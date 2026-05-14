@@ -14,6 +14,12 @@ realistic Jira issue records linked by stable metadata.
 The first MVP only ranks likely related Jira issues or incident candidates. Human
 approval and real Jira writing are phase 2.
 
+The current final MVP evaluation dataset is documented in:
+
+```text
+docs/mvp-evaluation-dataset.md
+```
+
 For the ranking MVP to be credible, every training and evaluation example must
 be traceable to:
 
@@ -521,6 +527,7 @@ scripts/research-lab/generate-shadow-jira-issues.ps1
 scripts/research-lab/validate-dataset-run.ps1
 scripts/research-lab/collect-dataset-run.ps1
 scripts/research-lab/build-ranking-dataset.ps1
+scripts/research-lab/build-cross-run-evaluation.ps1
 ```
 
 Responsibilities:
@@ -533,6 +540,7 @@ Responsibilities:
 - `validate-dataset-run.ps1`: verifies links, schemas, and required raw exports.
 - `collect-dataset-run.ps1`: orchestrates the first small dataset workflow.
 - `build-ranking-dataset.ps1`: freezes a validated raw run and builds derived ranking examples, compact tables, and a deterministic baseline evaluation.
+- `build-cross-run-evaluation.ps1`: combines derived runs into an aggregate evaluation set with cross-run metrics.
 
 ## Ranking Dataset Build
 
@@ -555,11 +563,23 @@ The key files are:
 
 - `freeze-manifest.json`: raw file checksums and source validation summary.
 - `ranking_examples.jsonl`: Jira issue to candidate episode pairs with labels.
-- `candidate_scores.csv`: ranked candidates for quick inspection.
-- `baseline-ranking-report.md`: deterministic baseline metrics and caveats.
+- `candidate_scores.csv`: ranked candidates for all scoring profiles.
+- `label_aware_candidate_scores.csv`: ranked candidates for the lab-label sanity profile.
+- `raw_telemetry_candidate_scores.csv`: ranked candidates for the production-facing raw telemetry profile.
+- `baseline-ranking-report.md`: deterministic profile metrics and caveats.
 
 See `docs/ranking-dataset-baseline.md` for the feature contract and leakage
 controls.
+
+After multiple derived runs exist, build a cross-run aggregate:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts\research-lab\build-cross-run-evaluation.ps1 `
+  -AggregateId "all-derived-runs" `
+  -Force
+```
+
+See `docs/cross-run-evaluation.md` for the aggregate contract.
 
 ## Validation Rules
 

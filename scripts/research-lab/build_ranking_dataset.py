@@ -22,7 +22,7 @@ from pathlib import Path
 from typing import Any, Iterable
 
 
-SCRIPT_VERSION = "0.1.0"
+SCRIPT_VERSION = "0.2.0"
 
 STOPWORDS = {
     "a",
@@ -299,6 +299,30 @@ def sample_loki_messages(path: Path, limit: int = 12) -> list[str]:
     return messages
 
 
+def sample_tempo_summaries(path: Path, limit: int = 20) -> list[str]:
+    if not path.exists() or limit <= 0:
+        return []
+    try:
+        tempo = read_json(path)
+    except (OSError, json.JSONDecodeError):
+        return []
+
+    traces = get_nested(tempo, ["search", "response", "traces"], [])
+    summaries: list[str] = []
+    seen: set[str] = set()
+    for trace in listify(traces):
+        root_service = str(trace.get("rootServiceName") or "").strip()
+        root_name = str(trace.get("rootTraceName") or "").strip()
+        summary = clean_text(" ".join(part for part in (root_service, root_name) if part))
+        if not summary or summary in seen:
+            continue
+        seen.add(summary)
+        summaries.append(summary[:180])
+        if len(summaries) >= limit:
+            break
+    return summaries
+
+
 def alert_name_map(alerts: list[dict[str, Any]]) -> dict[str, str]:
     mapping: dict[str, str] = {}
     for alert in alerts:
@@ -325,10 +349,12 @@ def build_episode_features(
 
     features: list[dict[str, Any]] = []
     raw_loki_root = run_root / "raw" / "loki"
+    raw_tempo_root = run_root / "raw" / "tempo"
     for episode in episodes:
         episode_id = str(episode["incident_episode_id"])
         windows = windows_by_episode.get(episode_id, [])
         services = listify(episode.get("affected_services"))
+        raw_services = sorted({str(window.get("service_name")) for window in windows if window.get("service_name")})
         alert_fingerprints = set(map(str, listify(episode.get("alert_fingerprints")))) | alerts_by_episode[episode_id]
         alert_names = sorted({names_by_fingerprint.get(fp, fp) for fp in alert_fingerprints if fp})
 
@@ -343,6 +369,8 @@ def build_episode_features(
         trace_ids = sorted({str(trace_id) for window in windows for trace_id in listify(window.get("trace_ids"))})
         log_messages: list[str] = []
         seen_messages: set[str] = set()
+        trace_summaries: list[str] = []
+        seen_trace_summaries: set[str] = set()
         for window in windows:
             window_id = str(window.get("telemetry_window_id", ""))
             for message in sample_loki_messages(raw_loki_root / f"{window_id}.json", limit=6):
@@ -352,6 +380,16 @@ def build_episode_features(
                 if len(log_messages) >= 40:
                     break
             if len(log_messages) >= 40:
+                break
+        for window in windows:
+            window_id = str(window.get("telemetry_window_id", ""))
+            for summary in sample_tempo_summaries(raw_tempo_root / f"{window_id}.json", limit=8):
+                if summary not in seen_trace_summaries:
+                    seen_trace_summaries.add(summary)
+                    trace_summaries.append(summary)
+                if len(trace_summaries) >= 40:
+                    break
+            if len(trace_summaries) >= 40:
                 break
 
         labels = episode.get("labels", {})
@@ -371,6 +409,13 @@ def build_episode_features(
             " ".join(log_messages),
         ]
         evidence_text = clean_text(" ".join(str(part) for part in evidence_parts if part))
+        raw_evidence_parts = [
+            " ".join(str(service) for service in raw_services),
+            " ".join(alert_names),
+            " ".join(log_messages),
+            " ".join(trace_summaries),
+        ]
+        raw_evidence_text = clean_text(" ".join(str(part) for part in raw_evidence_parts if part))
 
         features.append(
             {
@@ -382,6 +427,7 @@ def build_episode_features(
                 "incident_type": episode.get("incident_type"),
                 "root_cause_category": episode.get("root_cause_category"),
                 "affected_services": services,
+                "raw_services": raw_services,
                 "window_count": len(windows),
                 "alert_fingerprint_count": len(alert_fingerprints),
                 "alert_names": alert_names,
@@ -391,7 +437,9 @@ def build_episode_features(
                 "namespace_context_log_entries": namespace_context_log_entries,
                 "historical_alert_event_count": historical_alert_event_count,
                 "sample_log_messages": log_messages,
+                "trace_summaries": trace_summaries,
                 "evidence_text": evidence_text,
+                "raw_evidence_text": raw_evidence_text,
             }
         )
     return features
@@ -432,121 +480,24 @@ def ndcg_for_single_positive(rank: int | None) -> float:
     return 1.0 / math.log2(rank + 1)
 
 
-def build_ranking_examples(
+def calculate_profile_metrics(
     issues: list[dict[str, Any]],
     episodes: list[dict[str, Any]],
-    episode_features: list[dict[str, Any]],
-) -> tuple[list[dict[str, Any]], dict[str, Any], list[dict[str, Any]]]:
-    feature_by_episode = {record["incident_episode_id"]: record for record in episode_features}
-    episode_by_id = {record["incident_episode_id"]: record for record in episodes}
-    documents = {
-        episode_id: tokenize(features.get("evidence_text", ""))
-        for episode_id, features in feature_by_episode.items()
-    }
-
-    examples: list[dict[str, Any]] = []
-    rankings: list[dict[str, Any]] = []
-
-    for issue in issues:
-        metadata = issue.get("metadata", {})
-        issue_key = str(issue.get("jira_issue_key", ""))
-        true_episode_id = str(issue.get("incident_episode_id", ""))
-        query_text = issue_query_text(issue)
-        query_tokens = tokenize(query_text)
-        raw_bm25 = bm25_scores(documents, query_tokens)
-        max_bm25 = max(raw_bm25.values()) if raw_bm25 else 0.0
-        issue_services = listify(metadata.get("components"))
-        issue_severity = priority_to_severity(str(metadata.get("priority", "")))
-        issue_alerts = set(map(str, listify(get_nested(issue, ["telemetry_links", "alert_fingerprints"], []))))
-        issue_traces = set(map(str, listify(get_nested(issue, ["telemetry_links", "trace_ids"], []))))
-
-        issue_examples: list[dict[str, Any]] = []
-        for episode in episodes:
-            episode_id = str(episode["incident_episode_id"])
-            features = feature_by_episode[episode_id]
-            episode_alerts = set(map(str, listify(episode.get("alert_fingerprints"))))
-            episode_traces = set(map(str, listify(episode.get("trace_ids"))))
-            bm25_raw = raw_bm25.get(episode_id, 0.0)
-            text_score = bm25_raw / max_bm25 if max_bm25 > 0 else 0.0
-            service_overlap = jaccard(issue_services, episode.get("affected_services", []))
-            severity_match = 1.0 if issue_severity and issue_severity == str(episode.get("severity", "")).lower() else 0.0
-            incident_term_match = 1.0 if str(episode.get("incident_type", "")).lower() in set(query_tokens) else 0.0
-            telemetry_strength = min(1.0, math.log10(1 + features["exact_log_entries"] + features["trace_count"]) / 4.0)
-            baseline_score = (
-                0.55 * text_score
-                + 0.30 * service_overlap
-                + 0.10 * severity_match
-                + 0.03 * incident_term_match
-                + 0.02 * telemetry_strength
-            )
-            label = 1 if episode_id == true_episode_id else 0
-            example = {
-                "dataset_run_id": issue.get("dataset_run_id"),
-                "jira_issue_key": issue_key,
-                "jira_shadow_issue_id": issue.get("jira_shadow_issue_id"),
-                "query_text": query_text,
-                "candidate_episode_id": episode_id,
-                "candidate_scenario_id": episode.get("scenario_id"),
-                "candidate_severity": episode.get("severity"),
-                "candidate_incident_type": episode.get("incident_type"),
-                "candidate_root_cause_category": episode.get("root_cause_category"),
-                "candidate_services": episode.get("affected_services", []),
-                "label": label,
-                "bm25_raw": round(bm25_raw, 6),
-                "text_score": round(text_score, 6),
-                "service_overlap": round(service_overlap, 6),
-                "severity_match": severity_match,
-                "incident_term_match": incident_term_match,
-                "telemetry_strength": round(telemetry_strength, 6),
-                "baseline_score": round(baseline_score, 6),
-                "provenance_alert_overlap_count": len(issue_alerts & episode_alerts),
-                "provenance_trace_overlap_count": len(issue_traces & episode_traces),
-                "window_count": features["window_count"],
-                "alert_fingerprint_count": features["alert_fingerprint_count"],
-                "trace_count": features["trace_count"],
-                "exact_log_entries": features["exact_log_entries"],
-                "service_context_log_entries": features["service_context_log_entries"],
-                "namespace_context_log_entries": features["namespace_context_log_entries"],
-                "scoring_policy": "baseline_v0_no_identity_overlap",
-            }
-            issue_examples.append(example)
-
-        issue_examples.sort(
-            key=lambda item: (
-                -float(item["baseline_score"]),
-                -float(item["text_score"]),
-                str(item["candidate_episode_id"]),
-            )
-        )
-        for rank, example in enumerate(issue_examples, start=1):
-            example["rank"] = rank
-            rankings.append(
-                {
-                    "jira_issue_key": issue_key,
-                    "rank": rank,
-                    "candidate_episode_id": example["candidate_episode_id"],
-                    "candidate_scenario_id": example["candidate_scenario_id"],
-                    "label": example["label"],
-                    "baseline_score": example["baseline_score"],
-                    "text_score": example["text_score"],
-                    "service_overlap": example["service_overlap"],
-                    "severity_match": example["severity_match"],
-                }
-            )
-        examples.extend(issue_examples)
-
+    examples: list[dict[str, Any]],
+    rank_field: str,
+) -> dict[str, Any]:
     ranks_by_issue: dict[str, int | None] = {}
     for issue in issues:
         issue_key = str(issue.get("jira_issue_key", ""))
         positives = [
-            int(example["rank"])
+            int(example[rank_field])
             for example in examples
             if example["jira_issue_key"] == issue_key and int(example["label"]) == 1
         ]
         ranks_by_issue[issue_key] = min(positives) if positives else None
 
     query_count = len(issues)
-    metrics = {
+    return {
         "query_count": query_count,
         "candidate_episode_count": len(episodes),
         "example_count": len(examples),
@@ -571,7 +522,188 @@ def build_ranking_examples(
         ),
         "true_rank_by_issue": ranks_by_issue,
     }
-    return examples, metrics, rankings
+
+
+def ranked_rows_for_profile(
+    examples: list[dict[str, Any]],
+    score_field: str,
+    text_score_field: str,
+    rank_field: str,
+    profile_name: str,
+) -> list[dict[str, Any]]:
+    rows: list[dict[str, Any]] = []
+    grouped: dict[str, list[dict[str, Any]]] = defaultdict(list)
+    for example in examples:
+        grouped[str(example["jira_issue_key"])].append(example)
+
+    for issue_key, issue_examples in grouped.items():
+        issue_examples.sort(
+            key=lambda item: (
+                -float(item[score_field]),
+                -float(item[text_score_field]),
+                str(item["candidate_episode_id"]),
+            )
+        )
+        for rank, example in enumerate(issue_examples, start=1):
+            example[rank_field] = rank
+            if profile_name == "label_aware_baseline":
+                example["rank"] = rank
+            rows.append(
+                {
+                    "profile": profile_name,
+                    "jira_issue_key": issue_key,
+                    "rank": rank,
+                    "candidate_episode_id": example["candidate_episode_id"],
+                    "candidate_scenario_id": example["candidate_scenario_id"],
+                    "label": example["label"],
+                    "score": example[score_field],
+                    "text_score": example[text_score_field],
+                    "service_overlap": example["service_overlap"],
+                    "severity_match": example["severity_match"],
+                    "raw_service_overlap": example["raw_telemetry_service_overlap"],
+                }
+            )
+    return rows
+
+
+def build_ranking_examples(
+    issues: list[dict[str, Any]],
+    episodes: list[dict[str, Any]],
+    episode_features: list[dict[str, Any]],
+) -> tuple[list[dict[str, Any]], dict[str, dict[str, Any]], dict[str, list[dict[str, Any]]]]:
+    feature_by_episode = {record["incident_episode_id"]: record for record in episode_features}
+    label_aware_documents = {
+        episode_id: tokenize(features.get("evidence_text", ""))
+        for episode_id, features in feature_by_episode.items()
+    }
+    raw_documents = {
+        episode_id: tokenize(features.get("raw_evidence_text", ""))
+        for episode_id, features in feature_by_episode.items()
+    }
+
+    examples: list[dict[str, Any]] = []
+
+    for issue in issues:
+        metadata = issue.get("metadata", {})
+        issue_key = str(issue.get("jira_issue_key", ""))
+        true_episode_id = str(issue.get("incident_episode_id", ""))
+        query_text = issue_query_text(issue)
+        query_tokens = tokenize(query_text)
+        label_aware_bm25 = bm25_scores(label_aware_documents, query_tokens)
+        raw_telemetry_bm25 = bm25_scores(raw_documents, query_tokens)
+        max_label_aware_bm25 = max(label_aware_bm25.values()) if label_aware_bm25 else 0.0
+        max_raw_telemetry_bm25 = max(raw_telemetry_bm25.values()) if raw_telemetry_bm25 else 0.0
+        issue_services = listify(metadata.get("components"))
+        issue_severity = priority_to_severity(str(metadata.get("priority", "")))
+        issue_alerts = set(map(str, listify(get_nested(issue, ["telemetry_links", "alert_fingerprints"], []))))
+        issue_traces = set(map(str, listify(get_nested(issue, ["telemetry_links", "trace_ids"], []))))
+
+        for episode in episodes:
+            episode_id = str(episode["incident_episode_id"])
+            features = feature_by_episode[episode_id]
+            episode_alerts = set(map(str, listify(episode.get("alert_fingerprints"))))
+            episode_traces = set(map(str, listify(episode.get("trace_ids"))))
+            bm25_raw = label_aware_bm25.get(episode_id, 0.0)
+            text_score = bm25_raw / max_label_aware_bm25 if max_label_aware_bm25 > 0 else 0.0
+            service_overlap = jaccard(issue_services, episode.get("affected_services", []))
+            severity_match = 1.0 if issue_severity and issue_severity == str(episode.get("severity", "")).lower() else 0.0
+            incident_term_match = 1.0 if str(episode.get("incident_type", "")).lower() in set(query_tokens) else 0.0
+            telemetry_strength = min(1.0, math.log10(1 + features["exact_log_entries"] + features["trace_count"]) / 4.0)
+            baseline_score = (
+                0.55 * text_score
+                + 0.30 * service_overlap
+                + 0.10 * severity_match
+                + 0.03 * incident_term_match
+                + 0.02 * telemetry_strength
+            )
+            raw_bm25 = raw_telemetry_bm25.get(episode_id, 0.0)
+            raw_text_score = raw_bm25 / max_raw_telemetry_bm25 if max_raw_telemetry_bm25 > 0 else 0.0
+            raw_service_overlap = jaccard(issue_services, features.get("raw_services", []))
+            raw_alert_signal = min(
+                1.0,
+                math.log10(1 + features["alert_fingerprint_count"] + features["historical_alert_event_count"]) / 2.0,
+            )
+            raw_log_signal = min(1.0, math.log10(1 + features["exact_log_entries"]) / 4.0)
+            raw_trace_signal = min(1.0, math.log10(1 + features["trace_count"]) / 3.0)
+            raw_activity_signal = min(
+                1.0,
+                math.log10(
+                    1
+                    + features["exact_log_entries"]
+                    + (features["trace_count"] * 10)
+                    + (features["historical_alert_event_count"] * 50)
+                )
+                / 5.0,
+            )
+            raw_telemetry_score = (
+                0.40 * raw_text_score
+                + 0.30 * raw_service_overlap
+                + 0.20 * raw_activity_signal
+                + 0.05 * raw_alert_signal
+                + 0.03 * raw_log_signal
+                + 0.02 * raw_trace_signal
+            )
+            label = 1 if episode_id == true_episode_id else 0
+            example = {
+                "dataset_run_id": issue.get("dataset_run_id"),
+                "jira_issue_key": issue_key,
+                "jira_shadow_issue_id": issue.get("jira_shadow_issue_id"),
+                "query_text": query_text,
+                "candidate_episode_id": episode_id,
+                "candidate_scenario_id": episode.get("scenario_id"),
+                "candidate_severity": episode.get("severity"),
+                "candidate_incident_type": episode.get("incident_type"),
+                "candidate_root_cause_category": episode.get("root_cause_category"),
+                "candidate_services": episode.get("affected_services", []),
+                "label": label,
+                "bm25_raw": round(bm25_raw, 6),
+                "text_score": round(text_score, 6),
+                "service_overlap": round(service_overlap, 6),
+                "severity_match": severity_match,
+                "incident_term_match": incident_term_match,
+                "telemetry_strength": round(telemetry_strength, 6),
+                "baseline_score": round(baseline_score, 6),
+                "raw_telemetry_bm25_raw": round(raw_bm25, 6),
+                "raw_telemetry_text_score": round(raw_text_score, 6),
+                "raw_telemetry_service_overlap": round(raw_service_overlap, 6),
+                "raw_telemetry_activity_signal": round(raw_activity_signal, 6),
+                "raw_telemetry_alert_signal": round(raw_alert_signal, 6),
+                "raw_telemetry_log_signal": round(raw_log_signal, 6),
+                "raw_telemetry_trace_signal": round(raw_trace_signal, 6),
+                "raw_telemetry_score": round(raw_telemetry_score, 6),
+                "provenance_alert_overlap_count": len(issue_alerts & episode_alerts),
+                "provenance_trace_overlap_count": len(issue_traces & episode_traces),
+                "window_count": features["window_count"],
+                "alert_fingerprint_count": features["alert_fingerprint_count"],
+                "trace_count": features["trace_count"],
+                "exact_log_entries": features["exact_log_entries"],
+                "service_context_log_entries": features["service_context_log_entries"],
+                "namespace_context_log_entries": features["namespace_context_log_entries"],
+                "scoring_policy": "label_aware_baseline_v0_and_raw_telemetry_v0",
+            }
+            examples.append(example)
+
+    rankings_by_profile = {
+        "label_aware_baseline": ranked_rows_for_profile(
+            examples,
+            score_field="baseline_score",
+            text_score_field="text_score",
+            rank_field="rank",
+            profile_name="label_aware_baseline",
+        ),
+        "raw_telemetry": ranked_rows_for_profile(
+            examples,
+            score_field="raw_telemetry_score",
+            text_score_field="raw_telemetry_text_score",
+            rank_field="raw_telemetry_rank",
+            profile_name="raw_telemetry",
+        ),
+    }
+    metrics_by_profile = {
+        "label_aware_baseline": calculate_profile_metrics(issues, episodes, examples, "rank"),
+        "raw_telemetry": calculate_profile_metrics(issues, episodes, examples, "raw_telemetry_rank"),
+    }
+    return examples, metrics_by_profile, rankings_by_profile
 
 
 def flatten_episodes(episodes: list[dict[str, Any]]) -> list[dict[str, Any]]:
@@ -656,9 +788,11 @@ def write_report(
     path: Path,
     run_id: str,
     freeze_manifest: dict[str, Any],
-    metrics: dict[str, Any],
-    rankings: list[dict[str, Any]],
+    metrics_by_profile: dict[str, dict[str, Any]],
+    rankings_by_profile: dict[str, list[dict[str, Any]]],
 ) -> None:
+    label_metrics = metrics_by_profile["label_aware_baseline"]
+    raw_metrics = metrics_by_profile["raw_telemetry"]
     lines: list[str] = []
     lines.append(f"# Baseline Ranking Report {run_id}")
     lines.append("")
@@ -667,41 +801,69 @@ def write_report(
     lines.append(f"- Raw file count: {freeze_manifest['raw_file_count']}")
     lines.append(f"- Raw byte count: {freeze_manifest['raw_total_bytes']}")
     lines.append(f"- Raw tree SHA256: `{freeze_manifest['raw_tree_sha256']}`")
-    lines.append(f"- Query issues: {metrics['query_count']}")
-    lines.append(f"- Candidate episodes: {metrics['candidate_episode_count']}")
-    lines.append(f"- Ranking examples: {metrics['example_count']}")
-    lines.append(f"- Positive examples: {metrics['positive_example_count']}")
-    lines.append(f"- Negative examples: {metrics['negative_example_count']}")
+    lines.append(f"- Query issues: {label_metrics['query_count']}")
+    lines.append(f"- Candidate episodes: {label_metrics['candidate_episode_count']}")
+    lines.append(f"- Ranking examples: {label_metrics['example_count']}")
+    lines.append(f"- Positive examples: {label_metrics['positive_example_count']}")
+    lines.append(f"- Negative examples: {label_metrics['negative_example_count']}")
     lines.append("")
     lines.append("## Metrics")
     lines.append("")
-    lines.append("| Metric | Value |")
-    lines.append("| --- | ---: |")
-    for key in ("mrr", "recall_at_1", "recall_at_3", "ndcg_at_3"):
-        lines.append(f"| {key} | {metrics[key]} |")
+    lines.append("| Profile | MRR | Recall@1 | Recall@3 | nDCG@3 |")
+    lines.append("| --- | ---: | ---: | ---: | ---: |")
+    lines.append(
+        f"| label_aware_baseline | {label_metrics['mrr']} | {label_metrics['recall_at_1']} | {label_metrics['recall_at_3']} | {label_metrics['ndcg_at_3']} |"
+    )
+    lines.append(
+        f"| raw_telemetry | {raw_metrics['mrr']} | {raw_metrics['recall_at_1']} | {raw_metrics['recall_at_3']} | {raw_metrics['ndcg_at_3']} |"
+    )
     lines.append("")
-    lines.append("## Top Rankings")
+    lines.append("`label_aware_baseline` is a sanity-check profile that can use lab labels. `raw_telemetry` is the stricter production-facing profile; it does not score candidate severity, incident type, root-cause category, scenario title, fault type, or expected-impact labels.")
+    lines.append("")
+    lines.append("## Label-Aware Top Rankings")
     lines.append("")
     lines.append("| Jira issue | Rank | Candidate scenario | Label | Score | Text | Service | Severity |")
     lines.append("| --- | ---: | --- | ---: | ---: | ---: | ---: | ---: |")
-    for row in rankings:
+    for row in rankings_by_profile["label_aware_baseline"]:
         if int(row["rank"]) > 5:
             continue
         lines.append(
-            "| {jira_issue_key} | {rank} | {candidate_scenario_id} | {label} | {baseline_score} | {text_score} | {service_overlap} | {severity_match} |".format(
+            "| {jira_issue_key} | {rank} | {candidate_scenario_id} | {label} | {score} | {text_score} | {service_overlap} | {severity_match} |".format(
+                **row
+            )
+        )
+    lines.append("")
+    lines.append("## Raw Telemetry Top Rankings")
+    lines.append("")
+    lines.append("| Jira issue | Rank | Candidate scenario | Label | Score | Text | Service |")
+    lines.append("| --- | ---: | --- | ---: | ---: | ---: | ---: |")
+    for row in rankings_by_profile["raw_telemetry"]:
+        if int(row["rank"]) > 5:
+            continue
+        lines.append(
+            "| {jira_issue_key} | {rank} | {candidate_scenario_id} | {label} | {score} | {text_score} | {raw_service_overlap} |".format(
                 **row
             )
         )
     lines.append("")
     lines.append("## Scoring Policy")
     lines.append("")
-    lines.append("The baseline score is deterministic and intentionally simple:")
+    lines.append("Label-aware baseline:")
     lines.append("")
     lines.append("- 55% BM25 text match between sanitized Jira query text and episode evidence text.")
     lines.append("- 30% affected-service overlap.")
     lines.append("- 10% Jira priority to episode severity match.")
     lines.append("- 3% incident-type term match.")
     lines.append("- 2% telemetry strength from log and trace volume.")
+    lines.append("")
+    lines.append("Raw telemetry profile:")
+    lines.append("")
+    lines.append("- 40% BM25 text match between sanitized Jira query text and raw candidate evidence text.")
+    lines.append("- 30% service overlap from Jira components and telemetry-window service names.")
+    lines.append("- 20% activity signal from raw log, trace, and historical-alert volume.")
+    lines.append("- 5% alert-volume signal from alert names and historical alert event counts.")
+    lines.append("- 3% exact log-volume signal.")
+    lines.append("- 2% trace-volume signal.")
     lines.append("")
     lines.append("Identity leakage controls are active. Dataset ids, episode ids, telemetry window ids, Jira keys, alert fingerprints, trace ids, generated scenario slugs, generated root-cause labels, and generated severity labels are removed from scoring text. Alert and trace overlaps are still exported as audit features, but they are not used in `baseline_score`.")
     lines.append("")
@@ -729,7 +891,9 @@ Files:
 - `issues.csv` / `issues.jsonl`: compact Jira shadow issue table.
 - `episode_features.jsonl`: episode-level evidence features used by ranking.
 - `ranking_examples.jsonl` / `ranking_examples.csv`: issue-to-episode training and evaluation pairs.
-- `candidate_scores.csv`: ranked candidates per Jira issue.
+- `candidate_scores.csv`: ranked candidates per Jira issue for all scoring profiles.
+- `label_aware_candidate_scores.csv`: ranked candidates for the lab-label sanity profile.
+- `raw_telemetry_candidate_scores.csv`: ranked candidates for the raw telemetry profile.
 - `baseline-ranking-report.json` / `baseline-ranking-report.md`: deterministic baseline metrics and interpretation.
 
 Raw files are not copied here. Rebuild this directory from the raw run whenever the feature policy changes.
@@ -771,7 +935,7 @@ def build(args: argparse.Namespace) -> dict[str, Any]:
         "builder": {
             "name": "build_ranking_dataset.py",
             "version": SCRIPT_VERSION,
-            "scoring_policy": "baseline_v0_no_identity_overlap",
+            "scoring_policy": "label_aware_baseline_v0_and_raw_telemetry_v0",
         },
         "raw_run_root": str(run_root),
         "derived_output_root": str(output_root),
@@ -790,21 +954,42 @@ def build(args: argparse.Namespace) -> dict[str, Any]:
     }
 
     episode_features = build_episode_features(run_root, episodes, windows_by_episode, alerts)
-    examples, metrics, rankings = build_ranking_examples(issues, episodes, episode_features)
+    examples, metrics_by_profile, rankings_by_profile = build_ranking_examples(issues, episodes, episode_features)
+    combined_rankings = rankings_by_profile["label_aware_baseline"] + rankings_by_profile["raw_telemetry"]
     report = {
         "dataset_run_id": args.dataset_run_id,
         "generated_at": utc_now(),
         "builder_version": SCRIPT_VERSION,
-        "metrics": metrics,
-        "scoring_policy": {
-            "name": "baseline_v0_no_identity_overlap",
-            "weights": {
-                "bm25_text": 0.55,
-                "service_overlap": 0.30,
-                "severity_match": 0.10,
-                "incident_term_match": 0.03,
-                "telemetry_strength": 0.02,
+        "metrics": metrics_by_profile["label_aware_baseline"],
+        "profiles": {
+            "label_aware_baseline": {
+                "metrics": metrics_by_profile["label_aware_baseline"],
+                "weights": {
+                    "bm25_text": 0.55,
+                    "service_overlap": 0.30,
+                    "severity_match": 0.10,
+                    "incident_term_match": 0.03,
+                    "telemetry_strength": 0.02,
+                },
+                "uses_candidate_labels": True,
+                "description": "Sanity-check profile that can use lab labels such as severity and incident type.",
             },
+            "raw_telemetry": {
+                "metrics": metrics_by_profile["raw_telemetry"],
+                "weights": {
+                    "bm25_raw_evidence_text": 0.40,
+                    "service_overlap": 0.30,
+                    "activity_signal": 0.20,
+                    "alert_signal": 0.05,
+                    "log_signal": 0.03,
+                    "trace_signal": 0.02,
+                },
+                "uses_candidate_labels": False,
+                "description": "Production-facing profile using telemetry-window services, alert names, sampled logs, trace summaries, and volume signals.",
+            },
+        },
+        "scoring_policy": {
+            "name": "label_aware_baseline_v0_and_raw_telemetry_v0",
             "not_scored": [
                 "provenance_alert_overlap_count",
                 "provenance_trace_overlap_count",
@@ -820,7 +1005,8 @@ def build(args: argparse.Namespace) -> dict[str, Any]:
                 "generated root-cause and severity labels excluded from Jira query text",
             ],
         },
-        "rankings": rankings,
+        "rankings": combined_rankings,
+        "rankings_by_profile": rankings_by_profile,
     }
 
     episode_rows = flatten_episodes(episodes)
@@ -837,15 +1023,17 @@ def build(args: argparse.Namespace) -> dict[str, Any]:
     write_jsonl(output_root / "episode_features.jsonl", episode_features)
     write_jsonl(output_root / "ranking_examples.jsonl", examples)
     write_csv(output_root / "ranking_examples.csv", examples)
-    write_csv(output_root / "candidate_scores.csv", rankings)
+    write_csv(output_root / "candidate_scores.csv", combined_rankings)
+    write_csv(output_root / "label_aware_candidate_scores.csv", rankings_by_profile["label_aware_baseline"])
+    write_csv(output_root / "raw_telemetry_candidate_scores.csv", rankings_by_profile["raw_telemetry"])
     write_json(output_root / "baseline-ranking-report.json", report)
-    write_report(output_root / "baseline-ranking-report.md", args.dataset_run_id, freeze_manifest, metrics, rankings)
+    write_report(output_root / "baseline-ranking-report.md", args.dataset_run_id, freeze_manifest, metrics_by_profile, rankings_by_profile)
     write_readme(output_root / "README.md", args.dataset_run_id)
 
     return {
         "dataset_run_id": args.dataset_run_id,
         "output_root": str(output_root),
-        "metrics": metrics,
+        "metrics": metrics_by_profile,
         "raw_tree_sha256": tree_hash,
         "files_written": [
             "README.md",
@@ -860,6 +1048,8 @@ def build(args: argparse.Namespace) -> dict[str, Any]:
             "ranking_examples.csv",
             "ranking_examples.jsonl",
             "candidate_scores.csv",
+            "label_aware_candidate_scores.csv",
+            "raw_telemetry_candidate_scores.csv",
             "baseline-ranking-report.json",
             "baseline-ranking-report.md",
         ],

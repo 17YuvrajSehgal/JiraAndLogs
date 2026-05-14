@@ -42,6 +42,8 @@ data/derived/<DATASET_RUN_ID>/
   ranking_examples.csv
   ranking_examples.jsonl
   candidate_scores.csv
+  label_aware_candidate_scores.csv
+  raw_telemetry_candidate_scores.csv
   baseline-ranking-report.json
   baseline-ranking-report.md
 ```
@@ -107,9 +109,11 @@ version.
 episode into:
 
 - affected services,
+- raw telemetry-window services,
 - severity, incident type, and root cause category,
 - alert names,
 - trace count,
+- trace root service/name summaries,
 - exact and contextual log counts,
 - sampled service log messages,
 - sanitized evidence text.
@@ -141,10 +145,18 @@ This creates a small but complete learning-to-rank contract. Future runs can be
 appended by concatenating these files as long as the column contract remains
 stable.
 
-## Baseline Scoring Policy
+## Scoring Profiles
 
-The first baseline is deterministic and intentionally simple. It is a sanity
-check that the dataset joins are correct before we train or deploy a model.
+The first ranking step exports two deterministic profiles. Both are sanity
+checks before we train or deploy a model, but they answer different questions.
+
+`candidate_scores.csv` contains all profiles. `label_aware_candidate_scores.csv`
+and `raw_telemetry_candidate_scores.csv` split the same rankings by profile.
+
+### Label-Aware Baseline
+
+`label_aware_baseline` can use lab labels. It verifies that the dataset joins
+are correct and that each generated Jira issue points to the intended episode.
 
 `baseline_score` uses:
 
@@ -154,8 +166,38 @@ check that the dataset joins are correct before we train or deploy a model.
 - 3% incident-type term match,
 - 2% telemetry strength from log and trace volume.
 
-The baseline exports both the component features and the final score. This lets
-us replace the ranker later without changing the raw dataset.
+This profile should not be treated as production-realistic because candidate
+severity, incident type, root-cause category, scenario title, fault type, and
+expected-impact labels are lab knowledge.
+
+### Raw Telemetry Profile
+
+`raw_telemetry` is the stricter production-facing profile. It does not score:
+
+- candidate severity,
+- candidate incident type,
+- candidate root-cause category,
+- scenario title,
+- fault type,
+- expected user impact,
+- expected error rate,
+- expected latency impact.
+
+`raw_telemetry_score` uses:
+
+- 40% BM25 text score between sanitized Jira query text and raw candidate evidence text,
+- 30% service overlap from Jira components and telemetry-window service names,
+- 20% activity signal from raw log, trace, and historical-alert volume,
+- 5% alert-volume signal,
+- 3% exact log-volume signal,
+- 2% trace-volume signal.
+
+The raw profile still uses the generated shadow Jira issue text as the query,
+because that is what the product will rank against. It only restricts candidate
+features to evidence available from telemetry.
+
+Both profiles export component features and final scores. This lets us replace
+the ranker later without changing the raw dataset.
 
 ## Leakage Controls
 
@@ -168,7 +210,7 @@ The baseline avoids identity leakage in scoring text:
 - trace ids are removed,
 - alert fingerprints are removed,
 - synthetic scenario slug phrases are removed,
-- dataset and scenario labels are excluded from Jira query text.
+- dataset and scenario labels are excluded from Jira query text,
 - generated root-cause and severity labels are excluded from Jira query text.
 
 The builder still exports these audit-only columns:
@@ -177,11 +219,13 @@ The builder still exports these audit-only columns:
 - `provenance_trace_overlap_count`.
 
 They are useful to confirm that generated Jira links are correct, but they are
-not used in `baseline_score`. This distinction matters for research credibility.
+not used in either ranking score. This distinction matters for research
+credibility.
 
 ## Metrics
 
-`baseline-ranking-report.json` and `baseline-ranking-report.md` include:
+`baseline-ranking-report.json` and `baseline-ranking-report.md` include metrics
+for both profiles:
 
 - MRR,
 - Recall@1,
@@ -205,7 +249,9 @@ Make changes in this order:
 4. Compare `baseline-ranking-report.json` before and after the change.
 5. Update this document if the feature contract, leakage policy, or metrics change.
 
-The next practical improvement is to add a raw-only candidate feature profile
-that does not use scenario labels such as severity or root-cause category. That
-will move the ranking proof closer to a production setting where labels are
-predicted rather than known.
+The next practical improvement is to collect multiple additional runs with the
+same contract, then aggregate the derived `ranking_examples.jsonl` files into a
+cross-run evaluation set.
+
+The aggregate workflow is documented in `docs/cross-run-evaluation.md` and
+implemented by `scripts/research-lab/build-cross-run-evaluation.ps1`.
