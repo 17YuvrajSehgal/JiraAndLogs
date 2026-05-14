@@ -520,6 +520,7 @@ scripts/research-lab/export-telemetry-window.ps1
 scripts/research-lab/generate-shadow-jira-issues.ps1
 scripts/research-lab/validate-dataset-run.ps1
 scripts/research-lab/collect-dataset-run.ps1
+scripts/research-lab/build-ranking-dataset.ps1
 ```
 
 Responsibilities:
@@ -531,6 +532,34 @@ Responsibilities:
 - `generate-shadow-jira-issues.ps1`: creates realistic Jira-shaped records.
 - `validate-dataset-run.ps1`: verifies links, schemas, and required raw exports.
 - `collect-dataset-run.ps1`: orchestrates the first small dataset workflow.
+- `build-ranking-dataset.ps1`: freezes a validated raw run and builds derived ranking examples, compact tables, and a deterministic baseline evaluation.
+
+## Ranking Dataset Build
+
+After a raw run validates with zero errors, build the ranking-ready derived
+dataset:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts\research-lab\build-ranking-dataset.ps1 `
+  -DatasetRunId "2026-05-14-first-small-dataset-001" `
+  -Force
+```
+
+The derived output is written under:
+
+```text
+data/derived/<DATASET_RUN_ID>/
+```
+
+The key files are:
+
+- `freeze-manifest.json`: raw file checksums and source validation summary.
+- `ranking_examples.jsonl`: Jira issue to candidate episode pairs with labels.
+- `candidate_scores.csv`: ranked candidates for quick inspection.
+- `baseline-ranking-report.md`: deterministic baseline metrics and caveats.
+
+See `docs/ranking-dataset-baseline.md` for the feature contract and leakage
+controls.
 
 ## Validation Rules
 

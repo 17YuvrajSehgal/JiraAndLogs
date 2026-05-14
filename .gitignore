@@ -18,6 +18,7 @@ __pycache__/
 
 # Generated research datasets
 data/runs/
+data/derived/
 
 # Distribution / packaging
 build/
