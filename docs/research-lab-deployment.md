@@ -381,3 +381,27 @@ kubectl get pods -n observability
 kubectl get pods -n online-boutique-research
 kubectl logs -n online-boutique-research deploy/loadgenerator --tail=30
 ```
+
+After the lab is healthy, collect the first dataset with:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts\research-lab\collect-dataset-run.ps1 `
+  -DatasetRunId "2026-05-14-first-small-dataset-001" `
+  -Quick
+```
+
+Use `-RecordOnly` for a metadata and baseline dry run that does not inject
+faults. Use `-NoTelemetryExport` only for script testing, because it skips raw
+Loki, Prometheus, and Tempo evidence.
+
+Fast script-only smoke test:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts\research-lab\collect-dataset-run.ps1 `
+  -DatasetRunId "dry-run-001" `
+  -RecordOnly `
+  -NoTelemetryExport `
+  -ScenarioDurationSeconds 1 `
+  -PostWindowSeconds 0 `
+  -ForceNewRun
+```

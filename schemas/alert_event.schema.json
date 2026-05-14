@@ -25,6 +25,11 @@
     "starts_at": {"type": "string", "format": "date-time"},
     "ends_at": {"type": ["string", "null"], "format": "date-time"},
     "generator_url": {"type": ["string", "null"]},
+    "source": {"type": ["string", "null"]},
+    "query": {"type": ["string", "null"]},
+    "sample_count": {"type": "integer"},
+    "window_start": {"type": ["string", "null"], "format": "date-time"},
+    "window_end": {"type": ["string", "null"], "format": "date-time"},
     "labels": {
       "type": "object",
       "additionalProperties": {"type": ["string", "number", "boolean", "null"]}
@@ -45,4 +50,3 @@
   },
   "additionalProperties": false
 }
-

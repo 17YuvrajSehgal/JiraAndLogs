@@ -51,6 +51,14 @@ kubectl get pods -n online-boutique-research
 kubectl logs -n online-boutique-research deploy/loadgenerator --tail=30
 ```
 
+After deployment is healthy, the first dataset workflow is:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts\research-lab\collect-dataset-run.ps1 `
+  -DatasetRunId "2026-05-14-first-small-dataset-001" `
+  -Quick
+```
+
 ## Online Boutique overlay
 
 Render the research overlay:

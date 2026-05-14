@@ -1,0 +1,39 @@
+schema_version: 1
+scenario_id: baseline-normal-traffic
+title: Normal Online Boutique traffic baseline
+description: >
+  Normal traffic window with no injected fault. This is a negative example for
+  ranking and should not produce a Jira issue.
+dataset_run_id: local-dev-run-001
+traffic_profile_id: baseline-checkout-mix
+environment: research-local
+jira_candidate: false
+expected_jira:
+  issue_type: None
+  priority: None
+  components:
+    - frontend
+    - checkoutservice
+    - productcatalogservice
+  labels:
+    - synthetic-baseline
+    - negative-window
+fault:
+  fault_id: null
+  fault_type: none
+  affected_service: frontend
+  expected_start_offset_seconds: 0
+  expected_duration_seconds: 300
+  blast_radius:
+    user_visible: false
+    expected_error_rate: very_low
+    expected_latency_impact: low
+labels:
+  severity: none
+  incident_type: baseline
+  root_cause_category: none
+  should_alert: false
+  should_create_jira_shadow_issue: false
+execution:
+  action: RecordOnly
+  namespace: online-boutique-research

@@ -44,6 +44,8 @@ data/runs/<DATASET_RUN_ID>/
   jira_shadow_issues.jsonl
   raw/
     loki/
+      run-context.json
+      episode-context-<episode_id>.json
       <window_id>.json
     prometheus/
       <window_id>.json
@@ -52,6 +54,7 @@ data/runs/<DATASET_RUN_ID>/
   summaries/
     run-summary.md
     validation-report.md
+    validation-report.json
 ```
 
 The current schemas live in:
@@ -101,6 +104,60 @@ TRAFFIC_PROFILE_ID: baseline-checkout-mix
 Before each controlled run, `DATASET_RUN_ID`, `SCENARIO_ID`, and
 `TRAFFIC_PROFILE_ID` should be changed to match the scenario being executed.
 
+## Implemented Workflow
+
+The current workflow is implemented in PowerShell under `scripts/research-lab`.
+Run every script through `powershell -NoProfile -ExecutionPolicy Bypass` because
+Windows execution policy may block local scripts or modules.
+
+One-command first dataset workflow:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts\research-lab\collect-dataset-run.ps1 `
+  -DatasetRunId "2026-05-14-first-small-dataset-001" `
+  -Quick
+```
+
+Useful options:
+
+- `-Quick`: uses shorter scenario durations for a smoke-quality dataset.
+- `-ScenarioDurationSeconds <n>`: overrides all scenario active durations.
+- `-PostWindowSeconds <n>`: overrides recovery observation duration.
+- `-RecordOnly`: records windows without applying fault actions.
+- `-NoTelemetryExport`: creates metadata only, useful for script testing.
+- `-SkipJiraGeneration`: does not create shadow Jira issues.
+- `-ForceNewRun`: recreates an existing run scaffold.
+
+Fast script-only smoke test:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts\research-lab\collect-dataset-run.ps1 `
+  -DatasetRunId "dry-run-001" `
+  -RecordOnly `
+  -NoTelemetryExport `
+  -ScenarioDurationSeconds 1 `
+  -PostWindowSeconds 0 `
+  -ForceNewRun
+```
+
+Manual workflow:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts\research-lab\start-dataset-run.ps1 `
+  -DatasetRunId "2026-05-14-first-small-dataset-001"
+
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts\research-lab\run-scenario.ps1 `
+  -DatasetRunId "2026-05-14-first-small-dataset-001" `
+  -ScenarioFile deploy\research-lab\scenarios\baselines\baseline-normal-traffic.yaml
+
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts\research-lab\run-scenario.ps1 `
+  -DatasetRunId "2026-05-14-first-small-dataset-001" `
+  -ScenarioFile deploy\research-lab\scenarios\faults\productcatalog-latency-major.yaml
+
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts\research-lab\validate-dataset-run.ps1 `
+  -DatasetRunId "2026-05-14-first-small-dataset-001"
+```
+
 ## Dataset Creation Loop
 
 ### 1. Start A Dataset Run
@@ -120,7 +177,7 @@ The manifest records:
 - expected affected services,
 - timestamp source.
 
-Proposed script:
+Implemented script:
 
 ```powershell
 powershell -NoProfile -ExecutionPolicy Bypass -File scripts\research-lab\start-dataset-run.ps1 `
@@ -156,10 +213,30 @@ Each scenario produces one or more incident episodes.
 Current scenario files:
 
 ```text
+deploy/research-lab/scenarios/baselines/baseline-normal-traffic.yaml
 deploy/research-lab/scenarios/faults/productcatalog-latency-major.yaml
 deploy/research-lab/scenarios/faults/cart-redis-degradation-critical.yaml
 deploy/research-lab/scenarios/faults/frontend-cpu-nearmiss.yaml
 ```
+
+The scenario runner currently supports these execution actions:
+
+| Action | Behavior | Current Scenario |
+| --- | --- | --- |
+| `RecordOnly` | Waits for the scenario duration and records an observation window. | baseline normal traffic |
+| `SetEnv` | Patches deployment environment variables, waits for rollout, then restores originals. | product catalog latency, frontend near miss |
+| `ScaleDeployment` | Temporarily scales a deployment, then restores the original replica count. | Redis/cart degradation |
+| `RestartPods` | Deletes pods matching a selector and waits for replacements to become ready. | available for future scenarios |
+
+Current executable fault behavior:
+
+- `productcatalog-latency-major`: sets `EXTRA_LATENCY=750ms` on `productcatalogservice`.
+- `cart-redis-degradation-critical`: scales `redis-cart` to 0, then restores it to 1.
+- `frontend-cpu-nearmiss`: temporarily increases `loadgenerator` to `USERS=60` and `RATE=8`.
+
+For `SetEnv` scenarios, include `execution.target_container` whenever the
+deployment has init containers or multiple containers. This keeps fault
+injection and restore operations scoped to the intended runtime container.
 
 Scenario metadata must record:
 
@@ -179,13 +256,16 @@ Scenario metadata must record:
 Each scenario should create multiple labeled windows:
 
 ```text
+observation_window
 pre_fault_baseline
-fault_ramp_up
 active_fault
-alerting_window
 recovery_window
-post_recovery_baseline
 ```
+
+`observation_window` is used for record-only baseline scenarios. Fault scenarios
+write `pre_fault_baseline`, `active_fault`, and `recovery_window`. More detailed
+window types such as `fault_ramp_up` or `alerting_window` can be added later
+without changing the JSONL contract.
 
 Each window must be written to `telemetry_windows.jsonl` and linked back to the
 run and episode:
@@ -209,7 +289,17 @@ data first, then build compact features later. This preserves the evidence trail
 
 ### Logs From Loki
 
-Export logs for each window:
+Export logs for each window with the workflow script:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts\research-lab\export-telemetry-window.ps1 `
+  -DatasetRunId "2026-05-14-first-small-dataset-001"
+```
+
+The script starts temporary port-forwards to Loki, Prometheus, Tempo, and
+Alertmanager unless `-NoPortForward` is supplied.
+
+Manual Loki query shape:
 
 ```powershell
 $query = '{namespace="online-boutique-research"}'
@@ -229,6 +319,19 @@ Raw Loki exports should preserve:
 - message,
 - trace id or span id if present,
 - research labels.
+
+The exporter writes two levels of log evidence:
+
+- `raw/loki/<window_id>.json` contains the exact service window, a padded
+  service context query, and a padded namespace context query.
+- `raw/loki/run-context.json` contains a continuous namespace-level log export
+  across the whole dataset run, including padding before the first window and
+  after the last window.
+
+The run-level file is required for research use because some Online Boutique
+services emit sparse logs. A window can be valid even when its service-specific
+query has zero lines, but the run must still preserve enough namespace-level log
+context to reconstruct what the application and Kubernetes workloads were doing.
 
 ### Metrics From Prometheus
 
@@ -353,6 +456,13 @@ The issue should include realistic production fields:
 Do not generate a Jira issue for every alert. The dataset must include negative
 and ambiguous examples.
 
+Generate or regenerate issues for Jira-candidate episodes:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts\research-lab\generate-shadow-jira-issues.ps1 `
+  -DatasetRunId "2026-05-14-first-small-dataset-001"
+```
+
 ## Case Types Required For Ranking
 
 The ranking model needs several case types:
@@ -377,8 +487,12 @@ The first usable dataset should be small but complete:
 1. Baseline normal traffic.
 2. Product catalog latency incident.
 3. Cart or Redis degradation incident.
-4. Frontend CPU near-miss case.
+4. Frontend high-traffic near-miss case.
 5. Post-recovery normal traffic.
+
+`collect-dataset-run.ps1` now runs the normal baseline scenario at the beginning
+and again at the end so each small dataset has both pre-incident and
+post-recovery negative examples.
 
 Minimum expected outputs:
 
@@ -394,25 +508,29 @@ shadow Jira issues only for issue-worthy episodes
 one validation report
 ```
 
-## Proposed Scripts
+## Implemented Scripts
 
-The next engineering step is to implement these scripts:
+Current scripts:
 
 ```text
+scripts/research-lab/lib/ResearchLab.psm1
 scripts/research-lab/start-dataset-run.ps1
 scripts/research-lab/run-scenario.ps1
 scripts/research-lab/export-telemetry-window.ps1
 scripts/research-lab/generate-shadow-jira-issues.ps1
 scripts/research-lab/validate-dataset-run.ps1
+scripts/research-lab/collect-dataset-run.ps1
 ```
 
 Responsibilities:
 
+- `lib/ResearchLab.psm1`: shared path, JSONL, Git, Kubernetes, and scenario parsing helpers.
 - `start-dataset-run.ps1`: creates the run folder and `manifest.json`.
-- `run-scenario.ps1`: applies one scenario and records exact timestamps.
-- `export-telemetry-window.ps1`: queries Loki, Prometheus, and Tempo.
+- `run-scenario.ps1`: applies one scenario, restores the app, records exact timestamps, writes episodes and windows, and optionally exports telemetry and generates shadow Jira issues.
+- `export-telemetry-window.ps1`: queries Loki, Prometheus, Tempo, and Alertmanager. It also supports `-RunLevelLokiOnly` to refresh the continuous run-level log corpus without re-exporting every window.
 - `generate-shadow-jira-issues.ps1`: creates realistic Jira-shaped records.
 - `validate-dataset-run.ps1`: verifies links, schemas, and required raw exports.
+- `collect-dataset-run.ps1`: orchestrates the first small dataset workflow.
 
 ## Validation Rules
 
@@ -424,9 +542,21 @@ A dataset run is usable only if:
 - every generated Jira issue links to an episode,
 - every generated Jira issue links to at least one telemetry window,
 - raw exports exist for every telemetry window,
+- `raw/loki/run-context.json` contains namespace-level log context when raw exports are required,
 - negative windows are present,
+- severities are one of `none`, `minor`, `major`, or `critical`,
+- episode and telemetry-window labels include `incident_type` and `root_cause_category`,
 - timestamp ranges are non-overlapping where expected,
 - the validation report states known gaps explicitly.
+
+Validation command:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts\research-lab\validate-dataset-run.ps1 `
+  -DatasetRunId "2026-05-14-first-small-dataset-001"
+```
+
+For metadata-only script testing, use `-AllowMissingRawExports`.
 
 ## Research Proof Requirements
 
@@ -443,4 +573,3 @@ reproducible. A future reviewer should be able to answer:
 
 The dataset should favor provenance and reproducibility over volume in the early
 MVP. More data can be generated later once the run loop is correct.
-

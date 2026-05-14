@@ -39,4 +39,11 @@ labels:
   root_cause_category: dependency_latency
   should_alert: true
   should_create_jira_shadow_issue: true
-
+execution:
+  action: SetEnv
+  namespace: online-boutique-research
+  target_kind: deployment
+  target_name: productcatalogservice
+  target_container: server
+  env:
+    EXTRA_LATENCY: 750ms

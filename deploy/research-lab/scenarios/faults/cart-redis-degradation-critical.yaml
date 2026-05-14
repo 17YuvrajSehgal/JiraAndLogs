@@ -42,4 +42,10 @@ labels:
   root_cause_category: dependency_failure
   should_alert: true
   should_create_jira_shadow_issue: true
-
+execution:
+  action: ScaleDeployment
+  namespace: online-boutique-research
+  target_kind: deployment
+  target_name: redis-cart
+  replicas: 0
+  restore_replicas: 1

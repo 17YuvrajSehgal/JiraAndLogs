@@ -1,6 +1,6 @@
 schema_version: 1
 scenario_id: frontend-cpu-nearmiss
-title: Frontend CPU pressure near-miss
+title: Frontend high traffic near-miss
 dataset_run_id: local-dev-run-001
 traffic_profile_id: baseline-checkout-mix
 environment: research-local
@@ -16,9 +16,9 @@ expected_jira:
     - frontend
 fault:
   fault_id: frontend-cpu-pressure-001
-  fault_type: resource_pressure
+  fault_type: traffic_pressure
   affected_service: frontend
-  suggested_mechanism: inject moderate CPU pressure below user-visible impact threshold
+  suggested_mechanism: temporarily increase loadgenerator users and spawn rate below user-visible impact threshold
   expected_start_offset_seconds: 300
   expected_duration_seconds: 300
   blast_radius:
@@ -31,4 +31,12 @@ labels:
   root_cause_category: resource_pressure
   should_alert: maybe
   should_create_jira_shadow_issue: false
-
+execution:
+  action: SetEnv
+  namespace: online-boutique-research
+  target_kind: deployment
+  target_name: loadgenerator
+  target_container: main
+  env:
+    USERS: "60"
+    RATE: "8"

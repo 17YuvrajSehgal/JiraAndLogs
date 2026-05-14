@@ -40,4 +40,11 @@ labels:
   root_cause_category: none
   should_alert: false
   should_create_jira_shadow_issue: false
-
+execution:
+  action: RecordOnly
+  namespace: online-boutique-research
+  target_kind: deployment
+  target_name: frontend
+  target_container: server
+  selector: app=frontend
+  env: {}

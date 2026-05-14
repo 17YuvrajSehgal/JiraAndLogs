@@ -17,6 +17,16 @@ A shadow Jira issue must include:
 
 The schema is defined in `schemas/jira_shadow_issue.schema.json`.
 
+The current generator is:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts\research-lab\generate-shadow-jira-issues.ps1 `
+  -DatasetRunId "<DATASET_RUN_ID>"
+```
+
+It reads `episodes.jsonl`, `telemetry_windows.jsonl`, and `alerts.jsonl`, then
+writes `jira_shadow_issues.jsonl` for episodes where `jira_candidate=true`.
+
 ## Production-like fields to preserve
 
 The sample issue includes these useful signals:
@@ -76,4 +86,3 @@ For non-Jira near misses, create an `incident_episode` and telemetry windows but
 ## Privacy
 
 Generated lab issues should not include real names, internal URLs, private hostnames, customer identifiers, secrets, or credentials. Use deterministic synthetic users and fake internal URLs.
-
