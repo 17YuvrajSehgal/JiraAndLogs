@@ -14,6 +14,9 @@ needed for the MVP ranking dataset. Later Jira generation can use the same
 `DATASET_RUN_ID`, `SCENARIO_ID`, and `TRAFFIC_PROFILE_ID` values that are injected
 into the application pods.
 
+For the dataset creation contract, run contents, and scenario-to-Jira process,
+see `docs/dataset-acquisition-plan.md`.
+
 ## 1. Start From The Repo Root
 
 ```powershell
@@ -378,4 +381,3 @@ kubectl get pods -n observability
 kubectl get pods -n online-boutique-research
 kubectl logs -n online-boutique-research deploy/loadgenerator --tail=30
 ```
-
