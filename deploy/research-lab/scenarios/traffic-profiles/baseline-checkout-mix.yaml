@@ -1,0 +1,23 @@
+traffic_profile_id: baseline-checkout-mix
+description: >
+  Baseline user behavior using the stock Online Boutique load generator with
+  realistic checkout, cart, browse, and currency changes.
+load_generator:
+  users: 25
+  spawn_rate: 3
+  wait_time_seconds:
+    min: 1
+    max: 10
+expected_behavior:
+  primary_paths:
+    - /
+    - /product/{id}
+    - /cart
+    - /cart/checkout
+    - /setCurrency
+  normal_error_rate: very_low
+  normal_latency_profile: steady
+dataset_use:
+  include_as_negative_windows: true
+  include_for_baseline_training: true
+

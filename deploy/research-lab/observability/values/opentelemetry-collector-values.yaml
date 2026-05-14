@@ -1,0 +1,106 @@
+mode: deployment
+
+image:
+  repository: otel/opentelemetry-collector-contrib
+
+fullnameOverride: opentelemetrycollector
+
+ports:
+  otlp:
+    enabled: true
+    containerPort: 4317
+    servicePort: 4317
+    protocol: TCP
+  otlp-http:
+    enabled: true
+    containerPort: 4318
+    servicePort: 4318
+    protocol: TCP
+  metrics:
+    enabled: true
+    containerPort: 8889
+    servicePort: 8889
+    protocol: TCP
+
+presets:
+  kubernetesAttributes:
+    enabled: true
+
+config:
+  receivers:
+    otlp:
+      protocols:
+        grpc:
+          endpoint: 0.0.0.0:4317
+        http:
+          endpoint: 0.0.0.0:4318
+
+  processors:
+    batch: {}
+    memory_limiter:
+      check_interval: 5s
+      limit_percentage: 80
+      spike_limit_percentage: 25
+    k8sattributes:
+      auth_type: serviceAccount
+      extract:
+        metadata:
+          - k8s.namespace.name
+          - k8s.pod.name
+          - k8s.pod.uid
+          - k8s.deployment.name
+          - k8s.node.name
+        labels:
+          - tag_name: app
+            key: app
+            from: pod
+          - tag_name: research.dataset
+            key: research.jira-telemetry/dataset
+            from: pod
+          - tag_name: service.tier
+            key: research.jira-telemetry/service-tier
+            from: pod
+    resource:
+      attributes:
+        - key: deployment.environment
+          value: research-local
+          action: upsert
+        - key: service.namespace
+          value: online-boutique
+          action: upsert
+        - key: dataset.name
+          value: online-boutique-jira-telemetry
+          action: upsert
+        - key: jira.mode
+          value: shadow
+          action: upsert
+
+  exporters:
+    otlp/tempo:
+      endpoint: tempo.observability.svc.cluster.local:4317
+      tls:
+        insecure: true
+    prometheus:
+      endpoint: 0.0.0.0:8889
+      namespace: online_boutique
+      const_labels:
+        dataset: online_boutique_jira_telemetry
+    debug:
+      verbosity: basic
+
+  service:
+    pipelines:
+      traces:
+        receivers: [otlp]
+        processors: [memory_limiter, k8sattributes, resource, batch]
+        exporters: [otlp/tempo, debug]
+      metrics:
+        receivers: [otlp]
+        processors: [memory_limiter, k8sattributes, resource, batch]
+        exporters: [prometheus, debug]
+
+serviceMonitor:
+  enabled: true
+  metricsEndpoints:
+    - port: metrics
+

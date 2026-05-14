@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: observability
+  labels:
+    app.kubernetes.io/part-of: jira-telemetry-lab
+    research.jira-telemetry/role: observability
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: online-boutique-research
+  labels:
+    app.kubernetes.io/part-of: jira-telemetry-lab
+    research.jira-telemetry/role: workload
+

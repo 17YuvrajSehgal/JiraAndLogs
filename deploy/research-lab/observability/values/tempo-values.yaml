@@ -1,0 +1,16 @@
+tempo:
+  reportingEnabled: false
+  retention: 168h
+
+service:
+  type: ClusterIP
+
+persistence:
+  enabled: false
+
+tempoQuery:
+  enabled: false
+
+serviceMonitor:
+  enabled: true
+

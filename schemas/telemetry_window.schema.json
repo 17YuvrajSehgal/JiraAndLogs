@@ -1,0 +1,65 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://jira-telemetry.local/schemas/telemetry_window.schema.json",
+  "title": "TelemetryWindow",
+  "type": "object",
+  "required": [
+    "telemetry_window_id",
+    "dataset_run_id",
+    "start_time",
+    "end_time",
+    "service_name",
+    "features",
+    "labels"
+  ],
+  "properties": {
+    "telemetry_window_id": {"type": "string"},
+    "dataset_run_id": {"type": "string"},
+    "incident_episode_id": {"type": ["string", "null"]},
+    "scenario_id": {"type": ["string", "null"]},
+    "fault_id": {"type": ["string", "null"]},
+    "start_time": {"type": "string", "format": "date-time"},
+    "end_time": {"type": "string", "format": "date-time"},
+    "service_name": {"type": "string"},
+    "k8s": {
+      "type": "object",
+      "properties": {
+        "namespace": {"type": "string"},
+        "pod": {"type": ["string", "null"]},
+        "node": {"type": ["string", "null"]},
+        "deployment": {"type": ["string", "null"]}
+      },
+      "additionalProperties": true
+    },
+    "trace_ids": {
+      "type": "array",
+      "items": {"type": "string"}
+    },
+    "request_ids": {
+      "type": "array",
+      "items": {"type": "string"}
+    },
+    "features": {
+      "type": "object",
+      "properties": {
+        "metrics": {"type": "object", "additionalProperties": true},
+        "logs": {"type": "object", "additionalProperties": true},
+        "traces": {"type": "object", "additionalProperties": true}
+      },
+      "additionalProperties": true
+    },
+    "labels": {
+      "type": "object",
+      "properties": {
+        "jira_candidate": {"type": "boolean"},
+        "severity": {"type": "string"},
+        "affected_service": {"type": ["string", "null"]},
+        "incident_type": {"type": ["string", "null"]},
+        "root_cause_category": {"type": ["string", "null"]}
+      },
+      "additionalProperties": true
+    }
+  },
+  "additionalProperties": false
+}
+

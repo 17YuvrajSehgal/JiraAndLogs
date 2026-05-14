@@ -1,0 +1,76 @@
+fullnameOverride: kube-prometheus-stack
+
+grafana:
+  enabled: false
+
+alertmanager:
+  enabled: true
+  alertmanagerSpec:
+    retention: 120h
+
+prometheus:
+  prometheusSpec:
+    retention: 15d
+    scrapeInterval: 15s
+    evaluationInterval: 15s
+    serviceMonitorSelectorNilUsesHelmValues: false
+    podMonitorSelectorNilUsesHelmValues: false
+    ruleSelectorNilUsesHelmValues: false
+    storageSpec:
+      emptyDir: {}
+
+kubeEtcd:
+  enabled: false
+
+kubeControllerManager:
+  enabled: false
+
+kubeScheduler:
+  enabled: false
+
+defaultRules:
+  create: true
+
+additionalPrometheusRulesMap:
+  online-boutique-research-rules:
+    groups:
+      - name: online-boutique.research.rules
+        rules:
+          - alert: OnlineBoutiqueDeploymentUnavailable
+            expr: kube_deployment_status_replicas_unavailable{namespace="online-boutique-research"} > 0
+            for: 2m
+            labels:
+              severity: major
+              jira_candidate: "true"
+              dataset: online_boutique_jira_telemetry
+            annotations:
+              summary: "Online Boutique deployment has unavailable replicas"
+              description: "Deployment {{ $labels.deployment }} has unavailable replicas in online-boutique-research."
+              incident_type: availability
+          - alert: OnlineBoutiqueContainerRestarting
+            expr: increase(kube_pod_container_status_restarts_total{namespace="online-boutique-research"}[10m]) > 0
+            for: 1m
+            labels:
+              severity: major
+              jira_candidate: "true"
+              dataset: online_boutique_jira_telemetry
+            annotations:
+              summary: "Online Boutique container restarted"
+              description: "Container {{ $labels.container }} in pod {{ $labels.pod }} restarted during the last 10 minutes."
+              incident_type: instability
+          - alert: OnlineBoutiqueNearMissResourcePressure
+            expr: |
+              (
+                rate(container_cpu_cfs_throttled_periods_total{namespace="online-boutique-research", container!="", container!="POD"}[5m])
+                /
+                rate(container_cpu_cfs_periods_total{namespace="online-boutique-research", container!="", container!="POD"}[5m])
+              ) > 0.25
+            for: 10m
+            labels:
+              severity: minor
+              jira_candidate: "false"
+              dataset: online_boutique_jira_telemetry
+            annotations:
+              summary: "Research near-miss resource pressure marker"
+              description: "Low-severity resource-pressure marker for negative and near-miss ranking examples."
+              incident_type: near_miss

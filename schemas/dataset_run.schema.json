@@ -1,0 +1,76 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://jira-telemetry.local/schemas/dataset_run.schema.json",
+  "title": "DatasetRun",
+  "type": "object",
+  "required": [
+    "dataset_run_id",
+    "dataset_name",
+    "started_at",
+    "environment",
+    "git",
+    "workload",
+    "observability_stack"
+  ],
+  "properties": {
+    "dataset_run_id": {
+      "type": "string"
+    },
+    "dataset_name": {
+      "type": "string"
+    },
+    "started_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "ended_at": {
+      "type": ["string", "null"],
+      "format": "date-time"
+    },
+    "environment": {
+      "type": "string"
+    },
+    "git": {
+      "type": "object",
+      "required": ["repository", "commit_sha"],
+      "properties": {
+        "repository": {"type": "string"},
+        "commit_sha": {"type": "string"},
+        "branch": {"type": ["string", "null"]},
+        "dirty": {"type": "boolean"}
+      },
+      "additionalProperties": true
+    },
+    "workload": {
+      "type": "object",
+      "required": ["name", "namespace"],
+      "properties": {
+        "name": {"type": "string"},
+        "namespace": {"type": "string"},
+        "image_tag": {"type": ["string", "null"]},
+        "services": {
+          "type": "array",
+          "items": {"type": "string"}
+        }
+      },
+      "additionalProperties": true
+    },
+    "observability_stack": {
+      "type": "object",
+      "required": ["metrics", "logs", "traces", "dashboards", "alerts"],
+      "properties": {
+        "metrics": {"type": "string"},
+        "logs": {"type": "string"},
+        "traces": {"type": "string"},
+        "dashboards": {"type": "string"},
+        "alerts": {"type": "string"}
+      },
+      "additionalProperties": true
+    },
+    "notes": {
+      "type": "string"
+    }
+  },
+  "additionalProperties": false
+}
+

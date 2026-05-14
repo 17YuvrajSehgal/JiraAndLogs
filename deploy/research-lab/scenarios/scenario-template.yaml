@@ -1,0 +1,43 @@
+schema_version: 1
+scenario_id: template
+title: Human readable scenario title
+description: >
+  Describe the production-like situation being simulated, including why this
+  should or should not become a Jira issue.
+dataset_run_id: local-dev-run-001
+traffic_profile_id: baseline-checkout-mix
+environment: research-local
+jira_candidate: true
+expected_jira:
+  issue_type: Incident
+  priority: Major
+  components:
+    - Online Boutique
+  labels:
+    - synthetic-incident
+    - telemetry-linked
+  summary_template: "[{{severity}}] {{affected_service}} degradation during {{fault_type}}"
+  description_template: |
+    Synthetic lab issue generated from telemetry scenario {{scenario_id}}.
+
+    Affected service: {{affected_service}}
+    Fault type: {{fault_type}}
+    Incident window: {{start_time}} to {{end_time}}
+    Linked telemetry window ids: {{telemetry_window_ids}}
+fault:
+  fault_id: template-fault
+  fault_type: none
+  affected_service: frontend
+  expected_start_offset_seconds: 300
+  expected_duration_seconds: 600
+  blast_radius:
+    user_visible: false
+    expected_error_rate: low
+    expected_latency_impact: low
+labels:
+  severity: minor
+  incident_type: baseline
+  root_cause_category: none
+  should_alert: false
+  should_create_jira_shadow_issue: false
+

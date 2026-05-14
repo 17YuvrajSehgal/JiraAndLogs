@@ -13,6 +13,9 @@ __pycache__/
 *$py.class
 *.so
 
+# Local downloaded CLI tools
+.tools/
+
 # Distribution / packaging
 build/
 dist/

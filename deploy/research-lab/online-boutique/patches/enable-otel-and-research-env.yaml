@@ -1,0 +1,269 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: frontend
+spec:
+  template:
+    metadata:
+      labels:
+        research.jira-telemetry/service-tier: edge
+    spec:
+      containers:
+        - name: server
+          env:
+            - name: ENABLE_TRACING
+              value: "1"
+            - name: COLLECTOR_SERVICE_ADDR
+              value: "opentelemetrycollector.observability.svc.cluster.local:4317"
+            - name: OTEL_SERVICE_NAME
+              value: "frontend"
+            - name: OTEL_RESOURCE_ATTRIBUTES
+              value: "deployment.environment=research-local,service.namespace=online-boutique,dataset.name=online-boutique-jira-telemetry"
+            - name: DATASET_RUN_ID
+              valueFrom:
+                configMapKeyRef:
+                  name: research-run-config
+                  key: DATASET_RUN_ID
+            - name: SCENARIO_ID
+              valueFrom:
+                configMapKeyRef:
+                  name: research-run-config
+                  key: SCENARIO_ID
+            - name: JIRA_MODE
+              valueFrom:
+                configMapKeyRef:
+                  name: research-run-config
+                  key: JIRA_MODE
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: checkoutservice
+spec:
+  template:
+    metadata:
+      labels:
+        research.jira-telemetry/service-tier: business
+    spec:
+      containers:
+        - name: server
+          env:
+            - name: ENABLE_TRACING
+              value: "1"
+            - name: COLLECTOR_SERVICE_ADDR
+              value: "opentelemetrycollector.observability.svc.cluster.local:4317"
+            - name: OTEL_SERVICE_NAME
+              value: "checkoutservice"
+            - name: OTEL_RESOURCE_ATTRIBUTES
+              value: "deployment.environment=research-local,service.namespace=online-boutique,dataset.name=online-boutique-jira-telemetry"
+            - name: DATASET_RUN_ID
+              valueFrom:
+                configMapKeyRef:
+                  name: research-run-config
+                  key: DATASET_RUN_ID
+            - name: SCENARIO_ID
+              valueFrom:
+                configMapKeyRef:
+                  name: research-run-config
+                  key: SCENARIO_ID
+            - name: JIRA_MODE
+              valueFrom:
+                configMapKeyRef:
+                  name: research-run-config
+                  key: JIRA_MODE
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: currencyservice
+spec:
+  template:
+    metadata:
+      labels:
+        research.jira-telemetry/service-tier: dependency
+    spec:
+      containers:
+        - name: server
+          env:
+            - name: ENABLE_TRACING
+              value: "1"
+            - name: COLLECTOR_SERVICE_ADDR
+              value: "opentelemetrycollector.observability.svc.cluster.local:4317"
+            - name: OTEL_SERVICE_NAME
+              value: "currencyservice"
+            - name: DISABLE_PROFILER
+              value: "1"
+            - name: OTEL_RESOURCE_ATTRIBUTES
+              value: "deployment.environment=research-local,service.namespace=online-boutique,dataset.name=online-boutique-jira-telemetry"
+            - name: DATASET_RUN_ID
+              valueFrom:
+                configMapKeyRef:
+                  name: research-run-config
+                  key: DATASET_RUN_ID
+            - name: SCENARIO_ID
+              valueFrom:
+                configMapKeyRef:
+                  name: research-run-config
+                  key: SCENARIO_ID
+            - name: JIRA_MODE
+              valueFrom:
+                configMapKeyRef:
+                  name: research-run-config
+                  key: JIRA_MODE
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: emailservice
+spec:
+  template:
+    metadata:
+      labels:
+        research.jira-telemetry/service-tier: dependency
+    spec:
+      containers:
+        - name: server
+          env:
+            - name: ENABLE_TRACING
+              value: "1"
+            - name: COLLECTOR_SERVICE_ADDR
+              value: "opentelemetrycollector.observability.svc.cluster.local:4317"
+            - name: OTEL_SERVICE_NAME
+              value: "emailservice"
+            - name: DISABLE_PROFILER
+              value: "1"
+            - name: OTEL_RESOURCE_ATTRIBUTES
+              value: "deployment.environment=research-local,service.namespace=online-boutique,dataset.name=online-boutique-jira-telemetry"
+            - name: DATASET_RUN_ID
+              valueFrom:
+                configMapKeyRef:
+                  name: research-run-config
+                  key: DATASET_RUN_ID
+            - name: SCENARIO_ID
+              valueFrom:
+                configMapKeyRef:
+                  name: research-run-config
+                  key: SCENARIO_ID
+            - name: JIRA_MODE
+              valueFrom:
+                configMapKeyRef:
+                  name: research-run-config
+                  key: JIRA_MODE
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: paymentservice
+spec:
+  template:
+    metadata:
+      labels:
+        research.jira-telemetry/service-tier: business
+    spec:
+      containers:
+        - name: server
+          env:
+            - name: ENABLE_TRACING
+              value: "1"
+            - name: COLLECTOR_SERVICE_ADDR
+              value: "opentelemetrycollector.observability.svc.cluster.local:4317"
+            - name: OTEL_SERVICE_NAME
+              value: "paymentservice"
+            - name: DISABLE_PROFILER
+              value: "1"
+            - name: OTEL_RESOURCE_ATTRIBUTES
+              value: "deployment.environment=research-local,service.namespace=online-boutique,dataset.name=online-boutique-jira-telemetry"
+            - name: DATASET_RUN_ID
+              valueFrom:
+                configMapKeyRef:
+                  name: research-run-config
+                  key: DATASET_RUN_ID
+            - name: SCENARIO_ID
+              valueFrom:
+                configMapKeyRef:
+                  name: research-run-config
+                  key: SCENARIO_ID
+            - name: JIRA_MODE
+              valueFrom:
+                configMapKeyRef:
+                  name: research-run-config
+                  key: JIRA_MODE
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: productcatalogservice
+spec:
+  template:
+    metadata:
+      labels:
+        research.jira-telemetry/service-tier: catalog
+    spec:
+      containers:
+        - name: server
+          env:
+            - name: ENABLE_TRACING
+              value: "1"
+            - name: COLLECTOR_SERVICE_ADDR
+              value: "opentelemetrycollector.observability.svc.cluster.local:4317"
+            - name: OTEL_SERVICE_NAME
+              value: "productcatalogservice"
+            - name: DISABLE_PROFILER
+              value: "1"
+            - name: OTEL_RESOURCE_ATTRIBUTES
+              value: "deployment.environment=research-local,service.namespace=online-boutique,dataset.name=online-boutique-jira-telemetry"
+            - name: DATASET_RUN_ID
+              valueFrom:
+                configMapKeyRef:
+                  name: research-run-config
+                  key: DATASET_RUN_ID
+            - name: SCENARIO_ID
+              valueFrom:
+                configMapKeyRef:
+                  name: research-run-config
+                  key: SCENARIO_ID
+            - name: JIRA_MODE
+              valueFrom:
+                configMapKeyRef:
+                  name: research-run-config
+                  key: JIRA_MODE
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: recommendationservice
+spec:
+  template:
+    metadata:
+      labels:
+        research.jira-telemetry/service-tier: recommendation
+    spec:
+      containers:
+        - name: server
+          env:
+            - name: ENABLE_TRACING
+              value: "1"
+            - name: COLLECTOR_SERVICE_ADDR
+              value: "opentelemetrycollector.observability.svc.cluster.local:4317"
+            - name: OTEL_SERVICE_NAME
+              value: "recommendationservice"
+            - name: DISABLE_PROFILER
+              value: "1"
+            - name: OTEL_RESOURCE_ATTRIBUTES
+              value: "deployment.environment=research-local,service.namespace=online-boutique,dataset.name=online-boutique-jira-telemetry"
+            - name: DATASET_RUN_ID
+              valueFrom:
+                configMapKeyRef:
+                  name: research-run-config
+                  key: DATASET_RUN_ID
+            - name: SCENARIO_ID
+              valueFrom:
+                configMapKeyRef:
+                  name: research-run-config
+                  key: SCENARIO_ID
+            - name: JIRA_MODE
+              valueFrom:
+                configMapKeyRef:
+                  name: research-run-config
+                  key: JIRA_MODE
+

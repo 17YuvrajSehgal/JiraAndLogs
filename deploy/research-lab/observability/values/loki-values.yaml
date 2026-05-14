@@ -1,0 +1,62 @@
+deploymentMode: SingleBinary
+
+loki:
+  auth_enabled: false
+  commonConfig:
+    replication_factor: 1
+    path_prefix: /tmp/loki
+  schemaConfig:
+    configs:
+      - from: "2024-01-01"
+        store: tsdb
+        object_store: filesystem
+        schema: v13
+        index:
+          prefix: loki_index_
+          period: 24h
+  storage:
+    type: filesystem
+    filesystem:
+      chunks_directory: /tmp/loki/chunks
+      rules_directory: /tmp/loki/rules
+  rulerConfig:
+    wal:
+      dir: /tmp/loki/ruler-wal
+  limits_config:
+    retention_period: 168h
+    allow_structured_metadata: true
+  containerSecurityContext:
+    readOnlyRootFilesystem: false
+
+singleBinary:
+  replicas: 1
+  persistence:
+    enabled: false
+
+read:
+  replicas: 0
+write:
+  replicas: 0
+backend:
+  replicas: 0
+
+gateway:
+  enabled: true
+
+test:
+  enabled: false
+
+monitoring:
+  selfMonitoring:
+    enabled: false
+  lokiCanary:
+    enabled: false
+
+ruler:
+  enabled: false
+
+chunksCache:
+  enabled: false
+
+resultsCache:
+  enabled: false

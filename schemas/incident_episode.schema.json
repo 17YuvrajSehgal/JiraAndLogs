@@ -1,0 +1,79 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://jira-telemetry.local/schemas/incident_episode.schema.json",
+  "title": "IncidentEpisode",
+  "type": "object",
+  "required": [
+    "incident_episode_id",
+    "dataset_run_id",
+    "scenario_id",
+    "start_time",
+    "end_time",
+    "affected_services",
+    "severity",
+    "jira_candidate",
+    "labels"
+  ],
+  "properties": {
+    "incident_episode_id": {"type": "string"},
+    "dataset_run_id": {"type": "string"},
+    "scenario_id": {"type": "string"},
+    "fault_id": {"type": ["string", "null"]},
+    "traffic_profile_id": {"type": "string"},
+    "start_time": {"type": "string", "format": "date-time"},
+    "end_time": {"type": "string", "format": "date-time"},
+    "affected_services": {
+      "type": "array",
+      "items": {"type": "string"},
+      "minItems": 1
+    },
+    "severity": {
+      "type": "string",
+      "enum": ["none", "minor", "major", "critical"]
+    },
+    "incident_type": {
+      "type": "string"
+    },
+    "root_cause_category": {
+      "type": "string"
+    },
+    "jira_candidate": {
+      "type": "boolean"
+    },
+    "jira_shadow_issue_id": {
+      "type": ["string", "null"]
+    },
+    "jira_issue_key": {
+      "type": ["string", "null"]
+    },
+    "alert_fingerprints": {
+      "type": "array",
+      "items": {"type": "string"}
+    },
+    "trace_ids": {
+      "type": "array",
+      "items": {"type": "string"}
+    },
+    "telemetry_window_ids": {
+      "type": "array",
+      "items": {"type": "string"}
+    },
+    "labels": {
+      "type": "object",
+      "additionalProperties": {"type": ["string", "number", "boolean", "null"]}
+    },
+    "ground_truth": {
+      "type": "object",
+      "properties": {
+        "injected": {"type": "boolean"},
+        "fault_type": {"type": ["string", "null"]},
+        "expected_user_impact": {"type": ["string", "null"]},
+        "expected_error_rate": {"type": ["string", "number", "null"]},
+        "expected_latency_impact": {"type": ["string", "number", "null"]}
+      },
+      "additionalProperties": true
+    }
+  },
+  "additionalProperties": false
+}
+

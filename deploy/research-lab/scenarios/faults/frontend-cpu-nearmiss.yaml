@@ -1,0 +1,34 @@
+schema_version: 1
+scenario_id: frontend-cpu-nearmiss
+title: Frontend CPU pressure near-miss
+dataset_run_id: local-dev-run-001
+traffic_profile_id: baseline-checkout-mix
+environment: research-local
+jira_candidate: false
+expected_jira:
+  issue_type: None
+  priority: None
+  components:
+    - frontend
+  labels:
+    - synthetic-nearmiss
+    - cpu-pressure
+    - frontend
+fault:
+  fault_id: frontend-cpu-pressure-001
+  fault_type: resource_pressure
+  affected_service: frontend
+  suggested_mechanism: inject moderate CPU pressure below user-visible impact threshold
+  expected_start_offset_seconds: 300
+  expected_duration_seconds: 300
+  blast_radius:
+    user_visible: false
+    expected_error_rate: very_low
+    expected_latency_impact: low
+labels:
+  severity: minor
+  incident_type: near_miss
+  root_cause_category: resource_pressure
+  should_alert: maybe
+  should_create_jira_shadow_issue: false
+

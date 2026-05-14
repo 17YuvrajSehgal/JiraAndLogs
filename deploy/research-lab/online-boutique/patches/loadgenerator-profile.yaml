@@ -1,0 +1,33 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: loadgenerator
+spec:
+  template:
+    metadata:
+      labels:
+        research.jira-telemetry/service-tier: traffic
+    spec:
+      containers:
+        - name: main
+          env:
+            - name: USERS
+              value: "25"
+            - name: RATE
+              value: "3"
+            - name: DATASET_RUN_ID
+              valueFrom:
+                configMapKeyRef:
+                  name: research-run-config
+                  key: DATASET_RUN_ID
+            - name: TRAFFIC_PROFILE_ID
+              valueFrom:
+                configMapKeyRef:
+                  name: research-run-config
+                  key: TRAFFIC_PROFILE_ID
+            - name: SCENARIO_ID
+              valueFrom:
+                configMapKeyRef:
+                  name: research-run-config
+                  key: SCENARIO_ID
+

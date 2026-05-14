@@ -1,0 +1,45 @@
+schema_version: 1
+scenario_id: cart-redis-degradation-critical
+title: Cart dependency degradation causes checkout failures
+dataset_run_id: local-dev-run-001
+traffic_profile_id: baseline-checkout-mix
+environment: research-local
+jira_candidate: true
+expected_jira:
+  issue_type: Incident
+  priority: Critical
+  components:
+    - cartservice
+    - redis-cart
+    - checkoutservice
+  labels:
+    - synthetic-incident
+    - dependency-failure
+    - cartservice
+    - redis
+    - telemetry-linked
+  summary_template: "Cart dependency degradation caused checkout failures"
+  description_template: |
+    Synthetic lab issue generated from scenario cart-redis-degradation-critical.
+
+    The cart dependency was degraded while checkout traffic was active. This
+    should produce request errors, retry behavior, and user-visible checkout
+    failures.
+fault:
+  fault_id: redis-cart-degradation-001
+  fault_type: dependency_degradation
+  affected_service: redis-cart
+  suggested_mechanism: inject pod kill, network loss, or resource pressure against redis-cart
+  expected_start_offset_seconds: 300
+  expected_duration_seconds: 600
+  blast_radius:
+    user_visible: true
+    expected_error_rate: high
+    expected_latency_impact: medium
+labels:
+  severity: critical
+  incident_type: outage
+  root_cause_category: dependency_failure
+  should_alert: true
+  should_create_jira_shadow_issue: true
+

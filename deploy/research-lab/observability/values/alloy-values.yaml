@@ -1,0 +1,91 @@
+controller:
+  type: daemonset
+
+serviceMonitor:
+  enabled: true
+
+alloy:
+  configMap:
+    create: true
+    content: |
+      logging {
+        level  = "info"
+        format = "logfmt"
+      }
+
+      discovery.kubernetes "pods" {
+        role = "pod"
+      }
+
+      discovery.relabel "pod_logs" {
+        targets = discovery.kubernetes.pods.targets
+
+        rule {
+          source_labels = ["__meta_kubernetes_namespace"]
+          regex = "online-boutique-research|observability"
+          action = "keep"
+        }
+
+        rule {
+          source_labels = ["__meta_kubernetes_namespace"]
+          target_label  = "namespace"
+        }
+
+        rule {
+          source_labels = ["__meta_kubernetes_pod_name"]
+          target_label  = "pod"
+        }
+
+        rule {
+          source_labels = ["__meta_kubernetes_pod_container_name"]
+          target_label  = "container"
+        }
+
+        rule {
+          source_labels = ["__meta_kubernetes_pod_label_app"]
+          target_label  = "app"
+        }
+
+        rule {
+          source_labels = ["__meta_kubernetes_pod_label_research_jira_telemetry_dataset"]
+          target_label  = "research_dataset"
+        }
+
+        rule {
+          source_labels = ["__meta_kubernetes_pod_label_research_jira_telemetry_service_tier"]
+          target_label  = "service_tier"
+        }
+      }
+
+      loki.source.kubernetes "pod_logs" {
+        targets    = discovery.relabel.pod_logs.output
+        forward_to = [loki.process.pod_logs.receiver]
+      }
+
+      loki.process "pod_logs" {
+        stage.json {
+          expressions = {
+            severity = "severity",
+            message = "message",
+            trace = "logging.googleapis.com/trace",
+            span_id = "logging.googleapis.com/spanId",
+            request_id = "http.req.id",
+            session = "session",
+          }
+        }
+
+        stage.labels {
+          values = {
+            severity = "",
+          }
+        }
+
+        forward_to = [loki.write.default.receiver]
+      }
+
+      loki.write "default" {
+        endpoint {
+          url = "http://loki-gateway.observability.svc.cluster.local/loki/api/v1/push"
+        }
+      }
+

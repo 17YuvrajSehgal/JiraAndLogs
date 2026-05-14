@@ -1,0 +1,33 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: online-boutique-research
+
+resources:
+  - ../../../microservices-demo-google/kustomize/base
+
+labels:
+  - pairs:
+      app.kubernetes.io/part-of: online-boutique-research
+      research.jira-telemetry/dataset: online-boutique-jira
+    includeSelectors: false
+    includeTemplates: true
+
+configMapGenerator:
+  - name: research-run-config
+    literals:
+      - DATASET_NAME=online-boutique-jira-telemetry
+      - DATASET_RUN_ID=local-dev-run-001
+      - DEPLOYMENT_ENVIRONMENT=research-local
+      - JIRA_MODE=shadow
+      - TRAFFIC_PROFILE_ID=baseline-checkout-mix
+      - SCENARIO_ID=baseline-normal-traffic
+
+images:
+  - name: busybox
+    newName: registry.k8s.io/e2e-test-images/busybox
+    newTag: 1.29-4
+
+patches:
+  - path: patches/enable-otel-and-research-env.yaml
+  - path: patches/loadgenerator-profile.yaml

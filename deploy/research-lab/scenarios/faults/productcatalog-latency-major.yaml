@@ -1,0 +1,42 @@
+schema_version: 1
+scenario_id: productcatalog-latency-major
+title: Product catalog latency causes user-visible browse degradation
+dataset_run_id: local-dev-run-001
+traffic_profile_id: baseline-checkout-mix
+environment: research-local
+jira_candidate: true
+expected_jira:
+  issue_type: Incident
+  priority: Major
+  components:
+    - productcatalogservice
+    - frontend
+  labels:
+    - synthetic-incident
+    - latency
+    - productcatalogservice
+    - telemetry-linked
+  summary_template: "Product catalog latency increased browse and checkout latency"
+  description_template: |
+    Synthetic lab issue generated from scenario productcatalog-latency-major.
+
+    Product catalog calls were intentionally delayed to create realistic
+    downstream latency in frontend browse and checkout paths.
+fault:
+  fault_id: productcatalog-extra-latency-001
+  fault_type: application_latency
+  affected_service: productcatalogservice
+  suggested_mechanism: set EXTRA_LATENCY on productcatalogservice or inject network latency
+  expected_start_offset_seconds: 300
+  expected_duration_seconds: 900
+  blast_radius:
+    user_visible: true
+    expected_error_rate: low
+    expected_latency_impact: high
+labels:
+  severity: major
+  incident_type: degradation
+  root_cause_category: dependency_latency
+  should_alert: true
+  should_create_jira_shadow_issue: true
+

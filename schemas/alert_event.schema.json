@@ -1,0 +1,48 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://jira-telemetry.local/schemas/alert_event.schema.json",
+  "title": "AlertEvent",
+  "type": "object",
+  "required": [
+    "alert_event_id",
+    "dataset_run_id",
+    "alert_name",
+    "status",
+    "starts_at",
+    "labels",
+    "annotations"
+  ],
+  "properties": {
+    "alert_event_id": {"type": "string"},
+    "dataset_run_id": {"type": "string"},
+    "incident_episode_id": {"type": ["string", "null"]},
+    "alert_fingerprint": {"type": "string"},
+    "alert_name": {"type": "string"},
+    "status": {
+      "type": "string",
+      "enum": ["firing", "resolved"]
+    },
+    "starts_at": {"type": "string", "format": "date-time"},
+    "ends_at": {"type": ["string", "null"], "format": "date-time"},
+    "generator_url": {"type": ["string", "null"]},
+    "labels": {
+      "type": "object",
+      "additionalProperties": {"type": ["string", "number", "boolean", "null"]}
+    },
+    "annotations": {
+      "type": "object",
+      "additionalProperties": {"type": ["string", "number", "boolean", "null"]}
+    },
+    "linked_trace_ids": {
+      "type": "array",
+      "items": {"type": "string"}
+    },
+    "linked_telemetry_window_ids": {
+      "type": "array",
+      "items": {"type": "string"}
+    },
+    "jira_candidate": {"type": "boolean"}
+  },
+  "additionalProperties": false
+}
+

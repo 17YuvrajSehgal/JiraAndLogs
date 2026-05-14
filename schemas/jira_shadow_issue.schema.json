@@ -1,0 +1,148 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://jira-telemetry.local/schemas/jira_shadow_issue.schema.json",
+  "title": "JiraShadowIssue",
+  "type": "object",
+  "required": [
+    "jira_shadow_issue_id",
+    "dataset_run_id",
+    "incident_episode_id",
+    "metadata",
+    "telemetry_links",
+    "history",
+    "activity"
+  ],
+  "properties": {
+    "jira_shadow_issue_id": {"type": "string"},
+    "jira_issue_key": {"type": ["string", "null"]},
+    "dataset_run_id": {"type": "string"},
+    "incident_episode_id": {"type": "string"},
+    "metadata": {
+      "type": "object",
+      "required": [
+        "summary",
+        "project_key",
+        "issue_type",
+        "status",
+        "priority",
+        "components",
+        "description",
+        "created_at"
+      ],
+      "properties": {
+        "summary": {"type": "string"},
+        "project_id": {"type": ["string", "null"]},
+        "project_key": {"type": "string"},
+        "project_name": {"type": ["string", "null"]},
+        "issue_type": {"type": "string"},
+        "status": {"type": "string"},
+        "priority": {"type": "string"},
+        "affects_versions": {"type": "array", "items": {"type": "string"}},
+        "components": {"type": "array", "items": {"type": "string"}},
+        "labels": {"type": "array", "items": {"type": "string"}},
+        "resolution": {"type": ["string", "null"]},
+        "fix_versions": {"type": "array", "items": {"type": "string"}},
+        "description": {"type": "string"},
+        "attachments": {"type": "array", "items": {"type": "object", "additionalProperties": true}},
+        "assignee": {"type": ["string", "null"]},
+        "reporter": {"type": ["string", "null"]},
+        "watcher_count": {"type": "integer"},
+        "created_at": {"type": "string", "format": "date-time"},
+        "updated_at": {"type": ["string", "null"], "format": "date-time"},
+        "resolved_at": {"type": ["string", "null"], "format": "date-time"},
+        "related_issues": {"type": "array", "items": {"type": "string"}},
+        "comments_id": {"type": "array", "items": {"type": "string"}},
+        "comments_body": {"type": "string"},
+        "development": {
+          "type": "object",
+          "properties": {
+            "commit_count": {"type": "integer"},
+            "pr_count": {"type": "integer"},
+            "branch_count": {"type": "integer"},
+            "repository_count": {"type": "integer"},
+            "last_updated": {"type": ["string", "null"]}
+          },
+          "additionalProperties": true
+        }
+      },
+      "additionalProperties": true
+    },
+    "telemetry_links": {
+      "type": "object",
+      "required": ["alert_fingerprints", "telemetry_window_ids", "trace_ids"],
+      "properties": {
+        "alert_fingerprints": {"type": "array", "items": {"type": "string"}},
+        "telemetry_window_ids": {"type": "array", "items": {"type": "string"}},
+        "trace_ids": {"type": "array", "items": {"type": "string"}},
+        "log_query": {"type": ["string", "null"]},
+        "metric_query": {"type": ["string", "null"]},
+        "trace_query": {"type": ["string", "null"]}
+      },
+      "additionalProperties": true
+    },
+    "history": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "author", "created", "items"],
+        "properties": {
+          "id": {"type": "string"},
+          "author": {"type": "string"},
+          "created": {"type": "string"},
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["field", "fieldtype"],
+              "properties": {
+                "field": {"type": "string"},
+                "fieldtype": {"type": "string"},
+                "from": {"type": ["string", "null"]},
+                "to": {"type": ["string", "null"]},
+                "from_id": {"type": ["string", "null"]},
+                "to_id": {"type": ["string", "null"]}
+              },
+              "additionalProperties": true
+            }
+          }
+        },
+        "additionalProperties": true
+      }
+    },
+    "activity": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["date", "events"],
+        "properties": {
+          "date": {"type": "string"},
+          "events": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["type", "id", "author", "timestamp", "description"],
+              "properties": {
+                "type": {"type": "string"},
+                "id": {"type": "string"},
+                "author": {"type": "string"},
+                "created": {"type": "string"},
+                "timestamp": {"type": "string"},
+                "field": {"type": ["string", "null"]},
+                "from": {"type": ["string", "null"]},
+                "to": {"type": ["string", "null"]},
+                "body": {"type": ["string", "null"]},
+                "description": {"type": "string"}
+              },
+              "additionalProperties": true
+            }
+          }
+        },
+        "additionalProperties": true
+      }
+    },
+    "worklog": {"type": "array", "items": {"type": "object", "additionalProperties": true}},
+    "submissions": {"type": "array", "items": {"type": "object", "additionalProperties": true}}
+  },
+  "additionalProperties": false
+}
+
