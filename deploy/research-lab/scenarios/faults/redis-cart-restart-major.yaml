@@ -1,0 +1,49 @@
+schema_version: 1
+scenario_id: redis-cart-restart-major
+title: Redis cart restart causes cart and checkout degradation
+dataset_run_id: local-dev-run-001
+traffic_profile_id: baseline-checkout-mix
+environment: research-local
+jira_candidate: true
+expected_jira:
+  issue_type: Incident
+  priority: Major
+  components:
+    - redis-cart
+    - cartservice
+    - checkoutservice
+  labels:
+    - synthetic-incident
+    - dependency-restart
+    - redis
+    - cartservice
+    - telemetry-linked
+  summary_template: "Redis cart restart caused cart and checkout degradation"
+  description_template: |
+    Synthetic lab issue generated from scenario redis-cart-restart-major.
+
+    Redis cart pods were restarted while cart and checkout traffic was active.
+    This should create transient dependency errors and recovery behavior.
+fault:
+  fault_id: redis-cart-pod-restart-001
+  fault_type: dependency_restart
+  affected_service: redis-cart
+  suggested_mechanism: delete redis-cart pods and observe cartservice behavior
+  expected_start_offset_seconds: 300
+  expected_duration_seconds: 300
+  blast_radius:
+    user_visible: true
+    expected_error_rate: medium
+    expected_latency_impact: medium
+labels:
+  severity: major
+  incident_type: degradation
+  root_cause_category: dependency_restart
+  should_alert: true
+  should_create_jira_shadow_issue: true
+execution:
+  action: RestartPods
+  namespace: online-boutique-research
+  target_kind: deployment
+  target_name: redis-cart
+  selector: app=redis-cart

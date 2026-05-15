@@ -1,0 +1,50 @@
+schema_version: 1
+scenario_id: checkoutservice-pod-restart-major
+title: Checkout service restart causes transient order failures
+dataset_run_id: local-dev-run-001
+traffic_profile_id: baseline-checkout-mix
+environment: research-local
+jira_candidate: true
+expected_jira:
+  issue_type: Incident
+  priority: Major
+  components:
+    - checkoutservice
+    - frontend
+    - cartservice
+    - paymentservice
+  labels:
+    - synthetic-incident
+    - pod-restart
+    - checkoutservice
+    - telemetry-linked
+  summary_template: "Checkout service restart caused transient order failures"
+  description_template: |
+    Synthetic lab issue generated from scenario checkoutservice-pod-restart-major.
+
+    Checkoutservice pods were restarted while user checkout traffic was active.
+    The episode should show restart evidence, failed checkout attempts, and
+    recovery after the replacement pod becomes ready.
+fault:
+  fault_id: checkoutservice-pod-restart-001
+  fault_type: pod_restart
+  affected_service: checkoutservice
+  suggested_mechanism: delete checkoutservice pods and observe replacement behavior
+  expected_start_offset_seconds: 300
+  expected_duration_seconds: 300
+  blast_radius:
+    user_visible: true
+    expected_error_rate: medium
+    expected_latency_impact: medium
+labels:
+  severity: major
+  incident_type: degradation
+  root_cause_category: workload_restart
+  should_alert: true
+  should_create_jira_shadow_issue: true
+execution:
+  action: RestartPods
+  namespace: online-boutique-research
+  target_kind: deployment
+  target_name: checkoutservice
+  selector: app=checkoutservice

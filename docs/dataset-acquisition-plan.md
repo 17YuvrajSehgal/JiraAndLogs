@@ -20,6 +20,12 @@ The current final MVP evaluation dataset is documented in:
 docs/mvp-evaluation-dataset.md
 ```
 
+The next realism-focused collection plan is documented in:
+
+```text
+docs/dataset-v2-realism-plan.md
+```
+
 For the ranking MVP to be credible, every training and evaluation example must
 be traceable to:
 
@@ -124,6 +130,17 @@ powershell -NoProfile -ExecutionPolicy Bypass -File scripts\research-lab\collect
   -Quick
 ```
 
+Plan-driven Dataset v2 workflow:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts\research-lab\collect-dataset-plan.ps1 `
+  -DatasetRunId "2026-05-14-dataset-v2-pilot-001" `
+  -PlanFile "deploy\research-lab\run-plans\dataset-v2-pilot.json" `
+  -Quick `
+  -BuildDerived `
+  -ForceNewRun
+```
+
 Useful options:
 
 - `-Quick`: uses shorter scenario durations for a smoke-quality dataset.
@@ -223,6 +240,11 @@ deploy/research-lab/scenarios/baselines/baseline-normal-traffic.yaml
 deploy/research-lab/scenarios/faults/productcatalog-latency-major.yaml
 deploy/research-lab/scenarios/faults/cart-redis-degradation-critical.yaml
 deploy/research-lab/scenarios/faults/frontend-cpu-nearmiss.yaml
+deploy/research-lab/scenarios/faults/paymentservice-unavailable-critical.yaml
+deploy/research-lab/scenarios/faults/checkoutservice-pod-restart-major.yaml
+deploy/research-lab/scenarios/faults/redis-cart-restart-major.yaml
+deploy/research-lab/scenarios/faults/recommendationservice-pod-restart-nearmiss.yaml
+deploy/research-lab/scenarios/faults/loadgenerator-traffic-spike-nearmiss.yaml
 ```
 
 The scenario runner currently supports these execution actions:
@@ -239,6 +261,11 @@ Current executable fault behavior:
 - `productcatalog-latency-major`: sets `EXTRA_LATENCY=750ms` on `productcatalogservice`.
 - `cart-redis-degradation-critical`: scales `redis-cart` to 0, then restores it to 1.
 - `frontend-cpu-nearmiss`: temporarily increases `loadgenerator` to `USERS=60` and `RATE=8`.
+- `paymentservice-unavailable-critical`: scales `paymentservice` to 0, then restores it to 1.
+- `checkoutservice-pod-restart-major`: deletes `checkoutservice` pods and waits for replacement readiness.
+- `redis-cart-restart-major`: deletes `redis-cart` pods and waits for replacement readiness.
+- `recommendationservice-pod-restart-nearmiss`: deletes `recommendationservice` pods as a non-Jira near miss.
+- `loadgenerator-traffic-spike-nearmiss`: temporarily increases `loadgenerator` to `USERS=100` and `RATE=12`.
 
 For `SetEnv` scenarios, include `execution.target_container` whenever the
 deployment has init containers or multiple containers. This keeps fault

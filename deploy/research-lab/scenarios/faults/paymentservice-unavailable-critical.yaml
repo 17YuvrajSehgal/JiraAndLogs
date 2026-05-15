@@ -1,0 +1,51 @@
+schema_version: 1
+scenario_id: paymentservice-unavailable-critical
+title: Payment service outage causes checkout failures
+dataset_run_id: local-dev-run-001
+traffic_profile_id: baseline-checkout-mix
+environment: research-local
+jira_candidate: true
+expected_jira:
+  issue_type: Incident
+  priority: Critical
+  components:
+    - paymentservice
+    - checkoutservice
+    - frontend
+  labels:
+    - synthetic-incident
+    - dependency-failure
+    - paymentservice
+    - checkout
+    - telemetry-linked
+  summary_template: "Payment service outage caused checkout failures"
+  description_template: |
+    Synthetic lab issue generated from scenario paymentservice-unavailable-critical.
+
+    Payment service capacity was removed while checkout traffic was active.
+    This should create user-visible checkout failures and payment-related
+    traces through checkoutservice and frontend.
+fault:
+  fault_id: paymentservice-scale-zero-001
+  fault_type: dependency_outage
+  affected_service: paymentservice
+  suggested_mechanism: scale paymentservice to zero replicas during checkout traffic
+  expected_start_offset_seconds: 300
+  expected_duration_seconds: 600
+  blast_radius:
+    user_visible: true
+    expected_error_rate: high
+    expected_latency_impact: medium
+labels:
+  severity: critical
+  incident_type: outage
+  root_cause_category: dependency_failure
+  should_alert: true
+  should_create_jira_shadow_issue: true
+execution:
+  action: ScaleDeployment
+  namespace: online-boutique-research
+  target_kind: deployment
+  target_name: paymentservice
+  replicas: 0
+  restore_replicas: 1

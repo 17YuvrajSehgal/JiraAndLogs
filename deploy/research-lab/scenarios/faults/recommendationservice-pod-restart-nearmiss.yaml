@@ -1,0 +1,40 @@
+schema_version: 1
+scenario_id: recommendationservice-pod-restart-nearmiss
+title: Recommendation service restart near-miss
+dataset_run_id: local-dev-run-001
+traffic_profile_id: baseline-checkout-mix
+environment: research-local
+jira_candidate: false
+expected_jira:
+  issue_type: None
+  priority: None
+  components:
+    - recommendationservice
+    - frontend
+  labels:
+    - synthetic-nearmiss
+    - pod-restart
+    - recommendationservice
+fault:
+  fault_id: recommendationservice-pod-restart-001
+  fault_type: pod_restart
+  affected_service: recommendationservice
+  suggested_mechanism: delete recommendationservice pods and observe automatic recovery
+  expected_start_offset_seconds: 300
+  expected_duration_seconds: 240
+  blast_radius:
+    user_visible: false
+    expected_error_rate: very_low
+    expected_latency_impact: low
+labels:
+  severity: minor
+  incident_type: near_miss
+  root_cause_category: workload_restart
+  should_alert: maybe
+  should_create_jira_shadow_issue: false
+execution:
+  action: RestartPods
+  namespace: online-boutique-research
+  target_kind: deployment
+  target_name: recommendationservice
+  selector: app=recommendationservice

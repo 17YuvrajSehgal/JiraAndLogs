@@ -30,9 +30,16 @@ The first dataset acquisition workflow now exists:
 - `scripts/research-lab/generate-shadow-jira-issues.ps1`
 - `scripts/research-lab/validate-dataset-run.ps1`
 - `scripts/research-lab/collect-dataset-run.ps1`
+- `scripts/research-lab/collect-dataset-plan.ps1`
 
 This workflow records dataset manifests, incident episodes, telemetry windows,
 alert events, raw Loki/Prometheus/Tempo exports, and Jira shadow issues.
+
+Dataset v2 planning has started in `docs/dataset-v2-realism-plan.md`. The first
+executable v2 run plan is `deploy/research-lab/run-plans/dataset-v2-pilot.json`.
+It adds payment outage, checkout restart, Redis restart, recommendation restart
+near-miss, and traffic spike near-miss scenarios while staying inside the
+current runner capabilities.
 
 The telemetry exporter now writes padded Loki context at two levels:
 

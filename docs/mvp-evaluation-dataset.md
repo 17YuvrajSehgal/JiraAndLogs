@@ -4,6 +4,12 @@ This document records the current final lab dataset for ranking-MVP testing.
 It is the dataset we should use to test the first internal application version
 and to decide which ranker improvements are worth implementing next.
 
+The next dataset stage is Dataset v2, documented in:
+
+```text
+docs/dataset-v2-realism-plan.md
+```
+
 The dataset is intentionally small but complete. It contains repeated controlled
 runs from the Google Online Boutique research lab, shadow Jira issues, raw
 telemetry exports, derived ranking examples, and cross-run baseline metrics.
