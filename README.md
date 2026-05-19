@@ -492,11 +492,28 @@ deploy/research-lab/corpora/dataset-v3-production-corpus.json
 scripts/research-lab/collect-dataset-corpus.ps1
 ```
 
-Dataset v3 is designed for larger ML, NLP, AI, and agent benchmarks. It expands
-the lab to 40 planned production-style runs, 500+ episodes, 260+ shadow Jira
-issues, service-diverse outage/restart/latency cases, and harder near misses.
-It should be collected in batches and reviewed before it replaces any current
-benchmark pointer.
+Dataset v3 is designed for larger ML, NLP, AI, and agent benchmarks. The active
+default is now a compact production corpus rather than the older 40-run stress
+plan. The completed compact corpus is:
+
+```text
+2026-05-19-dataset-v3-compact
+```
+
+It contains 6 dataset runs, 69 episodes, 39 shadow Jira issues, 576 telemetry
+windows, and 462 ranking examples. It keeps service-diverse outage, restart,
+latency, bad configuration, Redis, traffic, and near-miss cases while staying
+practical to collect on the local lab.
+
+Current compact corpus reports:
+
+```text
+data/derived/aggregate/2026-05-19-dataset-v3-compact-aggregate/cross-run-evaluation.md
+data/derived/holdout/2026-05-19-dataset-v3-compact-holdout/run-aware-holdout-evaluation.md
+```
+
+This corpus is a harder research stress test. It should not replace the locked
+v2 MVP baseline until its failure families and data-quality limits are reviewed.
 
 ## Original MVP Final Results
 
@@ -531,21 +548,23 @@ misses: traffic pressure sometimes outranked productcatalog latency, and Redis
 outage sometimes outranked Redis restart.
 
 The first v2 feature iteration fixed those pilot misses by adding active-window
-deltas and telemetry-shape features. The next improvement should not be another
-manual weight tweak on the same runs. The next step is to collect the larger
-Dataset v3 production corpus, split by run id, and test whether any feature
-policy or learned model generalizes across services, fault families, traffic
-noise, and noisy Jira text.
+deltas and telemetry-shape features. The compact Dataset v3 corpus now gives us
+a harder test bed split by run id. The next improvement should not be another
+manual weight tweak on one run. The next step is to build model-ready global
+hard negatives and test whether feature policies, retrieval methods, or learned
+rankers generalize across services, fault families, traffic noise, and noisy
+Jira text.
 
 Promising improvements after Dataset v3 collection:
 
 - run train/validation/test splits by dataset run id,
 - report metrics by fault family and affected service,
+- add global hard-negative candidate generation across runs,
+- train a simple supervised model over the exported component features,
 - add service-local latency deltas,
 - add Prometheus error-rate and restart deltas,
 - use trace span latency and root-service features,
-- add global hard-negative candidate generation across runs,
-- train a simple supervised model over the exported component features,
+- tune or learn the service-delta and traffic-pressure contributions,
 - later, add retrieval against historical Jira issue text.
 
 ## How To Rebuild The Lab
@@ -613,39 +632,34 @@ powershell -NoProfile -ExecutionPolicy Bypass -File scripts\research-lab\collect
   -ForceNewRun
 ```
 
-## How To Collect The Large Dataset v3 Corpus
+## How To Collect The Compact Dataset v3 Corpus
 
-Use the corpus wrapper when the goal is a large benchmark instead of a single
-run:
-
-```powershell
-powershell -NoProfile -ExecutionPolicy Bypass -File scripts\research-lab\collect-dataset-corpus.ps1 `
-  -DatasetRunPrefix "2026-05-16-dataset-v3-corpus" `
-  -MaxRuns 3 `
-  -ForceNewRun
-```
-
-This runs the first three planned corpus runs, builds derived ranking outputs
-for each run, and then builds corpus aggregate and run-aware holdout reports.
-
-Continue in batches:
+Use the corpus wrapper when the goal is a benchmark corpus instead of a single
+run. Preview first:
 
 ```powershell
 powershell -NoProfile -ExecutionPolicy Bypass -File scripts\research-lab\collect-dataset-corpus.ps1 `
-  -DatasetRunPrefix "2026-05-16-dataset-v3-corpus" `
-  -StartAt 4 `
-  -MaxRuns 4 `
-  -ForceNewRun
-```
-
-Preview before running:
-
-```powershell
-powershell -NoProfile -ExecutionPolicy Bypass -File scripts\research-lab\collect-dataset-corpus.ps1 `
-  -DatasetRunPrefix "2026-05-16-dataset-v3-corpus" `
-  -MaxRuns 3 `
+  -DatasetRunPrefix "2026-05-19-dataset-v3-compact" `
   -PlanOnly
 ```
+
+Collect the complete compact corpus from scratch:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts\research-lab\collect-dataset-corpus.ps1 `
+  -DatasetRunPrefix "2026-05-19-dataset-v3-compact" `
+  -ForceNewRun
+```
+
+Resume an interrupted collection without rebuilding completed validated runs:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts\research-lab\collect-dataset-corpus.ps1 `
+  -DatasetRunPrefix "2026-05-19-dataset-v3-compact"
+```
+
+This builds derived ranking outputs for each run, then builds corpus aggregate
+and run-aware holdout reports.
 
 The full runbook is:
 
@@ -747,15 +761,17 @@ For the first application test, the MVP should:
 
 ## Current Limitations
 
-This is a strong local MVP dataset, but it is not yet a production-scale
-benchmark.
+This is a strong local MVP and research corpus, but it is not yet a
+production-scale benchmark.
 
 Known limitations:
 
 - only four final v2 runs are in the current aggregate,
+- the compact v3 corpus has 6 runs and 39 Jira-linked queries, which is enough
+  for benchmark development but still small for model claims,
 - all current final runs are same-day local lab runs,
 - shadow Jira issues are generated, not created by real engineers,
-- only a small set of fault types exists,
+- v3 adds more fault families, but all faults still come from a controlled lab,
 - some Online Boutique services have weaker trace coverage,
 - the current raw ranker uses simple deterministic scoring, not a trained model.
 
@@ -770,15 +786,10 @@ Before making external research claims, we should add:
 - stronger schema validation,
 - trained ranking baselines and ablation studies.
 
-The concrete next step is to collect the first Dataset v3 production corpus
-batch, then inspect the batch before scaling to all planned runs:
-
-```powershell
-powershell -NoProfile -ExecutionPolicy Bypass -File scripts\research-lab\collect-dataset-corpus.ps1 `
-  -DatasetRunPrefix "2026-05-16-dataset-v3-corpus" `
-  -MaxRuns 3 `
-  -ForceNewRun
-```
+The concrete next step is to use the completed compact v3 corpus to build a
+global hard-negative ranking dataset and a first learned or retrieval baseline.
+The main raw telemetry failure mode to address is the service-delta signal
+ranking traffic spikes or downstream symptom services above the true incident.
 
 ## Where To Read More
 

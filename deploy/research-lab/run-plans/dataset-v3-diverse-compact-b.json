@@ -1,0 +1,95 @@
+{
+  "schema_version": 1,
+  "plan_id": "dataset-v3-diverse-compact-b",
+  "title": "Dataset v3 diverse compact plan B",
+  "description": "Compact production-style mix covering service-diverse outages, frontend and Redis restarts, intermittent Redis failure, and noisy traffic near misses.",
+  "environment": "research-local",
+  "traffic_profile_id": "baseline-checkout-mix",
+  "default_post_window_seconds": 75,
+  "quick_duration_seconds": 75,
+  "quick_post_window_seconds": 45,
+  "realistic_jira_noise": true,
+  "target_use": "Shorter diverse corpus collection for outage-vs-restart and near-miss benchmark development",
+  "scenarios": [
+    {
+      "scenario_file": "deploy\\research-lab\\scenarios\\baselines\\baseline-normal-traffic.yaml",
+      "role": "negative_baseline",
+      "duration_seconds": 90,
+      "post_window_seconds": 0,
+      "notes": "Healthy pre-fault traffic."
+    },
+    {
+      "scenario_file": "deploy\\research-lab\\scenarios\\faults\\checkoutservice-unavailable-critical.yaml",
+      "role": "positive_incident",
+      "duration_seconds": 210,
+      "notes": "Checkout service outage."
+    },
+    {
+      "scenario_file": "deploy\\research-lab\\scenarios\\faults\\productcatalog-unavailable-critical.yaml",
+      "role": "positive_incident",
+      "duration_seconds": 210,
+      "notes": "Catalog outage."
+    },
+    {
+      "scenario_file": "deploy\\research-lab\\scenarios\\faults\\currencyservice-unavailable-major.yaml",
+      "role": "positive_incident",
+      "duration_seconds": 180,
+      "notes": "Currency dependency outage."
+    },
+    {
+      "scenario_file": "deploy\\research-lab\\scenarios\\faults\\shippingservice-unavailable-major.yaml",
+      "role": "positive_incident",
+      "duration_seconds": 180,
+      "notes": "Shipping quote outage."
+    },
+    {
+      "scenario_file": "deploy\\research-lab\\scenarios\\faults\\recommendationservice-unavailable-major.yaml",
+      "role": "positive_incident",
+      "duration_seconds": 180,
+      "notes": "Recommendation outage."
+    },
+    {
+      "scenario_file": "deploy\\research-lab\\scenarios\\faults\\adservice-unavailable-nearmiss.yaml",
+      "role": "negative_near_miss",
+      "duration_seconds": 120,
+      "notes": "Ad outage near miss."
+    },
+    {
+      "scenario_file": "deploy\\research-lab\\scenarios\\faults\\frontend-pod-restart-major.yaml",
+      "role": "positive_incident",
+      "duration_seconds": 150,
+      "notes": "Frontend restart incident."
+    },
+    {
+      "scenario_file": "deploy\\research-lab\\scenarios\\faults\\redis-cart-restart-major.yaml",
+      "role": "positive_incident",
+      "duration_seconds": 150,
+      "notes": "Redis restart incident."
+    },
+    {
+      "scenario_file": "deploy\\research-lab\\scenarios\\faults\\redis-cart-intermittent-failure-major.yaml",
+      "role": "positive_incident",
+      "duration_seconds": 150,
+      "notes": "Intermittent Redis failure."
+    },
+    {
+      "scenario_file": "deploy\\research-lab\\scenarios\\faults\\cartservice-pod-restart-nearmiss.yaml",
+      "role": "negative_near_miss",
+      "duration_seconds": 120,
+      "notes": "Cart restart near miss."
+    },
+    {
+      "scenario_file": "deploy\\research-lab\\scenarios\\faults\\loadgenerator-traffic-spike-nearmiss.yaml",
+      "role": "negative_near_miss",
+      "duration_seconds": 150,
+      "notes": "Traffic spike near miss."
+    },
+    {
+      "scenario_file": "deploy\\research-lab\\scenarios\\baselines\\baseline-normal-traffic.yaml",
+      "role": "negative_baseline",
+      "duration_seconds": 90,
+      "post_window_seconds": 0,
+      "notes": "Healthy restored traffic."
+    }
+  ]
+}

@@ -221,6 +221,10 @@ foreach ($run in $selectedRuns) {
         Write-Host "Skipping existing corpus run:"
         Write-Host "  dataset_run_id: $runId"
         Write-Host "  reason: manifest already exists; use -ForceNewRun to rebuild it"
+        $validationReport = Join-ResearchLabPath @($runRoot, "summaries", "validation-report.json")
+        if (-not (Test-Path -LiteralPath $validationReport)) {
+            throw "Existing corpus run has a manifest but no validation report: $runId. Remove the partial run or rerun this range with -ForceNewRun."
+        }
         if ((-not $SkipDerivedBuild) -and (-not (Test-DerivedRunExists -DatasetRunId $runId))) {
             Write-Host "  derived_status: missing; rebuilding derived ranking data"
             & powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $PSScriptRoot "build-ranking-dataset.ps1") `

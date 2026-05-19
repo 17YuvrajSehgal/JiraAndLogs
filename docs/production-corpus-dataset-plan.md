@@ -1,10 +1,11 @@
 # Production Corpus Dataset Plan
 
-This document describes the large Dataset v3 production corpus we will collect
-before building more ML, NLP, AI, or agent pipelines.
+This document describes the compact Dataset v3 production corpus we collect
+before building heavier ML, NLP, AI, or agent pipelines.
 
 The goal is simple: create a dataset that is hard enough that a weak pipeline
-cannot look good by accident.
+cannot look good by accident, while keeping collection practical on the local
+Kubernetes lab.
 
 Dataset v2 final remains the locked MVP baseline:
 
@@ -12,73 +13,147 @@ Dataset v2 final remains the locked MVP baseline:
 dataset-v2-final-production-v1
 ```
 
-Dataset v3 is the next research corpus. It is meant for serious benchmark
-development, not for replacing the locked MVP baseline until it has been
-collected, validated, and reviewed.
+Dataset v3 is the next research corpus. It is meant for benchmark development,
+not for replacing the locked MVP baseline until it has been collected,
+validated, and reviewed.
 
-## Why We Need A Bigger Corpus
+## Why The Corpus Is Compact
 
-Small observability datasets make ranking pipelines look better than they are.
-They usually have too few services, too few near misses, and too few similar
-incidents. That causes three problems:
+The earlier 40-run corpus design was valid but too slow for the current local
+workflow. Ten full foundation runs took more than 24 hours, so the default
+corpus is now compacted to 6 balanced runs.
 
-- models learn scenario names instead of operational behavior,
-- retrieval systems overfit to obvious service overlap,
-- agent pipelines appear useful because the candidate set is too easy.
+This is the tradeoff:
 
-Dataset v3 intentionally adds repeated runs, service diversity, hard negatives,
-restart-vs-outage confusion, noisy Jira text, and high-volume telemetry.
+- keep service diversity,
+- keep restart-vs-outage confusion,
+- keep latency-vs-config confusion,
+- keep noisy near misses,
+- keep full telemetry export and realistic Jira noise,
+- reduce repeated same-family runs,
+- use shorter active and recovery windows.
 
-## What Dataset v3 Contains
+The older large plan files remain in the repository as optional stress-test
+material, but the default top-level corpus manifest now points to the compact
+plans.
 
-The corpus is controlled by:
+## Corpus Manifest
+
+The active corpus is controlled by:
 
 ```text
 deploy/research-lab/corpora/dataset-v3-production-corpus.json
 ```
 
-It expands into four run-plan families:
+It expands into two compact run-plan families:
 
 | Plan | Purpose |
 | --- | --- |
-| `dataset-v3-corpus-foundation` | Broad mix of baseline, latency, outage, restart, degradation, and noisy near-miss cases. |
-| `dataset-v3-corpus-outage-heavy` | Service-diverse outage coverage across checkout, catalog, payment, currency, shipping, recommendation, ad, and Redis. |
-| `dataset-v3-corpus-restart-traffic` | Restart-heavy and traffic-heavy cases for restart, recovery, and near-miss separation. |
-| `dataset-v3-corpus-latency-config` | Productcatalog latency, bad configuration, outage, and traffic cases that look similar but mean different things. |
+| `dataset-v3-diverse-compact-a` | Latency, dependency outage, restart, Redis degradation, bad configuration, and near-miss coverage. |
+| `dataset-v3-diverse-compact-b` | Service-diverse outages, frontend and Redis restarts, intermittent Redis failure, and noisy traffic coverage. |
 
-The full corpus manifest currently targets:
+Target size:
 
 | Item | Target |
 | --- | ---: |
-| Dataset runs | 40 |
-| Incident or baseline episodes | 510 |
-| Shadow Jira issues | 262 |
-| Telemetry windows | 4000+ |
-| Current per-run ranking pairs | 3000+ |
-| Future global hard-negative pairs | 50000+ |
+| Dataset runs | 6 |
+| Incident or baseline episodes | 69 |
+| Shadow Jira issues | 39 |
+| Telemetry windows | 500+ |
+| Current per-run ranking pairs | 450+ |
+| Future global hard-negative pairs | 2500+ |
 
 The current derived builder creates per-run ranking pairs. Later, without
 recollecting telemetry, we can add a global hard-negative builder that pairs
-each Jira issue against candidates from all corpus runs. That is how this same
-raw corpus can support much larger ML and retrieval benchmarks.
+each Jira issue against candidates from all corpus runs.
+
+## Completed Compact Corpus
+
+The first complete compact corpus run finished on 2026-05-19:
+
+```text
+2026-05-19-dataset-v3-compact
+```
+
+Corpus manifest:
+
+```text
+data/derived/corpora/2026-05-19-dataset-v3-compact/corpus-run-manifest.json
+```
+
+Completed size:
+
+| Item | Count |
+| --- | ---: |
+| Dataset runs | 6 |
+| Episodes | 69 |
+| Shadow Jira issues | 39 |
+| Telemetry windows | 576 |
+| Ranking examples | 462 |
+| Positive examples | 39 |
+| Negative examples | 423 |
+
+Every raw run validation report showed 0 errors and 0 warnings.
+
+Aggregate and holdout reports:
+
+```text
+data/derived/aggregate/2026-05-19-dataset-v3-compact-aggregate/cross-run-evaluation.md
+data/derived/holdout/2026-05-19-dataset-v3-compact-holdout/run-aware-holdout-evaluation.md
+```
+
+Pooled run-aware holdout metrics:
+
+| Profile | Uses candidate labels | MRR | Recall@1 | Recall@3 | F1@1 | F1@3 | nDCG@3 |
+| --- | --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| `label_aware_baseline` | Yes | 0.805556 | 0.641026 | 0.974359 | 0.641026 | 0.487179 | 0.844621 |
+| `raw_telemetry` | No | 0.572934 | 0.358974 | 0.74359 | 0.358974 | 0.371795 | 0.581497 |
+
+The raw telemetry baseline is much weaker here than on Dataset v2. That is
+expected and useful: v3 has more service-diverse incidents, more near misses,
+and more cases where symptoms in one service compete with root evidence in
+another service.
+
+Main raw telemetry top-1 failure reasons:
+
+| Failure reason | Count |
+| --- | ---: |
+| `service_delta_signal_favored_rank1` | 20 |
+| `raw_text_overlap_favored_rank1` | 3 |
+| `traffic_pressure_overweighted` | 2 |
+
+This means the next product/research step should focus on better separating
+root-cause services from downstream symptom services and high-traffic near
+misses. The failure analysis is already exported in:
+
+```text
+data/derived/aggregate/2026-05-19-dataset-v3-compact-aggregate/raw-telemetry-failure-analysis.csv
+```
 
 ## Scenario Coverage
 
-Dataset v3 includes the existing v2.1 hard cases plus these additional
-production-style variants:
+Dataset v3 includes these production-style variants:
 
 | Scenario | Type | Jira issue |
 | --- | --- | --- |
+| `productcatalog-latency-major` | Latency degradation | Yes |
+| `paymentservice-unavailable-critical` | Checkout dependency outage | Yes |
+| `checkoutservice-pod-restart-major` | User-visible restart | Yes |
+| `cart-redis-degradation-critical` | Cart/Redis outage | Yes |
+| `productcatalog-bad-config-critical` | Configuration-style degradation | Yes |
+| `productcatalog-latency-nearmiss` | Small latency near miss | No |
+| `loadgenerator-noisy-high-traffic-nearmiss` | High traffic near miss | No |
 | `checkoutservice-unavailable-critical` | Checkout outage | Yes |
 | `productcatalog-unavailable-critical` | Browse/catalog outage | Yes |
 | `currencyservice-unavailable-major` | Checkout dependency outage | Yes |
 | `shippingservice-unavailable-major` | Shipping quote outage | Yes |
-| `recommendationservice-unavailable-major` | Browse path outage | Yes |
-| `adservice-unavailable-nearmiss` | Noisy non-critical dependency outage | No |
-| `frontend-pod-restart-major` | User-visible restart | Yes |
-| `paymentservice-pod-restart-major` | Checkout dependency restart | Yes |
+| `recommendationservice-unavailable-major` | Browse dependency outage | Yes |
+| `adservice-unavailable-nearmiss` | Non-critical dependency near miss | No |
+| `frontend-pod-restart-major` | Frontend restart | Yes |
+| `redis-cart-restart-major` | Redis restart | Yes |
+| `redis-cart-intermittent-failure-major` | Intermittent Redis failure | Yes |
 | `cartservice-pod-restart-nearmiss` | Restart near miss | No |
-| `productcatalog-latency-nearmiss` | Small latency near miss | No |
+| `loadgenerator-traffic-spike-nearmiss` | Traffic spike near miss | No |
 
 The important point is not just adding more incidents. We are adding similar
 but not identical incidents so the ranker must separate:
@@ -130,105 +205,65 @@ Start from the repository root:
 Set-Location C:\workplace\JiraAndLogs
 ```
 
-Preview the first three planned corpus runs without collecting data:
+Preview the planned compact corpus without collecting data:
 
 ```powershell
 powershell -NoProfile -ExecutionPolicy Bypass -File scripts\research-lab\collect-dataset-corpus.ps1 `
-  -DatasetRunPrefix "2026-05-16-dataset-v3-corpus" `
-  -MaxRuns 3 `
+  -DatasetRunPrefix "2026-05-19-dataset-v3-compact" `
   -PlanOnly
 ```
 
-Run a one-run smoke test if the cluster was restarted:
+Run a one-run smoke test if Docker or Kubernetes was restarted:
 
 ```powershell
 powershell -NoProfile -ExecutionPolicy Bypass -File scripts\research-lab\collect-dataset-corpus.ps1 `
-  -DatasetRunPrefix "2026-05-16-dataset-v3-corpus-smoke" `
+  -DatasetRunPrefix "2026-05-19-dataset-v3-compact-smoke" `
   -MaxRuns 1 `
   -Quick `
   -ForceNewRun
 ```
 
-Collect the first production batch:
+Collect the complete compact diverse corpus:
 
 ```powershell
 powershell -NoProfile -ExecutionPolicy Bypass -File scripts\research-lab\collect-dataset-corpus.ps1 `
-  -DatasetRunPrefix "2026-05-16-dataset-v3-corpus" `
-  -MaxRuns 3 `
+  -DatasetRunPrefix "2026-05-19-dataset-v3-compact" `
   -ForceNewRun
 ```
 
-Continue with the next batch:
+If you want a smaller first batch, run two corpus runs first:
 
 ```powershell
 powershell -NoProfile -ExecutionPolicy Bypass -File scripts\research-lab\collect-dataset-corpus.ps1 `
-  -DatasetRunPrefix "2026-05-16-dataset-v3-corpus" `
-  -StartAt 4 `
-  -MaxRuns 4 `
+  -DatasetRunPrefix "2026-05-19-dataset-v3-compact" `
+  -MaxRuns 2 `
   -ForceNewRun
 ```
 
-Collect the full remaining corpus only after early batches validate:
+Then continue:
 
 ```powershell
 powershell -NoProfile -ExecutionPolicy Bypass -File scripts\research-lab\collect-dataset-corpus.ps1 `
-  -DatasetRunPrefix "2026-05-16-dataset-v3-corpus" `
-  -StartAt 8
+  -DatasetRunPrefix "2026-05-19-dataset-v3-compact" `
+  -StartAt 3 `
+  -ForceNewRun
 ```
 
-The wrapper skips an existing run if its raw manifest already exists and
-`-ForceNewRun` is not supplied. This lets us resume collection without
-re-running completed runs.
-
-## Current Collection Status
-
-As of 2026-05-17, the first production batch completed:
-
-| Item | Value |
-| --- | --- |
-| Corpus prefix | `2026-05-16-dataset-v3-corpus` |
-| Completed runs | `foundation-r01`, `foundation-r02`, `foundation-r03` |
-| Validation | 0 errors, 0 warnings on all three runs |
-| Derived runs available | 3 |
-| Aggregate id | `2026-05-16-dataset-v3-corpus-aggregate` |
-| Holdout id | `2026-05-16-dataset-v3-corpus-holdout` |
-
-First-batch aggregate size:
-
-| Item | Count |
-| --- | ---: |
-| Dataset runs | 3 |
-| Candidate episodes | 45 |
-| Shadow Jira query issues | 24 |
-| Ranking examples | 360 |
-| Positive examples | 24 |
-| Negative examples | 336 |
-
-First-batch metrics:
-
-| Profile | MRR | Recall@1 | Recall@3 | F1@1 | F1@3 | nDCG@3 |
-| --- | ---: | ---: | ---: | ---: | ---: | ---: |
-| `label_aware_baseline` | 0.6875 | 0.458333 | 0.916667 | 0.458333 | 0.458333 | 0.731143 |
-| `raw_telemetry` | 0.513194 | 0.291667 | 0.625 | 0.291667 | 0.3125 | 0.4747 |
-
-These lower scores are expected for the v3 corpus foundation batch. The batch
-is deliberately harder than the locked v2 MVP benchmark and should be treated
-as a stress-test corpus, not as evidence that the product ranker is ready.
+The wrapper skips an existing run if its raw manifest and validation report
+already exist and `-ForceNewRun` is not supplied. This lets us resume collection
+without re-running completed runs.
 
 ## Batch Strategy
 
-Do not start with all 40 runs. Use this sequence:
+The compact corpus can be run end to end. Use this sequence:
 
 1. Run `-PlanOnly` to confirm the selected run ids.
 2. Run one quick smoke collection after any Docker or cluster restart.
-3. Run the first 3 full production runs.
+3. Run the full compact corpus, or run the first 2 runs as a smaller batch.
 4. Inspect validation reports and derived metrics.
-5. Continue in 4-run batches until the full corpus is complete.
+5. Continue only if the first batch validates cleanly.
 
-This keeps the dataset large without making one failed step waste an entire
-night.
-
-## Outputs To Inspect After Each Batch
+## Outputs To Inspect
 
 For each raw run:
 
@@ -256,7 +291,7 @@ data/derived/holdout/<DATASET_RUN_PREFIX>-holdout/
 
 ## Acceptance Gates
 
-A batch is acceptable only if:
+A corpus run is acceptable only if:
 
 - every selected run validates with 0 errors,
 - raw logs, metrics, traces, alerts, and Kubernetes exports exist,
@@ -271,7 +306,7 @@ Warnings are allowed only when they are understood and documented.
 ## What Good Results Look Like
 
 For Dataset v3, perfect scores are not the goal. We expect weaker metrics than
-the locked v2 baseline because the candidate set is larger and harder.
+the locked v2 baseline because the candidate set is harder.
 
 Useful failures include:
 
@@ -286,9 +321,9 @@ These are exactly the cases that make the eventual product more credible.
 ## Promotion Rule
 
 Dataset v3 should not become the new official benchmark just because it is
-larger. Promote it only after:
+larger or newer. Promote it only after:
 
-- at least the first 12 full production runs validate cleanly,
+- all compact corpus runs validate cleanly,
 - aggregate and holdout reports are reviewed,
 - failure families are documented,
 - known data-quality issues are separated from true ranking difficulty,

@@ -2,50 +2,38 @@
   "schema_version": 1,
   "corpus_id": "dataset-v3-production-corpus",
   "title": "Dataset v3 production corpus",
-  "description": "Large, diverse, production-style Online Boutique observability corpus for testing ranking, ML, NLP, AI, and agent approaches without overestimating performance.",
+  "description": "Compact, diverse, production-style Online Boutique observability corpus for testing ranking, ML, NLP, AI, and agent approaches without overestimating performance.",
   "locked_baseline": "dataset-v2-final-production-v1",
   "development_stage": "dataset-first research benchmark expansion",
   "default_dataset_run_prefix": "dataset-v3-production-corpus",
   "aggregate_id_suffix": "aggregate",
   "holdout_id_suffix": "holdout",
   "collection_strategy": {
-    "first_batch_runs": 3,
-    "recommended_batch_runs": 4,
-    "full_corpus_runs": 40,
-    "why_batch_collection": "The full corpus is intentionally large for a local Kubernetes lab. Batch collection lets us validate data quality and resume without discarding completed runs.",
+    "first_batch_runs": 2,
+    "recommended_batch_runs": 2,
+    "full_corpus_runs": 6,
+    "why_batch_collection": "The corpus is intentionally compact enough to finish in a practical local run while preserving diverse fault families. Batch collection still lets us validate data quality and resume without discarding completed runs.",
     "expected_full_scale": {
-      "dataset_runs": 40,
-      "episodes": 510,
-      "shadow_jira_issues": 262,
-      "telemetry_windows": "4000+",
-      "per_run_ranking_pairs": "3000+",
-      "future_global_hard_negative_pairs": "50000+"
+      "dataset_runs": 6,
+      "episodes": 69,
+      "shadow_jira_issues": 39,
+      "telemetry_windows": "500+",
+      "per_run_ranking_pairs": "450+",
+      "future_global_hard_negative_pairs": "2500+"
     }
   },
   "plans": [
     {
-      "plan_alias": "foundation",
-      "plan_file": "deploy\\research-lab\\run-plans\\dataset-v3-corpus-foundation.json",
-      "repeat": 12,
-      "purpose": "Broad scenario mix preserving v2.1 hard cases."
+      "plan_alias": "compact-a",
+      "plan_file": "deploy\\research-lab\\run-plans\\dataset-v3-diverse-compact-a.json",
+      "repeat": 3,
+      "purpose": "Latency, dependency outage, restart, Redis degradation, bad configuration, and near-miss coverage."
     },
     {
-      "plan_alias": "outage",
-      "plan_file": "deploy\\research-lab\\run-plans\\dataset-v3-corpus-outage-heavy.json",
-      "repeat": 10,
-      "purpose": "Service-diverse outage and dependency-failure coverage."
-    },
-    {
-      "plan_alias": "restart-traffic",
-      "plan_file": "deploy\\research-lab\\run-plans\\dataset-v3-corpus-restart-traffic.json",
-      "repeat": 10,
-      "purpose": "Restart, recovery, traffic spike, and near-miss coverage."
-    },
-    {
-      "plan_alias": "latency-config",
-      "plan_file": "deploy\\research-lab\\run-plans\\dataset-v3-corpus-latency-config.json",
-      "repeat": 8,
-      "purpose": "Latency, bad configuration, and service-local hard cases."
+      "plan_alias": "compact-b",
+      "plan_file": "deploy\\research-lab\\run-plans\\dataset-v3-diverse-compact-b.json",
+      "repeat": 3,
+      "purpose": "Service-diverse outages, frontend and Redis restarts, intermittent Redis failure, and noisy traffic coverage."
     }
   ],
   "benchmark_tracks": [

@@ -1,0 +1,77 @@
+{
+  "schema_version": 1,
+  "plan_id": "dataset-v3-diverse-compact-a",
+  "title": "Dataset v3 diverse compact plan A",
+  "description": "Compact production-style mix covering latency, dependency outage, restart, Redis degradation, bad configuration, and near misses with shorter windows.",
+  "environment": "research-local",
+  "traffic_profile_id": "baseline-checkout-mix",
+  "default_post_window_seconds": 75,
+  "quick_duration_seconds": 75,
+  "quick_post_window_seconds": 45,
+  "realistic_jira_noise": true,
+  "target_use": "Shorter diverse corpus collection for ML, NLP, AI, and agent benchmark development",
+  "scenarios": [
+    {
+      "scenario_file": "deploy\\research-lab\\scenarios\\baselines\\baseline-normal-traffic.yaml",
+      "role": "negative_baseline",
+      "duration_seconds": 90,
+      "post_window_seconds": 0,
+      "notes": "Healthy pre-fault traffic."
+    },
+    {
+      "scenario_file": "deploy\\research-lab\\scenarios\\faults\\productcatalog-latency-major.yaml",
+      "role": "positive_incident",
+      "duration_seconds": 240,
+      "notes": "Catalog latency incident."
+    },
+    {
+      "scenario_file": "deploy\\research-lab\\scenarios\\faults\\paymentservice-unavailable-critical.yaml",
+      "role": "positive_incident",
+      "duration_seconds": 180,
+      "notes": "Payment dependency outage."
+    },
+    {
+      "scenario_file": "deploy\\research-lab\\scenarios\\faults\\recommendationservice-pod-restart-nearmiss.yaml",
+      "role": "negative_near_miss",
+      "duration_seconds": 150,
+      "notes": "Restart near miss without Jira."
+    },
+    {
+      "scenario_file": "deploy\\research-lab\\scenarios\\faults\\checkoutservice-pod-restart-major.yaml",
+      "role": "positive_incident",
+      "duration_seconds": 150,
+      "notes": "Checkout restart incident."
+    },
+    {
+      "scenario_file": "deploy\\research-lab\\scenarios\\faults\\cart-redis-degradation-critical.yaml",
+      "role": "positive_incident",
+      "duration_seconds": 240,
+      "notes": "Cart and Redis degradation."
+    },
+    {
+      "scenario_file": "deploy\\research-lab\\scenarios\\faults\\productcatalog-bad-config-critical.yaml",
+      "role": "positive_incident",
+      "duration_seconds": 240,
+      "notes": "Bad configuration style catalog incident."
+    },
+    {
+      "scenario_file": "deploy\\research-lab\\scenarios\\faults\\loadgenerator-noisy-high-traffic-nearmiss.yaml",
+      "role": "negative_near_miss",
+      "duration_seconds": 150,
+      "notes": "High-traffic non-incident."
+    },
+    {
+      "scenario_file": "deploy\\research-lab\\scenarios\\faults\\productcatalog-latency-nearmiss.yaml",
+      "role": "negative_near_miss",
+      "duration_seconds": 120,
+      "notes": "Small latency near miss."
+    },
+    {
+      "scenario_file": "deploy\\research-lab\\scenarios\\baselines\\baseline-normal-traffic.yaml",
+      "role": "negative_baseline",
+      "duration_seconds": 90,
+      "post_window_seconds": 0,
+      "notes": "Healthy restored traffic."
+    }
+  ]
+}
