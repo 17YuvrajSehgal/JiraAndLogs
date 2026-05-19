@@ -130,6 +130,55 @@ misses. The failure analysis is already exported in:
 data/derived/aggregate/2026-05-19-dataset-v3-compact-aggregate/raw-telemetry-failure-analysis.csv
 ```
 
+## Global Hard-Negative Dataset
+
+The compact corpus now has a global candidate-pool dataset for ML, neural,
+language-model, lexical, and hybrid benchmarks:
+
+```text
+data/derived/global/2026-05-19-dataset-v3-compact-global/
+```
+
+Build command:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts\research-lab\build-global-hard-negative-dataset.ps1 `
+  -DatasetRunPrefix "2026-05-19-dataset-v3-compact" `
+  -GlobalDatasetId "2026-05-19-dataset-v3-compact-global" `
+  -Force
+```
+
+Global dataset size:
+
+| Item | Count |
+| --- | ---: |
+| Jira queries | 39 |
+| Candidate episodes per query | 69 |
+| Ranking examples | 2691 |
+| Positive examples | 39 |
+| Same-run negatives | 423 |
+| Cross-run hard negatives | 2229 |
+
+Global raw telemetry metrics:
+
+| MRR | Recall@1 | Recall@3 | F1@1 | F1@3 | nDCG@3 |
+| ---: | ---: | ---: | ---: | ---: | ---: |
+| 0.194273 | 0.076923 | 0.153846 | 0.076923 | 0.076923 | 0.122099 |
+
+This harder dataset should be the main comparison target for future pipeline
+work because it tests ranking across the whole corpus rather than only within a
+single run.
+
+The first pipeline benchmark report is:
+
+```text
+data/derived/global/2026-05-19-dataset-v3-compact-global/benchmarks/baseline-v1/benchmark-report.md
+```
+
+It compares the existing raw telemetry heuristic, BM25 lexical retrieval, a
+fixed hybrid, and a dependency-free logistic regression over numeric telemetry
+features.
+
 ## Scenario Coverage
 
 Dataset v3 includes these production-style variants:

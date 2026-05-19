@@ -14,6 +14,12 @@ The first product goal is not automatic Jira creation. The first MVP only ranks
 candidate telemetry episodes for a Jira issue or incident query and explains the
 evidence behind that ranking. Human approval and real Jira writing come later.
 
+If you are new to the project, start with the plain-language onboarding guide:
+
+```text
+docs/research-project-onboarding-guide.md
+```
+
 ## Why This Project Exists
 
 Modern engineering teams already collect a huge amount of telemetry:
@@ -512,6 +518,16 @@ data/derived/aggregate/2026-05-19-dataset-v3-compact-aggregate/cross-run-evaluat
 data/derived/holdout/2026-05-19-dataset-v3-compact-holdout/run-aware-holdout-evaluation.md
 ```
 
+The harder global candidate-pool dataset for ML, retrieval, neural, language
+model, and hybrid benchmarking is:
+
+```text
+data/derived/global/2026-05-19-dataset-v3-compact-global/
+```
+
+It pairs every Jira query against all 69 candidate episodes from the compact
+corpus, producing 2691 pairwise examples and 2229 cross-run hard negatives.
+
 This corpus is a harder research stress test. It should not replace the locked
 v2 MVP baseline until its failure families and data-quality limits are reviewed.
 
@@ -667,6 +683,55 @@ The full runbook is:
 docs/production-corpus-dataset-plan.md
 ```
 
+## How To Build The Global Hard-Negative Dataset
+
+After the compact corpus is collected and derived reports exist, build the
+global candidate-pool dataset:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts\research-lab\build-global-hard-negative-dataset.ps1 `
+  -DatasetRunPrefix "2026-05-19-dataset-v3-compact" `
+  -GlobalDatasetId "2026-05-19-dataset-v3-compact-global" `
+  -Force
+```
+
+This writes:
+
+```text
+data/derived/global/2026-05-19-dataset-v3-compact-global/
+```
+
+Key files:
+
+- `global-ranking-examples.jsonl`: pairwise query-candidate labels and numeric features.
+- `queries.jsonl`: one Jira query per row.
+- `candidate-episodes.jsonl`: one telemetry episode per row, including raw evidence text.
+- `split-manifest.json`: train/validation/test and leave-one-query-run-out splits.
+- `pipeline-input-schema.json`: shared contract for lexical, ML, neural, language-model, and hybrid pipelines.
+
+The benchmark plan is:
+
+```text
+docs/ml-ai-pipeline-benchmark-plan.md
+```
+
+Run the first dependency-free benchmark harness:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts\research-lab\run-global-pipeline-benchmark.ps1 `
+  -GlobalDatasetId "2026-05-19-dataset-v3-compact-global" `
+  -BenchmarkId "baseline-v1" `
+  -Force
+```
+
+This compares the existing raw telemetry score, BM25 lexical retrieval, a fixed
+hybrid score, and a simple classical logistic-regression baseline. Results are
+written to:
+
+```text
+data/derived/global/2026-05-19-dataset-v3-compact-global/benchmarks/baseline-v1/
+```
+
 ## How To Build Derived Ranking Data
 
 After a raw run is collected and validated:
@@ -745,6 +810,8 @@ powershell -NoProfile -ExecutionPolicy Bypass -File scripts\research-lab\build-r
 | `build-ranking-dataset.ps1` | Convert one raw run into ranking-ready derived data |
 | `build-cross-run-evaluation.ps1` | Combine derived runs and compute aggregate ranking metrics |
 | `build-run-aware-holdout-evaluation.ps1` | Build one-held-out-run-per-fold evaluation reports |
+| `build-global-hard-negative-dataset.ps1` | Build the global candidate-pool dataset for ML and AI benchmarks |
+| `run-global-pipeline-benchmark.ps1` | Run baseline pipeline comparisons on the global candidate-pool dataset |
 
 ## MVP Acceptance Gates
 
@@ -795,6 +862,7 @@ ranking traffic spikes or downstream symptom services above the true incident.
 
 Start here:
 
+- `docs/research-project-onboarding-guide.md`: plain-language explanation of the complete research workflow.
 - `docs/research-lab-deployment.md`: rebuild the Kubernetes lab.
 - `docs/dataset-acquisition-plan.md`: understand how raw runs are collected.
 - `docs/jira-shadow-issue-contract.md`: understand generated Jira records.
@@ -804,7 +872,8 @@ Start here:
 - `docs/mvp-evaluation-dataset.md`: understand the current final MVP dataset.
 - `docs/dataset-v2-realism-plan.md`: understand the next credibility step.
 - `docs/dataset-v2.1-realism-plan.md`: understand the current next research step.
-- `docs/production-corpus-dataset-plan.md`: understand the large Dataset v3 corpus.
+- `docs/production-corpus-dataset-plan.md`: understand the compact Dataset v3 corpus.
+- `docs/ml-ai-pipeline-benchmark-plan.md`: understand the ML, neural, LLM, and hybrid benchmark contract.
 - `docs/instrumentation-gaps-and-next-steps.md`: understand what to improve next.
 
 ## Mental Model For New Team Members
