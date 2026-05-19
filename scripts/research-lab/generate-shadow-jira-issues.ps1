@@ -14,7 +14,7 @@ param(
 
 $ErrorActionPreference = "Stop"
 
-Import-Module (Join-Path $PSScriptRoot "lib\ResearchLab.psm1") -Force
+Import-Module (Join-Path (Join-Path $PSScriptRoot "lib") "ResearchLab.psm1") -Force
 
 function Get-PriorityForSeverity {
     param([string]$Severity)

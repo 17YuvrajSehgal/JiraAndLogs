@@ -22,7 +22,7 @@ param(
 
 $ErrorActionPreference = "Stop"
 
-Import-Module (Join-Path $PSScriptRoot "lib\ResearchLab.psm1") -Force
+Import-Module (Join-Path (Join-Path $PSScriptRoot "lib") "ResearchLab.psm1") -Force
 
 function Start-LocalPortForward {
     param(
@@ -33,11 +33,16 @@ function Start-LocalPortForward {
     )
 
     $portSpec = "{0}:{1}" -f $LocalPort, $RemotePort
-    $process = Start-Process `
-        -FilePath "kubectl" `
-        -ArgumentList @("-n", $TargetNamespace, "port-forward", $ServiceName, $portSpec) `
-        -PassThru `
-        -WindowStyle Hidden
+    $startArgs = @{
+        FilePath = "kubectl"
+        ArgumentList = @("-n", $TargetNamespace, "port-forward", $ServiceName, $portSpec)
+        PassThru = $true
+    }
+    if ($PSVersionTable.PSEdition -eq "Desktop" -or [System.Runtime.InteropServices.RuntimeInformation]::IsOSPlatform([System.Runtime.InteropServices.OSPlatform]::Windows)) {
+        $startArgs["WindowStyle"] = "Hidden"
+    }
+
+    $process = Start-Process @startArgs
 
     Start-Sleep -Seconds 4
     if ($process.HasExited) {

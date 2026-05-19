@@ -37,6 +37,20 @@ The older large plan files remain in the repository as optional stress-test
 material, but the default top-level corpus manifest now points to the compact
 plans.
 
+For a larger cloud VM run, use the balanced cloud manifest:
+
+```text
+deploy/research-lab/corpora/dataset-v3-cloud-balanced-corpus.json
+```
+
+That manifest plans 16 runs in four balanced batches. Each batch includes
+foundation, outage-heavy, restart/traffic, and latency/config scenarios, so a
+partial run remains diverse. The setup and commands are documented in:
+
+```text
+docs/gcp-production-dataset-vm-runbook.md
+```
+
 ## Corpus Manifest
 
 The active corpus is controlled by:

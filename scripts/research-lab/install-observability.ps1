@@ -1,8 +1,10 @@
 $ErrorActionPreference = "Stop"
 
-$repoRoot = Resolve-Path (Join-Path $PSScriptRoot "..\..")
-$valuesRoot = Join-Path $repoRoot "deploy\research-lab\observability\values"
-$localHelm = Join-Path $repoRoot ".tools\helm.exe"
+Import-Module (Join-Path (Join-Path $PSScriptRoot "lib") "ResearchLab.psm1") -Force
+
+$repoRoot = Get-ResearchLabRepoRoot
+$valuesRoot = Join-ResearchLabPath @($repoRoot, "deploy", "research-lab", "observability", "values")
+$localHelm = Join-ResearchLabPath @($repoRoot, ".tools", "helm.exe")
 
 $helm = Get-Command helm -ErrorAction SilentlyContinue
 if ($null -eq $helm -and (Test-Path $localHelm)) {
@@ -16,7 +18,7 @@ if (-not (Get-Command kubectl -ErrorAction SilentlyContinue)) {
     throw "kubectl is not installed."
 }
 
-kubectl apply -f (Join-Path $repoRoot "deploy\research-lab\namespaces.yaml")
+kubectl apply -f (Join-ResearchLabPath @($repoRoot, "deploy", "research-lab", "namespaces.yaml"))
 
 & $helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
 & $helm repo add grafana https://grafana.github.io/helm-charts

@@ -21,7 +21,7 @@ param(
 
 $ErrorActionPreference = "Stop"
 
-Import-Module (Join-Path $PSScriptRoot "lib\ResearchLab.psm1") -Force
+Import-Module (Join-Path (Join-Path $PSScriptRoot "lib") "ResearchLab.psm1") -Force
 
 function ConvertTo-SafeIdPart {
     param([Parameter(Mandatory = $true)][string]$Value)
@@ -270,10 +270,11 @@ if (-not (Test-Path -LiteralPath (Join-Path $runRoot "manifest.json"))) {
 
 $scenarioPath = $ScenarioFile
 if (-not [System.IO.Path]::IsPathRooted($scenarioPath)) {
-    $scenarioPath = Join-Path (Get-ResearchLabRepoRoot) $scenarioPath
+    $scenarioPath = Join-ResearchLabPath @((Get-ResearchLabRepoRoot), $scenarioPath)
 }
 
 $scenario = Get-ResearchLabScenarioConfig -ScenarioFile $scenarioPath
+$powerShell = Get-ResearchLabPowerShellCommand
 if ($scenario.execution_namespace) {
     $Namespace = $scenario.execution_namespace
 }
@@ -422,7 +423,7 @@ $summaryLine = "- $($episode.start_time) scenario=$($scenario.scenario_id) episo
 Add-Content -LiteralPath (Join-ResearchLabPath @($runRoot, "summaries", "run-summary.md")) -Value $summaryLine -Encoding UTF8
 
 if (-not $NoTelemetryExport) {
-    & powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $PSScriptRoot "export-telemetry-window.ps1") `
+    & $powerShell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $PSScriptRoot "export-telemetry-window.ps1") `
         -DatasetRunId $DatasetRunId `
         -IncidentEpisodeId $episodeId
     if ($LASTEXITCODE -ne 0) {
@@ -442,7 +443,7 @@ if ((-not $SkipJiraGeneration) -and [bool]$scenario.should_create_jira_shadow_is
         $jiraArgs += "-RealisticNoise"
     }
 
-    & powershell @jiraArgs
+    & $powerShell @jiraArgs
     if ($LASTEXITCODE -ne 0) {
         throw "Shadow Jira generation failed for episode $episodeId."
     }

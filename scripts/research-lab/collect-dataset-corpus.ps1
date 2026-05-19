@@ -17,7 +17,7 @@ param(
 
 $ErrorActionPreference = "Stop"
 
-Import-Module (Join-Path $PSScriptRoot "lib\ResearchLab.psm1") -Force
+Import-Module (Join-Path (Join-Path $PSScriptRoot "lib") "ResearchLab.psm1") -Force
 
 function Resolve-ResearchLabInputPath {
     param([Parameter(Mandatory = $true)][string]$Path)
@@ -26,7 +26,7 @@ function Resolve-ResearchLabInputPath {
         return $Path
     }
 
-    return (Join-Path (Get-ResearchLabRepoRoot) $Path)
+    return (Join-ResearchLabPath @((Get-ResearchLabRepoRoot), $Path))
 }
 
 function Get-CorpusValue {
@@ -83,6 +83,29 @@ function Test-DerivedRunExists {
     return (Test-Path -LiteralPath $rankingExamples)
 }
 
+function Get-CompletedCorpusRunIds {
+    param(
+        [Parameter(Mandatory = $true)][object[]]$PlannedRuns,
+        [switch]$RequireDerived
+    )
+
+    $completed = @()
+    foreach ($run in @($PlannedRuns)) {
+        $runId = [string]$run.dataset_run_id
+        $runRoot = Get-ResearchLabRunRoot -DatasetRunId $runId
+        $validationReport = Join-ResearchLabPath @($runRoot, "summaries", "validation-report.json")
+        if (-not (Test-Path -LiteralPath $validationReport)) {
+            continue
+        }
+        if ($RequireDerived -and -not (Test-DerivedRunExists -DatasetRunId $runId)) {
+            continue
+        }
+        $completed += $runId
+    }
+
+    return @($completed | Sort-Object -Unique)
+}
+
 function Write-CorpusRunManifest {
     param(
         [Parameter(Mandatory = $true)][string]$OutputPath,
@@ -124,6 +147,7 @@ if ($MaxRuns -lt 0) {
 }
 
 $repoRoot = Get-ResearchLabRepoRoot
+$powerShell = Get-ResearchLabPowerShellCommand
 $resolvedCorpusFile = Resolve-ResearchLabInputPath -Path $CorpusFile
 if (-not (Test-Path -LiteralPath $resolvedCorpusFile)) {
     throw "Corpus file not found: $resolvedCorpusFile"
@@ -200,7 +224,7 @@ if ($PlanOnly) {
 $startedAt = Get-ResearchLabUtcNow
 $corpusOutputRoot = Join-ResearchLabPath @($repoRoot, "data", "derived", "corpora", $DatasetRunPrefix)
 $manifestPath = Join-Path $corpusOutputRoot "corpus-run-manifest.json"
-$completedRunIds = @()
+$completedRunIds = @(Get-CompletedCorpusRunIds -PlannedRuns $plannedRuns -RequireDerived:((-not $SkipDerivedBuild)))
 
 Write-CorpusRunManifest `
     -OutputPath $manifestPath `
@@ -227,7 +251,7 @@ foreach ($run in $selectedRuns) {
         }
         if ((-not $SkipDerivedBuild) -and (-not (Test-DerivedRunExists -DatasetRunId $runId))) {
             Write-Host "  derived_status: missing; rebuilding derived ranking data"
-            & powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $PSScriptRoot "build-ranking-dataset.ps1") `
+            & $powerShell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $PSScriptRoot "build-ranking-dataset.ps1") `
                 -DatasetRunId $runId `
                 -Force
             if ($LASTEXITCODE -ne 0) {
@@ -268,7 +292,7 @@ foreach ($run in $selectedRuns) {
         $collectArgs += "-BuildDerived"
     }
 
-    & powershell @collectArgs
+    & $powerShell @collectArgs
     if ($LASTEXITCODE -ne 0) {
         Write-CorpusRunManifest `
             -OutputPath $manifestPath `
@@ -282,7 +306,7 @@ foreach ($run in $selectedRuns) {
         throw "Corpus run failed: $runId"
     }
 
-    $completedRunIds += $runId
+    $completedRunIds = @($completedRunIds + $runId | Sort-Object -Unique)
     Write-CorpusRunManifest `
         -OutputPath $manifestPath `
         -Corpus $corpus `
@@ -314,7 +338,7 @@ if (-not $SkipAggregateBuild) {
         Write-Host "  aggregate_id: $aggregateId"
         Write-Host "  derived_run_count: $($derivedRunIds.Count)"
         $datasetRunIdArgument = ($derivedRunIds -join ",")
-        & powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $PSScriptRoot "build-cross-run-evaluation.ps1") `
+        & $powerShell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $PSScriptRoot "build-cross-run-evaluation.ps1") `
             -AggregateId $aggregateId `
             -DatasetRunId $datasetRunIdArgument `
             -PythonExe $PythonExe `
@@ -326,7 +350,7 @@ if (-not $SkipAggregateBuild) {
         if ($derivedRunIds.Count -ge 2) {
             Write-Host "Building corpus run-aware holdout evaluation:"
             Write-Host "  evaluation_id: $holdoutId"
-            & powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $PSScriptRoot "build-run-aware-holdout-evaluation.ps1") `
+            & $powerShell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $PSScriptRoot "build-run-aware-holdout-evaluation.ps1") `
                 -EvaluationId $holdoutId `
                 -DatasetRunId $datasetRunIdArgument `
                 -PythonExe $PythonExe `
@@ -340,6 +364,18 @@ if (-not $SkipAggregateBuild) {
     }
 }
 
+$completedRunIds = @(Get-CompletedCorpusRunIds -PlannedRuns $plannedRuns -RequireDerived:((-not $SkipDerivedBuild)))
+foreach ($runId in @($derivedRunIds)) {
+    if ($completedRunIds -notcontains $runId) {
+        $completedRunIds += $runId
+    }
+}
+$completedRunIds = @($completedRunIds | Sort-Object -Unique)
+$finalStatus = "partial_complete"
+if ($completedRunIds.Count -ge $plannedRuns.Count) {
+    $finalStatus = "complete"
+}
+
 Write-CorpusRunManifest `
     -OutputPath $manifestPath `
     -Corpus $corpus `
@@ -347,7 +383,7 @@ Write-CorpusRunManifest `
     -PlannedRuns $plannedRuns `
     -SelectedRuns $selectedRuns `
     -CompletedRunIds $completedRunIds `
-    -Status "complete" `
+    -Status $finalStatus `
     -StartedAt $startedAt
 
 Write-Host "Dataset corpus workflow complete:"

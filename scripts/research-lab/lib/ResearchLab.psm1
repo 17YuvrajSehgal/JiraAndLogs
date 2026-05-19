@@ -12,13 +12,18 @@ function Join-ResearchLabPath {
 
     $path = $Parts[0]
     for ($i = 1; $i -lt $Parts.Count; $i++) {
-        $path = Join-Path $path $Parts[$i]
+        foreach ($segment in ([string]$Parts[$i] -split '[\\/]+')) {
+            if ([string]::IsNullOrWhiteSpace($segment)) {
+                continue
+            }
+            $path = Join-Path $path $segment
+        }
     }
     return $path
 }
 
 function Get-ResearchLabRepoRoot {
-    return (Resolve-Path (Join-Path $PSScriptRoot "..\..\..")).Path
+    return (Resolve-Path (Split-Path -Parent (Split-Path -Parent (Split-Path -Parent $PSScriptRoot)))).Path
 }
 
 function Get-ResearchLabRunRoot {
@@ -236,6 +241,26 @@ function Test-ResearchLabCommand {
     )
 
     return $null -ne (Get-Command $Name -ErrorAction SilentlyContinue)
+}
+
+function Get-ResearchLabPowerShellCommand {
+    try {
+        $currentProcessPath = [System.Diagnostics.Process]::GetCurrentProcess().MainModule.FileName
+        if (-not [string]::IsNullOrWhiteSpace($currentProcessPath) -and (Test-Path -LiteralPath $currentProcessPath)) {
+            return $currentProcessPath
+        }
+    } catch {
+        # Fall through to PATH lookup.
+    }
+
+    foreach ($name in @("pwsh", "powershell")) {
+        $cmd = Get-Command $name -ErrorAction SilentlyContinue
+        if ($null -ne $cmd) {
+            return $cmd.Source
+        }
+    }
+
+    throw "Unable to find a PowerShell executable. Install PowerShell 7+ as 'pwsh' or Windows PowerShell as 'powershell'."
 }
 
 function Invoke-ResearchLabTextCommand {

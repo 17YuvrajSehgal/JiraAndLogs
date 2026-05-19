@@ -13,13 +13,13 @@ function Test-Command {
     return $true
 }
 
-$repoRoot = Resolve-Path (Join-Path $PSScriptRoot "..\..")
-$localHelm = Join-Path $repoRoot ".tools\helm.exe"
+$repoRoot = Resolve-Path (Split-Path -Parent (Split-Path -Parent $PSScriptRoot))
+$localHelm = Join-Path (Join-Path $repoRoot ".tools") "helm.exe"
 
 $hasDocker = Test-Command docker
 $hasKubectl = Test-Command kubectl
 $hasHelm = Test-Command helm
-if (-not $hasHelm -and (Test-Path $localHelm)) {
+if (-not $hasHelm -and (Test-Path -LiteralPath $localHelm)) {
     Write-Host "OK       helm -> $localHelm"
     $hasHelm = $true
 }

@@ -1,7 +1,9 @@
 $ErrorActionPreference = "Stop"
 
-$repoRoot = Resolve-Path (Join-Path $PSScriptRoot "..\..")
-$config = Join-Path $repoRoot "deploy\research-lab\kind-config.yaml"
+Import-Module (Join-Path (Join-Path $PSScriptRoot "lib") "ResearchLab.psm1") -Force
+
+$repoRoot = Get-ResearchLabRepoRoot
+$config = Join-ResearchLabPath @($repoRoot, "deploy", "research-lab", "kind-config.yaml")
 
 if (-not (Get-Command kind -ErrorAction SilentlyContinue)) {
     throw "kind is not installed. Install kind or enable Docker Desktop Kubernetes."
@@ -19,4 +21,3 @@ if ($existing -contains "jira-telemetry-lab") {
 }
 
 kubectl cluster-info --context kind-jira-telemetry-lab
-

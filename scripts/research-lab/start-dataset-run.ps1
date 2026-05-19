@@ -13,7 +13,7 @@ param(
 
 $ErrorActionPreference = "Stop"
 
-Import-Module (Join-Path $PSScriptRoot "lib\ResearchLab.psm1") -Force
+Import-Module (Join-Path (Join-Path $PSScriptRoot "lib") "ResearchLab.psm1") -Force
 
 $runRoot = Get-ResearchLabRunRoot -DatasetRunId $DatasetRunId
 if ((Test-Path -LiteralPath $runRoot) -and -not $Force) {

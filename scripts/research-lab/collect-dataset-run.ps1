@@ -12,9 +12,10 @@ param(
 
 $ErrorActionPreference = "Stop"
 
-Import-Module (Join-Path $PSScriptRoot "lib\ResearchLab.psm1") -Force
+Import-Module (Join-Path (Join-Path $PSScriptRoot "lib") "ResearchLab.psm1") -Force
 
 $runRoot = Get-ResearchLabRunRoot -DatasetRunId $DatasetRunId
+$powerShell = Get-ResearchLabPowerShellCommand
 if ((Test-Path -LiteralPath (Join-Path $runRoot "manifest.json")) -and -not $ForceNewRun) {
     Write-Host "Using existing dataset run: $DatasetRunId"
 } else {
@@ -31,7 +32,7 @@ if ((Test-Path -LiteralPath (Join-Path $runRoot "manifest.json")) -and -not $For
         $startArgs += "-Force"
     }
 
-    & powershell @startArgs
+    & $powerShell @startArgs
     if ($LASTEXITCODE -ne 0) {
         throw "Failed to start dataset run $DatasetRunId."
     }
@@ -84,7 +85,7 @@ foreach ($scenarioFile in $scenarios) {
         $args += "-SkipJiraGeneration"
     }
 
-    & powershell @args
+    & $powerShell @args
     if ($LASTEXITCODE -ne 0) {
         throw "Scenario workflow failed: $scenarioFile"
     }
@@ -99,7 +100,7 @@ if (-not $NoTelemetryExport) {
         "-RunLevelLokiOnly"
     )
 
-    & powershell @runContextArgs
+    & $powerShell @runContextArgs
     if ($LASTEXITCODE -ne 0) {
         throw "Run-level Loki context export failed for $DatasetRunId."
     }
@@ -115,7 +116,7 @@ if ($NoTelemetryExport) {
     $validateArgs += "-AllowMissingRawExports"
 }
 
-& powershell @validateArgs
+& $powerShell @validateArgs
 if ($LASTEXITCODE -ne 0) {
     throw "Dataset validation failed for $DatasetRunId."
 }

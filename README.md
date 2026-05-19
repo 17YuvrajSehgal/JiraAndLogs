@@ -812,6 +812,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File scripts\research-lab\build-r
 | `build-run-aware-holdout-evaluation.ps1` | Build one-held-out-run-per-fold evaluation reports |
 | `build-global-hard-negative-dataset.ps1` | Build the global candidate-pool dataset for ML and AI benchmarks |
 | `run-global-pipeline-benchmark.ps1` | Run baseline pipeline comparisons on the global candidate-pool dataset |
+| `test-cloud-dataset-preflight.ps1` | Validate the VM, corpus, scripts, cluster, bucket, and disk before a long cloud run |
 
 ## MVP Acceptance Gates
 
@@ -873,6 +874,7 @@ Start here:
 - `docs/dataset-v2-realism-plan.md`: understand the next credibility step.
 - `docs/dataset-v2.1-realism-plan.md`: understand the current next research step.
 - `docs/production-corpus-dataset-plan.md`: understand the compact Dataset v3 corpus.
+- `docs/gcp-production-dataset-vm-runbook.md`: run a larger production dataset on a Google Cloud VM.
 - `docs/ml-ai-pipeline-benchmark-plan.md`: understand the ML, neural, LLM, and hybrid benchmark contract.
 - `docs/instrumentation-gaps-and-next-steps.md`: understand what to improve next.
 

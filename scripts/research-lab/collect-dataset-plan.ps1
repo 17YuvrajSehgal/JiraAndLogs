@@ -15,7 +15,7 @@ param(
 
 $ErrorActionPreference = "Stop"
 
-Import-Module (Join-Path $PSScriptRoot "lib\ResearchLab.psm1") -Force
+Import-Module (Join-Path (Join-Path $PSScriptRoot "lib") "ResearchLab.psm1") -Force
 
 function Resolve-ResearchLabInputPath {
     param([Parameter(Mandatory = $true)][string]$Path)
@@ -24,7 +24,7 @@ function Resolve-ResearchLabInputPath {
         return $Path
     }
 
-    return (Join-Path (Get-ResearchLabRepoRoot) $Path)
+    return (Join-ResearchLabPath @((Get-ResearchLabRepoRoot), $Path))
 }
 
 function Get-PlanValue {
@@ -63,6 +63,7 @@ $resolvedPlanFile = Resolve-ResearchLabInputPath -Path $PlanFile
 if (-not (Test-Path -LiteralPath $resolvedPlanFile)) {
     throw "Run plan not found: $resolvedPlanFile"
 }
+$powerShell = Get-ResearchLabPowerShellCommand
 
 $plan = Get-Content -LiteralPath $resolvedPlanFile -Raw | ConvertFrom-Json
 $planId = [string](Get-PlanValue -Object $plan -Name "plan_id" -DefaultValue "dataset-plan")
@@ -114,7 +115,7 @@ if ((Test-Path -LiteralPath (Join-Path $runRoot "manifest.json")) -and -not $For
         $startArgs += "-Force"
     }
 
-    & powershell @startArgs
+    & $powerShell @startArgs
     if ($LASTEXITCODE -ne 0) {
         throw "Failed to start dataset run $DatasetRunId."
     }
@@ -177,7 +178,7 @@ foreach ($entry in $scenarioPlan) {
         $args += "-RealisticJiraNoise"
     }
 
-    & powershell @args
+    & $powerShell @args
     if ($LASTEXITCODE -ne 0) {
         throw "Scenario workflow failed: $scenarioFile"
     }
@@ -192,7 +193,7 @@ if (-not $NoTelemetryExport) {
         "-RunLevelLokiOnly"
     )
 
-    & powershell @runContextArgs
+    & $powerShell @runContextArgs
     if ($LASTEXITCODE -ne 0) {
         throw "Run-level Loki context export failed for $DatasetRunId."
     }
@@ -208,13 +209,13 @@ if ($NoTelemetryExport) {
     $validateArgs += "-AllowMissingRawExports"
 }
 
-& powershell @validateArgs
+& $powerShell @validateArgs
 if ($LASTEXITCODE -ne 0) {
     throw "Dataset validation failed for $DatasetRunId."
 }
 
 if ($BuildDerived) {
-    & powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $PSScriptRoot "build-ranking-dataset.ps1") `
+    & $powerShell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $PSScriptRoot "build-ranking-dataset.ps1") `
         -DatasetRunId $DatasetRunId `
         -Force
     if ($LASTEXITCODE -ne 0) {
