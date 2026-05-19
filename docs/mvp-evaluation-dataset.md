@@ -1,8 +1,16 @@
 # MVP Evaluation Dataset
 
-This document records the current final lab dataset for ranking-MVP testing.
-It is the dataset we should use to test the first internal application version
-and to decide which ranker improvements are worth implementing next.
+Status: superseded by Dataset v2 for current MVP work. Use:
+
+```text
+docs/final-dataset-v2-production.md
+```
+
+This document is retained as the original MVP v1 pipeline proof.
+
+This document records the original final lab dataset for early ranking-MVP
+testing. It was used to prove the collection and ranking pipeline before the
+larger Dataset v2 benchmark existed.
 
 The next dataset stage is Dataset v2, documented in:
 

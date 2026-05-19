@@ -1,0 +1,44 @@
+schema_version: 1
+scenario_id: currencyservice-unavailable-major
+title: Currency service outage degrades price display and checkout
+dataset_run_id: local-dev-run-001
+traffic_profile_id: baseline-checkout-mix
+environment: research-local
+jira_candidate: true
+expected_jira:
+  issue_type: Incident
+  priority: Major
+  components:
+    - currencyservice
+    - frontend
+    - checkoutservice
+  labels:
+    - synthetic-incident
+    - dependency-outage
+    - currencyservice
+    - telemetry-linked
+  summary_template: "Currency service outage degraded customer flows"
+fault:
+  fault_id: currencyservice-scale-zero-001
+  fault_type: dependency_outage
+  affected_service: currencyservice
+  suggested_mechanism: scale currencyservice to zero replicas
+  expected_start_offset_seconds: 300
+  expected_duration_seconds: 420
+  blast_radius:
+    user_visible: true
+    expected_error_rate: medium
+    expected_latency_impact: medium
+labels:
+  severity: major
+  incident_type: degradation
+  root_cause_category: dependency_failure
+  should_alert: true
+  should_create_jira_shadow_issue: true
+execution:
+  action: ScaleDeployment
+  namespace: online-boutique-research
+  target_kind: deployment
+  target_name: currencyservice
+  replicas: 0
+  restore_replicas: 1

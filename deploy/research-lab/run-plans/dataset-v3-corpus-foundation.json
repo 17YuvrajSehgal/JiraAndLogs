@@ -1,0 +1,90 @@
+{
+  "schema_version": 1,
+  "plan_id": "dataset-v3-corpus-foundation",
+  "title": "Dataset v3 corpus foundation plan",
+  "description": "Broad production-style corpus slice that preserves the v2.1 hard cases and mixes baseline, outage, restart, degradation, and noisy near-miss episodes.",
+  "environment": "research-local",
+  "traffic_profile_id": "baseline-checkout-mix",
+  "default_post_window_seconds": 240,
+  "quick_duration_seconds": 90,
+  "quick_post_window_seconds": 60,
+  "realistic_jira_noise": true,
+  "target_use": "Large production corpus foundation for ML, NLP, AI, and agent benchmark development",
+  "scenarios": [
+    {
+      "scenario_file": "deploy\\research-lab\\scenarios\\baselines\\baseline-normal-traffic.yaml",
+      "role": "negative_baseline",
+      "notes": "Healthy traffic before faults."
+    },
+    {
+      "scenario_file": "deploy\\research-lab\\scenarios\\faults\\productcatalog-latency-major.yaml",
+      "role": "positive_incident",
+      "notes": "Product catalog latency incident."
+    },
+    {
+      "scenario_file": "deploy\\research-lab\\scenarios\\faults\\loadgenerator-traffic-spike-nearmiss.yaml",
+      "role": "negative_near_miss",
+      "notes": "High traffic pressure without a Jira-worthy incident."
+    },
+    {
+      "scenario_file": "deploy\\research-lab\\scenarios\\faults\\paymentservice-unavailable-critical.yaml",
+      "role": "positive_incident",
+      "notes": "Payment outage impacting checkout."
+    },
+    {
+      "scenario_file": "deploy\\research-lab\\scenarios\\faults\\recommendationservice-pod-restart-nearmiss.yaml",
+      "role": "negative_near_miss",
+      "notes": "Restart evidence without a Jira-worthy incident."
+    },
+    {
+      "scenario_file": "deploy\\research-lab\\scenarios\\faults\\checkoutservice-pod-restart-major.yaml",
+      "role": "positive_incident",
+      "notes": "Checkout restart incident."
+    },
+    {
+      "scenario_file": "deploy\\research-lab\\scenarios\\faults\\redis-cart-restart-major.yaml",
+      "role": "positive_incident",
+      "notes": "Redis restart incident."
+    },
+    {
+      "scenario_file": "deploy\\research-lab\\scenarios\\faults\\frontend-cpu-nearmiss.yaml",
+      "role": "negative_near_miss",
+      "notes": "Frontend CPU near miss."
+    },
+    {
+      "scenario_file": "deploy\\research-lab\\scenarios\\faults\\cart-redis-degradation-critical.yaml",
+      "role": "positive_incident",
+      "notes": "Cart/Redis outage incident."
+    },
+    {
+      "scenario_file": "deploy\\research-lab\\scenarios\\faults\\redis-cart-intermittent-failure-major.yaml",
+      "role": "positive_incident",
+      "notes": "Intermittent Redis failure that should be separated from a sustained outage."
+    },
+    {
+      "scenario_file": "deploy\\research-lab\\scenarios\\faults\\productcatalog-bad-config-critical.yaml",
+      "role": "positive_incident",
+      "notes": "Bad configuration style product catalog incident."
+    },
+    {
+      "scenario_file": "deploy\\research-lab\\scenarios\\faults\\checkoutservice-partial-degradation-major.yaml",
+      "role": "positive_incident",
+      "notes": "Partial checkout degradation."
+    },
+    {
+      "scenario_file": "deploy\\research-lab\\scenarios\\faults\\loadgenerator-noisy-high-traffic-nearmiss.yaml",
+      "role": "negative_near_miss",
+      "notes": "Noisy high traffic without a Jira issue."
+    },
+    {
+      "scenario_file": "deploy\\research-lab\\scenarios\\faults\\redis-cart-restart-nearmiss.yaml",
+      "role": "negative_near_miss",
+      "notes": "Redis restart near miss with no Jira issue."
+    },
+    {
+      "scenario_file": "deploy\\research-lab\\scenarios\\baselines\\baseline-normal-traffic.yaml",
+      "role": "negative_baseline",
+      "notes": "Healthy traffic after injected faults."
+    }
+  ]
+}

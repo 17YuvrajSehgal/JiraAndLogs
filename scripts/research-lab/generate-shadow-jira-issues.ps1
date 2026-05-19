@@ -8,6 +8,7 @@ param(
     [string]$ProjectName = "Observability Research Lab",
     [string]$Reporter = "Research Lab Automation",
     [string]$DefaultAssignee = "Service Owner",
+    [switch]$RealisticNoise,
     [switch]$Force
 )
 
@@ -26,8 +27,27 @@ function Get-PriorityForSeverity {
     }
 }
 
+function Get-InitialPriorityForSeverity {
+    param(
+        [string]$Severity,
+        [int]$Bucket
+    )
+
+    $finalPriority = Get-PriorityForSeverity -Severity $Severity
+    if ($Bucket -eq 1 -and $finalPriority -eq "Critical") {
+        return "Major"
+    }
+    if ($Bucket -eq 2 -and $finalPriority -eq "Major") {
+        return "Minor"
+    }
+    return $finalPriority
+}
+
 function Get-IssueSummary {
-    param([object]$Episode)
+    param(
+        [object]$Episode,
+        [switch]$RealisticNoise
+    )
 
     $serviceText = (@($Episode.affected_services) -join ", ")
     if (-not $serviceText) {
@@ -39,7 +59,57 @@ function Get-IssueSummary {
         $type = "incident"
     }
 
+    if ($RealisticNoise) {
+        $primaryService = [string](@($Episode.affected_services | Select-Object -First 1))
+        if (-not $primaryService) {
+            $primaryService = "Online Boutique"
+        }
+
+        switch ([string]$Episode.incident_type) {
+            "outage" { return "Customer checkout path seeing elevated failures" }
+            "degradation" { return "Intermittent slowness reported around $primaryService" }
+            "near_miss" { return "Noisy service health signal under review" }
+            default { return "Service health investigation for $primaryService" }
+        }
+    }
+
     return "[$($Episode.severity.ToUpperInvariant())] $serviceText $type during $($Episode.scenario_id)"
+}
+
+function Get-RealisticComponents {
+    param(
+        [string[]]$Components,
+        [int]$Bucket
+    )
+
+    $values = @($Components)
+    if ($values.Count -eq 0) {
+        $values = @("Online Boutique")
+    }
+    if ($Bucket -eq 0 -and $values.Count -gt 1) {
+        return @($values | Select-Object -First ($values.Count - 1))
+    }
+    if ($Bucket -eq 2 -and -not ($values -contains "frontend")) {
+        return @($values + "frontend")
+    }
+    if ($Bucket -eq 3 -and -not ($values -contains "checkoutservice")) {
+        return @($values + "checkoutservice")
+    }
+    return $values
+}
+
+function Get-HumanTriageNote {
+    param(
+        [object]$Episode,
+        [int]$Bucket
+    )
+
+    switch ($Bucket) {
+        0 { return "Initial report is noisy. Checking whether this is customer traffic, a recent rollout, or a dependency issue." }
+        1 { return "Support saw intermittent failures before the automated alert stabilized. Priority may need adjustment after owner review." }
+        2 { return "Component mapping is not fully confirmed yet; starting with the most visible impacted service and adding owners as evidence improves." }
+        default { return "Correlating logs, alerts, and traces. There may be more than one symptom in the same customer journey." }
+    }
 }
 
 function New-JiraHistoryItem {
@@ -161,15 +231,35 @@ foreach ($episode in $episodes) {
         $shadowIssueId = "shadow-$episodeId"
     }
 
+    $issueNumberValue = 0
+    if ($issueKey -match "(\d+)$") {
+        $issueNumberValue = [int]$Matches[1]
+    }
+    $realismBucket = $issueNumberValue % 4
     $createdAt = [DateTimeOffset]::Parse([string]$episode.start_time)
+    if ($RealisticNoise) {
+        $createdAt = $createdAt.AddMinutes(6 + ($realismBucket * 5))
+    }
     $updatedAt = [DateTimeOffset]::Parse([string]$episode.end_time).AddMinutes(12)
+    if ($updatedAt -lt $createdAt.AddMinutes(5)) {
+        $updatedAt = $createdAt.AddMinutes(5)
+    }
     $triageAt = $createdAt.AddMinutes(6)
     $investigationAt = $createdAt.AddMinutes(18)
     $resolvedAt = $updatedAt.AddMinutes(35)
+    $finalPriority = Get-PriorityForSeverity -Severity $episode.severity
+    $initialPriority = $finalPriority
+    if ($RealisticNoise) {
+        $initialPriority = Get-InitialPriorityForSeverity -Severity $episode.severity -Bucket $realismBucket
+    }
 
     $components = @($episode.affected_services | ForEach-Object { [string]$_ } | Sort-Object -Unique)
     if ($components.Count -eq 0) {
         $components = @("Online Boutique")
+    }
+    $jiraComponents = $components
+    if ($RealisticNoise) {
+        $jiraComponents = @(Get-RealisticComponents -Components $components -Bucket $realismBucket | Sort-Object -Unique)
     }
 
     $labels = @(
@@ -183,8 +273,8 @@ foreach ($episode in $episodes) {
         $labels += "root-$($episode.root_cause_category)"
     }
 
-    $logQuery = '{namespace="online-boutique-research", app=~"' + (($components | ForEach-Object { [regex]::Escape($_) }) -join "|") + '"}'
-    $metricQuery = 'kube_pod_info{namespace="online-boutique-research",pod=~"' + (($components | ForEach-Object { [regex]::Escape($_) + "-.*" }) -join "|") + '"}'
+    $logQuery = '{namespace="online-boutique-research", app=~"' + (($jiraComponents | ForEach-Object { [regex]::Escape($_) }) -join "|") + '"}'
+    $metricQuery = 'kube_pod_info{namespace="online-boutique-research",pod=~"' + (($jiraComponents | ForEach-Object { [regex]::Escape($_) + "-.*" }) -join "|") + '"}'
     $traceQuery = $null
     if ($traceIds.Count -gt 0) {
         $traceQuery = ($traceIds -join ",")
@@ -200,6 +290,7 @@ Fault id: $($episode.fault_id)
 Incident type: $($episode.incident_type)
 Root cause category: $($episode.root_cause_category)
 Affected services: $($components -join ", ")
+Jira components at creation: $($jiraComponents -join ", ")
 Incident window: $($episode.start_time) to $($episode.end_time)
 
 Telemetry windows:
@@ -212,25 +303,59 @@ Trace ids:
 $($traceIds -join "`n")
 "@
 
+    $humanTriageNote = $null
+    if ($RealisticNoise) {
+        $humanTriageNote = Get-HumanTriageNote -Episode $episode -Bucket $realismBucket
+    }
+
     $commentsBody = @"
+Generated during the research lab workflow. The issue is intentionally linked to raw telemetry exports so ranking experiments can be audited.
+
+Triage note: $humanTriageNote
+
+Log query: $logQuery
+Metric query: $metricQuery
+Trace ids: $traceQuery
+"@
+    if (-not $RealisticNoise) {
+        $commentsBody = @"
 Generated during the research lab workflow. The issue is intentionally linked to raw telemetry exports so ranking experiments can be audited.
 
 Log query: $logQuery
 Metric query: $metricQuery
 Trace ids: $traceQuery
 "@
+    }
 
     $history = @()
     $history += New-JiraHistoryItem -Id "$issueKey-h1" -Author $Reporter -Created $createdAt.ToString("o") -Field "status" -From $null -To "Needs Triage"
-    $history += New-JiraHistoryItem -Id "$issueKey-h2" -Author $Reporter -Created $triageAt.ToString("o") -Field "priority" -From $null -To (Get-PriorityForSeverity -Severity $episode.severity)
+    $history += New-JiraHistoryItem -Id "$issueKey-h2" -Author $Reporter -Created $triageAt.ToString("o") -Field "priority" -From $null -To $initialPriority
     $history += New-JiraHistoryItem -Id "$issueKey-h3" -Author $DefaultAssignee -Created $investigationAt.ToString("o") -Field "status" -From "Needs Triage" -To "In Progress"
-    $history += New-JiraHistoryItem -Id "$issueKey-h4" -Author $DefaultAssignee -Created $resolvedAt.ToString("o") -Field "status" -From "In Progress" -To "Resolved"
+    $historyIndex = 4
+    if ($RealisticNoise -and $initialPriority -ne $finalPriority) {
+        $history += New-JiraHistoryItem -Id "$issueKey-h$historyIndex" -Author $DefaultAssignee -Created $investigationAt.AddMinutes(9).ToString("o") -Field "priority" -From $initialPriority -To $finalPriority
+        $historyIndex++
+    }
+    if ($RealisticNoise -and (($jiraComponents -join "|") -ne ($components -join "|"))) {
+        $history += New-JiraHistoryItem -Id "$issueKey-h$historyIndex" -Author $DefaultAssignee -Created $investigationAt.AddMinutes(14).ToString("o") -Field "components" -From ($jiraComponents -join ", ") -To ($components -join ", ")
+        $historyIndex++
+    }
+    $history += New-JiraHistoryItem -Id "$issueKey-h$historyIndex" -Author $DefaultAssignee -Created $resolvedAt.ToString("o") -Field "status" -From "In Progress" -To "Resolved"
 
     $activityEvents = @()
     $activityEvents += New-JiraActivityEvent -Id "$issueKey-a1" -Author $Reporter -Timestamp $createdAt.ToString("o") -Type "issue_created" -Description "Issue created from telemetry-linked incident episode."
-    $activityEvents += New-JiraActivityEvent -Id "$issueKey-a2" -Author $Reporter -Timestamp $triageAt.ToString("o") -Type "field_changed" -Field "priority" -From $null -To (Get-PriorityForSeverity -Severity $episode.severity) -Description "Priority set during automated triage."
+    $activityEvents += New-JiraActivityEvent -Id "$issueKey-a2" -Author $Reporter -Timestamp $triageAt.ToString("o") -Type "field_changed" -Field "priority" -From $null -To $initialPriority -Description "Priority set during initial triage."
     $activityEvents += New-JiraActivityEvent -Id "$issueKey-a3" -Author $DefaultAssignee -Timestamp $investigationAt.ToString("o") -Type "comment" -Body $commentsBody -Description "Investigation comment added with telemetry links."
-    $activityEvents += New-JiraActivityEvent -Id "$issueKey-a4" -Author $DefaultAssignee -Timestamp $resolvedAt.ToString("o") -Type "field_changed" -Field "status" -From "In Progress" -To "Resolved" -Description "Synthetic incident resolved after recovery window."
+    $activityIndex = 4
+    if ($RealisticNoise -and $initialPriority -ne $finalPriority) {
+        $activityEvents += New-JiraActivityEvent -Id "$issueKey-a$activityIndex" -Author $DefaultAssignee -Timestamp $investigationAt.AddMinutes(9).ToString("o") -Type "field_changed" -Field "priority" -From $initialPriority -To $finalPriority -Description "Priority corrected after impact review."
+        $activityIndex++
+    }
+    if ($RealisticNoise -and (($jiraComponents -join "|") -ne ($components -join "|"))) {
+        $activityEvents += New-JiraActivityEvent -Id "$issueKey-a$activityIndex" -Author $DefaultAssignee -Timestamp $investigationAt.AddMinutes(14).ToString("o") -Type "field_changed" -Field "components" -From ($jiraComponents -join ", ") -To ($components -join ", ") -Description "Components corrected after service-owner review."
+        $activityIndex++
+    }
+    $activityEvents += New-JiraActivityEvent -Id "$issueKey-a$activityIndex" -Author $DefaultAssignee -Timestamp $resolvedAt.ToString("o") -Type "field_changed" -Field "status" -From "In Progress" -To "Resolved" -Description "Synthetic incident resolved after recovery window."
 
     $issue = [ordered]@{
         jira_shadow_issue_id = $shadowIssueId
@@ -238,15 +363,18 @@ Trace ids: $traceQuery
         dataset_run_id = $DatasetRunId
         incident_episode_id = $episodeId
         metadata = [ordered]@{
-            summary = Get-IssueSummary -Episode $episode
+            summary = Get-IssueSummary -Episode $episode -RealisticNoise:$RealisticNoise
             project_id = $null
             project_key = $ProjectKey
             project_name = $ProjectName
             issue_type = "Incident"
             status = "Resolved"
-            priority = Get-PriorityForSeverity -Severity $episode.severity
+            priority = $finalPriority
+            initial_priority = $initialPriority
             affects_versions = @("research-lab-local")
-            components = $components
+            components = $jiraComponents
+            corrected_components = $components
+            realism_profile = if ($RealisticNoise) { "v2.1-noisy-human-triage" } else { "deterministic-v2" }
             labels = @($labels | Sort-Object -Unique)
             resolution = "Recovered"
             fix_versions = @()

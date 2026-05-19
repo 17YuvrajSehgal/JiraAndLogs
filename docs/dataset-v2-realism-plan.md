@@ -95,6 +95,8 @@ First real telemetry pilot completed:
 | Date | Run id | Aggregate id | Result |
 | --- | --- | --- | --- |
 | 2026-05-15 UTC | `2026-05-15-dataset-v2-pilot-001` | `dataset-v2-pilot-001` | 10 episodes, 78 windows, 606 alert events, 5 shadow Jira issues, 0 errors, 0 warnings |
+| 2026-05-15 UTC | `2026-05-15-dataset-v2-pilot-002` | included in `dataset-v2-pilot-003run` | 10 episodes, 78 windows, 592 alert events, 5 shadow Jira issues, 0 errors, 0 warnings |
+| 2026-05-15 UTC | `2026-05-15-dataset-v2-pilot-003` | included in `dataset-v2-pilot-003run` | 10 episodes, 78 windows, 518 alert events, 5 shadow Jira issues, 0 errors, 0 warnings |
 
 Telemetry quality from the first real pilot:
 
@@ -118,6 +120,39 @@ The label-aware profile confirms the joins are correct. The raw telemetry
 profile is weaker on this harder benchmark, which is useful for research because
 it creates clear improvement targets.
 
+Three-run v2 pilot aggregate:
+
+```text
+data/derived/aggregate/dataset-v2-pilot-003run/
+```
+
+Three-run aggregate size:
+
+| Item | Count |
+| --- | ---: |
+| Dataset runs | 3 |
+| Episodes | 30 |
+| Telemetry windows | 234 |
+| Shadow Jira issues | 15 |
+| Ranking examples | 150 |
+| Positive examples | 15 |
+| Negative examples | 135 |
+
+Three-run aggregate metrics:
+
+| Profile | MRR | Recall@1 | Recall@3 | nDCG@3 |
+| --- | ---: | ---: | ---: | ---: |
+| `label_aware_baseline` | 1.0 | 1.0 | 1.0 | 1.0 |
+| `raw_telemetry` | 0.833333 | 0.666667 | 1.0 | 0.876977 |
+
+Per-run raw telemetry metrics:
+
+| Run id | Raw MRR | Raw Recall@1 |
+| --- | ---: | ---: |
+| `2026-05-15-dataset-v2-pilot-001` | 0.8 | 0.6 |
+| `2026-05-15-dataset-v2-pilot-002` | 0.9 | 0.8 |
+| `2026-05-15-dataset-v2-pilot-003` | 0.8 | 0.6 |
+
 Raw telemetry rank-1 misses in the first real pilot:
 
 | Query | Correct scenario | Current rank | Incorrect rank-1 candidate |
@@ -133,6 +168,155 @@ Interpretation:
 - The Redis restart issue is confused with the Redis/cart outage scenario. This
   suggests the ranker needs better fault-shape features, such as restart event
   evidence, recovery timing, and pod lifecycle signals.
+
+Repeated three-run rank-1 misses:
+
+| Miss pattern | Runs affected | Interpretation |
+| --- | ---: | --- |
+| `redis-cart-restart-major` ranked below `cart-redis-degradation-critical` | 3 / 3 | The current raw ranker cannot reliably distinguish dependency restart from dependency outage when affected services overlap. |
+| `productcatalog-latency-major` ranked below `loadgenerator-traffic-spike-nearmiss` | 2 / 3 | The current raw ranker sometimes treats global traffic pressure as more relevant than service-local latency. |
+
+This became the first v2 feature target. The raw telemetry builder was updated
+from `0.2.0` to `0.3.0` with scoring policy
+`label_aware_baseline_v0_and_raw_telemetry_v1`.
+
+New production-facing features:
+
+1. active-fault versus pre-fault exact log deltas per Jira component,
+2. restart-like evidence from deployment lifecycle alerts and restart log terms,
+3. outage-like evidence from dependency exception logs such as Redis cache stack
+   traces and connection failures,
+4. traffic-pressure downweighting when the Jira query names a specific
+   dependency but the candidate lacks a service-local active-window delta,
+5. query-intent alignment for outage and degradation wording.
+
+The new raw telemetry profile still does not score candidate severity, incident
+type, root-cause category, scenario title, fault type, or expected-impact
+labels.
+
+Updated three-run v2 aggregate:
+
+```text
+data/derived/aggregate/dataset-v2-pilot-003run-v2features/
+```
+
+Before and after metrics:
+
+| Aggregate | Builder | Raw MRR | Raw Recall@1 | Raw Recall@3 | Raw nDCG@3 |
+| --- | --- | ---: | ---: | ---: | ---: |
+| `dataset-v2-pilot-003run` | `0.2.0` | 0.833333 | 0.666667 | 1.0 | 0.876977 |
+| `dataset-v2-pilot-003run-v2features` | `0.3.0` | 1.0 | 1.0 | 1.0 | 1.0 |
+
+The two repeated miss patterns are resolved in the pilot aggregate:
+
+| Miss pattern | Before | After |
+| --- | ---: | ---: |
+| `redis-cart-restart-major` below `cart-redis-degradation-critical` | 3 / 3 runs | 0 / 3 runs |
+| `productcatalog-latency-major` below `loadgenerator-traffic-spike-nearmiss` | 2 / 3 runs | 0 / 3 runs |
+
+Important caveat: this is a feature-policy improvement on the same three pilot
+runs used for failure analysis. It is useful evidence that the telemetry shape
+features are directionally correct, but it is not yet a held-out research claim.
+The next credible step is to collect more v2 runs and report run-aware holdout
+metrics.
+
+Run-aware pilot holdout report:
+
+```text
+data/derived/holdout/dataset-v2-pilot-003run-v2features-holdout/
+```
+
+The holdout evaluator creates one fold per selected dataset run. For the current
+three-run pilot, each fold trains on two run ids, tests on one held-out run id,
+and has zero train/test query-id overlap.
+
+Pilot holdout metrics:
+
+| Profile | Macro MRR | Macro Recall@1 | Macro Recall@3 | Macro nDCG@3 |
+| --- | ---: | ---: | ---: | ---: |
+| `label_aware_baseline` | 1.0 | 1.0 | 1.0 | 1.0 |
+| `raw_telemetry` | 1.0 | 1.0 | 1.0 | 1.0 |
+
+Command used:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts\research-lab\build-run-aware-holdout-evaluation.ps1 `
+  -EvaluationId "dataset-v2-pilot-003run-v2features-holdout" `
+  -DatasetRunId "2026-05-15-dataset-v2-pilot-001,2026-05-15-dataset-v2-pilot-002,2026-05-15-dataset-v2-pilot-003" `
+  -Force
+```
+
+This is still a pilot holdout check because each held-out fold contains only
+five queries. The next collection target remains 10-20 v2 runs before using
+these metrics in a serious internal research readout.
+
+## Final MVP v2 Production Dataset
+
+The current final dataset for MVP v1 development is documented in:
+
+```text
+docs/final-dataset-v2-production.md
+```
+
+Named aggregate:
+
+```text
+data/derived/aggregate/dataset-v2-final-production-v1/
+```
+
+Moving aggregate pointer:
+
+```text
+data/derived/aggregate/current/
+```
+
+Named holdout evaluation:
+
+```text
+data/derived/holdout/dataset-v2-final-production-v1-holdout/
+```
+
+Moving holdout pointer:
+
+```text
+data/derived/holdout/current/
+```
+
+It includes the three quick pilot runs plus one full-duration production-style
+run:
+
+```text
+2026-05-15-final-v2-production-001
+```
+
+Final aggregate size:
+
+| Item | Count |
+| --- | ---: |
+| Dataset runs | 4 |
+| Episodes | 40 |
+| Telemetry windows | 312 |
+| Shadow Jira issues | 20 |
+| Ranking examples | 200 |
+| Positive examples | 20 |
+| Negative examples | 180 |
+
+Final aggregate and holdout metrics:
+
+| Profile | MRR | Recall@1 | Recall@3 | nDCG@3 |
+| --- | ---: | ---: | ---: | ---: |
+| `label_aware_baseline` | 1.0 | 1.0 | 1.0 | 1.0 |
+| `raw_telemetry` | 0.975 | 0.95 | 1.0 | 0.981546 |
+
+Known final hard case:
+
+| Query | Correct candidate | Correct rank | Rank-1 candidate |
+| --- | --- | ---: | --- |
+| `2026-05-15-final-v2-production-001::OBSRV-1004` | `redis-cart-restart-major` | 2 | `cart-redis-degradation-critical` |
+
+This dataset should now be used for MVP application work. Keep the known hard
+case visible because it is the best current target for the next ranker or
+explanation improvement.
 
 One pilot run:
 

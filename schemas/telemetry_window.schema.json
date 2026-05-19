@@ -44,7 +44,8 @@
       "properties": {
         "metrics": {"type": "object", "additionalProperties": true},
         "logs": {"type": "object", "additionalProperties": true},
-        "traces": {"type": "object", "additionalProperties": true}
+        "traces": {"type": "object", "additionalProperties": true},
+        "kubernetes": {"type": "object", "additionalProperties": true}
       },
       "additionalProperties": true
     },
@@ -62,4 +63,3 @@
   },
   "additionalProperties": false
 }
-

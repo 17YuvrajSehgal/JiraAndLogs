@@ -1,0 +1,42 @@
+schema_version: 1
+scenario_id: adservice-unavailable-nearmiss
+title: Ad service unavailable near miss with no Jira issue
+dataset_run_id: local-dev-run-001
+traffic_profile_id: baseline-checkout-mix
+environment: research-local
+jira_candidate: false
+expected_jira:
+  issue_type: None
+  priority: None
+  components:
+    - adservice
+    - frontend
+  labels:
+    - synthetic-nearmiss
+    - dependency-outage
+    - adservice
+    - negative-window
+fault:
+  fault_id: adservice-scale-zero-nearmiss-001
+  fault_type: dependency_outage_nearmiss
+  affected_service: adservice
+  suggested_mechanism: scale adservice to zero replicas and verify core checkout still works
+  expected_start_offset_seconds: 300
+  expected_duration_seconds: 240
+  blast_radius:
+    user_visible: false
+    expected_error_rate: low
+    expected_latency_impact: low
+labels:
+  severity: minor
+  incident_type: near_miss
+  root_cause_category: dependency_failure
+  should_alert: maybe
+  should_create_jira_shadow_issue: false
+execution:
+  action: ScaleDeployment
+  namespace: online-boutique-research
+  target_kind: deployment
+  target_name: adservice
+  replicas: 0
+  restore_replicas: 1

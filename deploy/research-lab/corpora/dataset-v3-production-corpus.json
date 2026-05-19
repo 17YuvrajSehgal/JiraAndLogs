@@ -1,0 +1,75 @@
+{
+  "schema_version": 1,
+  "corpus_id": "dataset-v3-production-corpus",
+  "title": "Dataset v3 production corpus",
+  "description": "Large, diverse, production-style Online Boutique observability corpus for testing ranking, ML, NLP, AI, and agent approaches without overestimating performance.",
+  "locked_baseline": "dataset-v2-final-production-v1",
+  "development_stage": "dataset-first research benchmark expansion",
+  "default_dataset_run_prefix": "dataset-v3-production-corpus",
+  "aggregate_id_suffix": "aggregate",
+  "holdout_id_suffix": "holdout",
+  "collection_strategy": {
+    "first_batch_runs": 3,
+    "recommended_batch_runs": 4,
+    "full_corpus_runs": 40,
+    "why_batch_collection": "The full corpus is intentionally large for a local Kubernetes lab. Batch collection lets us validate data quality and resume without discarding completed runs.",
+    "expected_full_scale": {
+      "dataset_runs": 40,
+      "episodes": 510,
+      "shadow_jira_issues": 262,
+      "telemetry_windows": "4000+",
+      "per_run_ranking_pairs": "3000+",
+      "future_global_hard_negative_pairs": "50000+"
+    }
+  },
+  "plans": [
+    {
+      "plan_alias": "foundation",
+      "plan_file": "deploy\\research-lab\\run-plans\\dataset-v3-corpus-foundation.json",
+      "repeat": 12,
+      "purpose": "Broad scenario mix preserving v2.1 hard cases."
+    },
+    {
+      "plan_alias": "outage",
+      "plan_file": "deploy\\research-lab\\run-plans\\dataset-v3-corpus-outage-heavy.json",
+      "repeat": 10,
+      "purpose": "Service-diverse outage and dependency-failure coverage."
+    },
+    {
+      "plan_alias": "restart-traffic",
+      "plan_file": "deploy\\research-lab\\run-plans\\dataset-v3-corpus-restart-traffic.json",
+      "repeat": 10,
+      "purpose": "Restart, recovery, traffic spike, and near-miss coverage."
+    },
+    {
+      "plan_alias": "latency-config",
+      "plan_file": "deploy\\research-lab\\run-plans\\dataset-v3-corpus-latency-config.json",
+      "repeat": 8,
+      "purpose": "Latency, bad configuration, and service-local hard cases."
+    }
+  ],
+  "benchmark_tracks": [
+    {
+      "track_id": "oracle_metadata_sanity",
+      "description": "Uses clean labels and structured metadata to catch broken dataset contracts."
+    },
+    {
+      "track_id": "noisy_jira_text",
+      "description": "Uses delayed and noisy Jira-style issue text to evaluate production-like retrieval."
+    },
+    {
+      "track_id": "raw_telemetry_only",
+      "description": "Uses logs, metrics, traces, alerts, and Kubernetes evidence without Jira metadata leakage."
+    },
+    {
+      "track_id": "global_hard_negative_retrieval",
+      "description": "Future benchmark mode that pairs each Jira issue against candidates from all corpus runs."
+    }
+  ],
+  "promotion_gates": {
+    "raw_runs": "Every collected run must pass validate-dataset-run.ps1 with 0 errors.",
+    "derived_outputs": "Every collected run should build ranking outputs with F1@1 and F1@3 present.",
+    "aggregate_outputs": "Corpus aggregate and holdout reports must include MRR, Recall@1, Recall@3, F1@1, F1@3, and nDCG@3.",
+    "quality_review": "Inspect failures before claiming model progress. Near misses and service-confusion errors are expected and useful."
+  }
+}

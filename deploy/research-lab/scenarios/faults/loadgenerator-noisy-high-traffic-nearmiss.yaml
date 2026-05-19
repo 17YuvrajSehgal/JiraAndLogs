@@ -1,0 +1,44 @@
+schema_version: 1
+scenario_id: loadgenerator-noisy-high-traffic-nearmiss
+title: Noisy high-traffic non-incident
+dataset_run_id: local-dev-run-001
+traffic_profile_id: baseline-checkout-mix
+environment: research-local
+jira_candidate: false
+expected_jira:
+  issue_type: None
+  priority: None
+  components:
+    - frontend
+    - checkoutservice
+    - productcatalogservice
+  labels:
+    - synthetic-nearmiss
+    - high-traffic
+    - negative-window
+fault:
+  fault_id: loadgenerator-high-traffic-nearmiss-001
+  fault_type: noisy_high_traffic
+  affected_service: frontend
+  suggested_mechanism: raise loadgenerator users and rate while keeping the system below sustained incident threshold
+  expected_start_offset_seconds: 300
+  expected_duration_seconds: 300
+  blast_radius:
+    user_visible: false
+    expected_error_rate: low
+    expected_latency_impact: medium
+labels:
+  severity: minor
+  incident_type: near_miss
+  root_cause_category: traffic_pressure
+  should_alert: maybe
+  should_create_jira_shadow_issue: false
+execution:
+  action: SetEnv
+  namespace: online-boutique-research
+  target_kind: deployment
+  target_name: loadgenerator
+  target_container: main
+  env:
+    USERS: "180"
+    RATE: "20"

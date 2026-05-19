@@ -1,0 +1,45 @@
+schema_version: 1
+scenario_id: checkoutservice-unavailable-critical
+title: Checkout service outage blocks order placement
+dataset_run_id: local-dev-run-001
+traffic_profile_id: baseline-checkout-mix
+environment: research-local
+jira_candidate: true
+expected_jira:
+  issue_type: Incident
+  priority: Critical
+  components:
+    - checkoutservice
+    - frontend
+    - cartservice
+    - paymentservice
+  labels:
+    - synthetic-incident
+    - workload-outage
+    - checkoutservice
+    - telemetry-linked
+  summary_template: "Checkout service outage blocked order placement"
+fault:
+  fault_id: checkoutservice-scale-zero-001
+  fault_type: workload_outage
+  affected_service: checkoutservice
+  suggested_mechanism: scale checkoutservice to zero replicas
+  expected_start_offset_seconds: 300
+  expected_duration_seconds: 420
+  blast_radius:
+    user_visible: true
+    expected_error_rate: high
+    expected_latency_impact: high
+labels:
+  severity: critical
+  incident_type: outage
+  root_cause_category: workload_failure
+  should_alert: true
+  should_create_jira_shadow_issue: true
+execution:
+  action: ScaleDeployment
+  namespace: online-boutique-research
+  target_kind: deployment
+  target_name: checkoutservice
+  replicas: 0
+  restore_replicas: 1

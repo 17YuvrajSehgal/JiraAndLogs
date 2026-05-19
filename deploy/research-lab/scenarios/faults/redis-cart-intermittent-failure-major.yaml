@@ -1,0 +1,50 @@
+schema_version: 1
+scenario_id: redis-cart-intermittent-failure-major
+title: Intermittent Redis cart failures during checkout traffic
+dataset_run_id: local-dev-run-001
+traffic_profile_id: baseline-checkout-mix
+environment: research-local
+jira_candidate: true
+expected_jira:
+  issue_type: Incident
+  priority: Major
+  components:
+    - redis-cart
+    - cartservice
+    - checkoutservice
+  labels:
+    - synthetic-incident
+    - intermittent-failure
+    - redis
+    - cartservice
+    - telemetry-linked
+  summary_template: "Intermittent Redis cart failures affected checkout"
+  description_template: |
+    Synthetic lab issue generated from scenario redis-cart-intermittent-failure-major.
+
+    Redis cart pods are restarted during active checkout traffic. The intended
+    signal is a short dependency failure with recovery, not a full sustained
+    outage.
+fault:
+  fault_id: redis-cart-intermittent-restart-001
+  fault_type: dependency_intermittent_failure
+  affected_service: redis-cart
+  suggested_mechanism: delete redis-cart pods and observe cartservice retries and recovery
+  expected_start_offset_seconds: 300
+  expected_duration_seconds: 240
+  blast_radius:
+    user_visible: true
+    expected_error_rate: medium
+    expected_latency_impact: medium
+labels:
+  severity: major
+  incident_type: degradation
+  root_cause_category: dependency_intermittent_failure
+  should_alert: true
+  should_create_jira_shadow_issue: true
+execution:
+  action: RestartPods
+  namespace: online-boutique-research
+  target_kind: deployment
+  target_name: redis-cart
+  selector: app=redis-cart

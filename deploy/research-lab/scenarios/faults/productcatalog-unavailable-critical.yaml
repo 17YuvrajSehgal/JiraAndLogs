@@ -1,0 +1,50 @@
+schema_version: 1
+scenario_id: productcatalog-unavailable-critical
+title: Product catalog outage blocks browse and checkout flows
+dataset_run_id: local-dev-run-001
+traffic_profile_id: baseline-checkout-mix
+environment: research-local
+jira_candidate: true
+expected_jira:
+  issue_type: Incident
+  priority: Critical
+  components:
+    - productcatalogservice
+    - frontend
+    - checkoutservice
+  labels:
+    - synthetic-incident
+    - dependency-outage
+    - productcatalogservice
+    - telemetry-linked
+  summary_template: "Product catalog outage disrupted browse and checkout"
+  description_template: |
+    Synthetic lab issue generated from scenario productcatalog-unavailable-critical.
+
+    Product catalog service capacity is removed during active user traffic.
+    The expected signal includes frontend browse failures, checkout impact, and
+    recovery after the deployment is restored.
+fault:
+  fault_id: productcatalog-scale-zero-001
+  fault_type: dependency_outage
+  affected_service: productcatalogservice
+  suggested_mechanism: scale productcatalogservice to zero replicas
+  expected_start_offset_seconds: 300
+  expected_duration_seconds: 600
+  blast_radius:
+    user_visible: true
+    expected_error_rate: high
+    expected_latency_impact: high
+labels:
+  severity: critical
+  incident_type: outage
+  root_cause_category: dependency_failure
+  should_alert: true
+  should_create_jira_shadow_issue: true
+execution:
+  action: ScaleDeployment
+  namespace: online-boutique-research
+  target_kind: deployment
+  target_name: productcatalogservice
+  replicas: 0
+  restore_replicas: 1

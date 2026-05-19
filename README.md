@@ -171,6 +171,11 @@ Current fault behavior:
 | `cart-redis-degradation-critical` | Temporarily scales `redis-cart` down | Yes |
 | `frontend-cpu-nearmiss` | Raises load generator pressure | No |
 
+That list describes the original simple workflow in `collect-dataset-run.ps1`.
+The current v2 benchmark uses the JSON run plan
+`deploy/research-lab/run-plans/dataset-v2-pilot.json`, which expands each run
+to 10 episodes and 5 shadow Jira issues.
+
 ### 3. Create Telemetry Windows
 
 Each scenario is split into labeled time windows.
@@ -245,6 +250,7 @@ data/runs/<DATASET_RUN_ID>/
   raw/
     loki/
     prometheus/
+    kubernetes/
     tempo/
   summaries/
     run-summary.md
@@ -273,6 +279,8 @@ data/derived/<DATASET_RUN_ID>/
   episode_features.jsonl
   ranking_examples.jsonl
   candidate_scores.csv
+  ablation-metrics.csv
+  raw-telemetry-failure-analysis.csv
   baseline-ranking-report.json
   baseline-ranking-report.md
   freeze-manifest.json
@@ -329,19 +337,34 @@ uses evidence closer to what the product would have:
 - raw telemetry evidence text,
 - log volume,
 - alert volume,
-- trace volume.
+- trace volume,
+- active-fault versus pre-fault service deltas,
+- restart, outage, latency, and traffic-pressure telemetry-shape signals.
+- Kubernetes restart, rollout, readiness, and recovery signals when available.
 
 This is the baseline the MVP should match or beat.
 
-## Current Final MVP Dataset
+The current raw telemetry feature policy is builder `0.4.0`
+(`label_aware_baseline_v0_and_raw_telemetry_v1`). It still avoids candidate
+severity, candidate incident type, candidate root-cause category, scenario
+title, fault type, and expected-impact labels.
 
-The current final MVP dataset is documented in:
+The builder also exports ablation reports and raw telemetry failure analysis so
+we can see which signal families are carrying the ranking and why top-1 misses
+happen.
+
+## Original MVP Dataset
+
+The original three-run MVP dataset is documented in:
 
 ```text
 docs/mvp-evaluation-dataset.md
 ```
 
-The next realism and credibility plan is documented in:
+It is superseded for current work by Dataset v2 production. Keep it only as
+historical context for how the pipeline evolved.
+
+The previous v2 realism history is documented in:
 
 ```text
 docs/dataset-v2-realism-plan.md
@@ -385,14 +408,104 @@ The MVP should start with:
 data/derived/aggregate/current/combined-ranking-examples.jsonl
 ```
 
-## Current Results
+## Current Active Dataset v2 Benchmark
+
+Dataset v2 is the current realism benchmark. It uses the executable run plan:
+
+```text
+deploy/research-lab/run-plans/dataset-v2-pilot.json
+```
+
+The current final v2 production aggregate is:
+
+```text
+data/derived/aggregate/dataset-v2-final-production-v1/
+```
+
+The moving pointer for MVP work is:
+
+```text
+data/derived/aggregate/current/
+```
+
+Aggregate size:
+
+| Item | Count |
+| --- | ---: |
+| Dataset runs | 4 |
+| Episodes | 40 |
+| Telemetry windows | 312 |
+| Shadow Jira issues | 20 |
+| Ranking examples | 200 |
+| Positive examples | 20 |
+| Negative examples | 180 |
+
+Current v2 aggregate metrics:
+
+| Profile | MRR | Recall@1 | Recall@3 | F1@1 | F1@3 | nDCG@3 |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| `label_aware_baseline` | 1.0 | 1.0 | 1.0 | 1.0 | 0.5 | 1.0 |
+| `raw_telemetry` | 0.975 | 0.95 | 1.0 | 0.95 | 0.5 | 0.981546 |
+
+F1 is computed per Jira query with one relevant episode. A successful top-3
+hit contributes `0.5` to F1@3 because Precision@3 is `1/3` and Recall@3 is `1`.
+
+This is final for MVP v1 development. It is not yet a publication-grade final
+dataset because it contains only one full-duration production-style run. The
+main hard case is `2026-05-15-final-v2-production-001::OBSRV-1004`, where the
+raw telemetry baseline ranks `cart-redis-degradation-critical` above the true
+`redis-cart-restart-major` episode.
+
+Current v2 run-aware holdout report:
+
+```text
+data/derived/holdout/dataset-v2-final-production-v1-holdout/
+```
+
+The moving holdout pointer is:
+
+```text
+data/derived/holdout/current/
+```
+
+The holdout check uses one held-out dataset run per fold. On the current final
+v2 dataset, `raw_telemetry` has macro MRR `0.975`, macro Recall@1 `0.95`, macro
+Recall@3 `1.0`, macro F1@1 `0.95`, macro F1@3 `0.5`, and macro nDCG@3
+`0.981546`.
+
+The next research stage is Dataset v2.1:
+
+```text
+docs/dataset-v2.1-realism-plan.md
+deploy/research-lab/run-plans/dataset-v2.1-production.json
+```
+
+Dataset v2.1 adds Kubernetes events, pod restarts, rollout state, richer
+Prometheus service queries, noisy Jira generation, ablation reports, and failure
+analysis. It is not yet promoted as the MVP baseline.
+
+The next dataset-first research stage is Dataset v3 production corpus:
+
+```text
+docs/production-corpus-dataset-plan.md
+deploy/research-lab/corpora/dataset-v3-production-corpus.json
+scripts/research-lab/collect-dataset-corpus.ps1
+```
+
+Dataset v3 is designed for larger ML, NLP, AI, and agent benchmarks. It expands
+the lab to 40 planned production-style runs, 500+ episodes, 260+ shadow Jira
+issues, service-diverse outage/restart/latency cases, and harder near misses.
+It should be collected in batches and reviewed before it replaces any current
+benchmark pointer.
+
+## Original MVP Final Results
 
 Current aggregate metrics:
 
-| Profile | MRR | Recall@1 | Recall@3 | nDCG@3 |
-| --- | ---: | ---: | ---: | ---: |
-| `label_aware_baseline` | 1.0 | 1.0 | 1.0 | 1.0 |
-| `raw_telemetry` | 0.777778 | 0.666667 | 1.0 | 0.833333 |
+| Profile | MRR | Recall@1 | Recall@3 | F1@1 | F1@3 | nDCG@3 |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| `label_aware_baseline` | 1.0 | 1.0 | 1.0 | 1.0 | 0.5 | 1.0 |
+| `raw_telemetry` | 0.777778 | 0.666667 | 1.0 | 0.666667 | 0.5 | 0.833333 |
 
 What this means:
 
@@ -413,16 +526,25 @@ The immediate product/research target is:
 > Improve rank-1 accuracy while preserving top-3 recall.
 
 Specifically, the current raw telemetry ranker overweights broad service overlap
-and activity volume. In two runs, healthy baseline traffic outranks the real
-product catalog latency episode.
+and activity volume in the original MVP benchmark. Dataset v2 exposed harder
+misses: traffic pressure sometimes outranked productcatalog latency, and Redis
+outage sometimes outranked Redis restart.
 
-Promising improvements:
+The first v2 feature iteration fixed those pilot misses by adding active-window
+deltas and telemetry-shape features. The next improvement should not be another
+manual weight tweak on the same runs. The next step is to collect the larger
+Dataset v3 production corpus, split by run id, and test whether any feature
+policy or learned model generalizes across services, fault families, traffic
+noise, and noisy Jira text.
 
-- compare active-fault telemetry against pre-fault telemetry,
+Promising improvements after Dataset v3 collection:
+
+- run train/validation/test splits by dataset run id,
+- report metrics by fault family and affected service,
 - add service-local latency deltas,
-- add error-rate deltas,
-- downweight normal baseline windows for active-incident queries,
+- add Prometheus error-rate and restart deltas,
 - use trace span latency and root-service features,
+- add global hard-negative candidate generation across runs,
 - train a simple supervised model over the exported component features,
 - later, add retrieval against historical Jira issue text.
 
@@ -491,6 +613,46 @@ powershell -NoProfile -ExecutionPolicy Bypass -File scripts\research-lab\collect
   -ForceNewRun
 ```
 
+## How To Collect The Large Dataset v3 Corpus
+
+Use the corpus wrapper when the goal is a large benchmark instead of a single
+run:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts\research-lab\collect-dataset-corpus.ps1 `
+  -DatasetRunPrefix "2026-05-16-dataset-v3-corpus" `
+  -MaxRuns 3 `
+  -ForceNewRun
+```
+
+This runs the first three planned corpus runs, builds derived ranking outputs
+for each run, and then builds corpus aggregate and run-aware holdout reports.
+
+Continue in batches:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts\research-lab\collect-dataset-corpus.ps1 `
+  -DatasetRunPrefix "2026-05-16-dataset-v3-corpus" `
+  -StartAt 4 `
+  -MaxRuns 4 `
+  -ForceNewRun
+```
+
+Preview before running:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts\research-lab\collect-dataset-corpus.ps1 `
+  -DatasetRunPrefix "2026-05-16-dataset-v3-corpus" `
+  -MaxRuns 3 `
+  -PlanOnly
+```
+
+The full runbook is:
+
+```text
+docs/production-corpus-dataset-plan.md
+```
+
 ## How To Build Derived Ranking Data
 
 After a raw run is collected and validated:
@@ -516,8 +678,8 @@ Build the current final MVP aggregate:
 
 ```powershell
 powershell -NoProfile -ExecutionPolicy Bypass -File scripts\research-lab\build-cross-run-evaluation.ps1 `
-  -AggregateId "mvp-final-v1" `
-  -DatasetRunId "2026-05-14-research-final-001,2026-05-14-mvp-eval-002,2026-05-14-mvp-eval-003" `
+  -AggregateId "dataset-v2-final-production-v1" `
+  -DatasetRunId "2026-05-15-dataset-v2-pilot-001,2026-05-15-dataset-v2-pilot-002,2026-05-15-dataset-v2-pilot-003,2026-05-15-final-v2-production-001" `
   -Force
 ```
 
@@ -526,7 +688,16 @@ Update the moving `current` pointer:
 ```powershell
 powershell -NoProfile -ExecutionPolicy Bypass -File scripts\research-lab\build-cross-run-evaluation.ps1 `
   -AggregateId "current" `
-  -DatasetRunId "2026-05-14-research-final-001,2026-05-14-mvp-eval-002,2026-05-14-mvp-eval-003" `
+  -DatasetRunId "2026-05-15-dataset-v2-pilot-001,2026-05-15-dataset-v2-pilot-002,2026-05-15-dataset-v2-pilot-003,2026-05-15-final-v2-production-001" `
+  -Force
+```
+
+Build a run-aware holdout evaluation:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts\research-lab\build-run-aware-holdout-evaluation.ps1 `
+  -EvaluationId "dataset-v2-final-production-v1-holdout" `
+  -DatasetRunId "2026-05-15-dataset-v2-pilot-001,2026-05-15-dataset-v2-pilot-002,2026-05-15-dataset-v2-pilot-003,2026-05-15-final-v2-production-001" `
   -Force
 ```
 
@@ -552,12 +723,14 @@ powershell -NoProfile -ExecutionPolicy Bypass -File scripts\research-lab\build-c
 | `apply-online-boutique.ps1` | Deploy the research overlay for Online Boutique |
 | `collect-dataset-run.ps1` | Run the full collection workflow |
 | `collect-dataset-plan.ps1` | Run a JSON-defined dataset plan such as Dataset v2 pilot |
+| `collect-dataset-corpus.ps1` | Run a multi-plan, resumable production corpus collection |
 | `run-scenario.ps1` | Execute one scenario and record telemetry windows |
 | `export-telemetry-window.ps1` | Export logs, metrics, traces, and alerts for known windows |
 | `generate-shadow-jira-issues.ps1` | Create Jira-shaped records for incident episodes |
 | `validate-dataset-run.ps1` | Check raw run completeness and quality |
 | `build-ranking-dataset.ps1` | Convert one raw run into ranking-ready derived data |
 | `build-cross-run-evaluation.ps1` | Combine derived runs and compute aggregate ranking metrics |
+| `build-run-aware-holdout-evaluation.ps1` | Build one-held-out-run-per-fold evaluation reports |
 
 ## MVP Acceptance Gates
 
@@ -568,8 +741,9 @@ For the first application test, the MVP should:
 - avoid lab-only candidate labels in the production ranking path,
 - match or beat the `raw_telemetry` baseline,
 - preserve Recall@3 at `1.0`,
-- improve Recall@1 above `0.666667`,
-- keep the cart/Redis issue ranked at 1.
+- improve original MVP Recall@1 above `0.666667`,
+- preserve final v2 raw telemetry Recall@1 at or above `0.95`,
+- report held-out v2 results before making a research claim.
 
 ## Current Limitations
 
@@ -578,7 +752,7 @@ benchmark.
 
 Known limitations:
 
-- only three final runs are in the current aggregate,
+- only four final v2 runs are in the current aggregate,
 - all current final runs are same-day local lab runs,
 - shadow Jira issues are generated, not created by real engineers,
 - only a small set of fault types exists,
@@ -596,15 +770,13 @@ Before making external research claims, we should add:
 - stronger schema validation,
 - trained ranking baselines and ablation studies.
 
-The concrete next step is Dataset v2. It adds an executable run plan with more
-incident families and harder negative cases:
+The concrete next step is to collect the first Dataset v3 production corpus
+batch, then inspect the batch before scaling to all planned runs:
 
 ```powershell
-powershell -NoProfile -ExecutionPolicy Bypass -File scripts\research-lab\collect-dataset-plan.ps1 `
-  -DatasetRunId "2026-05-14-dataset-v2-pilot-001" `
-  -PlanFile "deploy\research-lab\run-plans\dataset-v2-pilot.json" `
-  -Quick `
-  -BuildDerived `
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts\research-lab\collect-dataset-corpus.ps1 `
+  -DatasetRunPrefix "2026-05-16-dataset-v3-corpus" `
+  -MaxRuns 3 `
   -ForceNewRun
 ```
 
@@ -616,9 +788,12 @@ Start here:
 - `docs/dataset-acquisition-plan.md`: understand how raw runs are collected.
 - `docs/jira-shadow-issue-contract.md`: understand generated Jira records.
 - `docs/ranking-dataset-baseline.md`: understand derived ranking data.
-- `docs/cross-run-evaluation.md`: understand aggregate metrics.
+- `docs/cross-run-evaluation.md`: understand aggregate and run-aware holdout metrics.
+- `docs/final-dataset-v2-production.md`: understand the current final MVP dataset.
 - `docs/mvp-evaluation-dataset.md`: understand the current final MVP dataset.
 - `docs/dataset-v2-realism-plan.md`: understand the next credibility step.
+- `docs/dataset-v2.1-realism-plan.md`: understand the current next research step.
+- `docs/production-corpus-dataset-plan.md`: understand the large Dataset v3 corpus.
 - `docs/instrumentation-gaps-and-next-steps.md`: understand what to improve next.
 
 ## Mental Model For New Team Members

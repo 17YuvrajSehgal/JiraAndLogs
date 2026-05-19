@@ -31,6 +31,7 @@ The first dataset acquisition workflow now exists:
 - `scripts/research-lab/validate-dataset-run.ps1`
 - `scripts/research-lab/collect-dataset-run.ps1`
 - `scripts/research-lab/collect-dataset-plan.ps1`
+- `scripts/research-lab/collect-dataset-corpus.ps1`
 
 This workflow records dataset manifests, incident episodes, telemetry windows,
 alert events, raw Loki/Prometheus/Tempo exports, and Jira shadow issues.
@@ -41,6 +42,16 @@ It adds payment outage, checkout restart, Redis restart, recommendation restart
 near-miss, and traffic spike near-miss scenarios while staying inside the
 current runner capabilities.
 
+Dataset v3 corpus planning now lives in:
+
+```text
+docs/production-corpus-dataset-plan.md
+deploy/research-lab/corpora/dataset-v3-production-corpus.json
+```
+
+This adds multi-plan batch collection for a larger production-style dataset
+before we start comparing heavier ML, NLP, AI, or agent pipelines.
+
 The telemetry exporter now writes padded Loki context at two levels:
 
 - per telemetry window, including exact service logs, padded service logs, and
@@ -50,7 +61,8 @@ The telemetry exporter now writes padded Loki context at two levels:
 
 Historical Prometheus `ALERTS` query-range results are converted into
 `alerts.jsonl`, alongside current Alertmanager state, so alert evidence is not
-lost after an alert resolves.
+lost after an alert resolves. Kubernetes event, restart, rollout, and readiness
+summaries are also attached to telemetry window features for new runs.
 
 ## Highest-value improvements
 
@@ -78,4 +90,8 @@ Without these joins, the model will learn weaker patterns and the future product
 
 ## Recommendation
 
-Do the deployment scaffold first, then add custom instrumentation in a controlled second step. That keeps the upstream demo runnable while giving us a clear before/after measurement of how much better the dataset becomes when logs, metrics, traces, and Jira shadow issues are fully correlated.
+Collect Dataset v3 in batches, inspect the validation and failure-analysis
+outputs after each batch, then add custom instrumentation in a controlled
+second step. That keeps the upstream demo runnable while giving us a clear
+before/after measurement of how much better the dataset becomes when logs,
+metrics, traces, Kubernetes state, and Jira shadow issues are fully correlated.

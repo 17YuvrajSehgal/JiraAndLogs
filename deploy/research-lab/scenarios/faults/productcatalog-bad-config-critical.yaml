@@ -1,0 +1,51 @@
+schema_version: 1
+scenario_id: productcatalog-bad-config-critical
+title: Product catalog bad configuration creates severe browse latency
+dataset_run_id: local-dev-run-001
+traffic_profile_id: baseline-checkout-mix
+environment: research-local
+jira_candidate: true
+expected_jira:
+  issue_type: Incident
+  priority: Critical
+  components:
+    - productcatalogservice
+    - frontend
+    - checkoutservice
+  labels:
+    - synthetic-incident
+    - bad-config
+    - productcatalogservice
+    - telemetry-linked
+  summary_template: "Product catalog configuration change caused severe latency"
+  description_template: |
+    Synthetic lab issue generated from scenario productcatalog-bad-config-critical.
+
+    The product catalog service is configured with a high artificial latency
+    value to mimic a bad rollout or misconfiguration that is visible through
+    frontend browse and checkout paths.
+fault:
+  fault_id: productcatalog-bad-config-latency-001
+  fault_type: bad_configuration
+  affected_service: productcatalogservice
+  suggested_mechanism: set a high EXTRA_LATENCY value on productcatalogservice
+  expected_start_offset_seconds: 300
+  expected_duration_seconds: 600
+  blast_radius:
+    user_visible: true
+    expected_error_rate: medium
+    expected_latency_impact: very_high
+labels:
+  severity: critical
+  incident_type: degradation
+  root_cause_category: bad_configuration
+  should_alert: true
+  should_create_jira_shadow_issue: true
+execution:
+  action: SetEnv
+  namespace: online-boutique-research
+  target_kind: deployment
+  target_name: productcatalogservice
+  target_container: server
+  env:
+    EXTRA_LATENCY: 1500ms

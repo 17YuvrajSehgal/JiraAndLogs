@@ -1,0 +1,80 @@
+{
+  "schema_version": 1,
+  "plan_id": "dataset-v3-corpus-restart-traffic",
+  "title": "Dataset v3 corpus restart and traffic plan",
+  "description": "Restart-heavy and traffic-noise corpus slice designed to make pod restarts, recovery, near misses, and traffic spikes difficult to overfit.",
+  "environment": "research-local",
+  "traffic_profile_id": "baseline-checkout-mix",
+  "default_post_window_seconds": 240,
+  "quick_duration_seconds": 90,
+  "quick_post_window_seconds": 60,
+  "realistic_jira_noise": true,
+  "target_use": "Restart-vs-outage separation, recovery ranking, and high-traffic near-miss benchmarks",
+  "scenarios": [
+    {
+      "scenario_file": "deploy\\research-lab\\scenarios\\baselines\\baseline-normal-traffic.yaml",
+      "role": "negative_baseline",
+      "notes": "Healthy traffic before restart cases."
+    },
+    {
+      "scenario_file": "deploy\\research-lab\\scenarios\\faults\\frontend-pod-restart-major.yaml",
+      "role": "positive_incident",
+      "notes": "Frontend restart with user-visible impact."
+    },
+    {
+      "scenario_file": "deploy\\research-lab\\scenarios\\faults\\checkoutservice-pod-restart-major.yaml",
+      "role": "positive_incident",
+      "notes": "Checkout restart with downstream order impact."
+    },
+    {
+      "scenario_file": "deploy\\research-lab\\scenarios\\faults\\paymentservice-pod-restart-major.yaml",
+      "role": "positive_incident",
+      "notes": "Payment restart with checkout symptoms."
+    },
+    {
+      "scenario_file": "deploy\\research-lab\\scenarios\\faults\\redis-cart-restart-major.yaml",
+      "role": "positive_incident",
+      "notes": "Redis restart incident."
+    },
+    {
+      "scenario_file": "deploy\\research-lab\\scenarios\\faults\\redis-cart-intermittent-failure-major.yaml",
+      "role": "positive_incident",
+      "notes": "Intermittent Redis failure."
+    },
+    {
+      "scenario_file": "deploy\\research-lab\\scenarios\\faults\\cartservice-pod-restart-nearmiss.yaml",
+      "role": "negative_near_miss",
+      "notes": "Cart restart near miss."
+    },
+    {
+      "scenario_file": "deploy\\research-lab\\scenarios\\faults\\redis-cart-restart-nearmiss.yaml",
+      "role": "negative_near_miss",
+      "notes": "Redis restart near miss."
+    },
+    {
+      "scenario_file": "deploy\\research-lab\\scenarios\\faults\\recommendationservice-pod-restart-nearmiss.yaml",
+      "role": "negative_near_miss",
+      "notes": "Recommendation restart near miss."
+    },
+    {
+      "scenario_file": "deploy\\research-lab\\scenarios\\faults\\frontend-cpu-nearmiss.yaml",
+      "role": "negative_near_miss",
+      "notes": "CPU pressure near miss."
+    },
+    {
+      "scenario_file": "deploy\\research-lab\\scenarios\\faults\\loadgenerator-traffic-spike-nearmiss.yaml",
+      "role": "negative_near_miss",
+      "notes": "Traffic spike near miss."
+    },
+    {
+      "scenario_file": "deploy\\research-lab\\scenarios\\faults\\loadgenerator-noisy-high-traffic-nearmiss.yaml",
+      "role": "negative_near_miss",
+      "notes": "Noisy high-traffic near miss."
+    },
+    {
+      "scenario_file": "deploy\\research-lab\\scenarios\\baselines\\baseline-normal-traffic.yaml",
+      "role": "negative_baseline",
+      "notes": "Healthy traffic after restart and traffic cases."
+    }
+  ]
+}

@@ -21,8 +21,17 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Iterable
 
+from build_cross_run_evaluation import (
+    ABLATION_PROFILES,
+    ablation_score,
+    likely_failure_reason,
+    metrics_from_ranks,
+    rank_int,
+    score_components,
+    service_delta_summary,
+)
 
-SCRIPT_VERSION = "0.2.0"
+SCRIPT_VERSION = "0.4.0"
 
 STOPWORDS = {
     "a",
@@ -259,6 +268,43 @@ def int_feature(record: dict[str, Any], path: list[str]) -> int:
         return 0
 
 
+def normalized_name(value: Any) -> str:
+    return re.sub(r"[^a-z0-9]+", "", str(value).lower())
+
+
+def keyword_presence(text: str, terms: Iterable[str]) -> float:
+    lowered = text.lower()
+    return 1.0 if any(term.lower() in lowered for term in terms) else 0.0
+
+
+def alert_presence(alert_names: Iterable[str], terms: Iterable[str]) -> float:
+    compact_names = " ".join(normalized_name(name) for name in alert_names)
+    return 1.0 if any(normalized_name(term) in compact_names for term in terms) else 0.0
+
+
+def positive_delta_signal(active: int, baseline: int) -> float:
+    delta = max(0, active - baseline)
+    if delta <= 0:
+        return 0.0
+    return min(1.0, math.log10(1 + delta) / 2.0)
+
+
+def service_window_delta_signal(issue_services: Iterable[Any], features: dict[str, Any]) -> float:
+    counts = features.get("exact_log_entries_by_service_window_type", {})
+    best = 0.0
+    for service in issue_services:
+        normalized_service = normalized_name(service)
+        if not normalized_service:
+            continue
+        service_counts = counts.get(normalized_service, {})
+        if not isinstance(service_counts, dict):
+            continue
+        active = int(service_counts.get("active_fault", 0) or 0)
+        baseline = int(service_counts.get("pre_fault_baseline", 0) or 0)
+        best = max(best, positive_delta_signal(active, baseline))
+    return best
+
+
 def parse_log_message(line: str) -> str:
     text = line.strip()
     if not text:
@@ -358,14 +404,39 @@ def build_episode_features(
         alert_fingerprints = set(map(str, listify(episode.get("alert_fingerprints")))) | alerts_by_episode[episode_id]
         alert_names = sorted({names_by_fingerprint.get(fp, fp) for fp in alert_fingerprints if fp})
 
-        exact_log_entries = sum(int_feature(window, ["features", "logs", "entry_count"]) for window in windows)
+        exact_by_window_type: Counter[str] = Counter()
+        trace_by_window_type: Counter[str] = Counter()
+        historical_alerts_by_window_type: Counter[str] = Counter()
+        k8s_restart_events_by_window_type: Counter[str] = Counter()
+        k8s_restart_counters_by_window_type: Counter[str] = Counter()
+        k8s_rollout_unavailable_by_window_type: Counter[str] = Counter()
+        exact_by_service_window_type: dict[str, Counter[str]] = defaultdict(Counter)
+        for window in windows:
+            window_type = str(get_nested(window, ["labels", "window_type"], "unknown") or "unknown")
+            service_name = normalized_name(window.get("service_name", ""))
+            exact_count = int_feature(window, ["features", "logs", "entry_count"])
+            trace_count = int_feature(window, ["features", "traces", "trace_count"])
+            historical_alert_count = int_feature(window, ["features", "metrics", "historical_alert_event_count"])
+            k8s_restart_events = int_feature(window, ["features", "kubernetes", "restart_event_count"])
+            k8s_restart_counters = int_feature(window, ["features", "kubernetes", "container_restart_total"])
+            desired_replicas = int_feature(window, ["features", "kubernetes", "deployment_desired_replicas"])
+            available_replicas = int_feature(window, ["features", "kubernetes", "deployment_available_replicas"])
+            exact_by_window_type[window_type] += exact_count
+            trace_by_window_type[window_type] += trace_count
+            historical_alerts_by_window_type[window_type] += historical_alert_count
+            k8s_restart_events_by_window_type[window_type] += k8s_restart_events
+            k8s_restart_counters_by_window_type[window_type] += k8s_restart_counters
+            if desired_replicas > available_replicas:
+                k8s_rollout_unavailable_by_window_type[window_type] += desired_replicas - available_replicas
+            if service_name:
+                exact_by_service_window_type[service_name][window_type] += exact_count
+
+        exact_log_entries = sum(exact_by_window_type.values())
         service_context_log_entries = sum(int_feature(window, ["features", "logs", "context_entry_count"]) for window in windows)
         namespace_context_log_entries = sum(
             int_feature(window, ["features", "logs", "namespace_context_entry_count"]) for window in windows
         )
-        historical_alert_event_count = sum(
-            int_feature(window, ["features", "metrics", "historical_alert_event_count"]) for window in windows
-        )
+        historical_alert_event_count = sum(historical_alerts_by_window_type.values())
         trace_ids = sorted({str(trace_id) for window in windows for trace_id in listify(window.get("trace_ids"))})
         log_messages: list[str] = []
         seen_messages: set[str] = set()
@@ -416,6 +487,75 @@ def build_episode_features(
             " ".join(trace_summaries),
         ]
         raw_evidence_text = clean_text(" ".join(str(part) for part in raw_evidence_parts if part))
+        log_text = " ".join(log_messages)
+        trace_text = " ".join(trace_summaries)
+        restart_signal = max(
+            0.5 * alert_presence(alert_names, ["KubeDeploymentReplicasMismatch"]),
+            keyword_presence(
+                log_text,
+                [
+                    "restarted",
+                    "restart",
+                    "created container",
+                    "started container",
+                    "deleted pod",
+                    "pod was restarted",
+                ],
+            ),
+        )
+        outage_alert_signal = alert_presence(alert_names, ["KubePodNotReady", "KubeContainerWaiting"])
+        outage_log_signal = keyword_presence(
+            log_text,
+            [
+                "redisconnectionexception",
+                "connecttimeout",
+                "connection refused",
+                "not possible to connect",
+                "rediscartstore",
+                "rediscache.getasync",
+                "stackexchangeredis",
+                "upstream connect error",
+                "service unavailable",
+                "exception stack trace",
+            ],
+        )
+        outage_signal = max(outage_log_signal, 0.5 * outage_alert_signal)
+        traffic_pressure_signal = alert_presence(
+            alert_names,
+            ["CPUThrottlingHigh", "OnlineBoutiqueNearMissResourcePressure"],
+        )
+        latency_signal = keyword_presence(
+            f"{log_text} {trace_text}",
+            ["extra latency", "latency enabled", "duration: 750ms", "duration:750ms"],
+        )
+        active_exact = exact_by_window_type.get("active_fault", 0)
+        pre_fault_exact = exact_by_window_type.get("pre_fault_baseline", 0)
+        recovery_exact = exact_by_window_type.get("recovery_window", 0)
+        active_alerts = historical_alerts_by_window_type.get("active_fault", 0)
+        pre_fault_alerts = historical_alerts_by_window_type.get("pre_fault_baseline", 0)
+        active_restart_events = k8s_restart_events_by_window_type.get("active_fault", 0)
+        pre_fault_restart_events = k8s_restart_events_by_window_type.get("pre_fault_baseline", 0)
+        active_restart_counters = k8s_restart_counters_by_window_type.get("active_fault", 0)
+        pre_fault_restart_counters = k8s_restart_counters_by_window_type.get("pre_fault_baseline", 0)
+        active_rollout_unavailable = k8s_rollout_unavailable_by_window_type.get("active_fault", 0)
+        recovery_rollout_unavailable = k8s_rollout_unavailable_by_window_type.get("recovery_window", 0)
+        restart_event_signal = max(
+            positive_delta_signal(active_restart_events, pre_fault_restart_events),
+            positive_delta_signal(active_restart_counters, pre_fault_restart_counters),
+        )
+        rollout_unavailable_signal = min(1.0, math.log10(1 + active_rollout_unavailable) / 1.5) if active_rollout_unavailable > 0 else 0.0
+        service_local_delta_signal = 0.0
+        for service_counts in exact_by_service_window_type.values():
+            service_local_delta_signal = max(
+                service_local_delta_signal,
+                positive_delta_signal(int(service_counts.get("active_fault", 0) or 0), int(service_counts.get("pre_fault_baseline", 0) or 0)),
+            )
+        if active_exact > pre_fault_exact:
+            active_delta = max(1, active_exact - pre_fault_exact)
+            recovery_gap = max(0, recovery_exact - pre_fault_exact)
+            recovery_complete_signal = round(max(0.0, min(1.0, 1.0 - (recovery_gap / active_delta))), 6)
+        else:
+            recovery_complete_signal = 0.0
 
         features.append(
             {
@@ -433,6 +573,32 @@ def build_episode_features(
                 "alert_names": alert_names,
                 "trace_count": len(trace_ids),
                 "exact_log_entries": exact_log_entries,
+                "exact_log_entries_by_window_type": dict(sorted(exact_by_window_type.items())),
+                "trace_count_by_window_type": dict(sorted(trace_by_window_type.items())),
+                "historical_alert_events_by_window_type": dict(sorted(historical_alerts_by_window_type.items())),
+                "kubernetes_restart_events_by_window_type": dict(sorted(k8s_restart_events_by_window_type.items())),
+                "kubernetes_restart_counters_by_window_type": dict(sorted(k8s_restart_counters_by_window_type.items())),
+                "kubernetes_rollout_unavailable_by_window_type": dict(sorted(k8s_rollout_unavailable_by_window_type.items())),
+                "exact_log_entries_by_service_window_type": {
+                    service_name: dict(sorted(counter.items()))
+                    for service_name, counter in sorted(exact_by_service_window_type.items())
+                },
+                "active_fault_exact_log_entries": active_exact,
+                "pre_fault_baseline_exact_log_entries": pre_fault_exact,
+                "recovery_window_exact_log_entries": recovery_exact,
+                "active_fault_historical_alert_event_count": active_alerts,
+                "pre_fault_baseline_historical_alert_event_count": pre_fault_alerts,
+                "active_to_pre_exact_log_delta_signal": round(positive_delta_signal(active_exact, pre_fault_exact), 6),
+                "active_to_pre_alert_delta_signal": round(positive_delta_signal(active_alerts, pre_fault_alerts), 6),
+                "raw_restart_event_signal": round(restart_event_signal, 6),
+                "raw_rollout_unavailable_signal": round(rollout_unavailable_signal, 6),
+                "raw_recovery_complete_signal": recovery_complete_signal,
+                "raw_recovery_incomplete_signal": round(1.0 - recovery_complete_signal if active_exact > pre_fault_exact else 0.0, 6),
+                "raw_service_local_delta_signal": round(service_local_delta_signal, 6),
+                "raw_restart_signal": round(max(restart_signal, restart_event_signal), 6),
+                "raw_outage_signal": round(max(outage_signal, rollout_unavailable_signal), 6),
+                "raw_traffic_pressure_signal": round(traffic_pressure_signal, 6),
+                "raw_latency_signal": round(latency_signal, 6),
                 "service_context_log_entries": service_context_log_entries,
                 "namespace_context_log_entries": namespace_context_log_entries,
                 "historical_alert_event_count": historical_alert_event_count,
@@ -496,32 +662,14 @@ def calculate_profile_metrics(
         ]
         ranks_by_issue[issue_key] = min(positives) if positives else None
 
-    query_count = len(issues)
-    return {
-        "query_count": query_count,
-        "candidate_episode_count": len(episodes),
-        "example_count": len(examples),
-        "positive_example_count": sum(int(example["label"]) for example in examples),
-        "negative_example_count": sum(1 - int(example["label"]) for example in examples),
-        "mrr": round(
-            sum((1.0 / rank) if rank else 0.0 for rank in ranks_by_issue.values()) / max(1, query_count),
-            6,
-        ),
-        "recall_at_1": round(
-            sum(1 for rank in ranks_by_issue.values() if rank is not None and rank <= 1) / max(1, query_count),
-            6,
-        ),
-        "recall_at_3": round(
-            sum(1 for rank in ranks_by_issue.values() if rank is not None and rank <= 3) / max(1, query_count),
-            6,
-        ),
-        "ndcg_at_3": round(
-            sum(ndcg_for_single_positive(rank) if rank is not None and rank <= 3 else 0.0 for rank in ranks_by_issue.values())
-            / max(1, query_count),
-            6,
-        ),
-        "true_rank_by_issue": ranks_by_issue,
-    }
+    metrics = metrics_from_ranks(
+        ranks_by_query=ranks_by_issue,
+        example_count=len(examples),
+        positive_example_count=sum(int(example["label"]) for example in examples),
+    )
+    metrics["candidate_episode_count"] = len(episodes)
+    metrics["true_rank_by_issue"] = metrics.pop("true_rank_by_query")
+    return metrics
 
 
 def ranked_rows_for_profile(
@@ -561,6 +709,17 @@ def ranked_rows_for_profile(
                     "service_overlap": example["service_overlap"],
                     "severity_match": example["severity_match"],
                     "raw_service_overlap": example["raw_telemetry_service_overlap"],
+                    "raw_query_service_delta_signal": example.get("raw_telemetry_query_service_delta_signal", 0.0),
+                    "raw_restart_signal": example.get("raw_telemetry_restart_signal", 0.0),
+                    "raw_outage_signal": example.get("raw_telemetry_outage_signal", 0.0),
+                    "raw_traffic_pressure_signal": example.get("raw_telemetry_traffic_pressure_signal", 0.0),
+                    "raw_restart_event_signal": example.get("raw_telemetry_restart_event_signal", 0.0),
+                    "raw_rollout_unavailable_signal": example.get("raw_telemetry_rollout_unavailable_signal", 0.0),
+                    "raw_recovery_complete_signal": example.get("raw_telemetry_recovery_complete_signal", 0.0),
+                    "raw_recovery_incomplete_signal": example.get("raw_telemetry_recovery_incomplete_signal", 0.0),
+                    "raw_service_local_delta_signal": example.get("raw_telemetry_service_local_delta_signal", 0.0),
+                    "raw_shape_alignment": example.get("raw_telemetry_shape_alignment", 0.0),
+                    "raw_confusion_penalty": example.get("raw_telemetry_confusion_penalty", 0.0),
                 }
             )
     return rows
@@ -597,6 +756,12 @@ def build_ranking_examples(
         issue_severity = priority_to_severity(str(metadata.get("priority", "")))
         issue_alerts = set(map(str, listify(get_nested(issue, ["telemetry_links", "alert_fingerprints"], []))))
         issue_traces = set(map(str, listify(get_nested(issue, ["telemetry_links", "trace_ids"], []))))
+        query_token_set = set(query_tokens)
+        query_outage_intent = 1.0 if {"outage", "critical", "blocker"} & query_token_set else 0.0
+        query_degradation_intent = 1.0 if {"degradation", "major", "latency", "slow"} & query_token_set else 0.0
+        query_specific_dependency = 1.0 if any(
+            normalized_name(service) not in {"", "frontend", "checkoutservice"} for service in issue_services
+        ) else 0.0
 
         for episode in episodes:
             episode_id = str(episode["incident_episode_id"])
@@ -635,13 +800,45 @@ def build_ranking_examples(
                 )
                 / 5.0,
             )
+            raw_query_service_delta_signal = service_window_delta_signal(issue_services, features)
+            raw_restart_signal = float(features.get("raw_restart_signal", 0.0) or 0.0)
+            raw_outage_signal = float(features.get("raw_outage_signal", 0.0) or 0.0)
+            raw_traffic_pressure_signal = float(features.get("raw_traffic_pressure_signal", 0.0) or 0.0)
+            raw_latency_signal = float(features.get("raw_latency_signal", 0.0) or 0.0)
+            if query_outage_intent:
+                raw_shape_alignment = max(raw_outage_signal, 0.4 * raw_query_service_delta_signal)
+            elif query_degradation_intent:
+                raw_shape_alignment = max(
+                    raw_query_service_delta_signal,
+                    raw_restart_signal,
+                    raw_latency_signal * raw_query_service_delta_signal,
+                )
+            else:
+                raw_shape_alignment = raw_query_service_delta_signal
+            raw_traffic_pressure_penalty = (
+                raw_traffic_pressure_signal
+                * query_specific_dependency
+                * max(0.0, 1.0 - query_outage_intent)
+                * max(0.0, 1.0 - raw_query_service_delta_signal)
+            )
+            raw_outage_vs_degradation_penalty = (
+                raw_outage_signal
+                * query_degradation_intent
+                * max(0.0, 1.0 - query_outage_intent)
+                * max(0.0, 1.0 - raw_restart_signal)
+                * max(0.0, 1.0 - raw_query_service_delta_signal)
+            )
+            raw_confusion_penalty = max(raw_traffic_pressure_penalty, raw_outage_vs_degradation_penalty)
             raw_telemetry_score = (
-                0.40 * raw_text_score
-                + 0.30 * raw_service_overlap
-                + 0.20 * raw_activity_signal
-                + 0.05 * raw_alert_signal
-                + 0.03 * raw_log_signal
-                + 0.02 * raw_trace_signal
+                0.34 * raw_text_score
+                + 0.26 * raw_service_overlap
+                + 0.12 * raw_activity_signal
+                + 0.04 * raw_alert_signal
+                + 0.02 * raw_log_signal
+                + 0.01 * raw_trace_signal
+                + 0.16 * raw_shape_alignment
+                + 0.05 * raw_query_service_delta_signal
+                - 0.10 * raw_confusion_penalty
             )
             label = 1 if episode_id == true_episode_id else 0
             example = {
@@ -670,6 +867,18 @@ def build_ranking_examples(
                 "raw_telemetry_alert_signal": round(raw_alert_signal, 6),
                 "raw_telemetry_log_signal": round(raw_log_signal, 6),
                 "raw_telemetry_trace_signal": round(raw_trace_signal, 6),
+                "raw_telemetry_query_service_delta_signal": round(raw_query_service_delta_signal, 6),
+                "raw_telemetry_restart_signal": round(raw_restart_signal, 6),
+                "raw_telemetry_outage_signal": round(raw_outage_signal, 6),
+                "raw_telemetry_traffic_pressure_signal": round(raw_traffic_pressure_signal, 6),
+                "raw_telemetry_latency_signal": round(raw_latency_signal, 6),
+                "raw_telemetry_restart_event_signal": round(float(features.get("raw_restart_event_signal", 0.0) or 0.0), 6),
+                "raw_telemetry_rollout_unavailable_signal": round(float(features.get("raw_rollout_unavailable_signal", 0.0) or 0.0), 6),
+                "raw_telemetry_recovery_complete_signal": round(float(features.get("raw_recovery_complete_signal", 0.0) or 0.0), 6),
+                "raw_telemetry_recovery_incomplete_signal": round(float(features.get("raw_recovery_incomplete_signal", 0.0) or 0.0), 6),
+                "raw_telemetry_service_local_delta_signal": round(float(features.get("raw_service_local_delta_signal", 0.0) or 0.0), 6),
+                "raw_telemetry_shape_alignment": round(raw_shape_alignment, 6),
+                "raw_telemetry_confusion_penalty": round(raw_confusion_penalty, 6),
                 "raw_telemetry_score": round(raw_telemetry_score, 6),
                 "provenance_alert_overlap_count": len(issue_alerts & episode_alerts),
                 "provenance_trace_overlap_count": len(issue_traces & episode_traces),
@@ -679,7 +888,7 @@ def build_ranking_examples(
                 "exact_log_entries": features["exact_log_entries"],
                 "service_context_log_entries": features["service_context_log_entries"],
                 "namespace_context_log_entries": features["namespace_context_log_entries"],
-                "scoring_policy": "label_aware_baseline_v0_and_raw_telemetry_v0",
+                "scoring_policy": "label_aware_baseline_v0_and_raw_telemetry_v1",
             }
             examples.append(example)
 
@@ -704,6 +913,116 @@ def build_ranking_examples(
         "raw_telemetry": calculate_profile_metrics(issues, episodes, examples, "raw_telemetry_rank"),
     }
     return examples, metrics_by_profile, rankings_by_profile
+
+
+def build_ablation_reports(examples: list[dict[str, Any]]) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+    grouped: dict[str, list[dict[str, Any]]] = defaultdict(list)
+    for example in examples:
+        grouped[str(example["jira_issue_key"])].append(example)
+
+    metric_rows: list[dict[str, Any]] = []
+    candidate_rows: list[dict[str, Any]] = []
+    positive_count = sum(int(example.get("label", 0)) for example in examples)
+    for profile_name, profile in ABLATION_PROFILES.items():
+        ranks_by_issue: dict[str, int | None] = {}
+        for issue_key, issue_examples in grouped.items():
+            ranked = sorted(
+                issue_examples,
+                key=lambda item: (
+                    -ablation_score(item, profile_name),
+                    str(item.get("candidate_episode_id")),
+                ),
+            )
+            true_rank: int | None = None
+            for rank, example in enumerate(ranked, start=1):
+                if int(example.get("label", 0)) == 1 and true_rank is None:
+                    true_rank = rank
+                candidate_rows.append(
+                    {
+                        "ablation_profile": profile_name,
+                        "dataset_run_id": example.get("dataset_run_id"),
+                        "jira_issue_key": issue_key,
+                        "rank": rank,
+                        "candidate_episode_id": example.get("candidate_episode_id"),
+                        "candidate_scenario_id": example.get("candidate_scenario_id"),
+                        "label": int(example.get("label", 0)),
+                        "score": round(ablation_score(example, profile_name), 6),
+                    }
+                )
+            ranks_by_issue[issue_key] = true_rank
+
+        metrics = metrics_from_ranks(
+            ranks_by_query=ranks_by_issue,
+            example_count=len(examples),
+            positive_example_count=positive_count,
+        )
+        metric_rows.append(
+            {
+                "ablation_profile": profile_name,
+                "description": profile["description"],
+                "uses_candidate_labels": profile["uses_candidate_labels"],
+                **{key: value for key, value in metrics.items() if key != "true_rank_by_query"},
+            }
+        )
+
+    candidate_rows.sort(
+        key=lambda row: (
+            str(row["ablation_profile"]),
+            str(row["jira_issue_key"]),
+            int(row["rank"] or 999999),
+        )
+    )
+    return metric_rows, candidate_rows
+
+
+def build_raw_failure_analysis(
+    examples: list[dict[str, Any]],
+    episode_features: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    feature_by_episode = {
+        str(record.get("incident_episode_id")): record
+        for record in episode_features
+        if record.get("incident_episode_id")
+    }
+    grouped: dict[str, list[dict[str, Any]]] = defaultdict(list)
+    for example in examples:
+        grouped[str(example["jira_issue_key"])].append(example)
+
+    rows: list[dict[str, Any]] = []
+    for issue_key, issue_examples in sorted(grouped.items()):
+        positives = [example for example in issue_examples if int(example.get("label", 0)) == 1]
+        true_example = min(positives, key=lambda item: rank_int(item.get("raw_telemetry_rank")) or 999999) if positives else None
+        true_rank = rank_int(true_example.get("raw_telemetry_rank")) if true_example else None
+        if true_rank is not None and true_rank <= 1:
+            continue
+
+        ranked = sorted(issue_examples, key=lambda item: rank_int(item.get("raw_telemetry_rank")) or 999999)
+        rank1_example = ranked[0] if ranked else None
+        true_features = feature_by_episode.get(str(true_example.get("candidate_episode_id"))) if true_example else {}
+        rank1_features = feature_by_episode.get(str(rank1_example.get("candidate_episode_id"))) if rank1_example else {}
+        rows.append(
+            {
+                "query_id": issue_key,
+                "dataset_run_id": (true_example or rank1_example or {}).get("dataset_run_id"),
+                "jira_issue_key": issue_key,
+                "true_candidate_episode_id": true_example.get("candidate_episode_id") if true_example else None,
+                "true_candidate_scenario_id": true_example.get("candidate_scenario_id") if true_example else None,
+                "true_rank": true_rank,
+                "rank1_candidate_episode_id": rank1_example.get("candidate_episode_id") if rank1_example else None,
+                "rank1_candidate_scenario_id": rank1_example.get("candidate_scenario_id") if rank1_example else None,
+                "rank1_label": int(rank1_example.get("label", 0)) if rank1_example else None,
+                "true_score_components": score_components(true_example),
+                "rank1_score_components": score_components(rank1_example),
+                "true_alert_names": true_features.get("alert_names", []) if true_features else [],
+                "rank1_alert_names": rank1_features.get("alert_names", []) if rank1_features else [],
+                "true_sampled_logs": list(true_features.get("sample_log_messages", []))[:8] if true_features else [],
+                "rank1_sampled_logs": list(rank1_features.get("sample_log_messages", []))[:8] if rank1_features else [],
+                "true_service_deltas": service_delta_summary(true_features or {}),
+                "rank1_service_deltas": service_delta_summary(rank1_features or {}),
+                "likely_failure_reason": likely_failure_reason(true_example, rank1_example),
+            }
+        )
+    return rows
 
 
 def flatten_episodes(episodes: list[dict[str, Any]]) -> list[dict[str, Any]]:
@@ -790,6 +1109,8 @@ def write_report(
     freeze_manifest: dict[str, Any],
     metrics_by_profile: dict[str, dict[str, Any]],
     rankings_by_profile: dict[str, list[dict[str, Any]]],
+    ablation_rows: list[dict[str, Any]],
+    failure_rows: list[dict[str, Any]],
 ) -> None:
     label_metrics = metrics_by_profile["label_aware_baseline"]
     raw_metrics = metrics_by_profile["raw_telemetry"]
@@ -809,16 +1130,39 @@ def write_report(
     lines.append("")
     lines.append("## Metrics")
     lines.append("")
-    lines.append("| Profile | MRR | Recall@1 | Recall@3 | nDCG@3 |")
-    lines.append("| --- | ---: | ---: | ---: | ---: |")
+    lines.append("| Profile | MRR | Recall@1 | Recall@3 | F1@1 | F1@3 | nDCG@3 |")
+    lines.append("| --- | ---: | ---: | ---: | ---: | ---: | ---: |")
     lines.append(
-        f"| label_aware_baseline | {label_metrics['mrr']} | {label_metrics['recall_at_1']} | {label_metrics['recall_at_3']} | {label_metrics['ndcg_at_3']} |"
+        f"| label_aware_baseline | {label_metrics['mrr']} | {label_metrics['recall_at_1']} | {label_metrics['recall_at_3']} | {label_metrics['f1_at_1']} | {label_metrics['f1_at_3']} | {label_metrics['ndcg_at_3']} |"
     )
     lines.append(
-        f"| raw_telemetry | {raw_metrics['mrr']} | {raw_metrics['recall_at_1']} | {raw_metrics['recall_at_3']} | {raw_metrics['ndcg_at_3']} |"
+        f"| raw_telemetry | {raw_metrics['mrr']} | {raw_metrics['recall_at_1']} | {raw_metrics['recall_at_3']} | {raw_metrics['f1_at_1']} | {raw_metrics['f1_at_3']} | {raw_metrics['ndcg_at_3']} |"
     )
     lines.append("")
+    lines.append("F1@k is computed per Jira query with one relevant episode. A top-k hit has Precision@k = 1/k and Recall@k = 1, then the per-query harmonic mean is averaged across queries.")
+    lines.append("")
     lines.append("`label_aware_baseline` is a sanity-check profile that can use lab labels. `raw_telemetry` is the stricter production-facing profile; it does not score candidate severity, incident type, root-cause category, scenario title, fault type, or expected-impact labels.")
+    lines.append("")
+    lines.append("## Ablation Metrics")
+    lines.append("")
+    lines.append("| Ablation | Uses candidate labels | MRR | Recall@1 | Recall@3 | F1@1 | F1@3 | nDCG@3 |")
+    lines.append("| --- | --- | ---: | ---: | ---: | ---: | ---: | ---: |")
+    for row in ablation_rows:
+        lines.append(
+            f"| {row['ablation_profile']} | {row['uses_candidate_labels']} | {row['mrr']} | {row['recall_at_1']} | {row['recall_at_3']} | {row['f1_at_1']} | {row['f1_at_3']} | {row['ndcg_at_3']} |"
+        )
+    lines.append("")
+    lines.append("## Raw Telemetry Failure Analysis")
+    lines.append("")
+    if failure_rows:
+        lines.append("| Jira issue | True rank | True scenario | Rank-1 scenario | Likely reason |")
+        lines.append("| --- | ---: | --- | --- | --- |")
+        for row in failure_rows:
+            lines.append(
+                f"| {row['jira_issue_key']} | {row['true_rank']} | {row['true_candidate_scenario_id']} | {row['rank1_candidate_scenario_id']} | {row['likely_failure_reason']} |"
+            )
+    else:
+        lines.append("No raw telemetry top-1 misses were found.")
     lines.append("")
     lines.append("## Label-Aware Top Rankings")
     lines.append("")
@@ -835,13 +1179,13 @@ def write_report(
     lines.append("")
     lines.append("## Raw Telemetry Top Rankings")
     lines.append("")
-    lines.append("| Jira issue | Rank | Candidate scenario | Label | Score | Text | Service |")
-    lines.append("| --- | ---: | --- | ---: | ---: | ---: | ---: |")
+    lines.append("| Jira issue | Rank | Candidate scenario | Label | Score | Text | Service | Shape | Delta | Penalty |")
+    lines.append("| --- | ---: | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |")
     for row in rankings_by_profile["raw_telemetry"]:
         if int(row["rank"]) > 5:
             continue
         lines.append(
-            "| {jira_issue_key} | {rank} | {candidate_scenario_id} | {label} | {score} | {text_score} | {raw_service_overlap} |".format(
+            "| {jira_issue_key} | {rank} | {candidate_scenario_id} | {label} | {score} | {text_score} | {raw_service_overlap} | {raw_shape_alignment} | {raw_query_service_delta_signal} | {raw_confusion_penalty} |".format(
                 **row
             )
         )
@@ -858,12 +1202,15 @@ def write_report(
     lines.append("")
     lines.append("Raw telemetry profile:")
     lines.append("")
-    lines.append("- 40% BM25 text match between sanitized Jira query text and raw candidate evidence text.")
-    lines.append("- 30% service overlap from Jira components and telemetry-window service names.")
-    lines.append("- 20% activity signal from raw log, trace, and historical-alert volume.")
-    lines.append("- 5% alert-volume signal from alert names and historical alert event counts.")
-    lines.append("- 3% exact log-volume signal.")
-    lines.append("- 2% trace-volume signal.")
+    lines.append("- 34% BM25 text match between sanitized Jira query text and raw candidate evidence text.")
+    lines.append("- 26% service overlap from Jira components and telemetry-window service names.")
+    lines.append("- 12% activity signal from raw log, trace, and historical-alert volume.")
+    lines.append("- 4% alert-volume signal from alert names and historical alert event counts.")
+    lines.append("- 2% exact log-volume signal.")
+    lines.append("- 1% trace-volume signal.")
+    lines.append("- 16% telemetry-shape alignment from active-window deltas, restart-like alerts, outage-like logs, and query intent.")
+    lines.append("- 5% issue-service active-window delta signal.")
+    lines.append("- Up to 10% penalty for common confusions, such as traffic-pressure near-misses without service-local deltas or outage-like evidence for non-outage queries.")
     lines.append("")
     lines.append("Identity leakage controls are active. Dataset ids, episode ids, telemetry window ids, Jira keys, alert fingerprints, trace ids, generated scenario slugs, generated root-cause labels, and generated severity labels are removed from scoring text. Alert and trace overlaps are still exported as audit features, but they are not used in `baseline_score`.")
     lines.append("")
@@ -894,6 +1241,9 @@ Files:
 - `candidate_scores.csv`: ranked candidates per Jira issue for all scoring profiles.
 - `label_aware_candidate_scores.csv`: ranked candidates for the lab-label sanity profile.
 - `raw_telemetry_candidate_scores.csv`: ranked candidates for the raw telemetry profile.
+- `ablation-metrics.json` / `ablation-metrics.csv`: first ablation metrics for text, service, volume, shape, and full raw telemetry scoring.
+- `ablation-candidate-scores.csv`: ranked candidate rows for each ablation profile.
+- `raw-telemetry-failure-analysis.json` / `raw-telemetry-failure-analysis.csv`: raw telemetry top-1 misses with score components, alerts, sampled logs, service deltas, and likely failure reason.
 - `baseline-ranking-report.json` / `baseline-ranking-report.md`: deterministic baseline metrics and interpretation.
 
 Raw files are not copied here. Rebuild this directory from the raw run whenever the feature policy changes.
@@ -935,7 +1285,7 @@ def build(args: argparse.Namespace) -> dict[str, Any]:
         "builder": {
             "name": "build_ranking_dataset.py",
             "version": SCRIPT_VERSION,
-            "scoring_policy": "label_aware_baseline_v0_and_raw_telemetry_v0",
+            "scoring_policy": "label_aware_baseline_v0_and_raw_telemetry_v1",
         },
         "raw_run_root": str(run_root),
         "derived_output_root": str(output_root),
@@ -955,6 +1305,8 @@ def build(args: argparse.Namespace) -> dict[str, Any]:
 
     episode_features = build_episode_features(run_root, episodes, windows_by_episode, alerts)
     examples, metrics_by_profile, rankings_by_profile = build_ranking_examples(issues, episodes, episode_features)
+    ablation_rows, ablation_candidate_rows = build_ablation_reports(examples)
+    raw_failure_rows = build_raw_failure_analysis(examples, episode_features)
     combined_rankings = rankings_by_profile["label_aware_baseline"] + rankings_by_profile["raw_telemetry"]
     report = {
         "dataset_run_id": args.dataset_run_id,
@@ -977,19 +1329,22 @@ def build(args: argparse.Namespace) -> dict[str, Any]:
             "raw_telemetry": {
                 "metrics": metrics_by_profile["raw_telemetry"],
                 "weights": {
-                    "bm25_raw_evidence_text": 0.40,
-                    "service_overlap": 0.30,
-                    "activity_signal": 0.20,
-                    "alert_signal": 0.05,
-                    "log_signal": 0.03,
-                    "trace_signal": 0.02,
+                    "bm25_raw_evidence_text": 0.34,
+                    "service_overlap": 0.26,
+                    "activity_signal": 0.12,
+                    "alert_signal": 0.04,
+                    "log_signal": 0.02,
+                    "trace_signal": 0.01,
+                    "telemetry_shape_alignment": 0.16,
+                    "issue_service_active_delta": 0.05,
+                    "confusion_penalty": -0.10,
                 },
                 "uses_candidate_labels": False,
-                "description": "Production-facing profile using telemetry-window services, alert names, sampled logs, trace summaries, and volume signals.",
+                "description": "Production-facing profile using telemetry-window services, alert names, sampled logs, trace summaries, volume signals, active-window deltas, and telemetry-shape signals.",
             },
         },
         "scoring_policy": {
-            "name": "label_aware_baseline_v0_and_raw_telemetry_v0",
+            "name": "label_aware_baseline_v0_and_raw_telemetry_v1",
             "not_scored": [
                 "provenance_alert_overlap_count",
                 "provenance_trace_overlap_count",
@@ -1007,6 +1362,8 @@ def build(args: argparse.Namespace) -> dict[str, Any]:
         },
         "rankings": combined_rankings,
         "rankings_by_profile": rankings_by_profile,
+        "ablation_metrics": ablation_rows,
+        "raw_telemetry_failure_analysis": raw_failure_rows,
     }
 
     episode_rows = flatten_episodes(episodes)
@@ -1026,8 +1383,21 @@ def build(args: argparse.Namespace) -> dict[str, Any]:
     write_csv(output_root / "candidate_scores.csv", combined_rankings)
     write_csv(output_root / "label_aware_candidate_scores.csv", rankings_by_profile["label_aware_baseline"])
     write_csv(output_root / "raw_telemetry_candidate_scores.csv", rankings_by_profile["raw_telemetry"])
+    write_json(output_root / "ablation-metrics.json", ablation_rows)
+    write_csv(output_root / "ablation-metrics.csv", ablation_rows)
+    write_csv(output_root / "ablation-candidate-scores.csv", ablation_candidate_rows)
+    write_json(output_root / "raw-telemetry-failure-analysis.json", raw_failure_rows)
+    write_csv(output_root / "raw-telemetry-failure-analysis.csv", raw_failure_rows)
     write_json(output_root / "baseline-ranking-report.json", report)
-    write_report(output_root / "baseline-ranking-report.md", args.dataset_run_id, freeze_manifest, metrics_by_profile, rankings_by_profile)
+    write_report(
+        output_root / "baseline-ranking-report.md",
+        args.dataset_run_id,
+        freeze_manifest,
+        metrics_by_profile,
+        rankings_by_profile,
+        ablation_rows,
+        raw_failure_rows,
+    )
     write_readme(output_root / "README.md", args.dataset_run_id)
 
     return {
@@ -1050,6 +1420,11 @@ def build(args: argparse.Namespace) -> dict[str, Any]:
             "candidate_scores.csv",
             "label_aware_candidate_scores.csv",
             "raw_telemetry_candidate_scores.csv",
+            "ablation-metrics.json",
+            "ablation-metrics.csv",
+            "ablation-candidate-scores.csv",
+            "raw-telemetry-failure-analysis.json",
+            "raw-telemetry-failure-analysis.csv",
             "baseline-ranking-report.json",
             "baseline-ranking-report.md",
         ],

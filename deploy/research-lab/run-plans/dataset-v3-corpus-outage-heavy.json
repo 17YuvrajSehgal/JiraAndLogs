@@ -1,0 +1,70 @@
+{
+  "schema_version": 1,
+  "plan_id": "dataset-v3-corpus-outage-heavy",
+  "title": "Dataset v3 corpus outage-heavy plan",
+  "description": "Production-style outage slice that expands the dataset across checkout, catalog, payment, currency, shipping, recommendation, ad, and Redis dependencies.",
+  "environment": "research-local",
+  "traffic_profile_id": "baseline-checkout-mix",
+  "default_post_window_seconds": 240,
+  "quick_duration_seconds": 90,
+  "quick_post_window_seconds": 60,
+  "realistic_jira_noise": true,
+  "target_use": "Hard negatives and service-diverse outage incidents for root-cause and ranking benchmarks",
+  "scenarios": [
+    {
+      "scenario_file": "deploy\\research-lab\\scenarios\\baselines\\baseline-normal-traffic.yaml",
+      "role": "negative_baseline",
+      "notes": "Healthy traffic before service outages."
+    },
+    {
+      "scenario_file": "deploy\\research-lab\\scenarios\\faults\\checkoutservice-unavailable-critical.yaml",
+      "role": "positive_incident",
+      "notes": "Checkout service outage."
+    },
+    {
+      "scenario_file": "deploy\\research-lab\\scenarios\\faults\\paymentservice-unavailable-critical.yaml",
+      "role": "positive_incident",
+      "notes": "Payment service outage."
+    },
+    {
+      "scenario_file": "deploy\\research-lab\\scenarios\\faults\\productcatalog-unavailable-critical.yaml",
+      "role": "positive_incident",
+      "notes": "Product catalog outage."
+    },
+    {
+      "scenario_file": "deploy\\research-lab\\scenarios\\faults\\currencyservice-unavailable-major.yaml",
+      "role": "positive_incident",
+      "notes": "Currency service outage with checkout and frontend symptoms."
+    },
+    {
+      "scenario_file": "deploy\\research-lab\\scenarios\\faults\\shippingservice-unavailable-major.yaml",
+      "role": "positive_incident",
+      "notes": "Shipping quote outage."
+    },
+    {
+      "scenario_file": "deploy\\research-lab\\scenarios\\faults\\recommendationservice-unavailable-major.yaml",
+      "role": "positive_incident",
+      "notes": "Recommendation outage with degraded product pages."
+    },
+    {
+      "scenario_file": "deploy\\research-lab\\scenarios\\faults\\adservice-unavailable-nearmiss.yaml",
+      "role": "negative_near_miss",
+      "notes": "Ad service outage that should be noisy but not Jira-worthy."
+    },
+    {
+      "scenario_file": "deploy\\research-lab\\scenarios\\faults\\cart-redis-degradation-critical.yaml",
+      "role": "positive_incident",
+      "notes": "Cart/Redis outage family."
+    },
+    {
+      "scenario_file": "deploy\\research-lab\\scenarios\\faults\\loadgenerator-noisy-high-traffic-nearmiss.yaml",
+      "role": "negative_near_miss",
+      "notes": "Traffic-only noisy negative after outage cases."
+    },
+    {
+      "scenario_file": "deploy\\research-lab\\scenarios\\baselines\\baseline-normal-traffic.yaml",
+      "role": "negative_baseline",
+      "notes": "Healthy traffic after outage injections."
+    }
+  ]
+}

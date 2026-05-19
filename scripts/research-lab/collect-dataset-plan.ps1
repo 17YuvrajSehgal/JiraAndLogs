@@ -6,6 +6,7 @@ param(
     [switch]$RecordOnly,
     [switch]$NoTelemetryExport,
     [switch]$SkipJiraGeneration,
+    [switch]$RealisticJiraNoise,
     [switch]$ForceNewRun,
     [switch]$BuildDerived,
     [int]$ScenarioDurationSeconds = 0,
@@ -41,6 +42,23 @@ function Get-PlanValue {
     return $value
 }
 
+function Get-PlanBoolean {
+    param(
+        [object]$Object,
+        [string]$Name,
+        [bool]$DefaultValue = $false
+    )
+
+    $value = Get-ResearchLabProperty -Object $Object -Name $Name
+    if ($null -eq $value -or [string]::IsNullOrWhiteSpace([string]$value)) {
+        return $DefaultValue
+    }
+    if ($value -is [bool]) {
+        return [bool]$value
+    }
+    return [System.Convert]::ToBoolean([string]$value)
+}
+
 $resolvedPlanFile = Resolve-ResearchLabInputPath -Path $PlanFile
 if (-not (Test-Path -LiteralPath $resolvedPlanFile)) {
     throw "Run plan not found: $resolvedPlanFile"
@@ -53,6 +71,7 @@ $environment = [string](Get-PlanValue -Object $plan -Name "environment" -Default
 $defaultPostWindowSeconds = [int](Get-PlanValue -Object $plan -Name "default_post_window_seconds" -DefaultValue 180)
 $quickDurationSeconds = [int](Get-PlanValue -Object $plan -Name "quick_duration_seconds" -DefaultValue 90)
 $quickPostWindowSeconds = [int](Get-PlanValue -Object $plan -Name "quick_post_window_seconds" -DefaultValue 60)
+$planRealisticJiraNoise = Get-PlanBoolean -Object $plan -Name "realistic_jira_noise" -DefaultValue $false
 
 if ($Quick) {
     $defaultPostWindowSeconds = $quickPostWindowSeconds
@@ -152,6 +171,10 @@ foreach ($entry in $scenarioPlan) {
     }
     if ($SkipJiraGeneration) {
         $args += "-SkipJiraGeneration"
+    }
+    $entryRealisticJiraNoise = Get-PlanBoolean -Object $entry -Name "realistic_jira_noise" -DefaultValue $planRealisticJiraNoise
+    if ($RealisticJiraNoise -or $entryRealisticJiraNoise) {
+        $args += "-RealisticJiraNoise"
     }
 
     & powershell @args

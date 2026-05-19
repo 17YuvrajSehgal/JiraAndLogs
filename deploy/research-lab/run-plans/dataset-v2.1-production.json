@@ -1,0 +1,90 @@
+{
+  "schema_version": 1,
+  "plan_id": "dataset-v2.1-production",
+  "title": "Dataset v2.1 research realism plan",
+  "description": "Next-stage research dataset plan that keeps the v2 locked MVP scenario families and adds harder real-world cases: intermittent failures, bad configuration, partial degradation, noisy high traffic, and restart near misses.",
+  "environment": "research-local",
+  "traffic_profile_id": "baseline-checkout-mix",
+  "default_post_window_seconds": 240,
+  "quick_duration_seconds": 90,
+  "quick_post_window_seconds": 60,
+  "realistic_jira_noise": true,
+  "target_use": "Research-grade ranker stress testing after the locked dataset-v2-final-production-v1 MVP baseline",
+  "scenarios": [
+    {
+      "scenario_file": "deploy\\research-lab\\scenarios\\baselines\\baseline-normal-traffic.yaml",
+      "role": "negative_baseline",
+      "notes": "Healthy traffic before faults."
+    },
+    {
+      "scenario_file": "deploy\\research-lab\\scenarios\\faults\\productcatalog-latency-major.yaml",
+      "role": "positive_incident",
+      "notes": "Locked v2 product catalog latency family."
+    },
+    {
+      "scenario_file": "deploy\\research-lab\\scenarios\\faults\\loadgenerator-traffic-spike-nearmiss.yaml",
+      "role": "negative_near_miss",
+      "notes": "Locked v2 traffic-pressure near miss."
+    },
+    {
+      "scenario_file": "deploy\\research-lab\\scenarios\\faults\\paymentservice-unavailable-critical.yaml",
+      "role": "positive_incident",
+      "notes": "Locked v2 checkout-impacting dependency outage."
+    },
+    {
+      "scenario_file": "deploy\\research-lab\\scenarios\\faults\\recommendationservice-pod-restart-nearmiss.yaml",
+      "role": "negative_near_miss",
+      "notes": "Locked v2 restart near miss on recommendationservice."
+    },
+    {
+      "scenario_file": "deploy\\research-lab\\scenarios\\faults\\checkoutservice-pod-restart-major.yaml",
+      "role": "positive_incident",
+      "notes": "Locked v2 checkout restart incident."
+    },
+    {
+      "scenario_file": "deploy\\research-lab\\scenarios\\faults\\redis-cart-restart-major.yaml",
+      "role": "positive_incident",
+      "notes": "Locked v2 Redis restart incident and known regression target family."
+    },
+    {
+      "scenario_file": "deploy\\research-lab\\scenarios\\faults\\frontend-cpu-nearmiss.yaml",
+      "role": "negative_near_miss",
+      "notes": "Locked v2 frontend CPU near miss."
+    },
+    {
+      "scenario_file": "deploy\\research-lab\\scenarios\\faults\\cart-redis-degradation-critical.yaml",
+      "role": "positive_incident",
+      "notes": "Locked v2 cart/Redis outage family."
+    },
+    {
+      "scenario_file": "deploy\\research-lab\\scenarios\\faults\\redis-cart-intermittent-failure-major.yaml",
+      "role": "positive_incident",
+      "notes": "Harder intermittent Redis failure, intended to separate restart/recovery from sustained outage."
+    },
+    {
+      "scenario_file": "deploy\\research-lab\\scenarios\\faults\\productcatalog-bad-config-critical.yaml",
+      "role": "positive_incident",
+      "notes": "Bad configuration style incident using known productcatalog latency injection."
+    },
+    {
+      "scenario_file": "deploy\\research-lab\\scenarios\\faults\\checkoutservice-partial-degradation-major.yaml",
+      "role": "positive_incident",
+      "notes": "Partial checkout degradation with recovery behavior."
+    },
+    {
+      "scenario_file": "deploy\\research-lab\\scenarios\\faults\\loadgenerator-noisy-high-traffic-nearmiss.yaml",
+      "role": "negative_near_miss",
+      "notes": "Noisy high-traffic non-incident that should not create Jira."
+    },
+    {
+      "scenario_file": "deploy\\research-lab\\scenarios\\faults\\redis-cart-restart-nearmiss.yaml",
+      "role": "negative_near_miss",
+      "notes": "Redis restart near miss with no shadow Jira issue."
+    },
+    {
+      "scenario_file": "deploy\\research-lab\\scenarios\\baselines\\baseline-normal-traffic.yaml",
+      "role": "negative_baseline",
+      "notes": "Healthy traffic after injected faults to capture restored behavior."
+    }
+  ]
+}

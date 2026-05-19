@@ -1,0 +1,43 @@
+schema_version: 1
+scenario_id: productcatalog-latency-nearmiss
+title: Product catalog mild latency near miss with no Jira issue
+dataset_run_id: local-dev-run-001
+traffic_profile_id: baseline-checkout-mix
+environment: research-local
+jira_candidate: false
+expected_jira:
+  issue_type: None
+  priority: None
+  components:
+    - productcatalogservice
+    - frontend
+  labels:
+    - synthetic-nearmiss
+    - latency
+    - productcatalogservice
+    - negative-window
+fault:
+  fault_id: productcatalog-mild-latency-001
+  fault_type: application_latency_nearmiss
+  affected_service: productcatalogservice
+  suggested_mechanism: set mild EXTRA_LATENCY on productcatalogservice below Jira threshold
+  expected_start_offset_seconds: 300
+  expected_duration_seconds: 240
+  blast_radius:
+    user_visible: false
+    expected_error_rate: very_low
+    expected_latency_impact: low
+labels:
+  severity: minor
+  incident_type: near_miss
+  root_cause_category: dependency_latency
+  should_alert: maybe
+  should_create_jira_shadow_issue: false
+execution:
+  action: SetEnv
+  namespace: online-boutique-research
+  target_kind: deployment
+  target_name: productcatalogservice
+  target_container: server
+  env:
+    EXTRA_LATENCY: 250ms

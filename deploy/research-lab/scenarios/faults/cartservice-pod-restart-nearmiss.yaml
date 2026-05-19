@@ -1,0 +1,41 @@
+schema_version: 1
+scenario_id: cartservice-pod-restart-nearmiss
+title: Cart service restart near miss with no Jira issue
+dataset_run_id: local-dev-run-001
+traffic_profile_id: baseline-checkout-mix
+environment: research-local
+jira_candidate: false
+expected_jira:
+  issue_type: None
+  priority: None
+  components:
+    - cartservice
+    - checkoutservice
+  labels:
+    - synthetic-nearmiss
+    - pod-restart
+    - cartservice
+    - negative-window
+fault:
+  fault_id: cartservice-pod-restart-nearmiss-001
+  fault_type: pod_restart_nearmiss
+  affected_service: cartservice
+  suggested_mechanism: restart cartservice pods and verify quick recovery
+  expected_start_offset_seconds: 300
+  expected_duration_seconds: 120
+  blast_radius:
+    user_visible: false
+    expected_error_rate: very_low
+    expected_latency_impact: low
+labels:
+  severity: minor
+  incident_type: near_miss
+  root_cause_category: workload_restart
+  should_alert: maybe
+  should_create_jira_shadow_issue: false
+execution:
+  action: RestartPods
+  namespace: online-boutique-research
+  target_kind: deployment
+  target_name: cartservice
+  selector: app=cartservice

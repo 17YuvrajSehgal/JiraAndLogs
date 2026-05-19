@@ -1,0 +1,50 @@
+schema_version: 1
+scenario_id: checkoutservice-partial-degradation-major
+title: Partial checkout degradation after transient checkout restart
+dataset_run_id: local-dev-run-001
+traffic_profile_id: baseline-checkout-mix
+environment: research-local
+jira_candidate: true
+expected_jira:
+  issue_type: Incident
+  priority: Major
+  components:
+    - checkoutservice
+    - frontend
+    - cartservice
+    - paymentservice
+  labels:
+    - synthetic-incident
+    - partial-degradation
+    - checkoutservice
+    - telemetry-linked
+  summary_template: "Checkout path partially degraded after checkoutservice restart"
+  description_template: |
+    Synthetic lab issue generated from scenario checkoutservice-partial-degradation-major.
+
+    Checkoutservice pods are restarted during active checkout traffic. The
+    expected pattern is a partial degradation with a recovery window, not a
+    complete dependency outage.
+fault:
+  fault_id: checkoutservice-partial-restart-001
+  fault_type: partial_service_degradation
+  affected_service: checkoutservice
+  suggested_mechanism: restart checkoutservice pods while traffic is active
+  expected_start_offset_seconds: 300
+  expected_duration_seconds: 240
+  blast_radius:
+    user_visible: true
+    expected_error_rate: medium
+    expected_latency_impact: medium
+labels:
+  severity: major
+  incident_type: degradation
+  root_cause_category: workload_restart
+  should_alert: true
+  should_create_jira_shadow_issue: true
+execution:
+  action: RestartPods
+  namespace: online-boutique-research
+  target_kind: deployment
+  target_name: checkoutservice
+  selector: app=checkoutservice

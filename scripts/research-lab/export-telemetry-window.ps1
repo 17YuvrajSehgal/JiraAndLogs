@@ -80,6 +80,26 @@ function Invoke-JsonEndpoint {
     }
 }
 
+function Invoke-KubectlJsonSnapshot {
+    param([Parameter(Mandatory = $true)][string[]]$ArgumentList)
+
+    try {
+        return [ordered]@{
+            ok = $true
+            argument_list = $ArgumentList
+            fetched_at = Get-ResearchLabUtcNow
+            response = Invoke-ResearchLabKubectlJson -ArgumentList $ArgumentList
+        }
+    } catch {
+        return [ordered]@{
+            ok = $false
+            argument_list = $ArgumentList
+            fetched_at = Get-ResearchLabUtcNow
+            error = $_.Exception.Message
+        }
+    }
+}
+
 function Get-StableHash {
     param([Parameter(Mandatory = $true)][string]$Text)
 
@@ -96,6 +116,43 @@ function Get-StableHash {
 function ConvertTo-SafeFileNamePart {
     param([Parameter(Mandatory = $true)][string]$Value)
     return ($Value -replace '[^A-Za-z0-9_.-]', '-')
+}
+
+function Ensure-ExportFeatureMap {
+    param(
+        [Parameter(Mandatory = $true)][object]$Features,
+        [Parameter(Mandatory = $true)][string]$Name
+    )
+
+    if ($Features -is [System.Collections.IDictionary]) {
+        if (-not $Features.Contains($Name)) {
+            $Features[$Name] = [ordered]@{}
+        }
+        return $Features[$Name]
+    }
+
+    $property = $Features.PSObject.Properties[$Name]
+    if ($null -eq $property) {
+        $Features | Add-Member -NotePropertyName $Name -NotePropertyValue ([pscustomobject]@{}) -Force
+        return $Features.PSObject.Properties[$Name].Value
+    }
+
+    return $property.Value
+}
+
+function Set-ExportFeatureValue {
+    param(
+        [Parameter(Mandatory = $true)][object]$FeatureMap,
+        [Parameter(Mandatory = $true)][string]$Name,
+        [object]$Value
+    )
+
+    if ($FeatureMap -is [System.Collections.IDictionary]) {
+        $FeatureMap[$Name] = $Value
+        return
+    }
+
+    $FeatureMap | Add-Member -NotePropertyName $Name -NotePropertyValue $Value -Force
 }
 
 function Get-ExportProperty {
@@ -362,6 +419,90 @@ function Get-ParsedLokiSectionCounts {
     }
 }
 
+function Get-KubernetesItems {
+    param([object]$Snapshot)
+
+    if (-not (Get-ExportProperty -Object $Snapshot -Name "ok")) {
+        return @()
+    }
+    $response = Get-ExportProperty -Object $Snapshot -Name "response"
+    $items = Get-ExportProperty -Object $response -Name "items"
+    if ($null -eq $items) {
+        return @()
+    }
+    return @($items)
+}
+
+function Get-KubernetesSnapshotSummary {
+    param([Parameter(Mandatory = $true)][object]$KubernetesExport)
+
+    $eventItems = Get-KubernetesItems -Snapshot (Get-ExportProperty -Object $KubernetesExport -Name "events")
+    $podItems = Get-KubernetesItems -Snapshot (Get-ExportProperty -Object $KubernetesExport -Name "pods")
+    $deploymentSnapshot = Get-ExportProperty -Object $KubernetesExport -Name "deployment"
+    $deployment = $null
+    if (Get-ExportProperty -Object $deploymentSnapshot -Name "ok") {
+        $deployment = Get-ExportProperty -Object $deploymentSnapshot -Name "response"
+    }
+
+    $restartTotal = 0
+    $readyPodCount = 0
+    foreach ($pod in @($podItems)) {
+        foreach ($containerStatus in @($pod.status.containerStatuses)) {
+            if ($null -ne $containerStatus.restartCount) {
+                $restartTotal += [int]$containerStatus.restartCount
+            }
+        }
+        foreach ($condition in @($pod.status.conditions)) {
+            if ([string]$condition.type -eq "Ready" -and [string]$condition.status -eq "True") {
+                $readyPodCount++
+                break
+            }
+        }
+    }
+
+    $restartEventCount = 0
+    $warningEventCount = 0
+    $rolloutEventCount = 0
+    foreach ($event in @($eventItems)) {
+        $reason = [string]$event.reason
+        $type = [string]$event.type
+        if ($type -eq "Warning") {
+            $warningEventCount++
+        }
+        if ($reason -match "Killing|BackOff|Failed|Unhealthy|Started|Created|Pulled") {
+            $restartEventCount++
+        }
+        if ($reason -match "ScalingReplicaSet|SuccessfulCreate|SuccessfulDelete|DeploymentRollback") {
+            $rolloutEventCount++
+        }
+    }
+
+    $desiredReplicas = $null
+    $availableReplicas = $null
+    $readyReplicas = $null
+    $updatedReplicas = $null
+    if ($null -ne $deployment) {
+        $desiredReplicas = if ($null -ne $deployment.spec.replicas) { [int]$deployment.spec.replicas } else { 0 }
+        $availableReplicas = if ($null -ne $deployment.status.availableReplicas) { [int]$deployment.status.availableReplicas } else { 0 }
+        $readyReplicas = if ($null -ne $deployment.status.readyReplicas) { [int]$deployment.status.readyReplicas } else { 0 }
+        $updatedReplicas = if ($null -ne $deployment.status.updatedReplicas) { [int]$deployment.status.updatedReplicas } else { 0 }
+    }
+
+    return [pscustomobject]@{
+        event_count = @($eventItems).Count
+        warning_event_count = $warningEventCount
+        restart_event_count = $restartEventCount
+        rollout_event_count = $rolloutEventCount
+        pod_count = @($podItems).Count
+        ready_pod_count = $readyPodCount
+        container_restart_total = $restartTotal
+        deployment_desired_replicas = $desiredReplicas
+        deployment_available_replicas = $availableReplicas
+        deployment_ready_replicas = $readyReplicas
+        deployment_updated_replicas = $updatedReplicas
+    }
+}
+
 function Get-TimeBounds {
     param([Parameter(Mandatory = $true)][object[]]$Windows)
 
@@ -520,6 +661,14 @@ try {
             restarts = 'kube_pod_container_status_restarts_total{namespace="' + $namespace + '",pod=~"' + $podRegex + '"}'
             cpu_usage = 'container_cpu_usage_seconds_total{namespace="' + $namespace + '",pod=~"' + $podRegex + '",container!="POD",container!=""}'
             memory_working_set = 'container_memory_working_set_bytes{namespace="' + $namespace + '",pod=~"' + $podRegex + '",container!="POD",container!=""}'
+            service_rpc_latency_count = 'rpc_server_duration_milliseconds_count{service_name="' + $serviceName + '"}'
+            service_rpc_latency_bucket = 'rpc_server_duration_milliseconds_bucket{service_name="' + $serviceName + '"}'
+            service_rpc_error_count = 'rpc_server_duration_milliseconds_count{service_name="' + $serviceName + '",rpc_grpc_status_code!="0"}'
+            service_http_latency_count = 'http_server_duration_milliseconds_count{service_name="' + $serviceName + '"}'
+            service_http_latency_bucket = 'http_server_duration_milliseconds_bucket{service_name="' + $serviceName + '"}'
+            service_http_error_count = 'http_server_duration_milliseconds_count{service_name="' + $serviceName + '",http_status_code=~"5.."}'
+            service_process_cpu = 'process_cpu_seconds_total{service_name="' + $serviceName + '"}'
+            service_process_memory = 'process_resident_memory_bytes{service_name="' + $serviceName + '"}'
             alerts = "ALERTS"
         }
 
@@ -537,6 +686,30 @@ try {
             $promResults.queries[$queryName] = Invoke-JsonEndpoint -Uri $uri
         }
         Write-ResearchLabJsonFile -Path (Join-ResearchLabPath @($runRoot, "raw", "prometheus", "$windowId.json")) -Value $promResults
+
+        $deploymentName = $serviceName
+        if ($window.k8s.deployment) {
+            $deploymentName = [string]$window.k8s.deployment
+        }
+        $serviceSelector = "app=$serviceName"
+        $kubernetes = [ordered]@{
+            fetched_at = Get-ResearchLabUtcNow
+            window = [ordered]@{
+                start_time = $start.ToString("o")
+                end_time = $end.ToString("o")
+                padded_start_time = $paddedStart.ToString("o")
+                padded_end_time = $paddedEnd.ToString("o")
+            }
+            namespace = $namespace
+            service_name = $serviceName
+            deployment_name = $deploymentName
+            service_label_selector = $serviceSelector
+            events = Invoke-KubectlJsonSnapshot -ArgumentList @("get", "events", "-n", $namespace, "-o", "json")
+            pods = Invoke-KubectlJsonSnapshot -ArgumentList @("get", "pods", "-n", $namespace, "-l", $serviceSelector, "-o", "json")
+            deployment = Invoke-KubectlJsonSnapshot -ArgumentList @("get", "deployment", $deploymentName, "-n", $namespace, "-o", "json")
+        }
+        $kubernetesSummary = Get-KubernetesSnapshotSummary -KubernetesExport $kubernetes
+        Write-ResearchLabJsonFile -Path (Join-ResearchLabPath @($runRoot, "raw", "kubernetes", "$windowId.json")) -Value $kubernetes
 
         $prometheusQueries = Get-ExportProperty -Object $promResults -Name "queries"
         $prometheusAlertsQuery = Get-ExportProperty -Object $prometheusQueries -Name "alerts"
@@ -583,6 +756,19 @@ try {
         $window.features.metrics.exported = $true
         $window.features.metrics | Add-Member -NotePropertyName query_count -NotePropertyValue $promQueries.Count -Force
         $window.features.metrics | Add-Member -NotePropertyName historical_alert_event_count -NotePropertyValue $historicalAlertEvents.Count -Force
+        $kubernetesFeatureMap = Ensure-ExportFeatureMap -Features $window.features -Name "kubernetes"
+        Set-ExportFeatureValue -FeatureMap $kubernetesFeatureMap -Name "exported" -Value $true
+        Set-ExportFeatureValue -FeatureMap $kubernetesFeatureMap -Name "event_count" -Value ([int]$kubernetesSummary.event_count)
+        Set-ExportFeatureValue -FeatureMap $kubernetesFeatureMap -Name "warning_event_count" -Value ([int]$kubernetesSummary.warning_event_count)
+        Set-ExportFeatureValue -FeatureMap $kubernetesFeatureMap -Name "restart_event_count" -Value ([int]$kubernetesSummary.restart_event_count)
+        Set-ExportFeatureValue -FeatureMap $kubernetesFeatureMap -Name "rollout_event_count" -Value ([int]$kubernetesSummary.rollout_event_count)
+        Set-ExportFeatureValue -FeatureMap $kubernetesFeatureMap -Name "pod_count" -Value ([int]$kubernetesSummary.pod_count)
+        Set-ExportFeatureValue -FeatureMap $kubernetesFeatureMap -Name "ready_pod_count" -Value ([int]$kubernetesSummary.ready_pod_count)
+        Set-ExportFeatureValue -FeatureMap $kubernetesFeatureMap -Name "container_restart_total" -Value ([int]$kubernetesSummary.container_restart_total)
+        Set-ExportFeatureValue -FeatureMap $kubernetesFeatureMap -Name "deployment_desired_replicas" -Value $kubernetesSummary.deployment_desired_replicas
+        Set-ExportFeatureValue -FeatureMap $kubernetesFeatureMap -Name "deployment_available_replicas" -Value $kubernetesSummary.deployment_available_replicas
+        Set-ExportFeatureValue -FeatureMap $kubernetesFeatureMap -Name "deployment_ready_replicas" -Value $kubernetesSummary.deployment_ready_replicas
+        Set-ExportFeatureValue -FeatureMap $kubernetesFeatureMap -Name "deployment_updated_replicas" -Value $kubernetesSummary.deployment_updated_replicas
         $window.features.traces.exported = $true
         $window.features.traces | Add-Member -NotePropertyName trace_count -NotePropertyValue $traceIds.Count -Force
 

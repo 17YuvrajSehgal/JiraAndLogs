@@ -1,0 +1,65 @@
+{
+  "schema_version": 1,
+  "plan_id": "dataset-v3-corpus-latency-config",
+  "title": "Dataset v3 corpus latency and configuration plan",
+  "description": "Latency and configuration-heavy corpus slice that intentionally creates similar productcatalog signatures with different operational meanings.",
+  "environment": "research-local",
+  "traffic_profile_id": "baseline-checkout-mix",
+  "default_post_window_seconds": 240,
+  "quick_duration_seconds": 90,
+  "quick_post_window_seconds": 60,
+  "realistic_jira_noise": true,
+  "target_use": "Service-local latency deltas, bad-configuration separation, and hard near-miss benchmark cases",
+  "scenarios": [
+    {
+      "scenario_file": "deploy\\research-lab\\scenarios\\baselines\\baseline-normal-traffic.yaml",
+      "role": "negative_baseline",
+      "notes": "Healthy traffic before latency cases."
+    },
+    {
+      "scenario_file": "deploy\\research-lab\\scenarios\\faults\\productcatalog-latency-nearmiss.yaml",
+      "role": "negative_near_miss",
+      "notes": "Small catalog latency that should not create Jira."
+    },
+    {
+      "scenario_file": "deploy\\research-lab\\scenarios\\faults\\productcatalog-latency-major.yaml",
+      "role": "positive_incident",
+      "notes": "Major catalog latency."
+    },
+    {
+      "scenario_file": "deploy\\research-lab\\scenarios\\faults\\productcatalog-bad-config-critical.yaml",
+      "role": "positive_incident",
+      "notes": "Configuration-driven catalog incident."
+    },
+    {
+      "scenario_file": "deploy\\research-lab\\scenarios\\faults\\productcatalog-unavailable-critical.yaml",
+      "role": "positive_incident",
+      "notes": "Catalog outage for outage-vs-latency contrast."
+    },
+    {
+      "scenario_file": "deploy\\research-lab\\scenarios\\faults\\currencyservice-unavailable-major.yaml",
+      "role": "positive_incident",
+      "notes": "Checkout-adjacent dependency outage."
+    },
+    {
+      "scenario_file": "deploy\\research-lab\\scenarios\\faults\\recommendationservice-unavailable-major.yaml",
+      "role": "positive_incident",
+      "notes": "Browse path dependency outage."
+    },
+    {
+      "scenario_file": "deploy\\research-lab\\scenarios\\faults\\loadgenerator-traffic-spike-nearmiss.yaml",
+      "role": "negative_near_miss",
+      "notes": "Traffic spike near miss."
+    },
+    {
+      "scenario_file": "deploy\\research-lab\\scenarios\\faults\\loadgenerator-noisy-high-traffic-nearmiss.yaml",
+      "role": "negative_near_miss",
+      "notes": "Noisy high-traffic near miss."
+    },
+    {
+      "scenario_file": "deploy\\research-lab\\scenarios\\baselines\\baseline-normal-traffic.yaml",
+      "role": "negative_baseline",
+      "notes": "Healthy traffic after latency cases."
+    }
+  ]
+}

@@ -15,6 +15,7 @@ param(
     [string]$Namespace = "online-boutique-research",
     [switch]$NoTelemetryExport,
     [switch]$SkipJiraGeneration,
+    [switch]$RealisticJiraNoise,
     [switch]$SkipRestore
 )
 
@@ -430,9 +431,18 @@ if (-not $NoTelemetryExport) {
 }
 
 if ((-not $SkipJiraGeneration) -and [bool]$scenario.should_create_jira_shadow_issue) {
-    & powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $PSScriptRoot "generate-shadow-jira-issues.ps1") `
-        -DatasetRunId $DatasetRunId `
-        -IncidentEpisodeId $episodeId
+    $jiraArgs = @(
+        "-NoProfile",
+        "-ExecutionPolicy", "Bypass",
+        "-File", (Join-Path $PSScriptRoot "generate-shadow-jira-issues.ps1"),
+        "-DatasetRunId", $DatasetRunId,
+        "-IncidentEpisodeId", $episodeId
+    )
+    if ($RealisticJiraNoise) {
+        $jiraArgs += "-RealisticNoise"
+    }
+
+    & powershell @jiraArgs
     if ($LASTEXITCODE -ne 0) {
         throw "Shadow Jira generation failed for episode $episodeId."
     }

@@ -12,7 +12,7 @@ Build the derived dataset for the current final run:
 
 ```powershell
 powershell -NoProfile -ExecutionPolicy Bypass -File scripts\research-lab\build-ranking-dataset.ps1 `
-  -DatasetRunId "2026-05-14-research-final-001" `
+  -DatasetRunId "2026-05-15-final-v2-production-001" `
   -Force
 ```
 
@@ -20,7 +20,7 @@ Equivalent Python command:
 
 ```powershell
 python scripts\research-lab\build_ranking_dataset.py `
-  --dataset-run-id "2026-05-14-research-final-001" `
+  --dataset-run-id "2026-05-15-final-v2-production-001" `
   --force
 ```
 
@@ -44,6 +44,11 @@ data/derived/<DATASET_RUN_ID>/
   candidate_scores.csv
   label_aware_candidate_scores.csv
   raw_telemetry_candidate_scores.csv
+  ablation-metrics.json
+  ablation-metrics.csv
+  ablation-candidate-scores.csv
+  raw-telemetry-failure-analysis.json
+  raw-telemetry-failure-analysis.csv
   baseline-ranking-report.json
   baseline-ranking-report.md
 ```
@@ -115,6 +120,13 @@ episode into:
 - trace count,
 - trace root service/name summaries,
 - exact and contextual log counts,
+- per-window exact log counts,
+- per-service active-fault versus pre-fault log deltas,
+- Kubernetes restart events, restart counters, rollout availability, and pod
+  readiness signals when captured by v2.1 telemetry export,
+- telemetry-shape signals for restart-like, outage-like, traffic-pressure, and
+  latency-like evidence,
+- recovery-completeness and service-local delta signals,
 - sampled service log messages,
 - sanitized evidence text.
 
@@ -126,13 +138,13 @@ exports remain the authoritative source.
 `ranking_examples.jsonl` and `ranking_examples.csv` contain one Jira issue
 paired with every candidate episode.
 
-For the first final run:
+For the current final v2 production run:
 
-- query issues: 2,
-- candidate episodes: 5,
-- ranking examples: 10,
-- positive examples: 2,
-- negative examples: 8.
+- query issues: 5,
+- candidate episodes: 10,
+- ranking examples: 50,
+- positive examples: 5,
+- negative examples: 45.
 
 The label is:
 
@@ -185,19 +197,57 @@ expected-impact labels are lab knowledge.
 
 `raw_telemetry_score` uses:
 
-- 40% BM25 text score between sanitized Jira query text and raw candidate evidence text,
-- 30% service overlap from Jira components and telemetry-window service names,
-- 20% activity signal from raw log, trace, and historical-alert volume,
-- 5% alert-volume signal,
-- 3% exact log-volume signal,
-- 2% trace-volume signal.
+- 34% BM25 text score between sanitized Jira query text and raw candidate evidence text,
+- 26% service overlap from Jira components and telemetry-window service names,
+- 12% activity signal from raw log, trace, and historical-alert volume,
+- 4% alert-volume signal,
+- 2% exact log-volume signal,
+- 1% trace-volume signal,
+- 16% telemetry-shape alignment from active-window deltas, restart-like alerts,
+  outage-like logs, and query intent,
+- 5% issue-service active-window delta signal,
+- up to 10% penalty for common confusions, such as traffic-pressure near misses
+  without service-local deltas or outage-like evidence for non-outage queries.
 
 The raw profile still uses the generated shadow Jira issue text as the query,
 because that is what the product will rank against. It only restricts candidate
 features to evidence available from telemetry.
 
+The raw profile remains production-facing: it still does not score candidate
+severity, candidate incident type, candidate root-cause category, scenario
+title, fault type, or expected impact labels. The v1 raw telemetry feature
+policy adds behavior-derived features only.
+
 Both profiles export component features and final scores. This lets us replace
-the ranker later without changing the raw dataset.
+the deterministic ranker later without changing the raw dataset.
+
+## Ablation And Failure Analysis
+
+The builder now exports first-pass ablation reports:
+
+- `jira_text_only`,
+- `service_overlap_only`,
+- `raw_telemetry_text_only`,
+- `volume_only`,
+- `shape_features_only`,
+- `full_raw_telemetry`.
+
+These are intentionally simple. They show which evidence families carry signal
+before we train a model.
+
+The builder also exports raw telemetry top-1 misses in
+`raw-telemetry-failure-analysis.csv` and
+`raw-telemetry-failure-analysis.json`. Each row includes:
+
+- query id,
+- true candidate,
+- true rank,
+- rank-1 candidate,
+- score components,
+- alert names,
+- sampled logs,
+- service deltas,
+- likely failure reason.
 
 ## Leakage Controls
 
@@ -230,10 +280,25 @@ for both profiles:
 - MRR,
 - Recall@1,
 - Recall@3,
+- F1@1,
+- F1@3,
 - nDCG@3,
 - top ranked candidates per Jira issue,
+- ablation metrics,
+- raw telemetry failure analysis,
 - scoring policy,
 - leakage controls.
+
+F1 is computed per Jira query with one relevant episode:
+
+```text
+Precision@k = 1/k if the true episode rank is <= k, else 0
+Recall@k = 1 if the true episode rank is <= k, else 0
+F1@k = harmonic mean of Precision@k and Recall@k
+```
+
+This means a successful top-1 query contributes `1.0` to F1@1, while a
+successful top-3 query contributes `0.5` to F1@3.
 
 For the current first run, metrics are only a smoke-test proof of the pipeline.
 There are two positive Jira issues, so they should not be treated as a
