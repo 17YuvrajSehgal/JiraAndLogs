@@ -472,9 +472,6 @@ for START_AT in 1 5 9 13; do
     -StartAt "$START_AT" \
     -MaxRuns 4 \
     2>&1 | tee "logs/${RUN_PREFIX}-batch-${START_AT}.log"
-
-  gcloud storage rsync -r data/runs "${BUCKET}/${RUN_PREFIX}/data/runs"
-  gcloud storage rsync -r data/derived "${BUCKET}/${RUN_PREFIX}/data/derived"
 done
 ```
 
