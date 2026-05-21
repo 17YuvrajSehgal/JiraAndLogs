@@ -715,22 +715,39 @@ The benchmark plan is:
 docs/ml-ai-pipeline-benchmark-plan.md
 ```
 
-Run the first dependency-free benchmark harness:
+Run the expanded dependency-free benchmark harness:
 
 ```powershell
 powershell -NoProfile -ExecutionPolicy Bypass -File scripts\research-lab\run-global-pipeline-benchmark.ps1 `
   -GlobalDatasetId "2026-05-19-dataset-v3-compact-global" `
-  -BenchmarkId "baseline-v1" `
+  -BenchmarkId "baseline-v2-expanded" `
   -Force
 ```
 
-This compares the existing raw telemetry score, BM25 lexical retrieval, a fixed
-hybrid score, and a simple classical logistic-regression baseline. Results are
-written to:
+This compares raw telemetry scoring, BM25, TF-IDF, hybrid score fusion,
+logistic regression, a pairwise perceptron ranker, and reciprocal-rank fusion.
+It also writes leave-one-query-run-out fold metrics and top-1 miss analysis.
+Results are written to:
 
 ```text
-data/derived/global/2026-05-19-dataset-v3-compact-global/benchmarks/baseline-v1/
+data/derived/global/2026-05-19-dataset-v3-compact-global/benchmarks/baseline-v2-expanded/
 ```
+
+The older `baseline-v1` benchmark is kept as the first historical smoke test.
+
+Run the optional embedding benchmark:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts\research-lab\run-global-embedding-pipeline-benchmark.ps1 `
+  -GlobalDatasetId "2026-05-19-dataset-v3-compact-global" `
+  -BenchmarkId "embedding-v1-local" `
+  -Force
+```
+
+This adds hashing-based embedding retrieval, hashing-plus-telemetry fusion, and
+a numeric-plus-hashing logistic baseline. It can also run a
+`sentence-transformers` bi-encoder when that backend is installed and requested
+with `-IncludeSentenceTransformers`.
 
 ## How To Build Derived Ranking Data
 
@@ -812,6 +829,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File scripts\research-lab\build-r
 | `build-run-aware-holdout-evaluation.ps1` | Build one-held-out-run-per-fold evaluation reports |
 | `build-global-hard-negative-dataset.ps1` | Build the global candidate-pool dataset for ML and AI benchmarks |
 | `run-global-pipeline-benchmark.ps1` | Run baseline pipeline comparisons on the global candidate-pool dataset |
+| `run-global-embedding-pipeline-benchmark.ps1` | Run optional embedding and neural bi-encoder comparisons on the global candidate-pool dataset |
 | `test-cloud-dataset-preflight.ps1` | Validate the VM, corpus, scripts, cluster, bucket, and disk before a long cloud run |
 
 ## MVP Acceptance Gates
@@ -841,7 +859,8 @@ Known limitations:
 - shadow Jira issues are generated, not created by real engineers,
 - v3 adds more fault families, but all faults still come from a controlled lab,
 - some Online Boutique services have weaker trace coverage,
-- the current raw ranker uses simple deterministic scoring, not a trained model.
+- the current trained rankers are still small-data baselines, not production
+  model claims.
 
 Before making external research claims, we should add:
 
@@ -852,12 +871,14 @@ Before making external research claims, we should add:
 - noisier non-incident windows,
 - real Jira Cloud replay or integration,
 - stronger schema validation,
-- trained ranking baselines and ablation studies.
+- neural, language-model, and agentic reranking baselines.
 
-The concrete next step is to use the completed compact v3 corpus to build a
-global hard-negative ranking dataset and a first learned or retrieval baseline.
-The main raw telemetry failure mode to address is the service-delta signal
-ranking traffic spikes or downstream symptom services above the true incident.
+The completed compact v3 corpus now has a global hard-negative benchmark and
+first learned baselines. The next modeling step is to add embedding retrieval
+and neural reranking, then test language-model reranking over a limited top-k
+candidate set. The main raw telemetry failure mode to keep addressing is broad
+service-delta or traffic-pressure evidence ranking symptom episodes above the
+true incident.
 
 ## Where To Read More
 
