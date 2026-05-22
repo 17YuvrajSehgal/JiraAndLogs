@@ -28,7 +28,10 @@ from typing import Any
 
 from triage_labels import (
     SCRIPT_VERSION,
+    _BASE_FEATURE_COLUMNS,
+    _DELTA_FEATURE_COLUMNS,
     build_triage_label_record,
+    evidence_text_from_raw,
     numeric_features_for_window,
     read_jsonl,
     repo_root_from_script,
@@ -81,6 +84,15 @@ def build_triage_dataset(
     label_counts: dict[str, int] = {}
     source_counts: dict[str, int] = {}
 
+    # First pass: compute base numeric features + label record for every
+    # window. Keep them in a side index so the second pass can join each
+    # window to its same-service pre_fault_baseline within the same episode
+    # to compute delta features.
+    per_window: list[dict[str, Any]] = []
+    baseline_features_by_episode_service: dict[
+        tuple[str, str], dict[str, float]
+    ] = {}
+
     for window in windows:
         episode_id = window.get("incident_episode_id")
         episode = episode_by_id.get(str(episode_id)) if episode_id else None
@@ -90,6 +102,31 @@ def build_triage_dataset(
             scenarios_root=scenarios_root,
             dataset_run_id=dataset_run_id,
         )
+        features = numeric_features_for_window(window, episode, run_dir=run_dir)
+        evidence_text = evidence_text_from_raw(
+            run_dir=run_dir,
+            window_id=label_record["telemetry_window_id"],
+        )
+        per_window.append(
+            {
+                "window": window,
+                "label_record": label_record,
+                "features": features,
+                "evidence_text": evidence_text,
+            }
+        )
+        if label_record["window_type"] == "pre_fault_baseline":
+            key = (
+                str(label_record["incident_episode_id"] or ""),
+                str(window.get("service_name") or ""),
+            )
+            baseline_features_by_episode_service[key] = features
+
+    for entry in per_window:
+        window = entry["window"]
+        label_record = entry["label_record"]
+        features = entry["features"]
+        evidence_text = entry["evidence_text"]
         label_records.append(label_record)
         label_counts[label_record["triage_label"]] = (
             label_counts.get(label_record["triage_label"], 0) + 1
@@ -98,7 +135,24 @@ def build_triage_dataset(
             source_counts.get(label_record["source"], 0) + 1
         )
 
-        features = numeric_features_for_window(window, episode, run_dir=run_dir)
+        # Delta features = window's value - same-service-same-episode
+        # pre_fault_baseline value. When the window IS the pre_fault_baseline
+        # (or no baseline exists, e.g. for the baseline-normal-traffic
+        # observation_window), deltas are zero.
+        key = (
+            str(label_record["incident_episode_id"] or ""),
+            str(window.get("service_name") or ""),
+        )
+        baseline = baseline_features_by_episode_service.get(key)
+        deltas: dict[str, float] = {}
+        for base_col, delta_col in zip(_BASE_FEATURE_COLUMNS, _DELTA_FEATURE_COLUMNS):
+            if baseline is None or label_record["window_type"] == "pre_fault_baseline":
+                deltas[delta_col] = 0.0
+            else:
+                deltas[delta_col] = float(features.get(base_col, 0.0)) - float(
+                    baseline.get(base_col, 0.0)
+                )
+
         example_record: dict[str, Any] = {
             "window_id": label_record["telemetry_window_id"],
             "dataset_run_id": dataset_run_id,
@@ -115,7 +169,9 @@ def build_triage_dataset(
             "triage_reason_class": label_record["triage_reason_class"],
             "is_hard_case": label_record["is_hard_case"],
             "source": label_record["source"],
+            "triage_evidence_text": evidence_text,
             **features,
+            **deltas,
         }
         example_records.append(example_record)
 

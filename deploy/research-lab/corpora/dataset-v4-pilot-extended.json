@@ -1,0 +1,64 @@
+{
+  "schema_version": 1,
+  "corpus_id": "dataset-v4-pilot-extended",
+  "title": "Dataset v4 extended pilot with control anchor",
+  "description": "Extension of the v4 pilot adding control (baseline-only) runs plus more compact-a/compact-b coverage. Designed for a 2-3 day unattended VM collection with retry-resilient export and provenance recording.",
+  "locked_baseline": null,
+  "development_stage": "v4 extended pilot for ML and benchmark research",
+  "default_dataset_run_prefix": "2026-05-22-dataset-v4-extended",
+  "aggregate_id_suffix": "aggregate",
+  "holdout_id_suffix": "holdout",
+  "collection_strategy": {
+    "first_batch_runs": 2,
+    "recommended_batch_runs": 5,
+    "full_corpus_runs": 13,
+    "why_batch_collection": "Control runs first anchor the false-positive distribution. Compact-a and compact-b runs follow with alternation to preserve corpus balance under early termination.",
+    "expected_full_scale": {
+      "dataset_runs": 13,
+      "episodes_per_compact_a_run": 10,
+      "episodes_per_compact_b_run": 13,
+      "episodes_per_control_run": 6,
+      "total_episodes": 133,
+      "total_telemetry_windows": "approx 1200"
+    }
+  },
+  "plans": [
+    {
+      "plan_alias": "control",
+      "plan_file": "deploy\\research-lab\\run-plans\\control-baseline-only.json",
+      "repeat": 3,
+      "purpose": "Pure baseline runs (no faults). Anchor false-positive distribution and supply additional noise-class training data."
+    },
+    {
+      "plan_alias": "compact-a",
+      "plan_file": "deploy\\research-lab\\run-plans\\dataset-v3-diverse-compact-a.json",
+      "repeat": 5,
+      "purpose": "Latency, dependency outage, restart, Redis degradation, bad configuration, and near-miss coverage."
+    },
+    {
+      "plan_alias": "compact-b",
+      "plan_file": "deploy\\research-lab\\run-plans\\dataset-v3-diverse-compact-b.json",
+      "repeat": 5,
+      "purpose": "Service-diverse outages, frontend and Redis restarts, intermittent Redis failure, and noisy traffic coverage."
+    }
+  ],
+  "benchmark_tracks": [
+    {
+      "track_id": "triage_classification",
+      "description": "Primary task: classify each telemetry window as ticket_worthy / borderline / noise."
+    },
+    {
+      "track_id": "triage_with_memory_retrieval",
+      "description": "Combined task: classification grounded in Jira memory corpus retrieval. Requires triage_evidence_text."
+    },
+    {
+      "track_id": "ranking_retrospective",
+      "description": "Secondary task: given a Jira issue, rank candidate telemetry episodes."
+    }
+  ],
+  "promotion_gates": {
+    "raw_runs": "Every collected run must pass validate-dataset-run.ps1 with 0 errors and validate-run-feature-distribution.py with 0 anomalies flagged.",
+    "derived_outputs": "Per-run triage_examples.jsonl must populate all FEATURE_COLUMNS with >=1 non-zero value across the run, and label distribution must include ticket_worthy + borderline + noise (control runs are exempt for ticket_worthy + borderline).",
+    "aggregate_outputs": "Global triage dataset must include all 13 scenario families across runs."
+  }
+}

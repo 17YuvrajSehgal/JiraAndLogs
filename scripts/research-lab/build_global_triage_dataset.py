@@ -212,6 +212,7 @@ def build_global_triage_dataset(
                 "source",
                 "is_novel",
                 "matched_memory_issue_ids",
+                "triage_evidence_text",
             ],
         },
     )

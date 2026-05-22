@@ -394,7 +394,7 @@ def build_triage_label_record(
     return record
 
 
-FEATURE_COLUMNS: tuple[str, ...] = (
+_BASE_FEATURE_COLUMNS: tuple[str, ...] = (
     "triage_feature_log_total_count",
     "triage_feature_log_error_count",
     "triage_feature_log_warning_count",
@@ -408,9 +408,25 @@ FEATURE_COLUMNS: tuple[str, ...] = (
     "triage_feature_metric_memory_pct",
     "triage_feature_k8s_restart_count",
     "triage_feature_k8s_pod_unavailable_count",
-    "triage_feature_alert_firing_count",
     "triage_feature_k8s_warning_event_count",
 )
+
+# Delta features are computed by build_triage_dataset.py against the
+# same-service pre_fault_baseline window of the same episode. They capture
+# the "change from baseline" pattern that production triage actually keys
+# on. Same naming convention so the feature columns json picks them up.
+_DELTA_FEATURE_COLUMNS: tuple[str, ...] = tuple(
+    f"triage_feature_delta_{column.removeprefix('triage_feature_')}"
+    for column in _BASE_FEATURE_COLUMNS
+)
+
+FEATURE_COLUMNS: tuple[str, ...] = _BASE_FEATURE_COLUMNS + _DELTA_FEATURE_COLUMNS
+
+# Removed: triage_feature_alert_firing_count. Reserved for a future
+# benchmark version that ships PrometheusRule definitions wired to scenario
+# fault patterns. Until those rules exist, the feature carries zero
+# information for this corpus (every value would be 0 after filtering out
+# cluster-default alerts) and would only confuse model training.
 
 # Alerts that fire continuously regardless of the system under test. Excluding
 # them sharpens alert_firing_count as a per-window signal.
@@ -632,21 +648,11 @@ def numeric_features_from_raw(
     mem_values = _prom_values(queries, "memory_working_set")
     mem_mean = (sum(mem_values) / len(mem_values)) if mem_values else 0.0
 
-    alert_firing = 0
-    for series in _prom_series(queries, "alerts"):
-        labels = series.get("metric") or {}
-        if str(labels.get("alertstate", "")).lower() != "firing":
-            continue
-        if labels.get("alertname") in CLUSTER_DEFAULT_ALERTS:
-            continue
-        values = series.get("values") or []
-        if not values:
-            continue
-        try:
-            if float(values[-1][1]) > 0:
-                alert_firing += 1
-        except (TypeError, ValueError, IndexError):
-            continue
+    # Alert firing is intentionally not computed as a model input. The
+    # cluster ships only default alerts (Watchdog, TargetDown,
+    # KubeProxyInstanceUnreachable, NodeClock*) which fire continuously
+    # regardless of scenario state. Add scenario-specific PrometheusRule
+    # definitions before re-introducing this signal.
 
     log_total = log_error = log_warning = 0
     loki_streams = (
@@ -695,7 +701,17 @@ def numeric_features_from_raw(
     scale_down_events = 0
     events_response = ((k8s.get("events") or {}).get("response")) or {}
     for item in events_response.get("items") or []:
-        if str(item.get("type", "")).lower() == "warning":
+        # Filter warning events to this window's service. The events query
+        # is namespace-wide; without this filter the feature fires for ~97%
+        # of windows regardless of label. We match either by the involved
+        # object (typical for pod events) or by the event message.
+        involved = (item.get("involvedObject") or {})
+        involved_name = str(involved.get("name", "")).lower()
+        message_lower = str(item.get("message") or "").lower()
+        matches_service = bool(service_name) and (
+            service_name in involved_name or service_name in message_lower
+        )
+        if str(item.get("type", "")).lower() == "warning" and matches_service:
             try:
                 warning_events += int(item.get("count") or 1)
             except (TypeError, ValueError):
@@ -795,9 +811,134 @@ def numeric_features_from_raw(
         "triage_feature_metric_memory_pct": float(mem_mean),
         "triage_feature_k8s_restart_count": float(max(prom_restart_delta, k8s_restart)),
         "triage_feature_k8s_pod_unavailable_count": float(unavailable),
-        "triage_feature_alert_firing_count": float(alert_firing),
         "triage_feature_k8s_warning_event_count": float(warning_events),
     }
+
+
+def evidence_text_from_raw(
+    run_dir: Path,
+    window_id: str,
+    max_chars: int = 4000,
+) -> str:
+    """Build a per-window evidence text string from raw exports.
+
+    This text is the input that lexical, retrieval, and language-model
+    pipelines consume. The shape is intentionally compact and structured
+    so an LLM can parse sections, while staying under typical context
+    limits.
+
+    Sections (in order):
+      LOG-ERRORS   -- up to 12 error/warning log messages, body parsed
+      TRACES       -- top root span names by frequency, span/error counts
+      K8S-EVENTS   -- warning events for this service, with reason+message
+      WINDOW       -- window_id, service_name (header line)
+
+    Production-safe: does NOT include scenario_id, severity, jira_candidate,
+    triage_label, or any ground-truth field. Only raw observation content.
+    """
+    raw = run_dir / "raw"
+    loki = _safe_read_json(raw / "loki" / f"{window_id}.json") or {}
+    k8s = _safe_read_json(raw / "kubernetes" / f"{window_id}.json") or {}
+    tempo = _safe_read_json(raw / "tempo" / f"{window_id}.json") or {}
+
+    service_name = (k8s.get("service_name") or "").strip()
+    window_meta = k8s.get("window") or {}
+    start = window_meta.get("start_time") or ""
+    end = window_meta.get("end_time") or ""
+
+    sections: list[str] = []
+    sections.append(f"WINDOW window_id={window_id} service={service_name} start={start} end={end}")
+
+    # --- Logs: pick error/warning level messages from body ---
+    log_lines: list[str] = []
+    loki_streams = (
+        (loki.get("service_window") or {}).get("response", {}).get("data", {}).get("result")
+        or []
+    )
+    error_levels = {"error", "err", "critical", "crit", "fatal", "panic"}
+    warning_levels = {"warning", "warn"}
+    for stream in loki_streams:
+        for entry in stream.get("values") or []:
+            try:
+                ts, line = entry[0], entry[1]
+            except (IndexError, TypeError):
+                continue
+            level = _log_severity_from_body(line)
+            if level is None or level not in error_levels | warning_levels:
+                continue
+            try:
+                body = json.loads(line)
+                message = str(body.get("message") or body.get("msg") or line)[:200]
+            except json.JSONDecodeError:
+                message = str(line)[:200]
+            log_lines.append(f"[{level}] {message}")
+            if len(log_lines) >= 12:
+                break
+        if len(log_lines) >= 12:
+            break
+    if log_lines:
+        sections.append("LOG-ERRORS")
+        sections.extend(log_lines)
+
+    # --- Traces: top root names + counts + error span summary ---
+    span_total = 0
+    span_errors = 0
+    durations: list[float] = []
+    root_names: dict[str, int] = {}
+    traces_top = tempo.get("traces") or {}
+    trace_iter = traces_top.values() if isinstance(traces_top, dict) else traces_top
+    for trace in trace_iter:
+        if not isinstance(trace, dict):
+            continue
+        body = trace.get("response") or trace
+        for batch in body.get("batches") or []:
+            for scope in batch.get("scopeSpans") or []:
+                for span in scope.get("spans") or []:
+                    span_total += 1
+                    if _span_is_error(span):
+                        span_errors += 1
+                    duration = _span_duration_ms(span)
+                    if duration is not None:
+                        durations.append(duration)
+                    if not span.get("parentSpanId"):
+                        name = str(span.get("name") or "")[:80]
+                        root_names[name] = root_names.get(name, 0) + 1
+    sections.append(
+        f"TRACES total_spans={span_total} error_spans={span_errors} p50_ms={_percentile(durations, 50):.1f} p95_ms={_percentile(durations, 95):.1f}"
+    )
+    top_roots = sorted(root_names.items(), key=lambda pair: -pair[1])[:5]
+    for name, count in top_roots:
+        sections.append(f"  root={name} count={count}")
+
+    # --- K8s warning events for this service ---
+    service_lower = service_name.lower()
+    warning_summaries: list[str] = []
+    events_response = ((k8s.get("events") or {}).get("response")) or {}
+    seen: set[tuple[str, str]] = set()
+    for item in events_response.get("items") or []:
+        if str(item.get("type", "")).lower() != "warning":
+            continue
+        involved = (item.get("involvedObject") or {})
+        involved_name = str(involved.get("name", "")).lower()
+        message = str(item.get("message") or "").strip()
+        if not (service_lower and (service_lower in involved_name or service_lower in message.lower())):
+            continue
+        reason = str(item.get("reason") or "")
+        key = (reason, message[:80])
+        if key in seen:
+            continue
+        seen.add(key)
+        warning_summaries.append(f"[{reason}] {message[:160]}")
+        if len(warning_summaries) >= 8:
+            break
+    if warning_summaries:
+        sections.append("K8S-EVENTS")
+        sections.extend(warning_summaries)
+
+    text = "\n".join(sections)
+    if len(text) > max_chars:
+        text = text[:max_chars - 3] + "..."
+    return text
 
 
 def numeric_features_for_window(

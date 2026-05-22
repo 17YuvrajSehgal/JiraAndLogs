@@ -12,6 +12,9 @@ param(
     [switch]$SkipDerivedBuild,
     [switch]$SkipAggregateBuild,
     [switch]$PlanOnly,
+    [switch]$BuildTriage,
+    [switch]$HaltOnValidationFail,
+    [string]$GlobalDatasetId,
     [string]$PythonExe = "python"
 )
 
@@ -307,6 +310,38 @@ foreach ($run in $selectedRuns) {
     }
 
     $completedRunIds = @($completedRunIds + $runId | Sort-Object -Unique)
+
+    if ($BuildTriage) {
+        Write-Host "Building triage dataset for $runId"
+        & $powerShell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $PSScriptRoot "build-triage-dataset.ps1") `
+            -DatasetRunId $runId -PythonExe $PythonExe -Force
+        if ($LASTEXITCODE -ne 0) {
+            throw "Triage dataset build failed for run $runId."
+        }
+
+        Write-Host "Validating run $runId"
+        & $powerShell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $PSScriptRoot "validate-run-feature-distribution.ps1") `
+            -DatasetRunId $runId -PythonExe $PythonExe
+        $validationExit = $LASTEXITCODE
+        if ($validationExit -ne 0) {
+            $msg = "Validation FAILED for run ${runId}. See data/runs/${runId}/summaries/data-quality-report.md"
+            if ($HaltOnValidationFail) {
+                Write-CorpusRunManifest `
+                    -OutputPath $manifestPath `
+                    -Corpus $corpus `
+                    -Prefix $DatasetRunPrefix `
+                    -PlannedRuns $plannedRuns `
+                    -SelectedRuns $selectedRuns `
+                    -CompletedRunIds $completedRunIds `
+                    -Status "failed_validation" `
+                    -StartedAt $startedAt
+                throw $msg
+            } else {
+                Write-Warning $msg
+            }
+        }
+    }
+
     Write-CorpusRunManifest `
         -OutputPath $manifestPath `
         -Corpus $corpus `
@@ -316,6 +351,35 @@ foreach ($run in $selectedRuns) {
         -CompletedRunIds $completedRunIds `
         -Status "running" `
         -StartedAt $startedAt
+}
+
+if ($BuildTriage) {
+    if (-not $GlobalDatasetId) {
+        $GlobalDatasetId = "$DatasetRunPrefix-global"
+    }
+    Write-Host "Building Jira memory corpus for prefix $DatasetRunPrefix into $GlobalDatasetId"
+    & $powerShell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $PSScriptRoot "build-jira-memory-corpus.ps1") `
+        -DatasetRunPrefix $DatasetRunPrefix -GlobalDatasetId $GlobalDatasetId -PythonExe $PythonExe -Force
+    if ($LASTEXITCODE -ne 0) {
+        throw "Jira memory corpus build failed."
+    }
+
+    foreach ($run in $selectedRuns) {
+        $runId = [string]$run.dataset_run_id
+        Write-Host "Building window memory matchings for $runId"
+        & $powerShell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $PSScriptRoot "build-window-memory-matchings.ps1") `
+            -DatasetRunId $runId -GlobalDatasetId $GlobalDatasetId -PythonExe $PythonExe -Force
+        if ($LASTEXITCODE -ne 0) {
+            throw "Window memory matchings build failed for $runId."
+        }
+    }
+
+    Write-Host "Building global triage dataset $GlobalDatasetId"
+    & $powerShell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $PSScriptRoot "build-global-triage-dataset.ps1") `
+        -DatasetRunPrefix $DatasetRunPrefix -GlobalDatasetId $GlobalDatasetId -PythonExe $PythonExe -Force
+    if ($LASTEXITCODE -ne 0) {
+        throw "Global triage dataset build failed."
+    }
 }
 
 $derivedRunIds = @(Get-ExistingDerivedRunIds -Prefix $DatasetRunPrefix)

@@ -275,6 +275,29 @@ if (-not [System.IO.Path]::IsPathRooted($scenarioPath)) {
 
 $scenario = Get-ResearchLabScenarioConfig -ScenarioFile $scenarioPath
 $powerShell = Get-ResearchLabPowerShellCommand
+
+# Record provenance: scenario YAML SHA256, file size, and whether the
+# YAML carries an authored triage block. The SHA pins the exact label
+# decisions used for this episode so a reviewer can detect mid-collection
+# scenario edits.
+$scenarioYamlSha = $null
+$scenarioYamlBytes = 0
+$scenarioTriageBlockPresent = $false
+try {
+    $scenarioYamlBytes = (Get-Item -LiteralPath $scenarioPath).Length
+    $hash = [System.Security.Cryptography.SHA256]::Create()
+    try {
+        $bytes = [System.IO.File]::ReadAllBytes($scenarioPath)
+        $hashBytes = $hash.ComputeHash($bytes)
+        $scenarioYamlSha = (($hashBytes | ForEach-Object { $_.ToString("x2") }) -join "")
+    } finally {
+        $hash.Dispose()
+    }
+    $rawYamlText = [System.IO.File]::ReadAllText($scenarioPath)
+    $scenarioTriageBlockPresent = ($rawYamlText -match '(?m)^triage:\s*$')
+} catch {
+    Write-Warning "Could not hash scenario YAML at ${scenarioPath}: $($_.Exception.Message)"
+}
 if ($scenario.execution_namespace) {
     $Namespace = $scenario.execution_namespace
 }
@@ -413,6 +436,13 @@ $episode = [ordered]@{
         expected_error_rate = $scenario.expected_error_rate
         expected_latency_impact = $scenario.expected_latency_impact
         action_metadata = $actionMetadata
+    }
+    provenance = [ordered]@{
+        scenario_file = ($scenarioPath -replace [Regex]::Escape((Get-ResearchLabRepoRoot) + [System.IO.Path]::DirectorySeparatorChar), "")
+        scenario_yaml_sha256 = $scenarioYamlSha
+        scenario_yaml_bytes = $scenarioYamlBytes
+        scenario_triage_block_present = $scenarioTriageBlockPresent
+        recorded_at = Get-ResearchLabUtcNow
     }
 }
 

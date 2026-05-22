@@ -43,6 +43,55 @@ foreach ($fileName in $jsonlFiles) {
 $services = @(Get-ResearchLabWorkloadServices -Namespace $WorkloadNamespace)
 $context = Get-ResearchLabKubeContext
 
+function Get-ToolVersion {
+    param([Parameter(Mandatory = $true)][string]$Command)
+    try {
+        $result = & $Command --version 2>&1 | Select-Object -First 2 | Out-String
+        return $result.Trim()
+    } catch {
+        return $null
+    }
+}
+
+$toolVersions = [ordered]@{
+    powershell = $PSVersionTable.PSVersion.ToString()
+    powershell_edition = $PSVersionTable.PSEdition
+    python = (Get-ToolVersion -Command "python")
+    kubectl = (Get-ToolVersion -Command "kubectl")
+    kind = (Get-ToolVersion -Command "kind")
+    helm = (Get-ToolVersion -Command "helm")
+    docker = (Get-ToolVersion -Command "docker")
+}
+
+# Hash the Python builder modules so a reviewer can detect mid-collection
+# script edits (which would invalidate downstream comparability).
+$builderHashes = [ordered]@{}
+$builderFiles = @(
+    "scripts\research-lab\triage_labels.py",
+    "scripts\research-lab\build_triage_dataset.py",
+    "scripts\research-lab\build_jira_memory_corpus.py",
+    "scripts\research-lab\build_window_memory_matchings.py",
+    "scripts\research-lab\build_global_triage_dataset.py",
+    "scripts\research-lab\run_triage_benchmark.py",
+    "scripts\research-lab\export-telemetry-window.ps1",
+    "scripts\research-lab\run-scenario.ps1",
+    "scripts\research-lab\generate-shadow-jira-issues.ps1"
+)
+$repoRoot = Get-ResearchLabRepoRoot
+foreach ($relative in $builderFiles) {
+    $absolute = Join-ResearchLabPath @($repoRoot, $relative)
+    if (Test-Path -LiteralPath $absolute) {
+        $hash = [System.Security.Cryptography.SHA256]::Create()
+        try {
+            $bytes = [System.IO.File]::ReadAllBytes($absolute)
+            $hashBytes = $hash.ComputeHash($bytes)
+            $builderHashes[$relative] = (($hashBytes | ForEach-Object { $_.ToString("x2") }) -join "")
+        } finally {
+            $hash.Dispose()
+        }
+    }
+}
+
 $manifestPath = Join-Path $runRoot "manifest.json"
 
 $manifest = [ordered]@{
@@ -52,6 +101,8 @@ $manifest = [ordered]@{
     ended_at = $null
     environment = $Environment
     git = Get-ResearchLabGitInfo
+    tool_versions = $toolVersions
+    builder_hashes = $builderHashes
     workload = [ordered]@{
         name = "online-boutique"
         namespace = $WorkloadNamespace

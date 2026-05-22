@@ -66,43 +66,70 @@ function Stop-LocalPortForward {
 function Invoke-JsonEndpoint {
     param(
         [Parameter(Mandatory = $true)][string]$Uri,
-        [int]$TimeoutSeconds = 45
+        [int]$TimeoutSeconds = 45,
+        [int]$MaxAttempts = 3,
+        [int]$BackoffSeconds = 2
     )
 
-    try {
-        return [ordered]@{
-            ok = $true
-            uri = $Uri
-            fetched_at = Get-ResearchLabUtcNow
-            response = Invoke-RestMethod -Uri $Uri -TimeoutSec $TimeoutSeconds
+    # Long unattended collections can see transient port-forward hiccups,
+    # Tempo cold-start latency, and Loki rate-limiting. We retry up to
+    # MaxAttempts times with exponential backoff before recording failure.
+    $lastError = $null
+    for ($attempt = 1; $attempt -le $MaxAttempts; $attempt++) {
+        try {
+            return [ordered]@{
+                ok = $true
+                uri = $Uri
+                fetched_at = Get-ResearchLabUtcNow
+                attempt = $attempt
+                response = Invoke-RestMethod -Uri $Uri -TimeoutSec $TimeoutSeconds
+            }
+        } catch {
+            $lastError = $_.Exception.Message
+            if ($attempt -lt $MaxAttempts) {
+                Start-Sleep -Seconds ($BackoffSeconds * [Math]::Pow(2, $attempt - 1))
+            }
         }
-    } catch {
-        return [ordered]@{
-            ok = $false
-            uri = $Uri
-            fetched_at = Get-ResearchLabUtcNow
-            error = $_.Exception.Message
-        }
+    }
+    return [ordered]@{
+        ok = $false
+        uri = $Uri
+        fetched_at = Get-ResearchLabUtcNow
+        attempts = $MaxAttempts
+        error = $lastError
     }
 }
 
 function Invoke-KubectlJsonSnapshot {
-    param([Parameter(Mandatory = $true)][string[]]$ArgumentList)
+    param(
+        [Parameter(Mandatory = $true)][string[]]$ArgumentList,
+        [int]$MaxAttempts = 3,
+        [int]$BackoffSeconds = 2
+    )
 
-    try {
-        return [ordered]@{
-            ok = $true
-            argument_list = $ArgumentList
-            fetched_at = Get-ResearchLabUtcNow
-            response = Invoke-ResearchLabKubectlJson -ArgumentList $ArgumentList
+    $lastError = $null
+    for ($attempt = 1; $attempt -le $MaxAttempts; $attempt++) {
+        try {
+            return [ordered]@{
+                ok = $true
+                argument_list = $ArgumentList
+                fetched_at = Get-ResearchLabUtcNow
+                attempt = $attempt
+                response = Invoke-ResearchLabKubectlJson -ArgumentList $ArgumentList
+            }
+        } catch {
+            $lastError = $_.Exception.Message
+            if ($attempt -lt $MaxAttempts) {
+                Start-Sleep -Seconds ($BackoffSeconds * [Math]::Pow(2, $attempt - 1))
+            }
         }
-    } catch {
-        return [ordered]@{
-            ok = $false
-            argument_list = $ArgumentList
-            fetched_at = Get-ResearchLabUtcNow
-            error = $_.Exception.Message
-        }
+    }
+    return [ordered]@{
+        ok = $false
+        argument_list = $ArgumentList
+        fetched_at = Get-ResearchLabUtcNow
+        attempts = $MaxAttempts
+        error = $lastError
     }
 }
 
@@ -662,25 +689,18 @@ try {
             (Get-ExportProperty -Object $namespaceContextLogCounts -Name "entries"))
 
         $podRegex = "$serviceName-.*"
-        # OnlineBoutique does not export Prometheus-scrapeable per-service
-        # HTTP/RPC metrics. The legacy service_rpc_*/service_http_*/
-        # service_process_* queries (kept here for back-compat with prior
-        # dataset versions) always return empty for this application. The
-        # actual request-volume / error / latency signal is extracted from
-        # Tempo spans by scripts/research-lab/triage_labels.py.
+        # OnlineBoutique services do not emit Prometheus-scrapeable per-
+        # service HTTP/RPC metrics; the per-service request volume / error
+        # rate / latency signal is computed from Tempo spans by
+        # scripts/research-lab/triage_labels.py. Earlier dataset versions
+        # included rpc_server_duration_*, http_server_duration_*, and
+        # process_* queries here -- they always returned empty for this
+        # application and have been removed to keep raw exports clean.
         $promQueries = [ordered]@{
             pod_info = 'kube_pod_info{namespace="' + $namespace + '",pod=~"' + $podRegex + '"}'
             restarts = 'kube_pod_container_status_restarts_total{namespace="' + $namespace + '",pod=~"' + $podRegex + '"}'
             cpu_usage = 'container_cpu_usage_seconds_total{namespace="' + $namespace + '",pod=~"' + $podRegex + '",container!="POD",container!=""}'
             memory_working_set = 'container_memory_working_set_bytes{namespace="' + $namespace + '",pod=~"' + $podRegex + '",container!="POD",container!=""}'
-            service_rpc_latency_count = 'rpc_server_duration_milliseconds_count{service_name="' + $serviceName + '"}'
-            service_rpc_latency_bucket = 'rpc_server_duration_milliseconds_bucket{service_name="' + $serviceName + '"}'
-            service_rpc_error_count = 'rpc_server_duration_milliseconds_count{service_name="' + $serviceName + '",rpc_grpc_status_code!="0"}'
-            service_http_latency_count = 'http_server_duration_milliseconds_count{service_name="' + $serviceName + '"}'
-            service_http_latency_bucket = 'http_server_duration_milliseconds_bucket{service_name="' + $serviceName + '"}'
-            service_http_error_count = 'http_server_duration_milliseconds_count{service_name="' + $serviceName + '",http_status_code=~"5.."}'
-            service_process_cpu = 'process_cpu_seconds_total{service_name="' + $serviceName + '"}'
-            service_process_memory = 'process_resident_memory_bytes{service_name="' + $serviceName + '"}'
             alerts = "ALERTS"
         }
 
