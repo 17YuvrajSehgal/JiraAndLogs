@@ -426,6 +426,39 @@ CLUSTER_DEFAULT_ALERTS: frozenset[str] = frozenset(
 )
 
 
+def _parse_iso8601(value: Any) -> float | None:
+    """Parse an ISO-8601 timestamp into a UTC unix-seconds float. Tolerates
+    fractional seconds, trailing Z, and Python 3.10 fromisoformat quirks."""
+    if not value:
+        return None
+    text = str(value).strip()
+    if not text:
+        return None
+    if text.endswith("Z"):
+        text = text[:-1] + "+00:00"
+    try:
+        return datetime.fromisoformat(text).timestamp()
+    except ValueError:
+        # Truncate sub-microsecond precision (Go-style 7-digit fractions
+        # the kubectl JSON sometimes emits).
+        if "." in text:
+            head, _, tail = text.partition(".")
+            sep = ""
+            for marker in ("+", "-", "Z"):
+                idx = tail.find(marker)
+                if idx >= 0:
+                    sep = tail[idx:]
+                    tail = tail[:idx]
+                    break
+            tail = tail[:6]
+            candidate = f"{head}.{tail}{sep}"
+            try:
+                return datetime.fromisoformat(candidate).timestamp()
+            except ValueError:
+                return None
+        return None
+
+
 def _safe_read_json(path: Path) -> dict[str, Any] | None:
     if not path.exists():
         return None
@@ -649,9 +682,17 @@ def numeric_features_from_raw(
     ready = int(dep_status.get("readyReplicas") or 0)
     available = int(dep_status.get("availableReplicas") or 0)
     unavailable_field = int(dep_status.get("unavailableReplicas") or 0)
-    unavailable = max(unavailable_field, max(0, desired - ready), max(0, desired - available))
+    unavailable_from_replicas = max(
+        unavailable_field, max(0, desired - ready), max(0, desired - available)
+    )
+
+    service_name = (k8s.get("service_name") or "").strip().lower()
+    window_meta = k8s.get("window") or {}
+    win_start = _parse_iso8601(window_meta.get("start_time"))
+    win_end = _parse_iso8601(window_meta.get("end_time"))
 
     warning_events = 0
+    scale_down_events = 0
     events_response = ((k8s.get("events") or {}).get("response")) or {}
     for item in events_response.get("items") or []:
         if str(item.get("type", "")).lower() == "warning":
@@ -659,6 +700,44 @@ def numeric_features_from_raw(
                 warning_events += int(item.get("count") or 1)
             except (TypeError, ValueError):
                 warning_events += 1
+        if str(item.get("reason", "")) == "ScalingReplicaSet":
+            message = str(item.get("message") or "")
+            if " to 0" not in message:
+                continue
+            if service_name and service_name not in message.lower():
+                continue
+            event_time = _parse_iso8601(
+                item.get("lastTimestamp")
+                or item.get("eventTime")
+                or item.get("firstTimestamp")
+            )
+            if event_time is None:
+                continue
+            # k8s event timestamps are second-precision. Treat the event as
+            # occupying the 1-second interval [event_time, event_time + 1)
+            # and only count it when that interval fits entirely inside the
+            # window [win_start, win_end). This biases boundary events to
+            # the LATER window, which is what we want -- a scale-down at
+            # the boundary belongs to the active_fault window that follows
+            # the pre_fault_baseline, not to the baseline itself.
+            event_end = event_time + 1.0
+            if win_start is not None and event_end <= win_start:
+                continue
+            if win_end is not None and event_end > win_end:
+                continue
+            scale_down_events += 1
+
+    # Unavailable signal combines two evidence sources:
+    #   replicas-based -- non-zero only when the snapshot is taken while
+    #     the deployment is between desired and ready (rare in our
+    #     scenarios because the scenario runner restores replicas before
+    #     export), and
+    #   event-based   -- ScalingReplicaSet "Scaled ... to 0" events
+    #     attributable to this window's service within the window's
+    #     time bounds. This is the dominant source for ScaleDeployment
+    #     fault scenarios where the deployment is restored by the time we
+    #     read its current state.
+    unavailable = max(unavailable_from_replicas, scale_down_events)
 
     k8s_restart = 0
     pods_response = ((k8s.get("pods") or {}).get("response")) or {}
