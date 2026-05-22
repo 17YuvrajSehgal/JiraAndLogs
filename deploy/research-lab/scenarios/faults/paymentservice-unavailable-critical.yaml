@@ -49,3 +49,32 @@ execution:
   target_name: paymentservice
   replicas: 0
   restore_replicas: 1
+triage:
+  schema_version: 1
+  scenario_family: payment-outage
+  per_window:
+    pre_fault_baseline:
+      triage_label: noise
+      triage_severity: null
+      triage_components: null
+      triage_reason_class: null
+      is_hard_case: false
+      rationale: "Pre-fault baseline; payment service still healthy."
+    active_fault:
+      triage_label: ticket_worthy
+      triage_severity: critical
+      triage_components:
+        - paymentservice
+        - checkoutservice
+        - frontend
+      triage_reason_class: dependency_failure
+      is_hard_case: false
+      rationale: "Customer-visible checkout failures during payment outage."
+    recovery_window:
+      triage_label: borderline
+      triage_severity: minor
+      triage_components:
+        - paymentservice
+      triage_reason_class: dependency_failure
+      is_hard_case: true
+      rationale: "Recovery may show residual checkout errors before full stabilization."

@@ -7,50 +7,52 @@ The goal is not to make one demo model look good. The goal is to create a
 repeatable benchmark where different approaches rank the same Jira queries
 against the same telemetry candidates using the same split rules and metrics.
 
-## Current Benchmark Dataset
+## Two Tracks
 
-Use the completed compact Dataset v3 global hard-negative dataset:
+This benchmark plan covers two parallel tasks.
+
+| Track | Task | Status | Contract |
+| --- | --- | --- | --- |
+| **Triage** | Per-window: should this telemetry deserve a Jira ticket? | Primary product task | `docs/triage-task-contract.md` |
+| **Ranking** | Per-query: given a Jira ticket, find the matching telemetry episode. | Secondary benchmark, retrospective use | This document, sections below |
+
+Sections from "Current Benchmark Dataset" through "Optional Embedding And
+Neural Benchmark" define the **ranking** benchmark. The **triage** benchmark
+is defined in the final section of this document and in
+`docs/triage-task-contract.md`.
+
+When new pipelines are added, they should report on whichever task is
+relevant to the approach. Lexical and embedding pipelines naturally apply to
+both; classical feature pipelines tend to favor triage; LM rerankers apply to
+both but with different prompts.
+
+## Benchmark Dataset (Pending Collection)
+
+The first benchmark dataset under the new product framing will be Dataset
+v4, collected per `docs/dataset-v4-plan.md`. No collected dataset exists
+yet; the earlier v3 dataset and its derived files were removed during the
+Jira-as-memory pivot. The shape below is what the build pipeline must
+produce.
+
+Global dataset location once collected:
 
 ```text
-data/derived/global/2026-05-19-dataset-v3-compact-global/
+data/derived/global/<GLOBAL_DATASET_ID>/
 ```
-
-It was built from:
-
-```text
-2026-05-19-dataset-v3-compact
-```
-
-Current size:
-
-| Item | Count |
-| --- | ---: |
-| Source dataset runs | 6 |
-| Jira queries | 39 |
-| Candidate episodes | 69 |
-| Pairwise ranking examples | 2691 |
-| Positive examples | 39 |
-| Same-run negatives | 423 |
-| Cross-run hard negatives | 2229 |
-
-Every Jira query has exactly one positive candidate and 68 negatives.
 
 ## Build Command
 
-Rebuild the global dataset from the compact corpus:
+Build the global ranking dataset (secondary task) from a collected corpus:
 
 ```powershell
 powershell -NoProfile -ExecutionPolicy Bypass -File scripts\research-lab\build-global-hard-negative-dataset.ps1 `
-  -DatasetRunPrefix "2026-05-19-dataset-v3-compact" `
-  -GlobalDatasetId "2026-05-19-dataset-v3-compact-global" `
+  -DatasetRunPrefix "<DATASET_RUN_PREFIX>" `
+  -GlobalDatasetId "<GLOBAL_DATASET_ID>" `
   -Force
 ```
 
-This reads raw and derived run data but writes only derived outputs under:
-
-```text
-data/derived/global/2026-05-19-dataset-v3-compact-global/
-```
+Build the global triage dataset (primary task) from the same corpus — see
+the Triage Benchmark section below for the parallel commands.
 
 ## Dataset Contract
 
@@ -81,20 +83,18 @@ Important fields in `global-ranking-examples.jsonl`:
 
 ## Split Rules
 
-The benchmark must split by query run, not by individual pair rows.
+The ranking benchmark splits by query run, not by individual pair rows. The
+specific train/validation/test runs are defined in the dataset's
+`split-manifest.json` once collection completes; until then the contract
+below applies.
 
-Default split:
+The candidate pool is global: every query ranks against all selected
+candidate episodes across all runs. This is intentional because a real
+system compares a new Jira issue against many possible telemetry episodes,
+not only episodes from the same collection run.
 
-| Split | Query dataset runs |
-| --- | --- |
-| Train | `compact-a-r01`, `compact-a-r02`, `compact-a-r03`, `compact-b-r01` |
-| Validation | `compact-b-r02` |
-| Test | `compact-b-r03` |
-
-The candidate pool is global: every query ranks against all 69 selected
-candidate episodes. This is intentional because a real triage system compares a
-new Jira issue against many possible telemetry episodes, not only episodes from
-the same collection run.
+Note: the triage benchmark (primary task) uses a stricter split — scenario
+families, not runs. See the Triage Benchmark section.
 
 Leakage rules:
 
@@ -106,102 +106,30 @@ Leakage rules:
 - If a model uses candidate text, use `candidate-episodes.raw_evidence_text`,
   not scenario labels or generated ground-truth labels.
 
-## Current Global Baselines
+## Global Baselines
 
-Global candidate-pool metrics:
+No collected baseline numbers yet. The first ranking baselines will be
+produced from Dataset v4. Until then this section captures the pipeline
+catalog and report shape only.
 
-| Profile | Uses candidate labels | MRR | Recall@1 | Recall@3 | F1@1 | F1@3 | nDCG@3 |
-| --- | --- | ---: | ---: | ---: | ---: | ---: | ---: |
-| `label_aware_baseline` | Yes | 0.398346 | 0.179487 | 0.512821 | 0.179487 | 0.25641 | 0.369654 |
-| `raw_telemetry` | No | 0.194273 | 0.076923 | 0.153846 | 0.076923 | 0.076923 | 0.122099 |
+## Pipeline Benchmark
 
-These scores are lower than the per-run corpus because the global candidate
-pool is much harder. That is the point: it gives us enough headroom to compare
-real pipeline improvements.
-
-Main raw telemetry top-1 failure reasons:
-
-| Reason | Count |
-| --- | ---: |
-| `service_delta_signal_favored_rank1` | 25 |
-| `raw_text_overlap_favored_rank1` | 7 |
-| `redis_restart_vs_redis_outage_confusion` | 3 |
-| `score_component_overlap` | 1 |
-
-## First Pipeline Benchmark
-
-The first benchmark harness was generated as `baseline-v1` with builder version
-`0.1.0`. Keep it as a historical smoke-test reference. The current script has
-since expanded to version `0.2.0`, so use the expanded benchmark section below
-for new runs.
-
-Historical command:
+Run the ranking benchmark on a collected global dataset:
 
 ```powershell
 powershell -NoProfile -ExecutionPolicy Bypass -File scripts\research-lab\run-global-pipeline-benchmark.ps1 `
-  -GlobalDatasetId "2026-05-19-dataset-v3-compact-global" `
-  -BenchmarkId "baseline-v1" `
+  -GlobalDatasetId "<GLOBAL_DATASET_ID>" `
+  -BenchmarkId "ranking-baseline-v1" `
   -Force
 ```
 
 Outputs:
 
 ```text
-data/derived/global/2026-05-19-dataset-v3-compact-global/benchmarks/baseline-v1/
+data/derived/global/<GLOBAL_DATASET_ID>/benchmarks/<BENCHMARK_ID>/
 ```
 
-The initial benchmark runs:
-
-| Pipeline | Family | Description |
-| --- | --- | --- |
-| `raw_telemetry_existing` | heuristic | Existing deterministic raw telemetry score. |
-| `bm25_raw_evidence` | lexical | BM25 over Jira query text and raw telemetry evidence text. |
-| `hybrid_bm25_raw_telemetry` | hybrid | Fixed 55% BM25 plus 45% raw telemetry score. |
-| `logistic_numeric_features` | classical ML | Standardized logistic regression over production-safe numeric telemetry features. |
-
-Initial overall metrics:
-
-| Pipeline | MRR | Recall@1 | Recall@3 | F1@1 | F1@3 | nDCG@3 |
-| --- | ---: | ---: | ---: | ---: | ---: | ---: |
-| `raw_telemetry_existing` | 0.194273 | 0.076923 | 0.153846 | 0.076923 | 0.076923 | 0.122099 |
-| `bm25_raw_evidence` | 0.134792 | 0.051282 | 0.076923 | 0.051282 | 0.038462 | 0.064103 |
-| `hybrid_bm25_raw_telemetry` | 0.173442 | 0.076923 | 0.102564 | 0.076923 | 0.051282 | 0.089744 |
-| `logistic_numeric_features` | 0.373998 | 0.153846 | 0.538462 | 0.153846 | 0.269231 | 0.369654 |
-
-Initial held-out test metrics on `compact-b-r03`:
-
-| Pipeline | MRR | Recall@1 | Recall@3 | F1@1 | F1@3 | nDCG@3 |
-| --- | ---: | ---: | ---: | ---: | ---: | ---: |
-| `raw_telemetry_existing` | 0.240221 | 0.125 | 0.25 | 0.125 | 0.125 | 0.203866 |
-| `bm25_raw_evidence` | 0.304579 | 0.25 | 0.25 | 0.25 | 0.125 | 0.25 |
-| `hybrid_bm25_raw_telemetry` | 0.300369 | 0.25 | 0.25 | 0.25 | 0.125 | 0.25 |
-| `logistic_numeric_features` | 0.391033 | 0.25 | 0.375 | 0.25 | 0.1875 | 0.328866 |
-
-The logistic baseline is a useful first signal, but it is not a final model. It
-is trained on only 23 query groups, so the next benchmark work must add
-leave-one-run-out reporting and more robust model comparisons before making a
-product claim.
-
-## Expanded Pipeline Benchmark
-
-The current benchmark harness is version `0.2.0`. It keeps the same
-dependency-free execution model, but adds more comparison families and
-run-level cross-validation:
-
-```powershell
-powershell -NoProfile -ExecutionPolicy Bypass -File scripts\research-lab\run-global-pipeline-benchmark.ps1 `
-  -GlobalDatasetId "2026-05-19-dataset-v3-compact-global" `
-  -BenchmarkId "baseline-v2-expanded" `
-  -Force
-```
-
-Outputs:
-
-```text
-data/derived/global/2026-05-19-dataset-v3-compact-global/benchmarks/baseline-v2-expanded/
-```
-
-Additional files:
+Report files:
 
 | File | Purpose |
 | --- | --- |
@@ -227,57 +155,14 @@ Expanded pipelines:
 | `pairwise_perceptron_text_numeric` | classical ML | Pairwise positive-vs-negative linear ranker. |
 | `rrf_bm25_tfidf_raw_logistic` | hybrid | Reciprocal-rank fusion over raw telemetry, BM25, TF-IDF, and logistic ranking. |
 
-Overall metrics on the compact global dataset:
+Baseline numbers will be added once the v4 ranking benchmark is run. The
+report contract requires:
 
-| Pipeline | MRR | Recall@1 | Recall@3 | F1@1 | F1@3 | nDCG@3 |
-| --- | ---: | ---: | ---: | ---: | ---: | ---: |
-| `raw_telemetry_existing` | 0.194273 | 0.076923 | 0.153846 | 0.076923 | 0.076923 | 0.122099 |
-| `bm25_raw_evidence` | 0.134792 | 0.051282 | 0.076923 | 0.051282 | 0.038462 | 0.064103 |
-| `tfidf_raw_evidence` | 0.123546 | 0.051282 | 0.076923 | 0.051282 | 0.038462 | 0.06746 |
-| `hybrid_bm25_raw_telemetry` | 0.179997 | 0.076923 | 0.153846 | 0.076923 | 0.076923 | 0.118742 |
-| `logistic_numeric_features` | 0.373998 | 0.153846 | 0.538462 | 0.153846 | 0.269231 | 0.369654 |
-| `logistic_text_numeric_features` | 0.364137 | 0.153846 | 0.487179 | 0.153846 | 0.24359 | 0.340656 |
-| `pairwise_perceptron_text_numeric` | 0.40353 | 0.205128 | 0.487179 | 0.205128 | 0.24359 | 0.366297 |
-| `rrf_bm25_tfidf_raw_logistic` | 0.259313 | 0.102564 | 0.282051 | 0.102564 | 0.141026 | 0.202379 |
-
-Default held-out test metrics on `compact-b-r03`:
-
-| Pipeline | MRR | Recall@1 | Recall@3 | F1@1 | F1@3 | nDCG@3 |
-| --- | ---: | ---: | ---: | ---: | ---: | ---: |
-| `raw_telemetry_existing` | 0.240221 | 0.125 | 0.25 | 0.125 | 0.125 | 0.203866 |
-| `bm25_raw_evidence` | 0.304579 | 0.25 | 0.25 | 0.25 | 0.125 | 0.25 |
-| `tfidf_raw_evidence` | 0.334731 | 0.25 | 0.375 | 0.25 | 0.1875 | 0.328866 |
-| `hybrid_bm25_raw_telemetry` | 0.300604 | 0.25 | 0.25 | 0.25 | 0.125 | 0.25 |
-| `logistic_numeric_features` | 0.391033 | 0.25 | 0.375 | 0.25 | 0.1875 | 0.328866 |
-| `logistic_text_numeric_features` | 0.40145 | 0.25 | 0.5 | 0.25 | 0.25 | 0.391366 |
-| `pairwise_perceptron_text_numeric` | 0.495833 | 0.375 | 0.5 | 0.375 | 0.25 | 0.4375 |
-| `rrf_bm25_tfidf_raw_logistic` | 0.361604 | 0.25 | 0.375 | 0.25 | 0.1875 | 0.328866 |
-
-Leave-one-query-run-out macro metrics are more conservative and should be used
-as the primary generalization signal while the corpus is still small:
-
-| Pipeline | MRR | Recall@1 | Recall@3 | F1@1 | F1@3 | nDCG@3 |
-| --- | ---: | ---: | ---: | ---: | ---: | ---: |
-| `raw_telemetry_existing` | 0.198314 | 0.075 | 0.1625 | 0.075 | 0.08125 | 0.125842 |
-| `bm25_raw_evidence` | 0.127395 | 0.041667 | 0.0625 | 0.041667 | 0.03125 | 0.052083 |
-| `tfidf_raw_evidence` | 0.111129 | 0.041667 | 0.0625 | 0.041667 | 0.03125 | 0.054811 |
-| `hybrid_bm25_raw_telemetry` | 0.1753 | 0.0625 | 0.15 | 0.0625 | 0.075 | 0.110614 |
-| `logistic_numeric_features` | 0.304628 | 0.116667 | 0.35 | 0.116667 | 0.175 | 0.245881 |
-| `logistic_text_numeric_features` | 0.26245 | 0.041667 | 0.35 | 0.041667 | 0.175 | 0.215473 |
-| `pairwise_perceptron_text_numeric` | 0.307635 | 0.116667 | 0.4125 | 0.116667 | 0.20625 | 0.28095 |
-| `rrf_bm25_tfidf_raw_logistic` | 0.22621 | 0.0625 | 0.245833 | 0.0625 | 0.122917 | 0.168351 |
-
-Current interpretation:
-
-- Classical feature models are stronger than raw telemetry and lexical-only
-  retrieval on this compact corpus.
-- The pairwise perceptron has the strongest default test split result, but the
-  leave-one-run-out macro result is close to numeric logistic, so we should not
-  over-claim from one held-out run.
-- Lexical-only retrieval is weak overall but useful in hybrids and as a cheap
-  first-stage retriever for future neural or LLM rerankers.
-- The top-1 miss files show the remaining hard cases for model and feature
-  work.
+- overall metrics across the global dataset,
+- default held-out test split metrics,
+- leave-one-query-run-out macro metrics (primary generalization signal),
+- per-pipeline top-1 failure analysis,
+- per-scenario-family stratified metrics.
 
 ## Pipeline Tracks
 
@@ -403,7 +288,7 @@ Run the local embedding benchmark:
 
 ```powershell
 powershell -NoProfile -ExecutionPolicy Bypass -File scripts\research-lab\run-global-embedding-pipeline-benchmark.ps1 `
-  -GlobalDatasetId "2026-05-19-dataset-v3-compact-global" `
+  -GlobalDatasetId "<GLOBAL_DATASET_ID>" `
   -BenchmarkId "embedding-v1-local" `
   -Force
 ```
@@ -411,7 +296,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File scripts\research-lab\run-glo
 Outputs:
 
 ```text
-data/derived/global/2026-05-19-dataset-v3-compact-global/benchmarks/embedding-v1-local/
+data/derived/global/<GLOBAL_DATASET_ID>/benchmarks/embedding-v1-local/
 ```
 
 Files are the same shape as the main benchmark where possible:
@@ -434,53 +319,200 @@ Local pipelines:
 | `hybrid_hashing_embedding_raw_telemetry` | hybrid | Weighted hashing embedding plus raw telemetry score. |
 | `logistic_numeric_hashing_embedding` | classical ML | Logistic regression over numeric telemetry, raw telemetry score, and hashing embedding score. |
 
-Current local embedding metrics:
+Embedding baseline numbers will be added once the v4 ranking benchmark is
+run. Treat plain hashing retrieval as a floor, not a semantic model.
 
-| Pipeline | MRR | Recall@1 | Recall@3 | F1@1 | F1@3 | nDCG@3 |
-| --- | ---: | ---: | ---: | ---: | ---: | ---: |
-| `hashing_embedding_raw_evidence` | 0.076187 | 0.0 | 0.076923 | 0.0 | 0.038462 | 0.038462 |
-| `hybrid_hashing_embedding_raw_telemetry` | 0.158286 | 0.025641 | 0.153846 | 0.025641 | 0.076923 | 0.099815 |
-| `logistic_numeric_hashing_embedding` | 0.396941 | 0.205128 | 0.512821 | 0.205128 | 0.25641 | 0.379117 |
-
-Current held-out test metrics on `compact-b-r03`:
-
-| Pipeline | MRR | Recall@1 | Recall@3 | F1@1 | F1@3 | nDCG@3 |
-| --- | ---: | ---: | ---: | ---: | ---: | ---: |
-| `hashing_embedding_raw_evidence` | 0.076501 | 0.0 | 0.125 | 0.0 | 0.0625 | 0.0625 |
-| `hybrid_hashing_embedding_raw_telemetry` | 0.227653 | 0.125 | 0.25 | 0.125 | 0.125 | 0.203866 |
-| `logistic_numeric_hashing_embedding` | 0.479233 | 0.375 | 0.5 | 0.375 | 0.25 | 0.453866 |
-
-Leave-one-query-run-out macro metrics:
-
-| Pipeline | MRR | Recall@1 | Recall@3 | F1@1 | F1@3 | nDCG@3 |
-| --- | ---: | ---: | ---: | ---: | ---: | ---: |
-| `hashing_embedding_raw_evidence` | 0.076475 | 0.0 | 0.075 | 0.0 | 0.0375 | 0.0375 |
-| `hybrid_hashing_embedding_raw_telemetry` | 0.162225 | 0.020833 | 0.1625 | 0.020833 | 0.08125 | 0.103123 |
-| `logistic_numeric_hashing_embedding` | 0.310085 | 0.116667 | 0.35 | 0.116667 | 0.175 | 0.248609 |
-
-Interpretation:
-
-- Plain hashing retrieval is weak and should be treated as a floor, not a
-  serious semantic model.
-- The hashing score still helps as a cheap feature when combined with numeric
-  telemetry signals.
-- The local embedding benchmark is competitive with the first classical ML
-  baselines but does not beat the pairwise perceptron on the default test split.
-- The leave-one-run-out macro result remains the better generalization signal
-  until the larger cloud corpus finishes.
-
-Optional neural bi-encoder:
+Optional neural bi-encoder (requires `sentence-transformers`):
 
 ```powershell
 powershell -NoProfile -ExecutionPolicy Bypass -File scripts\research-lab\run-global-embedding-pipeline-benchmark.ps1 `
-  -GlobalDatasetId "2026-05-19-dataset-v3-compact-global" `
+  -GlobalDatasetId "<GLOBAL_DATASET_ID>" `
   -BenchmarkId "embedding-v1-sentence-transformers" `
   -IncludeSentenceTransformers `
   -SentenceTransformerModel "sentence-transformers/all-MiniLM-L6-v2" `
   -Force
 ```
 
-This path requires the `sentence-transformers` Python package and access to the
-model locally or through the package cache. The current local environment did
-not have `sentence-transformers` installed, so the validated local run recorded
-that backend as `not_requested` in `backend-status.json`.
+## Triage Benchmark
+
+The triage benchmark is the primary product benchmark. The full task contract,
+label space, severity, components, hard-case flag, and operating-point rules
+live in `docs/triage-task-contract.md`. This section defines the benchmark
+shape — dataset paths, split rules, metrics, pipeline tracks, and report
+contents — so that pipelines can compete on the same basis.
+
+### Triage Dataset
+
+The triage dataset is built from the same dataset runs as the ranking
+dataset. Per-run derived files:
+
+```text
+data/derived/<DATASET_RUN_ID>/triage_examples.jsonl
+data/derived/<DATASET_RUN_ID>/window_memory_matchings.jsonl
+```
+
+Global triage dataset:
+
+```text
+data/derived/global/<GLOBAL_DATASET_ID>/global-triage-examples.jsonl
+data/derived/global/<GLOBAL_DATASET_ID>/jira-memory-corpus.jsonl
+data/derived/global/<GLOBAL_DATASET_ID>/window-memory-matchings.jsonl
+```
+
+For v4 the label source must be `human_adjudicated` for every `borderline`
+and `is_hard_case` window. See `docs/dataset-v4-plan.md` for the adjudication
+procedure and the time-ordered memory corpus rules.
+
+### Build Commands
+
+```powershell
+# Per-run triage build
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts\research-lab\build-triage-dataset.ps1 `
+  -DatasetRunId "<DATASET_RUN_ID>" `
+  -Force
+
+# Per-run memory-match ground truth (after Jira corpus is built)
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts\research-lab\build-window-memory-matchings.ps1 `
+  -DatasetRunId "<DATASET_RUN_ID>" `
+  -GlobalDatasetId "<GLOBAL_DATASET_ID>" `
+  -Force
+
+# Jira memory corpus (across all runs in a prefix)
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts\research-lab\build-jira-memory-corpus.ps1 `
+  -DatasetRunPrefix "<DATASET_RUN_PREFIX>" `
+  -GlobalDatasetId "<GLOBAL_DATASET_ID>" `
+  -Force
+
+# Global triage build
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts\research-lab\build-global-triage-dataset.ps1 `
+  -DatasetRunPrefix "<DATASET_RUN_PREFIX>" `
+  -GlobalDatasetId "<GLOBAL_DATASET_ID>" `
+  -Force
+
+# Benchmark (planned)
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts\research-lab\run-triage-benchmark.ps1 `
+  -GlobalDatasetId "<GLOBAL_DATASET_ID>" `
+  -BenchmarkId "triage-baseline-v1" `
+  -Force
+```
+
+### Triage Dataset Contract
+
+Core files:
+
+| File | Purpose |
+| --- | --- |
+| `global-triage-examples.jsonl` | One row per telemetry window with label, source, severity, components, hard-case flag, and numeric features. |
+| `triage-windows.jsonl` | One row per window with the production-safe evidence text used as model input. |
+| `triage-split-manifest.json` | Train/validation/test split definitions, plus leave-one-scenario-family-out fold definitions. |
+| `triage-feature-columns.json` | Production-safe numeric features for classical ML. |
+| `triage-pipeline-input-schema.json` | Stable input contract for all triage pipelines. |
+| `triage-benchmark-report.md` | Human-readable benchmark report per benchmark id. |
+
+Important fields in `global-triage-examples.jsonl`:
+
+| Field | Meaning |
+| --- | --- |
+| `window_id` | Globally unique window id. |
+| `dataset_run_id` | Run the window came from. |
+| `scenario_family` | Family used for splits. |
+| `triage_label` | `ticket_worthy`, `borderline`, or `noise`. Target. |
+| `triage_severity` | Severity when ticket-worthy. Eval-only. |
+| `triage_components` | Components when ticket-worthy. Eval-only for triage; target for the optional ticket-draft subtask. |
+| `triage_reason_class` | Coarse reason when ticket-worthy. Eval-only for triage. |
+| `is_hard_case` | True when intentionally designed to confuse simple models. Eval-only. |
+| `source` | `scenario_authored` / `human_adjudicated` / `derived`. |
+| `split` | Default split based on scenario-family holdout. |
+| `triage_feature_*` | Production-facing numeric features. |
+| `triage_evidence_text` | Production-facing text evidence. |
+
+### Triage Split Rules
+
+The triage benchmark must hold out scenario families, not runs.
+
+A scenario family groups scenarios sharing fault mechanism and affected
+service (e.g. `payment-outage`, `cart-redis`, `productcatalog-latency`,
+`checkout-restart`). See `docs/triage-task-contract.md` for the canonical
+family taxonomy.
+
+Default split:
+
+- train on at least three families,
+- validation on one held-out family,
+- test on one held-out family,
+- additionally report leave-one-family-out macro metrics for every family.
+
+Per-run holdout is insufficient for triage because fault signatures repeat
+across runs of the same family. A model that has seen one
+`payment-outage` run can memorize the signature.
+
+Threshold selection must happen on the validation split only. Applying a
+threshold tuned on test back to test is treated as a leak.
+
+### Triage Metrics
+
+Required:
+
+| Metric | Why |
+| --- | --- |
+| Precision@FPR=1% | Headline. Models a low-alert-fatigue operating point. |
+| Recall@FPR=1% | What fraction of real tickets we catch at the headline operating point. |
+| Precision@FPR=5% | Secondary operating point. |
+| PR-AUC | Threshold-free, robust to class imbalance. |
+| ROC-AUC | Comparable across base rates. |
+| Reliability curve + Expected Calibration Error | Required for probabilities to be usable downstream. |
+| Cost-weighted F-beta (β=2) | Penalizes missed incidents more than false alarms. |
+
+Borderline handling — both variants required, strict is headline:
+
+| Variant | Treatment |
+| --- | --- |
+| Strict | Borderline counted as negative; precision computed against `ticket_worthy` only. |
+| Inclusive | Borderline counted as positive; rewards models that surface human-interesting windows. |
+
+Stratified metrics (recommended):
+
+- by scenario family,
+- by `is_hard_case`,
+- by `triage_reason_class`,
+- by affected service,
+- by window type (active fault vs. recovery vs. baseline).
+
+### Triage Pipeline Tracks
+
+**Rule-based baseline.** Threshold on existing alert state and `should_alert`
+heuristics. Establishes the floor a learned model must beat.
+
+**Classical ML.** Logistic regression, gradient boosting, calibrated random
+forest over `triage_feature_*` numeric features. Calibrate with Platt or
+isotonic on the validation split.
+
+**Lexical.** BM25 / TF-IDF over `triage_evidence_text` against a small set of
+ticket-worthy and noise reference texts. Cheap, useful as a feature.
+
+**Neural.** Bi-encoder embeddings of the window evidence text plus a learned
+classification head. Cross-encoders over (window, ticket-worthy-reference)
+pairs for harder cases.
+
+**Language model.** Zero-shot or few-shot classification with rationale.
+Calibration is the main risk — LMs are poorly calibrated by default;
+temperature scaling on the validation set is required.
+
+**Hybrid.** Classical features + LM-derived score fusion. Reciprocal-rank
+fusion does not apply directly to classification; use stacking or weighted
+log-odds blend instead.
+
+### Triage Implementation Order
+
+1. Build the v3 triage derived files using `source: derived` rules.
+2. Implement rule baseline and classical logistic baselines.
+3. Validate the split contract (scenario-family holdouts) on the compact corpus.
+4. Add lexical and embedding pipelines.
+5. Plan and collect dataset v4 with `human_adjudicated` borderline windows.
+6. Add LM zero-shot and few-shot pipelines once v4 is available.
+7. Add the optional ticket-draft subtask once classification metrics plateau.
+
+### Acceptance Gates
+
+A triage benchmark report is acceptance-ready when it meets the gates listed
+in `docs/triage-task-contract.md#acceptance-gates-for-the-first-triage-benchmark`.

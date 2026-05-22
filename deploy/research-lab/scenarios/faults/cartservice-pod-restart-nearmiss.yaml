@@ -39,3 +39,28 @@ execution:
   target_kind: deployment
   target_name: cartservice
   selector: app=cartservice
+triage:
+  schema_version: 1
+  scenario_family: cart-redis
+  per_window:
+    pre_fault_baseline:
+      triage_label: noise
+      triage_severity: null
+      triage_components: null
+      triage_reason_class: null
+      is_hard_case: false
+      rationale: "Pre-fault baseline; cartservice healthy."
+    active_fault:
+      triage_label: noise
+      triage_severity: null
+      triage_components: null
+      triage_reason_class: null
+      is_hard_case: true
+      rationale: "Cartservice restart absorbed by replication. Hard case: must be distinguished from restart-with-impact scenarios."
+    recovery_window:
+      triage_label: noise
+      triage_severity: null
+      triage_components: null
+      triage_reason_class: null
+      is_hard_case: false
+      rationale: "Replacement pod ready; quick clean recovery."

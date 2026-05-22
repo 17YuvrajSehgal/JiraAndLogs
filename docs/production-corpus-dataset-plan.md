@@ -1,21 +1,20 @@
 # Production Corpus Dataset Plan
 
-This document describes the compact Dataset v3 production corpus we collect
-before building heavier ML, NLP, AI, or agent pipelines.
+Status: historical. This document describes the compact Dataset v3
+production corpus. The v3 dataset itself has been removed from the
+repository during the move to the Jira-as-memory product framing. The
+active dataset plan is now `docs/dataset-v4-plan.md`. Earlier dataset
+versions (v1, v2, v2.1) are also no longer in the repository.
 
-The goal is simple: create a dataset that is hard enough that a weak pipeline
-cannot look good by accident, while keeping collection practical on the local
-Kubernetes lab.
+This document is kept for the **collection mechanics** it describes — the
+`collect-dataset-corpus.ps1` workflow, scenario layout, run-plan structure,
+and validation steps remain valid for v4 collection. Skip to those sections
+if you are rebuilding the pipeline against a new run prefix; ignore the
+specific v3 dataset ids.
 
-Dataset v2 final remains the locked MVP baseline:
-
-```text
-dataset-v2-final-production-v1
-```
-
-Dataset v3 is the next research corpus. It is meant for benchmark development,
-not for replacing the locked MVP baseline until it has been collected,
-validated, and reviewed.
+The goal of the dataset effort is unchanged: create a corpus that is hard
+enough that a weak pipeline cannot look good by accident, while keeping
+collection practical on the local Kubernetes lab.
 
 ## Why The Corpus Is Compact
 

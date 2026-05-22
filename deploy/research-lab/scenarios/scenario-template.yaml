@@ -48,3 +48,34 @@ execution:
   target_container: server
   selector: app=frontend
   env: {}
+# Optional. Adds per-window triage labels for the forward-looking triage task.
+# See docs/triage-task-contract.md for the full label space and source policy.
+# Window types: pre_fault_baseline, active_fault, recovery_window for fault
+# scenarios; observation_window for baseline scenarios.
+triage:
+  schema_version: 1
+  scenario_family: template-family
+  per_window:
+    pre_fault_baseline:
+      triage_label: noise
+      triage_severity: null
+      triage_components: null
+      triage_reason_class: null
+      is_hard_case: false
+      rationale: "Pre-fault baseline. No injected fault; not ticket-worthy."
+    active_fault:
+      triage_label: ticket_worthy   # or borderline / noise depending on scenario
+      triage_severity: major         # required when triage_label is ticket_worthy
+      triage_components:             # required when triage_label is ticket_worthy
+        - frontend
+      triage_reason_class: outage    # required when triage_label is ticket_worthy
+      is_hard_case: false
+      rationale: "Describe why this window is ticket-worthy."
+    recovery_window:
+      triage_label: borderline       # often borderline; depends on residual impact
+      triage_severity: minor
+      triage_components:
+        - frontend
+      triage_reason_class: outage
+      is_hard_case: true
+      rationale: "Recovery may carry residual errors; reasonable engineers disagree."

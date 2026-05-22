@@ -38,3 +38,28 @@ execution:
   target_kind: deployment
   target_name: recommendationservice
   selector: app=recommendationservice
+triage:
+  schema_version: 1
+  scenario_family: recommendation-outage
+  per_window:
+    pre_fault_baseline:
+      triage_label: noise
+      triage_severity: null
+      triage_components: null
+      triage_reason_class: null
+      is_hard_case: false
+      rationale: "Pre-fault baseline; recommendationservice healthy."
+    active_fault:
+      triage_label: noise
+      triage_severity: null
+      triage_components: null
+      triage_reason_class: null
+      is_hard_case: true
+      rationale: "Single recommendation pod restart with replication absorbing impact. Must not be flagged."
+    recovery_window:
+      triage_label: noise
+      triage_severity: null
+      triage_components: null
+      triage_reason_class: null
+      is_hard_case: false
+      rationale: "Replacement pod ready; nothing for engineers to file."

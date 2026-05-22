@@ -14,17 +14,15 @@ realistic Jira issue records linked by stable metadata.
 The first MVP only ranks likely related Jira issues or incident candidates. Human
 approval and real Jira writing are phase 2.
 
-The current final MVP evaluation dataset is documented in:
+The active dataset plan is documented in:
 
 ```text
-docs/mvp-evaluation-dataset.md
+docs/dataset-v4-plan.md
+docs/triage-task-contract.md
 ```
 
-The next realism-focused collection plan is documented in:
-
-```text
-docs/dataset-v2-realism-plan.md
-```
+Earlier dataset versions (v1, v2, v2.1, v3) and their docs have been
+removed during the move to the Jira-as-memory product framing.
 
 For the ranking MVP to be credible, every training and evaluation example must
 be traceable to:
@@ -595,8 +593,9 @@ The key files are:
 - `raw_telemetry_candidate_scores.csv`: ranked candidates for the production-facing raw telemetry profile.
 - `baseline-ranking-report.md`: deterministic profile metrics and caveats.
 
-See `docs/ranking-dataset-baseline.md` for the feature contract and leakage
-controls.
+See `docs/ml-ai-pipeline-benchmark-plan.md` for the ranking feature contract
+and leakage controls, and `docs/triage-task-contract.md` for the triage
+contract.
 
 After multiple derived runs exist, build a cross-run aggregate:
 
@@ -605,8 +604,6 @@ powershell -NoProfile -ExecutionPolicy Bypass -File scripts\research-lab\build-c
   -AggregateId "all-derived-runs" `
   -Force
 ```
-
-See `docs/cross-run-evaluation.md` for the aggregate contract.
 
 ## Validation Rules
 

@@ -41,3 +41,32 @@ execution:
   target_kind: deployment
   target_name: frontend
   selector: app=frontend
+triage:
+  schema_version: 1
+  scenario_family: frontend-restart
+  per_window:
+    pre_fault_baseline:
+      triage_label: noise
+      triage_severity: null
+      triage_components: null
+      triage_reason_class: null
+      is_hard_case: false
+      rationale: "Pre-fault baseline; frontend healthy."
+    active_fault:
+      triage_label: ticket_worthy
+      triage_severity: major
+      triage_components:
+        - frontend
+        - checkoutservice
+        - productcatalogservice
+      triage_reason_class: restart_with_impact
+      is_hard_case: true
+      rationale: "Frontend restart causes broad customer impact. Hard case: must distinguish from healthy-replication restarts on backend services."
+    recovery_window:
+      triage_label: borderline
+      triage_severity: minor
+      triage_components:
+        - frontend
+      triage_reason_class: restart_with_impact
+      is_hard_case: true
+      rationale: "Recovery typically quick but residual customer-facing errors may surface."

@@ -1,0 +1,108 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://jira-telemetry.local/schemas/triage_window_label.schema.json",
+  "title": "TriageWindowLabel",
+  "description": "Per-window triage label for the forward-looking telemetry-to-Jira decision task. Defined in docs/triage-task-contract.md.",
+  "type": "object",
+  "required": [
+    "telemetry_window_id",
+    "dataset_run_id",
+    "triage_label",
+    "is_hard_case",
+    "source"
+  ],
+  "properties": {
+    "telemetry_window_id": {"type": "string"},
+    "dataset_run_id": {"type": "string"},
+    "incident_episode_id": {"type": ["string", "null"]},
+    "scenario_id": {"type": ["string", "null"]},
+    "scenario_family": {"type": ["string", "null"]},
+    "window_type": {
+      "type": "string",
+      "description": "Telemetry window phase, e.g. pre_fault_baseline, active_fault, recovery_window, observation_window."
+    },
+    "triage_label": {
+      "type": "string",
+      "enum": ["ticket_worthy", "borderline", "noise"]
+    },
+    "triage_severity": {
+      "type": ["string", "null"],
+      "enum": ["minor", "major", "critical", null],
+      "description": "Required when triage_label is ticket_worthy. Must be null otherwise."
+    },
+    "triage_components": {
+      "type": ["array", "null"],
+      "items": {"type": "string"},
+      "description": "Jira components the ticket would carry. Required when triage_label is ticket_worthy."
+    },
+    "triage_reason_class": {
+      "type": ["string", "null"],
+      "enum": [
+        "outage",
+        "latency_regression",
+        "restart_with_impact",
+        "bad_config",
+        "capacity",
+        "dependency_failure",
+        "data_consistency",
+        null
+      ],
+      "description": "Coarse reason class for ticket-worthy windows. Required when triage_label is ticket_worthy."
+    },
+    "is_hard_case": {
+      "type": "boolean",
+      "description": "True if this window is intentionally designed to confuse simple models. Analysis use only; not a model input."
+    },
+    "rationale": {
+      "type": ["string", "null"],
+      "description": "Human-readable explanation of why this label was assigned."
+    },
+    "source": {
+      "type": "string",
+      "enum": ["scenario_authored", "human_adjudicated", "derived"],
+      "description": "Origin of the label. See docs/triage-task-contract.md."
+    },
+    "adjudicator": {
+      "type": ["string", "null"],
+      "description": "Identifier of the reviewer when source is human_adjudicated."
+    },
+    "adjudicated_at": {
+      "type": ["string", "null"],
+      "format": "date-time"
+    },
+    "derived_rule_id": {
+      "type": ["string", "null"],
+      "description": "Identifier of the derivation rule when source is derived. Example: derive-from-jira-candidate-v1."
+    },
+    "labels": {
+      "type": "object",
+      "additionalProperties": {"type": ["string", "number", "boolean", "null"]}
+    }
+  },
+  "additionalProperties": false,
+  "allOf": [
+    {
+      "if": {
+        "properties": {"triage_label": {"const": "ticket_worthy"}},
+        "required": ["triage_label"]
+      },
+      "then": {
+        "required": ["triage_severity", "triage_components", "triage_reason_class"],
+        "properties": {
+          "triage_severity": {"type": "string"},
+          "triage_components": {"type": "array", "minItems": 1},
+          "triage_reason_class": {"type": "string"}
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {"source": {"const": "human_adjudicated"}},
+        "required": ["source"]
+      },
+      "then": {
+        "required": ["adjudicator", "adjudicated_at"]
+      }
+    }
+  ]
+}

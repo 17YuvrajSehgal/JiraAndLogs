@@ -1,0 +1,11 @@
+# Optional Python dependencies for research-lab build scripts.
+#
+# PyYAML enables reading scenario-authored triage blocks
+# (deploy/research-lab/scenarios/**/*.yaml) directly from
+# build_triage_dataset.py. Without it, every label falls back to
+# `source: derived` rules in triage_labels.derive_triage_label — that
+# fallback is permitted by docs/triage-task-contract.md for v3, but v4
+# expects authored labels to be honored.
+#
+# Install with: pip install -r scripts/research-lab/requirements.txt
+PyYAML>=6.0

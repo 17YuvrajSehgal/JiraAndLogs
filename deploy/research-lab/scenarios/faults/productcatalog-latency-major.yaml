@@ -47,3 +47,31 @@ execution:
   target_container: server
   env:
     EXTRA_LATENCY: 750ms
+triage:
+  schema_version: 1
+  scenario_family: productcatalog-latency
+  per_window:
+    pre_fault_baseline:
+      triage_label: noise
+      triage_severity: null
+      triage_components: null
+      triage_reason_class: null
+      is_hard_case: false
+      rationale: "Pre-fault baseline; productcatalog response times normal."
+    active_fault:
+      triage_label: ticket_worthy
+      triage_severity: major
+      triage_components:
+        - productcatalogservice
+        - frontend
+      triage_reason_class: latency_regression
+      is_hard_case: false
+      rationale: "User-visible browse and checkout latency degradation."
+    recovery_window:
+      triage_label: borderline
+      triage_severity: minor
+      triage_components:
+        - productcatalogservice
+      triage_reason_class: latency_regression
+      is_hard_case: true
+      rationale: "Latency may take time to fully normalize after env restore."

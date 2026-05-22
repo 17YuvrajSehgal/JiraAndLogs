@@ -11,7 +11,8 @@ param(
     [int]$LokiLimit = 5000,
     [int]$LokiPaddingSeconds = 300,
     [int]$LokiContextLimit = 5000,
-    [int]$TempoLimit = 100,
+    [int]$TempoLimit = 500,
+    [int]$TempoTraceFetchLimit = 200,
     [switch]$RunLevelLokiOnly,
     [switch]$NoPortForward,
     [string]$LokiBaseUrl = "http://127.0.0.1:13100",
@@ -661,6 +662,12 @@ try {
             (Get-ExportProperty -Object $namespaceContextLogCounts -Name "entries"))
 
         $podRegex = "$serviceName-.*"
+        # OnlineBoutique does not export Prometheus-scrapeable per-service
+        # HTTP/RPC metrics. The legacy service_rpc_*/service_http_*/
+        # service_process_* queries (kept here for back-compat with prior
+        # dataset versions) always return empty for this application. The
+        # actual request-volume / error / latency signal is extracted from
+        # Tempo spans by scripts/research-lab/triage_labels.py.
         $promQueries = [ordered]@{
             pod_info = 'kube_pod_info{namespace="' + $namespace + '",pod=~"' + $podRegex + '"}'
             restarts = 'kube_pod_container_status_restarts_total{namespace="' + $namespace + '",pod=~"' + $podRegex + '"}'
@@ -731,7 +738,11 @@ try {
         $tempoSearch = Invoke-JsonEndpoint -Uri $tempoSearchUri
         $traceIds = @(Get-TempoTraceIds -TempoResponse $tempoSearch)
         $traceDetails = [ordered]@{}
-        foreach ($traceId in @($traceIds | Select-Object -First 20)) {
+        # Fetch full trace bodies for up to TempoTraceFetchLimit traces. The
+        # previous 20-cap missed error traces (e.g. failed PaymentService
+        # calls would be among traces 21-100). The feature extractor relies
+        # on these bodies to derive span counts, error counts, and latency.
+        foreach ($traceId in @($traceIds | Select-Object -First $TempoTraceFetchLimit)) {
             $traceDetails[$traceId] = Invoke-JsonEndpoint -Uri "$TempoBaseUrl/api/traces/$traceId"
         }
         $tempo = [ordered]@{

@@ -39,3 +39,28 @@ execution:
   target_kind: deployment
   target_name: redis-cart
   selector: app=redis-cart
+triage:
+  schema_version: 1
+  scenario_family: cart-redis
+  per_window:
+    pre_fault_baseline:
+      triage_label: noise
+      triage_severity: null
+      triage_components: null
+      triage_reason_class: null
+      is_hard_case: false
+      rationale: "Pre-fault baseline; redis-cart healthy."
+    active_fault:
+      triage_label: noise
+      triage_severity: null
+      triage_components: null
+      triage_reason_class: null
+      is_hard_case: true
+      rationale: "Redis-cart restart with no Jira-worthy impact. Hard case: must be distinguished from redis-cart-restart-major."
+    recovery_window:
+      triage_label: noise
+      triage_severity: null
+      triage_components: null
+      triage_reason_class: null
+      is_hard_case: false
+      rationale: "Quick recovery without lasting impact."

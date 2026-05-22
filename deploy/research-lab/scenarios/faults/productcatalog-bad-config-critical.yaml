@@ -49,3 +49,32 @@ execution:
   target_container: server
   env:
     EXTRA_LATENCY: 1500ms
+triage:
+  schema_version: 1
+  scenario_family: productcatalog-outage
+  per_window:
+    pre_fault_baseline:
+      triage_label: noise
+      triage_severity: null
+      triage_components: null
+      triage_reason_class: null
+      is_hard_case: false
+      rationale: "Pre-fault baseline; productcatalog config healthy."
+    active_fault:
+      triage_label: ticket_worthy
+      triage_severity: critical
+      triage_components:
+        - productcatalogservice
+        - frontend
+        - checkoutservice
+      triage_reason_class: bad_config
+      is_hard_case: true
+      rationale: "Bad configuration produces severe latency. Hard case: must distinguish bad config from generic latency regression."
+    recovery_window:
+      triage_label: borderline
+      triage_severity: minor
+      triage_components:
+        - productcatalogservice
+      triage_reason_class: bad_config
+      is_hard_case: true
+      rationale: "Recovery follows config rollback; tail latency may persist."

@@ -42,3 +42,28 @@ execution:
   env:
     USERS: "180"
     RATE: "20"
+triage:
+  schema_version: 1
+  scenario_family: frontend-traffic-pressure
+  per_window:
+    pre_fault_baseline:
+      triage_label: noise
+      triage_severity: null
+      triage_components: null
+      triage_reason_class: null
+      is_hard_case: false
+      rationale: "Pre-fault baseline; traffic at baseline level."
+    active_fault:
+      triage_label: noise
+      triage_severity: null
+      triage_components: null
+      triage_reason_class: null
+      is_hard_case: true
+      rationale: "Noisy high traffic with no user-visible incident. Must not be flagged despite the activity volume."
+    recovery_window:
+      triage_label: noise
+      triage_severity: null
+      triage_components: null
+      triage_reason_class: null
+      is_hard_case: false
+      rationale: "Traffic returned to baseline."

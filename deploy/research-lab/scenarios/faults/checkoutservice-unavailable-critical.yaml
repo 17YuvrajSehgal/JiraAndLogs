@@ -43,3 +43,33 @@ execution:
   target_name: checkoutservice
   replicas: 0
   restore_replicas: 1
+triage:
+  schema_version: 1
+  scenario_family: checkout-outage
+  per_window:
+    pre_fault_baseline:
+      triage_label: noise
+      triage_severity: null
+      triage_components: null
+      triage_reason_class: null
+      is_hard_case: false
+      rationale: "Pre-fault baseline; checkoutservice healthy."
+    active_fault:
+      triage_label: ticket_worthy
+      triage_severity: critical
+      triage_components:
+        - checkoutservice
+        - frontend
+        - cartservice
+        - paymentservice
+      triage_reason_class: outage
+      is_hard_case: false
+      rationale: "Order placement fully blocked by checkoutservice outage."
+    recovery_window:
+      triage_label: borderline
+      triage_severity: minor
+      triage_components:
+        - checkoutservice
+      triage_reason_class: outage
+      is_hard_case: true
+      rationale: "Order retries may surface failures during recovery."

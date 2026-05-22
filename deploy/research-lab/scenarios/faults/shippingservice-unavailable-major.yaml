@@ -42,3 +42,32 @@ execution:
   target_name: shippingservice
   replicas: 0
   restore_replicas: 1
+triage:
+  schema_version: 1
+  scenario_family: shipping-outage
+  per_window:
+    pre_fault_baseline:
+      triage_label: noise
+      triage_severity: null
+      triage_components: null
+      triage_reason_class: null
+      is_hard_case: false
+      rationale: "Pre-fault baseline; shippingservice healthy."
+    active_fault:
+      triage_label: ticket_worthy
+      triage_severity: major
+      triage_components:
+        - shippingservice
+        - checkoutservice
+        - frontend
+      triage_reason_class: dependency_failure
+      is_hard_case: false
+      rationale: "Checkout completion disrupted by shippingservice outage."
+    recovery_window:
+      triage_label: borderline
+      triage_severity: minor
+      triage_components:
+        - shippingservice
+      triage_reason_class: dependency_failure
+      is_hard_case: true
+      rationale: "Checkout retries may still surface failures during recovery."

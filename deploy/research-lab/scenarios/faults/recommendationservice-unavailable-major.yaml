@@ -42,3 +42,32 @@ execution:
   target_name: recommendationservice
   replicas: 0
   restore_replicas: 1
+triage:
+  schema_version: 1
+  scenario_family: recommendation-outage
+  per_window:
+    pre_fault_baseline:
+      triage_label: noise
+      triage_severity: null
+      triage_components: null
+      triage_reason_class: null
+      is_hard_case: false
+      rationale: "Pre-fault baseline; recommendationservice healthy."
+    active_fault:
+      triage_label: ticket_worthy
+      triage_severity: major
+      triage_components:
+        - recommendationservice
+        - frontend
+        - productcatalogservice
+      triage_reason_class: outage
+      is_hard_case: true
+      rationale: "Recommendation outage degrades discovery. Hard case: must distinguish from single-pod restart."
+    recovery_window:
+      triage_label: borderline
+      triage_severity: minor
+      triage_components:
+        - recommendationservice
+      triage_reason_class: outage
+      is_hard_case: true
+      rationale: "Recovery typically clean once replicas return."

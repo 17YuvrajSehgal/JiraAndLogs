@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(pip install *)",
+      "Bash(python *)",
+      "PowerShell(& \"C:\\\\workplace\\\\JiraAndLogs\\\\scripts\\\\research-lab\\\\check-prereqs.ps1\" 2>&1 | Select-Object -First 60)",
+      "PowerShell($ErrorActionPreference = 'Continue')"
+    ]
+  }
+}

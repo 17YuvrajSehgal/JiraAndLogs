@@ -36,18 +36,11 @@ The first dataset acquisition workflow now exists:
 This workflow records dataset manifests, incident episodes, telemetry windows,
 alert events, raw Loki/Prometheus/Tempo exports, and Jira shadow issues.
 
-Dataset v2 planning has started in `docs/dataset-v2-realism-plan.md`. The first
-executable v2 run plan is `deploy/research-lab/run-plans/dataset-v2-pilot.json`.
-It adds payment outage, checkout restart, Redis restart, recommendation restart
-near-miss, and traffic spike near-miss scenarios while staying inside the
-current runner capabilities.
-
-Dataset v3 corpus planning now lives in:
-
-```text
-docs/production-corpus-dataset-plan.md
-deploy/research-lab/corpora/dataset-v3-production-corpus.json
-```
+The active dataset plan is `docs/dataset-v4-plan.md`. Earlier dataset
+versions (v1, v2, v2.1, v3) have been removed during the move to the
+Jira-as-memory product framing. The historical v3 corpus mechanics live in
+`docs/production-corpus-dataset-plan.md` and remain valid for the v4
+collection pipeline.
 
 This adds multi-plan batch collection for a larger production-style dataset
 before we start comparing heavier ML, NLP, AI, or agent pipelines.

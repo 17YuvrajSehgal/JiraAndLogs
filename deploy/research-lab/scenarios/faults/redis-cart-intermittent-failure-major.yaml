@@ -48,3 +48,32 @@ execution:
   target_kind: deployment
   target_name: redis-cart
   selector: app=redis-cart
+triage:
+  schema_version: 1
+  scenario_family: cart-redis
+  per_window:
+    pre_fault_baseline:
+      triage_label: noise
+      triage_severity: null
+      triage_components: null
+      triage_reason_class: null
+      is_hard_case: false
+      rationale: "Pre-fault baseline; redis-cart healthy."
+    active_fault:
+      triage_label: ticket_worthy
+      triage_severity: major
+      triage_components:
+        - redis-cart
+        - cartservice
+        - checkoutservice
+      triage_reason_class: dependency_failure
+      is_hard_case: true
+      rationale: "Intermittent dependency failures with retry behavior. Hard case: must separate from full outage."
+    recovery_window:
+      triage_label: borderline
+      triage_severity: minor
+      triage_components:
+        - redis-cart
+      triage_reason_class: dependency_failure
+      is_hard_case: true
+      rationale: "Recovery is often clean but partial cart failures may persist briefly."

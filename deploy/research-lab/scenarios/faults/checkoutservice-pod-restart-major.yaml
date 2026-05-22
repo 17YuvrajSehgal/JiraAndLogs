@@ -48,3 +48,31 @@ execution:
   target_kind: deployment
   target_name: checkoutservice
   selector: app=checkoutservice
+triage:
+  schema_version: 1
+  scenario_family: checkout-restart
+  per_window:
+    pre_fault_baseline:
+      triage_label: noise
+      triage_severity: null
+      triage_components: null
+      triage_reason_class: null
+      is_hard_case: false
+      rationale: "Pre-fault baseline; checkoutservice healthy."
+    active_fault:
+      triage_label: ticket_worthy
+      triage_severity: major
+      triage_components:
+        - checkoutservice
+        - frontend
+      triage_reason_class: restart_with_impact
+      is_hard_case: true
+      rationale: "Restart caused customer-visible order failures. Hard case: must be distinguished from healthy-replication single-pod restart."
+    recovery_window:
+      triage_label: borderline
+      triage_severity: minor
+      triage_components:
+        - checkoutservice
+      triage_reason_class: restart_with_impact
+      is_hard_case: true
+      rationale: "Recovery typically clean but residual failed orders may surface depending on retry behavior."

@@ -40,3 +40,28 @@ execution:
   target_name: adservice
   replicas: 0
   restore_replicas: 1
+triage:
+  schema_version: 1
+  scenario_family: ad-outage
+  per_window:
+    pre_fault_baseline:
+      triage_label: noise
+      triage_severity: null
+      triage_components: null
+      triage_reason_class: null
+      is_hard_case: false
+      rationale: "Pre-fault baseline; adservice healthy."
+    active_fault:
+      triage_label: noise
+      triage_severity: null
+      triage_components: null
+      triage_reason_class: null
+      is_hard_case: true
+      rationale: "Adservice outage with no checkout impact. Hard case: looks like an outage but is non-critical; must not be flagged."
+    recovery_window:
+      triage_label: noise
+      triage_severity: null
+      triage_components: null
+      triage_reason_class: null
+      is_hard_case: false
+      rationale: "Adservice restored; no engineer action needed."

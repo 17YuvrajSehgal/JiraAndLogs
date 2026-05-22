@@ -41,3 +41,28 @@ execution:
   target_container: server
   env:
     EXTRA_LATENCY: 250ms
+triage:
+  schema_version: 1
+  scenario_family: productcatalog-latency
+  per_window:
+    pre_fault_baseline:
+      triage_label: noise
+      triage_severity: null
+      triage_components: null
+      triage_reason_class: null
+      is_hard_case: false
+      rationale: "Pre-fault baseline; productcatalog response times normal."
+    active_fault:
+      triage_label: noise
+      triage_severity: null
+      triage_components: null
+      triage_reason_class: null
+      is_hard_case: true
+      rationale: "Mild latency below Jira threshold. Hard case: must not be flagged despite measurable latency increase."
+    recovery_window:
+      triage_label: noise
+      triage_severity: null
+      triage_components: null
+      triage_reason_class: null
+      is_hard_case: false
+      rationale: "Latency returned to baseline."

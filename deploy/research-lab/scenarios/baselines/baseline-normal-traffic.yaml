@@ -37,3 +37,14 @@ labels:
 execution:
   action: RecordOnly
   namespace: online-boutique-research
+triage:
+  schema_version: 1
+  scenario_family: baseline-normal
+  per_window:
+    observation_window:
+      triage_label: noise
+      triage_severity: null
+      triage_components: null
+      triage_reason_class: null
+      is_hard_case: false
+      rationale: "Normal traffic with no injected fault; must not be flagged."
