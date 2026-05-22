@@ -1,0 +1,1152 @@
+#!/usr/bin/env python3
+"""
+Run the first triage benchmark over a global triage dataset.
+
+Pipelines compared:
+  rule_baseline             -- deterministic threshold on a handful of
+                               trace + pod-unavailable features.
+  logistic_numeric_features -- L2-regularized logistic regression over the
+                               full production-safe numeric feature set,
+                               trained from scratch on the train split.
+
+Metrics, both in a STRICT mode (borderline counted as negative) and an
+INCLUSIVE mode (borderline counted as positive):
+  precision@FPR=1%, recall@FPR=1%, precision@FPR=5% -- operating-point
+  PR-AUC, ROC-AUC                                   -- threshold-free
+  Expected Calibration Error                        -- 10-bin reliability
+  F-beta with beta=2                                -- cost-weighted F
+
+Threshold selection happens on the validation split, then is APPLIED to
+the test split (per docs/triage-task-contract.md - no test-set tuning).
+
+Outputs under data/derived/global/<global_id>/benchmarks/<benchmark_id>/:
+  benchmark-report.md      -- human-readable headline metrics
+  benchmark-report.json    -- full metrics tree
+  pipeline-scores.csv      -- per-window score / threshold-decision per pipeline
+  reliability-curves.csv   -- per-pipeline bin centers + observed positive rate
+  stratified-metrics.json  -- per-family / per-is_hard_case metric breakdowns
+
+The contract that defines these metrics, splits, and borderline handling
+lives in docs/triage-task-contract.md.
+"""
+
+from __future__ import annotations
+
+import argparse
+import csv
+import math
+import sys
+from collections import defaultdict
+from pathlib import Path
+from typing import Any, Callable, Iterable
+
+BinarizeFn = Callable[[str], int]
+
+from triage_labels import (
+    FEATURE_COLUMNS,
+    read_jsonl,
+    repo_root_from_script,
+    utc_now,
+    write_json,
+)
+
+SCRIPT_VERSION = "0.1.0"
+
+# ---------------------------------------------------------------------------
+# Feature shaping
+# ---------------------------------------------------------------------------
+
+
+def _row_features(row: dict[str, Any]) -> list[float]:
+    return [float(row.get(column, 0.0) or 0.0) for column in FEATURE_COLUMNS]
+
+
+def _standardize(rows: list[list[float]]) -> tuple[list[float], list[float]]:
+    """Return per-column (mean, std) using train data. Std floor 1e-9."""
+    if not rows:
+        return [0.0] * len(FEATURE_COLUMNS), [1.0] * len(FEATURE_COLUMNS)
+    n_features = len(rows[0])
+    means: list[float] = []
+    stds: list[float] = []
+    for j in range(n_features):
+        column = [row[j] for row in rows]
+        mean = sum(column) / len(column)
+        var = sum((value - mean) ** 2 for value in column) / max(1, len(column) - 1)
+        means.append(mean)
+        stds.append(max(math.sqrt(var), 1e-9))
+    return means, stds
+
+
+def _apply_standardize(
+    rows: list[list[float]],
+    means: list[float],
+    stds: list[float],
+) -> list[list[float]]:
+    return [
+        [(row[j] - means[j]) / stds[j] for j in range(len(row))]
+        for row in rows
+    ]
+
+
+# ---------------------------------------------------------------------------
+# Logistic regression (stdlib only)
+# ---------------------------------------------------------------------------
+
+
+def _sigmoid(z: float) -> float:
+    if z >= 0:
+        ez = math.exp(-z)
+        return 1.0 / (1.0 + ez)
+    ez = math.exp(z)
+    return ez / (1.0 + ez)
+
+
+def fit_logistic(
+    features: list[list[float]],
+    labels: list[int],
+    n_iter: int = 2000,
+    lr: float = 0.1,
+    l2: float = 0.001,
+) -> tuple[list[float], float]:
+    """Train logistic regression with batch gradient descent and L2 weight
+    decay. Class imbalance is handled by inverse-frequency weighting."""
+    n = len(features)
+    if n == 0:
+        return [], 0.0
+    d = len(features[0])
+    weights = [0.0] * d
+    bias = 0.0
+
+    n_pos = sum(labels)
+    n_neg = n - n_pos
+    pos_weight = (n / (2.0 * n_pos)) if n_pos > 0 else 1.0
+    neg_weight = (n / (2.0 * n_neg)) if n_neg > 0 else 1.0
+
+    for _ in range(n_iter):
+        dw = [0.0] * d
+        db = 0.0
+        total_weight = 0.0
+        for i in range(n):
+            z = bias + sum(weights[j] * features[i][j] for j in range(d))
+            p = _sigmoid(z)
+            y = labels[i]
+            sample_weight = pos_weight if y == 1 else neg_weight
+            error = (p - y) * sample_weight
+            for j in range(d):
+                dw[j] += error * features[i][j]
+            db += error
+            total_weight += sample_weight
+        scale = total_weight if total_weight > 0 else float(n)
+        for j in range(d):
+            weights[j] -= lr * (dw[j] / scale + l2 * weights[j])
+        bias -= lr * (db / scale)
+    return weights, bias
+
+
+def predict_logistic(
+    features: list[list[float]],
+    weights: list[float],
+    bias: float,
+) -> list[float]:
+    return [
+        _sigmoid(bias + sum(weights[j] * row[j] for j in range(len(row))))
+        for row in features
+    ]
+
+
+# ---------------------------------------------------------------------------
+# Rule baseline
+# ---------------------------------------------------------------------------
+
+
+_RULE_WEIGHTS: dict[str, float] = {
+    "triage_feature_trace_error_rate": 4.0,
+    "triage_feature_trace_error_count": 0.02,
+    "triage_feature_trace_latency_p95_ms": 0.0005,
+    "triage_feature_k8s_pod_unavailable_count": 1.5,
+    "triage_feature_k8s_warning_event_count": 0.02,
+    "triage_feature_alert_firing_count": 1.0,
+}
+
+
+def score_rule_baseline(row: dict[str, Any]) -> float:
+    raw = sum(
+        weight * float(row.get(column, 0.0) or 0.0)
+        for column, weight in _RULE_WEIGHTS.items()
+    )
+    # Squash to (0, 1) so the rule score lives on the same scale as
+    # the logistic probabilities for plotting and reliability comparison.
+    return _sigmoid(raw - 1.0)
+
+
+# ---------------------------------------------------------------------------
+# Metrics
+# ---------------------------------------------------------------------------
+
+
+def roc_auc(scores: list[float], labels: list[int]) -> float:
+    """Mann-Whitney U AUC. Ties contribute 0.5."""
+    pos = [s for s, y in zip(scores, labels) if y == 1]
+    neg = [s for s, y in zip(scores, labels) if y == 0]
+    if not pos or not neg:
+        return 0.0
+    correct = 0.0
+    for p in pos:
+        for n in neg:
+            if p > n:
+                correct += 1.0
+            elif p == n:
+                correct += 0.5
+    return correct / (len(pos) * len(neg))
+
+
+def pr_auc(scores: list[float], labels: list[int]) -> float:
+    """Trapezoidal area under precision-recall curve."""
+    if not scores:
+        return 0.0
+    pairs = sorted(zip(scores, labels), key=lambda item: -item[0])
+    n_pos = sum(labels)
+    if n_pos == 0:
+        return 0.0
+    tp = 0
+    fp = 0
+    precisions: list[float] = []
+    recalls: list[float] = []
+    last_score = None
+    for score, label in pairs:
+        if label == 1:
+            tp += 1
+        else:
+            fp += 1
+        if last_score is not None and score == last_score:
+            precisions[-1] = tp / (tp + fp)
+            recalls[-1] = tp / n_pos
+        else:
+            precisions.append(tp / (tp + fp))
+            recalls.append(tp / n_pos)
+        last_score = score
+    precisions = [1.0] + precisions
+    recalls = [0.0] + recalls
+    area = 0.0
+    for i in range(1, len(recalls)):
+        width = recalls[i] - recalls[i - 1]
+        height = (precisions[i] + precisions[i - 1]) / 2.0
+        area += width * height
+    return area
+
+
+def threshold_at_fpr(
+    scores: list[float],
+    labels: list[int],
+    target_fpr: float,
+) -> tuple[float, float, float]:
+    """Return (threshold, achieved_fpr, achieved_tpr) where threshold is
+    the smallest value such that the false-positive rate is at or below
+    target_fpr on this dataset. If no threshold meets the target, returns
+    the threshold that minimizes the achieved FPR."""
+    pairs = sorted(zip(scores, labels), key=lambda item: -item[0])
+    n_pos = sum(labels)
+    n_neg = len(labels) - n_pos
+    if n_neg == 0 or n_pos == 0:
+        return (1.0, 0.0, 0.0)
+    tp = 0
+    fp = 0
+    best_threshold = pairs[0][0] + 1e-9
+    best_fpr = 0.0
+    best_tpr = 0.0
+    feasible = False
+    for score, label in pairs:
+        if label == 1:
+            tp += 1
+        else:
+            fp += 1
+        fpr = fp / n_neg
+        tpr = tp / n_pos
+        if fpr <= target_fpr:
+            best_threshold = score
+            best_fpr = fpr
+            best_tpr = tpr
+            feasible = True
+        else:
+            if not feasible:
+                # First time we exceed target; track the closest feasible
+                # point so we can fall back to it.
+                best_threshold = score + 1e-9
+                best_fpr = fpr
+                best_tpr = tpr
+            break
+    return (best_threshold, best_fpr, best_tpr)
+
+
+def metrics_at_threshold(
+    scores: list[float],
+    labels: list[int],
+    threshold: float,
+    beta: float = 2.0,
+) -> dict[str, float]:
+    tp = fp = tn = fn = 0
+    for score, label in zip(scores, labels):
+        predicted = 1 if score >= threshold else 0
+        if predicted == 1 and label == 1:
+            tp += 1
+        elif predicted == 1 and label == 0:
+            fp += 1
+        elif predicted == 0 and label == 0:
+            tn += 1
+        else:
+            fn += 1
+    precision = tp / (tp + fp) if (tp + fp) > 0 else 0.0
+    recall = tp / (tp + fn) if (tp + fn) > 0 else 0.0
+    fpr = fp / (fp + tn) if (fp + tn) > 0 else 0.0
+    beta_sq = beta * beta
+    denom = (beta_sq * precision) + recall
+    f_beta = ((1 + beta_sq) * precision * recall / denom) if denom > 0 else 0.0
+    return {
+        "threshold": threshold,
+        "tp": tp,
+        "fp": fp,
+        "tn": tn,
+        "fn": fn,
+        "precision": precision,
+        "recall": recall,
+        "fpr": fpr,
+        "f_beta": f_beta,
+    }
+
+
+def expected_calibration_error(
+    scores: list[float],
+    labels: list[int],
+    bins: int = 10,
+) -> tuple[float, list[dict[str, float]]]:
+    """Standard ECE: bin predictions, compute |confidence - accuracy| per
+    bin, weight by bin size. Returns (ece, per-bin records)."""
+    if not scores:
+        return 0.0, []
+    buckets: list[list[tuple[float, int]]] = [[] for _ in range(bins)]
+    for score, label in zip(scores, labels):
+        idx = min(bins - 1, int(score * bins))
+        buckets[idx].append((score, label))
+    ece = 0.0
+    rows: list[dict[str, float]] = []
+    for i, bucket in enumerate(buckets):
+        if not bucket:
+            rows.append(
+                {
+                    "bin": i,
+                    "bin_lower": i / bins,
+                    "bin_upper": (i + 1) / bins,
+                    "count": 0,
+                    "mean_score": 0.0,
+                    "observed_positive_rate": 0.0,
+                    "abs_gap": 0.0,
+                }
+            )
+            continue
+        mean_score = sum(s for s, _ in bucket) / len(bucket)
+        positive_rate = sum(y for _, y in bucket) / len(bucket)
+        gap = abs(mean_score - positive_rate)
+        ece += (len(bucket) / len(scores)) * gap
+        rows.append(
+            {
+                "bin": i,
+                "bin_lower": i / bins,
+                "bin_upper": (i + 1) / bins,
+                "count": len(bucket),
+                "mean_score": mean_score,
+                "observed_positive_rate": positive_rate,
+                "abs_gap": gap,
+            }
+        )
+    return ece, rows
+
+
+# ---------------------------------------------------------------------------
+# Benchmark orchestration
+# ---------------------------------------------------------------------------
+
+
+def _binarize_strict(label: str) -> int:
+    return 1 if label == "ticket_worthy" else 0
+
+
+def _binarize_inclusive(label: str) -> int:
+    return 1 if label in {"ticket_worthy", "borderline"} else 0
+
+
+def _partition_by_split(
+    rows: list[dict[str, Any]],
+) -> dict[str, list[dict[str, Any]]]:
+    out: dict[str, list[dict[str, Any]]] = defaultdict(list)
+    for row in rows:
+        out[row.get("split", "train")].append(row)
+    return out
+
+
+def _stratify_metrics(
+    rows: list[dict[str, Any]],
+    scores: list[float],
+    labels: list[int],
+    threshold: float,
+    key: str,
+) -> dict[str, dict[str, float]]:
+    groups: dict[Any, list[int]] = defaultdict(list)
+    for idx, row in enumerate(rows):
+        groups[row.get(key)].append(idx)
+    out: dict[str, dict[str, float]] = {}
+    for group_key, indices in groups.items():
+        group_scores = [scores[i] for i in indices]
+        group_labels = [labels[i] for i in indices]
+        if not any(group_labels) and not any(1 - y for y in group_labels):
+            continue
+        metrics = metrics_at_threshold(group_scores, group_labels, threshold)
+        metrics["pr_auc"] = pr_auc(group_scores, group_labels)
+        metrics["roc_auc"] = roc_auc(group_scores, group_labels)
+        metrics["window_count"] = len(indices)
+        metrics["positive_count"] = sum(group_labels)
+        out[str(group_key)] = metrics
+    return out
+
+
+def _train_logistic_model(
+    train_rows: list[dict[str, Any]],
+    binarize: BinarizeFn,
+) -> dict[str, Any]:
+    raw = [_row_features(row) for row in train_rows]
+    labels = [binarize(row["triage_label"]) for row in train_rows]
+    means, stds = _standardize(raw)
+    scaled = _apply_standardize(raw, means, stds)
+    weights, bias = fit_logistic(scaled, labels)
+    return {"means": means, "stds": stds, "weights": weights, "bias": bias}
+
+
+def _logistic_scores(
+    rows: list[dict[str, Any]],
+    model: dict[str, Any],
+) -> list[float]:
+    raw = [_row_features(row) for row in rows]
+    scaled = _apply_standardize(raw, model["means"], model["stds"])
+    return predict_logistic(scaled, model["weights"], model["bias"])
+
+
+def evaluate_pipeline(
+    pipeline_id: str,
+    test_rows: list[dict[str, Any]],
+    validation_rows: list[dict[str, Any]],
+    test_scores: list[float],
+    validation_scores: list[float],
+    binarize: BinarizeFn,
+) -> dict[str, Any]:
+    test_labels = [binarize(row["triage_label"]) for row in test_rows]
+    val_labels = [binarize(row["triage_label"]) for row in validation_rows]
+
+    results: dict[str, Any] = {
+        "test_window_count": len(test_rows),
+        "test_positive_count": sum(test_labels),
+        "validation_window_count": len(validation_rows),
+        "validation_positive_count": sum(val_labels),
+        "pr_auc_test": pr_auc(test_scores, test_labels),
+        "roc_auc_test": roc_auc(test_scores, test_labels),
+        "pr_auc_validation": pr_auc(validation_scores, val_labels),
+        "roc_auc_validation": roc_auc(validation_scores, val_labels),
+    }
+
+    operating_points: dict[str, Any] = {}
+    for target_fpr in (0.01, 0.05):
+        threshold, val_fpr, val_tpr = threshold_at_fpr(
+            validation_scores, val_labels, target_fpr
+        )
+        test_metrics = metrics_at_threshold(test_scores, test_labels, threshold)
+        operating_points[f"fpr<={target_fpr:.2f}"] = {
+            "validation_threshold": threshold,
+            "validation_achieved_fpr": val_fpr,
+            "validation_achieved_recall": val_tpr,
+            **test_metrics,
+        }
+    results["operating_points"] = operating_points
+
+    ece, reliability = expected_calibration_error(test_scores, test_labels)
+    results["expected_calibration_error"] = ece
+    results["reliability_bins"] = reliability
+
+    # Stratified metrics use the precision@FPR=1% threshold so they show
+    # how a deployed model would behave at the headline operating point.
+    headline_threshold = operating_points["fpr<=0.01"]["validation_threshold"]
+    results["stratified_by_scenario_family"] = _stratify_metrics(
+        test_rows, test_scores, test_labels, headline_threshold, "scenario_family"
+    )
+    results["stratified_by_is_hard_case"] = _stratify_metrics(
+        test_rows, test_scores, test_labels, headline_threshold, "is_hard_case"
+    )
+    return results
+
+
+def _lofo_evaluate_family(
+    family: str,
+    all_rows: list[dict[str, Any]],
+    binarize: BinarizeFn,
+) -> dict[str, Any] | None:
+    """Train logistic on all-other-families, evaluate on the held-out
+    family. Returns per-fold metrics, or None when the family has no
+    positives or no negatives under the current variant (those folds
+    cannot produce meaningful AUC)."""
+    test_rows = [row for row in all_rows if row.get("scenario_family") == family]
+    train_rows = [row for row in all_rows if row.get("scenario_family") != family]
+    if not test_rows or not train_rows:
+        return None
+    test_labels = [binarize(row["triage_label"]) for row in test_rows]
+    n_pos = sum(test_labels)
+    n_neg = len(test_labels) - n_pos
+    if n_pos == 0 or n_neg == 0:
+        return {
+            "family": family,
+            "window_count": len(test_rows),
+            "positive_count": n_pos,
+            "skipped": "single-class fold (no positives or no negatives)",
+        }
+    rule_scores = [score_rule_baseline(row) for row in test_rows]
+    logistic_model = _train_logistic_model(train_rows, binarize)
+    logistic_scores = _logistic_scores(test_rows, logistic_model)
+    ece_rule, _ = expected_calibration_error(rule_scores, test_labels)
+    ece_log, _ = expected_calibration_error(logistic_scores, test_labels)
+    return {
+        "family": family,
+        "window_count": len(test_rows),
+        "positive_count": n_pos,
+        "rule_baseline": {
+            "pr_auc": pr_auc(rule_scores, test_labels),
+            "roc_auc": roc_auc(rule_scores, test_labels),
+            "expected_calibration_error": ece_rule,
+        },
+        "logistic_numeric_features": {
+            "pr_auc": pr_auc(logistic_scores, test_labels),
+            "roc_auc": roc_auc(logistic_scores, test_labels),
+            "expected_calibration_error": ece_log,
+        },
+        "logistic_scores": logistic_scores,
+        "rule_scores": rule_scores,
+        "test_labels": test_labels,
+    }
+
+
+def _macro_average(values: list[float]) -> float:
+    return sum(values) / len(values) if values else 0.0
+
+
+def run_lofo(
+    all_rows: list[dict[str, Any]],
+    binarize: BinarizeFn,
+) -> dict[str, Any]:
+    families = sorted({str(row.get("scenario_family", "")) for row in all_rows})
+    folds: list[dict[str, Any]] = []
+    pooled_rule_scores: list[float] = []
+    pooled_logistic_scores: list[float] = []
+    pooled_labels: list[int] = []
+    for family in families:
+        result = _lofo_evaluate_family(family, all_rows, binarize)
+        if result is None:
+            continue
+        folds.append(result)
+        if "logistic_scores" in result:
+            pooled_rule_scores.extend(result["rule_scores"])
+            pooled_logistic_scores.extend(result["logistic_scores"])
+            pooled_labels.extend(result["test_labels"])
+
+    scored_folds = [f for f in folds if "logistic_scores" in f]
+    macro = {
+        "rule_baseline": {
+            "pr_auc": _macro_average([f["rule_baseline"]["pr_auc"] for f in scored_folds]),
+            "roc_auc": _macro_average([f["rule_baseline"]["roc_auc"] for f in scored_folds]),
+            "expected_calibration_error": _macro_average(
+                [f["rule_baseline"]["expected_calibration_error"] for f in scored_folds]
+            ),
+        },
+        "logistic_numeric_features": {
+            "pr_auc": _macro_average([f["logistic_numeric_features"]["pr_auc"] for f in scored_folds]),
+            "roc_auc": _macro_average([f["logistic_numeric_features"]["roc_auc"] for f in scored_folds]),
+            "expected_calibration_error": _macro_average(
+                [f["logistic_numeric_features"]["expected_calibration_error"] for f in scored_folds]
+            ),
+        },
+    }
+    micro = {
+        "rule_baseline": {
+            "pr_auc": pr_auc(pooled_rule_scores, pooled_labels),
+            "roc_auc": roc_auc(pooled_rule_scores, pooled_labels),
+        },
+        "logistic_numeric_features": {
+            "pr_auc": pr_auc(pooled_logistic_scores, pooled_labels),
+            "roc_auc": roc_auc(pooled_logistic_scores, pooled_labels),
+        },
+    }
+    return {
+        "fold_count": len(scored_folds),
+        "skipped_families": [
+            f["family"] for f in folds if "logistic_scores" not in f
+        ],
+        "macro_average": macro,
+        "micro_pooled": micro,
+        "folds": folds,
+    }
+
+
+def run_benchmark(
+    repo_root: Path,
+    global_dataset_id: str,
+    benchmark_id: str,
+    derived_root: Path | None = None,
+    force: bool = False,
+) -> dict[str, Any]:
+    if derived_root is None:
+        derived_root = repo_root / "data" / "derived"
+    global_dir = derived_root / "global" / global_dataset_id
+    examples_path = global_dir / "global-triage-examples.jsonl"
+    if not examples_path.exists():
+        raise FileNotFoundError(
+            f"Global triage dataset not found at {examples_path}. "
+            f"Run build-global-triage-dataset.ps1 first."
+        )
+
+    out_dir = global_dir / "benchmarks" / benchmark_id
+    report_md_path = out_dir / "benchmark-report.md"
+    if report_md_path.exists() and not force:
+        raise FileExistsError(
+            f"{report_md_path} already exists. Re-run with --force to overwrite."
+        )
+
+    rows = read_jsonl(examples_path)
+    by_split = _partition_by_split(rows)
+    train_rows = by_split.get("train", [])
+    val_rows = by_split.get("validation", [])
+    test_rows = by_split.get("test", [])
+    if not train_rows or not val_rows or not test_rows:
+        raise ValueError(
+            f"Split missing: train={len(train_rows)} validation={len(val_rows)} test={len(test_rows)}"
+        )
+
+    rule_scores = {
+        "train": [score_rule_baseline(row) for row in train_rows],
+        "validation": [score_rule_baseline(row) for row in val_rows],
+        "test": [score_rule_baseline(row) for row in test_rows],
+    }
+
+    pipelines_output: dict[str, Any] = {}
+
+    for variant_name, binarize in (
+        ("strict", _binarize_strict),
+        ("inclusive", _binarize_inclusive),
+    ):
+        logistic_model = _train_logistic_model(train_rows, binarize)
+        logistic_scores = {
+            "train": _logistic_scores(train_rows, logistic_model),
+            "validation": _logistic_scores(val_rows, logistic_model),
+            "test": _logistic_scores(test_rows, logistic_model),
+        }
+
+        rule_result = evaluate_pipeline(
+            pipeline_id="rule_baseline",
+            test_rows=test_rows,
+            validation_rows=val_rows,
+            test_scores=rule_scores["test"],
+            validation_scores=rule_scores["validation"],
+            binarize=binarize,
+        )
+        logistic_result = evaluate_pipeline(
+            pipeline_id="logistic_numeric_features",
+            test_rows=test_rows,
+            validation_rows=val_rows,
+            test_scores=logistic_scores["test"],
+            validation_scores=logistic_scores["validation"],
+            binarize=binarize,
+        )
+
+        logistic_result["model"] = {
+            "feature_columns": list(FEATURE_COLUMNS),
+            "weights": logistic_model["weights"],
+            "bias": logistic_model["bias"],
+            "feature_means": logistic_model["means"],
+            "feature_stds": logistic_model["stds"],
+        }
+
+        pipelines_output[variant_name] = {
+            "rule_baseline": rule_result,
+            "logistic_numeric_features": logistic_result,
+            "scores": {
+                "rule_baseline_test": rule_scores["test"],
+                "logistic_numeric_features_test": logistic_scores["test"],
+            },
+        }
+
+    lofo_output: dict[str, Any] = {}
+    for variant_name, binarize in (
+        ("strict", _binarize_strict),
+        ("inclusive", _binarize_inclusive),
+    ):
+        lofo_output[variant_name] = run_lofo(rows, binarize)
+
+    report = {
+        "schema_version": 1,
+        "builder": "run_triage_benchmark.py",
+        "builder_version": SCRIPT_VERSION,
+        "global_dataset_id": global_dataset_id,
+        "benchmark_id": benchmark_id,
+        "generated_at": utc_now(),
+        "split_counts": {
+            "train": len(train_rows),
+            "validation": len(val_rows),
+            "test": len(test_rows),
+        },
+        "feature_columns": list(FEATURE_COLUMNS),
+        "leave_one_family_out": {
+            variant_name: {
+                "fold_count": lofo["fold_count"],
+                "skipped_families": lofo["skipped_families"],
+                "macro_average": lofo["macro_average"],
+                "micro_pooled": lofo["micro_pooled"],
+                "folds": [
+                    {
+                        key: value
+                        for key, value in fold.items()
+                        if key
+                        not in ("logistic_scores", "rule_scores", "test_labels")
+                    }
+                    for fold in lofo["folds"]
+                ],
+            }
+            for variant_name, lofo in lofo_output.items()
+        },
+        "pipelines": [
+            {
+                name: {
+                    key: value
+                    for key, value in result.items()
+                    if key not in ("reliability_bins", "model")
+                }
+                for name, result in variant.items()
+                if name != "scores"
+            }
+            for variant in pipelines_output.values()
+        ],
+        "results_by_variant": {
+            variant_name: {
+                pipeline_name: {
+                    key: value
+                    for key, value in result.items()
+                    if key != "reliability_bins"
+                }
+                for pipeline_name, result in variant.items()
+                if pipeline_name != "scores"
+            }
+            for variant_name, variant in pipelines_output.items()
+        },
+    }
+
+    write_json(out_dir / "benchmark-report.json", report)
+    _write_report_md(
+        out_dir / "benchmark-report.md",
+        report,
+        pipelines_output,
+        lofo_output,
+    )
+    _write_pipeline_scores_csv(
+        out_dir / "pipeline-scores.csv",
+        test_rows=test_rows,
+        pipelines_output=pipelines_output,
+    )
+    _write_reliability_curves_csv(
+        out_dir / "reliability-curves.csv",
+        pipelines_output=pipelines_output,
+    )
+    _write_stratified_metrics_json(
+        out_dir / "stratified-metrics.json",
+        pipelines_output=pipelines_output,
+    )
+    _write_lofo_csv(
+        out_dir / "leave-one-family-out-metrics.csv",
+        lofo_output=lofo_output,
+    )
+
+    return report
+
+
+# ---------------------------------------------------------------------------
+# Output writers
+# ---------------------------------------------------------------------------
+
+
+def _write_report_md(
+    path: Path,
+    report: dict[str, Any],
+    pipelines_output: dict[str, Any],
+    lofo_output: dict[str, Any],
+) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    lines: list[str] = []
+    lines.append(f"# Triage Benchmark Report")
+    lines.append("")
+    lines.append(f"Benchmark id: `{report['benchmark_id']}`")
+    lines.append(f"Global dataset: `{report['global_dataset_id']}`")
+    lines.append(f"Builder version: `{report['builder_version']}`")
+    lines.append(f"Generated: {report['generated_at']}")
+    lines.append("")
+    counts = report["split_counts"]
+    lines.append(
+        f"Splits: train={counts['train']}, validation={counts['validation']}, test={counts['test']}"
+    )
+    lines.append("")
+    for variant_name in ("strict", "inclusive"):
+        variant = pipelines_output[variant_name]
+        lines.append(f"## {variant_name.capitalize()} borderline handling")
+        lines.append("")
+        if variant_name == "strict":
+            lines.append(
+                "Strict: `borderline` is counted as negative. Precision is "
+                "computed against `ticket_worthy` only. This is the headline."
+            )
+        else:
+            lines.append(
+                "Inclusive: `borderline` is counted as positive. Rewards "
+                "models that surface human-interesting windows."
+            )
+        lines.append("")
+        lines.append("### Headline metrics on test split")
+        lines.append("")
+        lines.append("| Pipeline | PR-AUC | ROC-AUC | ECE | Precision@FPR=1% | Recall@FPR=1% | F-beta(2)@FPR=1% |")
+        lines.append("| --- | ---: | ---: | ---: | ---: | ---: | ---: |")
+        for pipeline_name in ("rule_baseline", "logistic_numeric_features"):
+            result = variant[pipeline_name]
+            op = result["operating_points"]["fpr<=0.01"]
+            lines.append(
+                f"| `{pipeline_name}` | "
+                f"{result['pr_auc_test']:.4f} | "
+                f"{result['roc_auc_test']:.4f} | "
+                f"{result['expected_calibration_error']:.4f} | "
+                f"{op['precision']:.4f} | "
+                f"{op['recall']:.4f} | "
+                f"{op['f_beta']:.4f} |"
+            )
+        lines.append("")
+        lines.append("### Secondary operating point (Precision@FPR=5%)")
+        lines.append("")
+        lines.append("| Pipeline | Precision@FPR=5% | Recall@FPR=5% | F-beta(2)@FPR=5% |")
+        lines.append("| --- | ---: | ---: | ---: |")
+        for pipeline_name in ("rule_baseline", "logistic_numeric_features"):
+            result = variant[pipeline_name]
+            op = result["operating_points"]["fpr<=0.05"]
+            lines.append(
+                f"| `{pipeline_name}` | "
+                f"{op['precision']:.4f} | "
+                f"{op['recall']:.4f} | "
+                f"{op['f_beta']:.4f} |"
+            )
+        lines.append("")
+        lines.append("### Confusion at FPR=1% operating point")
+        lines.append("")
+        lines.append("| Pipeline | TP | FP | TN | FN |")
+        lines.append("| --- | ---: | ---: | ---: | ---: |")
+        for pipeline_name in ("rule_baseline", "logistic_numeric_features"):
+            op = variant[pipeline_name]["operating_points"]["fpr<=0.01"]
+            lines.append(
+                f"| `{pipeline_name}` | {op['tp']} | {op['fp']} | {op['tn']} | {op['fn']} |"
+            )
+        lines.append("")
+        lines.append("### Stratified by `is_hard_case` (logistic, FPR=1% threshold)")
+        lines.append("")
+        lines.append("| Group | Window count | Positive count | PR-AUC | Precision | Recall |")
+        lines.append("| --- | ---: | ---: | ---: | ---: | ---: |")
+        for group_key, metrics in sorted(
+            variant["logistic_numeric_features"]["stratified_by_is_hard_case"].items()
+        ):
+            lines.append(
+                f"| {group_key} | {metrics['window_count']} | "
+                f"{metrics['positive_count']} | "
+                f"{metrics['pr_auc']:.4f} | "
+                f"{metrics['precision']:.4f} | "
+                f"{metrics['recall']:.4f} |"
+            )
+        lines.append("")
+        lines.append("### Stratified by scenario family (logistic, FPR=1% threshold)")
+        lines.append("")
+        lines.append("| Scenario family | Window count | Positive count | PR-AUC | Precision | Recall |")
+        lines.append("| --- | ---: | ---: | ---: | ---: | ---: |")
+        for group_key, metrics in sorted(
+            variant["logistic_numeric_features"]["stratified_by_scenario_family"].items()
+        ):
+            lines.append(
+                f"| {group_key} | {metrics['window_count']} | "
+                f"{metrics['positive_count']} | "
+                f"{metrics['pr_auc']:.4f} | "
+                f"{metrics['precision']:.4f} | "
+                f"{metrics['recall']:.4f} |"
+            )
+        lines.append("")
+    lines.append("## Leave-one-family-out folds")
+    lines.append("")
+    lines.append(
+        "Each family is held out as the test set; train uses all other "
+        "families pooled across all splits. Per-fold metrics quantify how "
+        "well a model generalizes to a fault pattern it has not seen "
+        "during training. Macro-averaged metrics are the primary "
+        "generalization signal (each family contributes equally regardless "
+        "of size). Single-class folds (e.g. baseline-normal or ad-outage "
+        "under strict binarization) are skipped because PR/ROC are "
+        "undefined without both classes."
+    )
+    lines.append("")
+    for variant_name in ("strict", "inclusive"):
+        lofo = lofo_output[variant_name]
+        lines.append(f"### {variant_name.capitalize()} mode")
+        lines.append("")
+        lines.append(
+            f"Scored folds: {lofo['fold_count']}; skipped: "
+            f"{', '.join(lofo['skipped_families']) or 'none'}."
+        )
+        lines.append("")
+        macro = lofo["macro_average"]
+        micro = lofo["micro_pooled"]
+        lines.append(
+            "| Pipeline | Macro PR-AUC | Macro ROC-AUC | Macro ECE | "
+            "Pooled PR-AUC | Pooled ROC-AUC |"
+        )
+        lines.append("| --- | ---: | ---: | ---: | ---: | ---: |")
+        for pipeline_name in ("rule_baseline", "logistic_numeric_features"):
+            lines.append(
+                f"| `{pipeline_name}` | "
+                f"{macro[pipeline_name]['pr_auc']:.4f} | "
+                f"{macro[pipeline_name]['roc_auc']:.4f} | "
+                f"{macro[pipeline_name]['expected_calibration_error']:.4f} | "
+                f"{micro[pipeline_name]['pr_auc']:.4f} | "
+                f"{micro[pipeline_name]['roc_auc']:.4f} |"
+            )
+        lines.append("")
+        lines.append("#### Per-family folds")
+        lines.append("")
+        lines.append(
+            "| Family | Windows | Positives | Rule PR-AUC | Rule ROC-AUC | "
+            "Logistic PR-AUC | Logistic ROC-AUC |"
+        )
+        lines.append("| --- | ---: | ---: | ---: | ---: | ---: | ---: |")
+        for fold in lofo["folds"]:
+            family = fold["family"]
+            if "logistic_numeric_features" not in fold:
+                lines.append(
+                    f"| {family} | {fold['window_count']} | "
+                    f"{fold['positive_count']} | n/a | n/a | n/a | n/a |"
+                )
+                continue
+            lines.append(
+                f"| {family} | {fold['window_count']} | "
+                f"{fold['positive_count']} | "
+                f"{fold['rule_baseline']['pr_auc']:.4f} | "
+                f"{fold['rule_baseline']['roc_auc']:.4f} | "
+                f"{fold['logistic_numeric_features']['pr_auc']:.4f} | "
+                f"{fold['logistic_numeric_features']['roc_auc']:.4f} |"
+            )
+        lines.append("")
+    lines.append("## Top logistic feature weights (strict)")
+    lines.append("")
+    strict_model = pipelines_output["strict"]["logistic_numeric_features"]["model"]
+    feature_weights = list(zip(FEATURE_COLUMNS, strict_model["weights"]))
+    feature_weights.sort(key=lambda pair: -abs(pair[1]))
+    lines.append("| Feature | Standardized weight |")
+    lines.append("| --- | ---: |")
+    for column, weight in feature_weights[:15]:
+        lines.append(f"| `{column}` | {weight:+.4f} |")
+    lines.append("")
+    lines.append(
+        "Reliability curves and per-window scores are in the companion CSVs."
+    )
+    path.write_text("\n".join(lines), encoding="utf-8")
+
+
+def _write_pipeline_scores_csv(
+    path: Path,
+    test_rows: list[dict[str, Any]],
+    pipelines_output: dict[str, Any],
+) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    rule_scores = pipelines_output["strict"]["scores"]["rule_baseline_test"]
+    logistic_strict = pipelines_output["strict"]["scores"][
+        "logistic_numeric_features_test"
+    ]
+    logistic_incl = pipelines_output["inclusive"]["scores"][
+        "logistic_numeric_features_test"
+    ]
+    headers = [
+        "window_id",
+        "scenario_family",
+        "scenario_id",
+        "triage_label",
+        "is_hard_case",
+        "split",
+        "rule_baseline_score",
+        "logistic_strict_score",
+        "logistic_inclusive_score",
+    ]
+    with path.open("w", encoding="utf-8", newline="") as handle:
+        writer = csv.writer(handle)
+        writer.writerow(headers)
+        for row, rule, log_s, log_i in zip(
+            test_rows, rule_scores, logistic_strict, logistic_incl
+        ):
+            writer.writerow(
+                [
+                    row.get("window_id", ""),
+                    row.get("scenario_family", ""),
+                    row.get("scenario_id", ""),
+                    row.get("triage_label", ""),
+                    row.get("is_hard_case", False),
+                    row.get("split", ""),
+                    f"{rule:.6f}",
+                    f"{log_s:.6f}",
+                    f"{log_i:.6f}",
+                ]
+            )
+
+
+def _write_reliability_curves_csv(
+    path: Path,
+    pipelines_output: dict[str, Any],
+) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    rows: list[dict[str, Any]] = []
+    for variant_name in ("strict", "inclusive"):
+        for pipeline_name in ("rule_baseline", "logistic_numeric_features"):
+            bins = pipelines_output[variant_name][pipeline_name]["reliability_bins"]
+            for record in bins:
+                rows.append(
+                    {
+                        "variant": variant_name,
+                        "pipeline": pipeline_name,
+                        **record,
+                    }
+                )
+    headers = [
+        "variant",
+        "pipeline",
+        "bin",
+        "bin_lower",
+        "bin_upper",
+        "count",
+        "mean_score",
+        "observed_positive_rate",
+        "abs_gap",
+    ]
+    with path.open("w", encoding="utf-8", newline="") as handle:
+        writer = csv.DictWriter(handle, fieldnames=headers, extrasaction="ignore")
+        writer.writeheader()
+        for row in rows:
+            writer.writerow(row)
+
+
+def _write_lofo_csv(
+    path: Path,
+    lofo_output: dict[str, Any],
+) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    headers = [
+        "variant",
+        "family",
+        "window_count",
+        "positive_count",
+        "rule_baseline_pr_auc",
+        "rule_baseline_roc_auc",
+        "rule_baseline_ece",
+        "logistic_pr_auc",
+        "logistic_roc_auc",
+        "logistic_ece",
+        "skipped_reason",
+    ]
+    with path.open("w", encoding="utf-8", newline="") as handle:
+        writer = csv.writer(handle)
+        writer.writerow(headers)
+        for variant_name in ("strict", "inclusive"):
+            for fold in lofo_output[variant_name]["folds"]:
+                if "logistic_numeric_features" not in fold:
+                    writer.writerow(
+                        [
+                            variant_name,
+                            fold["family"],
+                            fold["window_count"],
+                            fold["positive_count"],
+                            "",
+                            "",
+                            "",
+                            "",
+                            "",
+                            "",
+                            fold.get("skipped", ""),
+                        ]
+                    )
+                    continue
+                writer.writerow(
+                    [
+                        variant_name,
+                        fold["family"],
+                        fold["window_count"],
+                        fold["positive_count"],
+                        f"{fold['rule_baseline']['pr_auc']:.6f}",
+                        f"{fold['rule_baseline']['roc_auc']:.6f}",
+                        f"{fold['rule_baseline']['expected_calibration_error']:.6f}",
+                        f"{fold['logistic_numeric_features']['pr_auc']:.6f}",
+                        f"{fold['logistic_numeric_features']['roc_auc']:.6f}",
+                        f"{fold['logistic_numeric_features']['expected_calibration_error']:.6f}",
+                        "",
+                    ]
+                )
+
+
+def _write_stratified_metrics_json(
+    path: Path,
+    pipelines_output: dict[str, Any],
+) -> None:
+    payload: dict[str, Any] = {}
+    for variant_name in ("strict", "inclusive"):
+        payload[variant_name] = {}
+        for pipeline_name in ("rule_baseline", "logistic_numeric_features"):
+            result = pipelines_output[variant_name][pipeline_name]
+            payload[variant_name][pipeline_name] = {
+                "by_scenario_family": result["stratified_by_scenario_family"],
+                "by_is_hard_case": result["stratified_by_is_hard_case"],
+            }
+    write_json(path, payload)
+
+
+# ---------------------------------------------------------------------------
+# CLI
+# ---------------------------------------------------------------------------
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--global-dataset-id", required=True)
+    parser.add_argument("--benchmark-id", required=True)
+    parser.add_argument("--derived-root", default=None)
+    parser.add_argument("--force", action="store_true")
+    args = parser.parse_args()
+
+    repo_root = repo_root_from_script()
+    derived_root = Path(args.derived_root) if args.derived_root else None
+
+    report = run_benchmark(
+        repo_root=repo_root,
+        global_dataset_id=args.global_dataset_id,
+        benchmark_id=args.benchmark_id,
+        derived_root=derived_root,
+        force=args.force,
+    )
+    strict = report["results_by_variant"]["strict"]
+    rule = strict["rule_baseline"]
+    log = strict["logistic_numeric_features"]
+    rule_op = rule["operating_points"]["fpr<=0.01"]
+    log_op = log["operating_points"]["fpr<=0.01"]
+    print(
+        f"Wrote triage benchmark '{args.benchmark_id}'. Strict @ FPR<=1%: "
+        f"rule precision={rule_op['precision']:.3f} recall={rule_op['recall']:.3f}; "
+        f"logistic precision={log_op['precision']:.3f} recall={log_op['recall']:.3f}"
+    )
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())
