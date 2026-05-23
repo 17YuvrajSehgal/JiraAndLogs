@@ -24,3 +24,5 @@ data/derived/
 build/
 dist/
 *.egg-info/
+
+temp.json
