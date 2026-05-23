@@ -29,6 +29,8 @@ ML/AI agenda in `todo.md`. Specific overfitting / coverage risks:
 | Fault duration capped at ~2 min                   | `slow-leak-saturation` and similar gradual faults can't be expressed |
 | No temporal / continuous context                  | Each run is a discrete burst, no day/night / deploy / business-hour patterns |
 | No real-world anchoring                           | We're calibrating noise families against our own assumptions only |
+| **No system / infrastructure faults**             | Every scenario is `kubectl scale` or pod restart. Zero DNS / network-partition / disk-pressure / clock-skew / kubelet / etcd faults. Real on-call is dominated by these. (Phase D11) |
+| **No orphan / unreported faults**                 | Every `ticket_worthy` window has a paired Jira entry. We cannot tell whether the model is detecting genuine anomalies or just memorizing Jira patterns. (Phase D12) |
 
 Each of these is a phase below.
 
@@ -52,6 +54,8 @@ Compared to v4-large (3,216 windows / 208 issues / 40 runs / 13 families):
 | Distinct microservice apps     | 1        | 2         | 2x     |
 | Long-window (>=10 min) episodes | 0       | >=100     | inf    |
 | Cross-service cascade episodes | ~0       | >=80      | inf    |
+| System-level fault scenarios   | 0        | >=14      | inf    |
+| Orphan ticket_worthy windows (no Jira) | 0 | >=200    | inf    |
 
 The 100-run target is sized for a 4-5 day cloud VM at the same `e2-standard-8`
 profile that ran v4-large in ~24 hours. Doubling the disk to 1TB covers the
@@ -371,6 +375,218 @@ timestamps and trace IDs) dataset from the same git SHA on a clean VM.
 
 ---
 
+## Phase D11 - System / infrastructure-level fault injection
+**Goal:** v4-large faults are application-level - `kubectl scale to 0`,
+pod restart, app config change. Real on-call queues are dominated by
+infrastructure faults the application code never sees directly: DNS,
+network partition, disk pressure, clock skew, kubelet, etcd, container
+runtime. Without these, the model never learns the signature of an
+infrastructure-class incident, and the dataset stays unrealistic.
+
+### Tooling
+
+- [ ] **D11.1** Install chaos-mesh in the kind cluster. It ships
+      declarative CRDs (`NetworkChaos`, `IOChaos`, `StressChaos`,
+      `TimeChaos`, `PodChaos`, `DNSChaos`, `KernelChaos`) and runs
+      cleanly on kind. Litmus is the alternative; chaos-mesh has
+      better tooling. Add `scripts/research-lab/install-chaos-mesh.ps1`.
+- [ ] **D11.2** Authoring schema extension. Add an optional
+      `system_fault` block to scenario YAML referencing a chaos-mesh
+      experiment manifest (path or inline). Update `run-scenario.ps1`
+      to apply the experiment at the same point in the lifecycle where
+      app-level faults are currently applied, and clean it up at
+      teardown. Keep the existing `fault` block for app-level scenarios;
+      a scenario can have one or both.
+
+### Network faults (NetworkChaos / DNSChaos)
+
+- [ ] **D11.3** `dns-coredns-down-60s` (ticket_worthy). Kill CoreDNS
+      pod for 60 seconds. Affects every service's DNS resolution -
+      one of the most important infrastructure faults to recognize.
+- [ ] **D11.4** `network-partition-cart-redis` (ticket_worthy).
+      Partition `cartservice` from `redis-cart`. Mimics a real
+      network split inside the cluster.
+- [ ] **D11.5** `packet-loss-frontend-30pct-90s` (borderline).
+      30% packet loss on frontend ingress; some users see retries,
+      most don't.
+- [ ] **D11.6** `network-latency-add-500ms-currency` (ticket_worthy).
+      Inject 500ms latency on egress from `currencyservice`. Will
+      ripple into checkout latency.
+
+### Disk faults (IOChaos)
+
+- [ ] **D11.7** `disk-read-latency-paymentservice-50ms` (borderline).
+- [ ] **D11.8** `disk-full-frontend-pv` (ticket_worthy). Fill the
+      PV to 100%; observe cascading write failures.
+
+### Memory / CPU faults (StressChaos)
+
+- [ ] **D11.9** `node-memory-pressure-eviction` (ticket_worthy).
+      Pressure a node to trigger pod eviction.
+- [ ] **D11.10** `cpu-throttle-recommendationservice-80pct` (borderline).
+      Sustained CPU throttling.
+
+### Time faults (TimeChaos)
+
+- [ ] **D11.11** `clock-skew-cartservice-5min` (borderline).
+      Skew system time forward 5 minutes; tests cert / token validation
+      paths. Often produces strange-looking but recoverable errors.
+
+### Pod-level faults (PodChaos beyond `kubectl scale`)
+
+- [ ] **D11.12** `pod-kill-not-graceful-paymentservice` (ticket_worthy).
+      SIGKILL instead of SIGTERM. Different log + trace signature than
+      the existing `pod-restart-major` family.
+
+### Control-plane faults (more invasive, optional stretch)
+
+- [ ] **D11.13** `kubelet-restart-worker-node` (ticket_worthy).
+      Restart kubelet on one worker. Brief API-server connectivity loss.
+- [ ] **D11.14** `etcd-slow-100ms` (ticket_worthy). Inject latency into
+      etcd. Affects every Kubernetes op cluster-wide.
+
+### Dataset hygiene
+
+- [ ] **D11.15** Two new scenario family slots in
+      `SCENARIO_FAMILIES`: `network-fault` and `infra-fault`. Network
+      faults cluster together (DNS, partition, packet loss, latency),
+      infra faults cluster together (disk, memory, time, kubelet, etcd).
+- [ ] **D11.16** Update `triage_labels.py` `FAULT_TYPE_COMPATIBILITY`
+      to know that, e.g., a `network-latency` window is fault-compatible
+      with an `application-latency` window (same observable symptom, but
+      different root cause). This affects `window-memory-matchings`
+      ground truth.
+
+**Acceptance:**
+- At least 10 of the 12+2 system-fault scenarios above run end-to-end
+  on the kind cluster without breaking the rest of the lab.
+- At least 800 windows in v5 carry system faults.
+- System-fault windows are distinguishable from app-fault windows in
+  feature space (e.g., `k8s_warning_event_count` distribution differs
+  significantly, measured with KS test p < 0.05).
+
+**Jira utilization:** these faults DO get Jira tickets - the on-call
+team would file them. Same shadow-jira generator as app-faults. (D12
+covers the case where they do NOT get tickets.)
+
+**Status:** not started.
+**Blocks:** D12 reuses these injectors for orphan-fault windows. Some
+D11 scenarios (e.g., `node-memory-pressure-eviction`) benefit from
+Phase D3 extended windows.
+
+---
+
+## Phase D12 - Unreported / orphan faults (real fault, no Jira ticket)
+**Goal:** test whether the system catches genuine anomalies, or just
+memorizes Jira-matched patterns. Inject real faults BUT gate the
+shadow-jira generator OFF so no memory entry is produced for the
+episode. The window is gold-labeled `ticket_worthy` (because a senior
+engineer would file a ticket if they noticed), but has NO corresponding
+Jira issue in the memory corpus.
+
+This is the **inverse of D7.3** (false-alarm Jira: memory exists but
+shouldn't match anything). Together they probe the two failure modes
+of a Jira-as-memory system:
+
+| Failure mode                       | What's wrong            | Probe          |
+| ---------------------------------- | ----------------------- | -------------- |
+| Retrieval over-fires on irrelevant memory | False-positive cite | D7.3 (false-alarm) |
+| Detection under-fires on un-memoried fault | False-negative triage | D12 (this phase) |
+
+Expected model behavior:
+- A model that ONLY learned Jira patterns will **fail to flag** orphan
+  faults (under-recall). The Jira-features (Phase 0.5) will all sit
+  near zero on orphan windows; if those features carry the bulk of the
+  decision weight, the model will stay silent.
+- A model that learned genuine telemetry signal will **still flag**
+  orphan faults, correctly mark them `is_novel=true`, and the
+  citation field will say "novel pattern, no memory match".
+
+### Design
+
+- [ ] **D12.1** Scenario schema: new optional field
+      `produces_jira_ticket: false` (default `true`). The collection
+      script honors this and skips shadow-jira generation for the
+      episode. The episode + telemetry windows are still recorded,
+      but no row is added to `jira_shadow_issues.jsonl`.
+- [ ] **D12.2** Author 8-12 orphan-fault scenarios mixing app-level
+      (from D1 / D2 base catalog) and system-level (from D11). Roughly
+      half should be **near-twin orphans** (the fault type and affected
+      service ALSO appear in reported scenarios elsewhere in the
+      corpus - tests pure generalization) and half **far orphans**
+      (fault type and/or affected service never appears in any Jira
+      ticket - tests truly out-of-distribution detection).
+- [ ] **D12.3** Build-pipeline propagation. Set a new window field
+      `expected_in_memory: false` on every window from an orphan
+      episode. `build-window-memory-matchings.py` recognises this and
+      forces `matched_memory_issue_ids = []` and `is_novel = true` in
+      the ground truth.
+- [ ] **D12.4** Triage labels for orphan windows are still computed
+      the normal way: `ticket_worthy` for the active fault window,
+      `noise` for `pre_fault_baseline`, etc. The whole point is that
+      these LOOK ticket_worthy by signal even though no human filed.
+- [ ] **D12.5** New evaluation slice: `orphan_ticket_worthy`. Reported
+      via the comparison framework's stratified metrics, sliced on
+      `expected_in_memory == false`.
+- [ ] **D12.6** Headline metric: **orphan-detection recall gap** =
+      (recall on reported ticket_worthy) - (recall on orphan
+      ticket_worthy). Per pipeline. A gap > 20pts means the pipeline
+      relies on Jira pattern matching; a gap < 10pts means the
+      pipeline learned the underlying anomaly signal. This metric
+      goes into the headline table for every Phase 0.5+ benchmark.
+- [ ] **D12.7** Adversarial twin pairs. For at least 4 of the orphan
+      scenarios, also collect a paired *reported* episode with the
+      identical fault, identical service, identical timing, but
+      `produces_jira_ticket: true`. This lets us compute the per-window
+      delta directly: same fault, same telemetry, only difference is
+      "Jira entry exists or not". Cleanest possible ablation of
+      Jira-reliance.
+
+### Orphan-fault catalog (initial)
+
+Near-twin orphans (fault type already in corpus, just no ticket):
+- `orphan-cart-redis-degradation-critical` (twin of `cart-redis-degradation-critical`)
+- `orphan-paymentservice-pod-restart-major`
+- `orphan-frontend-pod-restart-major`
+- `orphan-productcatalog-latency-major`
+
+Far orphans (fault type or service unseen in any Jira):
+- `orphan-dns-coredns-down-60s` (system fault; nobody filed)
+- `orphan-clock-skew-cartservice-3min`
+- `orphan-disk-throttle-recommendationservice`
+- `orphan-emailservice-flake-major` (new service that has no prior
+  Jira tickets in the corpus at all)
+
+### Expected research finding
+
+If the orphan-detection recall gap is small (< 10pts), the system is
+genuinely useful for catching unreported anomalies - a significant
+product claim. If it is large (> 20pts), we have honest evidence that
+the Jira-as-memory architecture is doing pattern matching rather than
+detection, which is a useful negative finding worth publishing in its
+own right.
+
+**Acceptance:**
+- v5 corpus contains at least **200 orphan `ticket_worthy` windows**
+  across at least 8 orphan scenarios, with at least 4 adversarial
+  twin pairs (D12.7).
+- Every orphan window correctly produces `expected_in_memory = false`
+  in the derived per-window matchings.
+- Every orphan window correctly produces `is_novel = true` in any
+  analyzer output.
+- The comparison report includes the **orphan-detection recall gap**
+  for every registered pipeline, headlined alongside PR-AUC.
+
+**Jira utilization:** these windows have NO Jira entries by design.
+Their `jira_*` features will all be near-zero. The system must triage
+them on signal features alone. This is the most direct test of the
+"memorization vs detection" question that the Jira-as-memory
+principle implicitly raises.
+
+**Status:** not started.
+
+---
+
 ## Suggested execution order (sprints)
 
 Adjudication and scenario authoring can run before any new collection.
@@ -382,17 +598,23 @@ v5 has validated the bigger-corpus hypothesis.
 | D-1    | D0           | 3-5 reviewer days   | nothing         |
 | D-2    | D1, D2       | 2 author days       | nothing         |
 | D-3    | D3, D7       | 3 dev days          | D2 (templates)  |
-| D-4    | D4 pilot     | 1 VM day            | D1, D2, D3      |
+| D-3.5  | **D11 tooling + D12 schema** | 3 dev days | nothing (chaos-mesh install + schema work) |
+| D-4    | D4 pilot     | 1 VM day            | D1, D2, D3, D11.1-2 |
 | D-5    | D4 full      | 4-5 VM days         | D-4 passes      |
-| D-6    | D5           | 2 author + 1 VM day | D-5 done        |
+| D-6    | D5, D11, D12 collection | 2 author + 2 VM days | D-5 done; D11 tooling ready |
 | D-7    | D6           | 5 dev + 2 VM days   | D-5 done        |
 | D-8    | D8           | 2 dev + 1 VM day    | D-5 done        |
 | D-9    | D9           | 2 research days     | D-5 done        |
 | D-10   | D10          | 1 dev day           | D-5 done        |
 
-D-1 and D-2 are pure-thinking-and-writing sprints - they can start
-today and run in parallel with the existing `todo.md` Phase 1 (real
-embeddings) work, which doesn't need new data.
+D-1, D-2 and D-3.5 are pure-thinking-and-writing-and-tooling sprints -
+they can start today and run in parallel with the existing `todo.md`
+Phase 1 (real embeddings) work, which doesn't need new data.
+
+System-fault scenarios (D11) and orphan-fault scenarios (D12) are
+collected together with D5 cascades in sprint D-6, because they all
+require running chaos-mesh experiments alongside the existing
+fault-injection pipeline.
 
 ---
 
@@ -440,7 +662,22 @@ These do not block on any cloud VM or new collection:
 - [ ] D7.3: design false-alarm Jira generation (huge differentiator
       vs other public datasets - nobody else has "memory entries that
       should be ignored")
+- [ ] **D11.1 + D11.2: install chaos-mesh, extend scenario schema with
+      a `system_fault` block** (pure setup; no collection yet)
+- [ ] **D12.1 + D12.3: add `produces_jira_ticket: false` field and
+      `expected_in_memory` plumbing through the build pipeline**
+      (schema work; can validate end-to-end with a single test scenario)
+- [ ] **D12.6: implement orphan-detection recall gap metric in
+      `src/comparison/stratified.py`** (can be tested on v4-large by
+      synthetically marking some ticket_worthy windows as orphan and
+      verifying the metric is computed correctly)
 
 The cleanest first step is **D0.2 + D0.3** (adjudication + LLM-first
 review). It unlocks the v4 contract's promise that labels are
 trustworthy, which the rest of the research story depends on.
+
+The most **research-distinctive** pair of quick wins is **D12.1 + D12.6**:
+even without collecting new orphan data, defining the `produces_jira_ticket`
+schema and the orphan-detection recall gap metric is the foundation for
+the central question "does our system memorize Jira or detect anomalies?",
+which is what makes this work different from yet-another-log-classifier.
