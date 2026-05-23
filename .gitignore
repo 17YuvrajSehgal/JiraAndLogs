@@ -25,4 +25,4 @@ build/
 dist/
 *.egg-info/
 
-temp.json
+temp-dir/
