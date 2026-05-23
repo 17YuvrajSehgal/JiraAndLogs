@@ -1,8 +1,12 @@
-"""Pure-Python logistic regression on the numeric feature vector.
+"""JiraOnlyTriageModel: triage purely from Jira-memory features.
 
-Matches the math in scripts/research-lab/run_triage_benchmark.py but exposed
-as a reusable model class. L2-regularized, batch gradient descent on
-standardized features. Tiny dataset (hundreds of rows), so stdlib is fine.
+This is the cleanest test of "does the Jira-as-memory signal carry
+standalone triage value?" - if it beats the rule baseline, the central
+research claim has empirical support.
+
+It is NOT meant as a production model. It deliberately ignores trace,
+log, metric, and k8s features so any lift it shows comes purely from the
+similarity-to-prior-tickets structure of the input.
 """
 
 from __future__ import annotations
@@ -12,7 +16,6 @@ import math
 from .base import TriageModel, label_to_target
 from ..data.schema import TriageWindow
 from ..features.numeric import (
-    NumericFeaturizer,
     StandardScaler,
     standardize_apply,
     standardize_fit,
@@ -29,25 +32,24 @@ def _sigmoid(z: float) -> float:
     return ez / (1.0 + ez)
 
 
-class LogisticTriageModel(TriageModel):
-    name = "logistic_numeric"
+class JiraOnlyTriageModel(TriageModel):
+    """L2 logistic regression on JIRA_FEATURE_COLUMNS only."""
+
+    name = "jira_only_logistic"
 
     def __init__(
         self,
-        feature_columns: list[str],
+        jira_featurizer: "JiraMemoryFeaturizer",
         *,
         l2: float = 1.0,
         learning_rate: float = 0.1,
         n_iters: int = 800,
         borderline_as: int = 0,
-        jira_featurizer: "JiraMemoryFeaturizer | None" = None,
     ) -> None:
-        self.featurizer = NumericFeaturizer(feature_columns)
+        if jira_featurizer is None:
+            raise ValueError("JiraOnlyTriageModel requires a JiraMemoryFeaturizer")
         self.jira_featurizer = jira_featurizer
-        self.features_used = list(feature_columns)
-        if jira_featurizer is not None:
-            self.features_used = list(feature_columns) + list(JIRA_FEATURE_COLUMNS)
-            self.name = "logistic_numeric_with_jira"
+        self.features_used = list(JIRA_FEATURE_COLUMNS)
         self.l2 = l2
         self.learning_rate = learning_rate
         self.n_iters = n_iters
@@ -56,18 +58,13 @@ class LogisticTriageModel(TriageModel):
         self.weights: list[float] = []
         self.bias: float = 0.0
 
-    def _vector_for(self, window: TriageWindow) -> list[float]:
-        base = self.featurizer.transform_one(window)
-        if self.jira_featurizer is None:
-            return base
-        return base + self.jira_featurizer.features_vector(window)
-
     def fit(self, windows: list[TriageWindow]) -> None:
         if not windows:
             raise ValueError("Cannot fit on empty training data")
-        if self.jira_featurizer is not None and not self.jira_featurizer._fit_done:
+        if not self.jira_featurizer._fit_done:
             self.jira_featurizer.fit()
-        x = [self._vector_for(w) for w in windows]
+
+        x = [self.jira_featurizer.features_vector(w) for w in windows]
         self.scaler = standardize_fit(x)
         x = standardize_apply(x, self.scaler)
         y = [label_to_target(w.triage_label, borderline_as=self.borderline_as) for w in windows]
@@ -76,8 +73,6 @@ class LogisticTriageModel(TriageModel):
         w = [0.0] * n_features
         b = 0.0
         n = len(x)
-        lr = self.learning_rate
-        l2 = self.l2
 
         for _ in range(self.n_iters):
             grad_w = [0.0] * n_features
@@ -90,8 +85,8 @@ class LogisticTriageModel(TriageModel):
                 for j in range(n_features):
                     grad_w[j] += err * xi[j]
             for j in range(n_features):
-                w[j] -= lr * (grad_w[j] / n + l2 * w[j] / n)
-            b -= lr * (grad_b / n)
+                w[j] -= self.learning_rate * (grad_w[j] / n + self.l2 * w[j] / n)
+            b -= self.learning_rate * (grad_b / n)
 
         self.weights = w
         self.bias = b
@@ -99,7 +94,17 @@ class LogisticTriageModel(TriageModel):
     def predict_score(self, window: TriageWindow) -> float:
         if self.scaler is None:
             raise RuntimeError("Model has not been fit yet")
-        xi = self._vector_for(window)
+        xi = self.jira_featurizer.features_vector(window)
         xi_std = standardize_apply([xi], self.scaler)[0]
         z = self.bias + sum(self.weights[j] * xi_std[j] for j in range(len(self.weights)))
         return _sigmoid(z)
+
+    def feature_importance(self) -> list[tuple[str, float]]:
+        """Returns (feature_name, |standardized_weight|) sorted descending."""
+        if not self.weights:
+            return []
+        return sorted(
+            zip(JIRA_FEATURE_COLUMNS, [abs(w) for w in self.weights]),
+            key=lambda kv: kv[1],
+            reverse=True,
+        )

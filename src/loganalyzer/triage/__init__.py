@@ -5,6 +5,7 @@ from .rule import RuleTriageModel
 from .logistic import LogisticTriageModel
 from .lexical import LexicalTriageModel
 from .hybrid import HybridTriageModel
+from .jira_only import JiraOnlyTriageModel
 
 __all__ = [
     "TriageModel",
@@ -13,4 +14,5 @@ __all__ = [
     "LogisticTriageModel",
     "LexicalTriageModel",
     "HybridTriageModel",
+    "JiraOnlyTriageModel",
 ]

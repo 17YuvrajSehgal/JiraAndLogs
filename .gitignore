@@ -17,8 +17,7 @@ __pycache__/
 .tools/
 
 # Generated research datasets
-data/runs/
-data/derived/
+data/
 
 # Distribution / packaging
 build/
@@ -26,3 +25,5 @@ dist/
 *.egg-info/
 
 temp-dir/
+
+data.tar.gz

@@ -18,12 +18,19 @@ class HybridTriageModel(TriageModel):
         numeric_weight: float = 0.7,
         lexical_weight: float = 0.3,
         borderline_as: int = 0,
+        jira_featurizer=None,
     ) -> None:
-        self.numeric = LogisticTriageModel(feature_columns, borderline_as=borderline_as)
+        self.numeric = LogisticTriageModel(
+            feature_columns,
+            borderline_as=borderline_as,
+            jira_featurizer=jira_featurizer,
+        )
         self.lexical = LexicalTriageModel(borderline_as=borderline_as)
         self.numeric_weight = numeric_weight
         self.lexical_weight = lexical_weight
         self.features_used = self.numeric.features_used + self.lexical.features_used
+        if jira_featurizer is not None:
+            self.name = "hybrid_numeric_lexical_with_jira"
 
     def fit(self, windows: list[TriageWindow]) -> None:
         self.numeric.fit(windows)

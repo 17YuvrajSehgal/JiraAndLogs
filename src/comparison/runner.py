@@ -13,7 +13,13 @@ from pathlib import Path
 from typing import Any
 
 from .ensemble import EnsemblePipeline, blend_mean
-from .pipelines import LoganalyzerPipeline, LogsensePipeline, PipelineRunner
+from .pipelines import (
+    JiraOnlyPipeline,
+    LoganalyzerPipeline,
+    LoganalyzerWithJiraPipeline,
+    LogsensePipeline,
+    PipelineRunner,
+)
 from .schema import PipelineResult
 from .significance import paired_bootstrap_ci, render_ci_table, render_pairwise_table
 from .stratified import StrataRow, render_strata_table, stratified_metrics
@@ -21,6 +27,8 @@ from .stratified import StrataRow, render_strata_table, stratified_metrics
 
 KNOWN_PIPELINES: dict[str, type[PipelineRunner]] = {
     "loganalyzer": LoganalyzerPipeline,
+    "loganalyzer_with_jira": LoganalyzerWithJiraPipeline,
+    "jira_only": JiraOnlyPipeline,
     "logsense": LogsensePipeline,
 }
 

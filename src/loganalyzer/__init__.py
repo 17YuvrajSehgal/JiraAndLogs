@@ -18,7 +18,15 @@ The dataset contract this package consumes is documented in
 docs/triage-task-contract.md and docs/dataset-v4-plan.md.
 """
 
-from .product.analyzer import SmartLogAnalyzer, AnalysisResult
+# Top-level re-exports are deliberately omitted to avoid pulling in the
+# whole triage stack at package import time. Users should import from the
+# submodule that owns the symbol they want:
+#
+#     from loganalyzer.product.analyzer import SmartLogAnalyzer
+#     from loganalyzer.triage.hybrid import HybridTriageModel
+#
+# Keeping this file empty also prevents circular-import loops with the
+# sibling `jira_features` package, which itself depends on
+# `loganalyzer.data.schema` / `.memory.corpus`.
 
-__all__ = ["SmartLogAnalyzer", "AnalysisResult"]
 __version__ = "0.1.0"

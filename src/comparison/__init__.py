@@ -13,7 +13,13 @@ The package owns NO modelling code - it only orchestrates and reports.
 """
 
 from .schema import PipelinePrediction, PipelineResult
-from .pipelines import PipelineRunner, LoganalyzerPipeline, LogsensePipeline
+from .pipelines import (
+    PipelineRunner,
+    LoganalyzerPipeline,
+    LoganalyzerWithJiraPipeline,
+    JiraOnlyPipeline,
+    LogsensePipeline,
+)
 from .ensemble import EnsemblePipeline, blend_mean, blend_max, blend_weighted
 from .stratified import stratified_metrics
 from .significance import paired_bootstrap_ci
@@ -23,6 +29,8 @@ __all__ = [
     "PipelineResult",
     "PipelineRunner",
     "LoganalyzerPipeline",
+    "LoganalyzerWithJiraPipeline",
+    "JiraOnlyPipeline",
     "LogsensePipeline",
     "EnsemblePipeline",
     "blend_mean",
