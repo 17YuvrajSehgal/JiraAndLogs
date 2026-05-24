@@ -266,4 +266,138 @@ spec:
                 configMapKeyRef:
                   name: research-run-config
                   key: JIRA_MODE
+---
+# cartservice (.NET) — added by M1.1
+# Previously had no OTel wiring at all; brings it to fleet parity.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cartservice
+spec:
+  template:
+    metadata:
+      labels:
+        research.jira-telemetry/service-tier: business
+    spec:
+      containers:
+        - name: server
+          env:
+            - name: ENABLE_TRACING
+              value: "1"
+            - name: COLLECTOR_SERVICE_ADDR
+              value: "opentelemetrycollector.observability.svc.cluster.local:4317"
+            - name: OTEL_SERVICE_NAME
+              value: "cartservice"
+            - name: OTEL_RESOURCE_ATTRIBUTES
+              value: "deployment.environment=research-local,service.namespace=online-boutique,dataset.name=online-boutique-jira-telemetry"
+            - name: DEPLOYMENT_ENVIRONMENT
+              value: "research-local"
+            - name: SERVICE_VERSION
+              value: "v5.0.0-otel"
+            - name: DATASET_RUN_ID
+              valueFrom:
+                configMapKeyRef:
+                  name: research-run-config
+                  key: DATASET_RUN_ID
+            - name: SCENARIO_ID
+              valueFrom:
+                configMapKeyRef:
+                  name: research-run-config
+                  key: SCENARIO_ID
+            - name: JIRA_MODE
+              valueFrom:
+                configMapKeyRef:
+                  name: research-run-config
+                  key: JIRA_MODE
+---
+# adservice (Java) — added by M1.2
+# Switches to OpenTelemetry Java agent for zero-code-change tracing.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: adservice
+spec:
+  template:
+    metadata:
+      labels:
+        research.jira-telemetry/service-tier: recommendation
+    spec:
+      containers:
+        - name: server
+          env:
+            - name: ENABLE_TRACING
+              value: "1"
+            - name: COLLECTOR_SERVICE_ADDR
+              value: "opentelemetrycollector.observability.svc.cluster.local:4317"
+            # Java agent reads OTEL_* env vars directly (no app code change).
+            # Activated via JAVA_TOOL_OPTIONS in the Dockerfile.
+            - name: OTEL_SERVICE_NAME
+              value: "adservice"
+            - name: OTEL_EXPORTER_OTLP_ENDPOINT
+              value: "http://opentelemetrycollector.observability.svc.cluster.local:4317"
+            - name: OTEL_EXPORTER_OTLP_PROTOCOL
+              value: "grpc"
+            - name: OTEL_PROPAGATORS
+              value: "tracecontext,baggage"
+            - name: OTEL_TRACES_SAMPLER
+              value: "always_on"
+            - name: OTEL_METRICS_EXPORTER
+              value: "prometheus"
+            - name: OTEL_RESOURCE_ATTRIBUTES
+              value: "deployment.environment=research-local,service.namespace=online-boutique,dataset.name=online-boutique-jira-telemetry,service.version=v5.0.0-otel"
+            - name: DATASET_RUN_ID
+              valueFrom:
+                configMapKeyRef:
+                  name: research-run-config
+                  key: DATASET_RUN_ID
+            - name: SCENARIO_ID
+              valueFrom:
+                configMapKeyRef:
+                  name: research-run-config
+                  key: SCENARIO_ID
+            - name: JIRA_MODE
+              valueFrom:
+                configMapKeyRef:
+                  name: research-run-config
+                  key: JIRA_MODE
+---
+# shippingservice (Go) — added by M1.3
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: shippingservice
+spec:
+  template:
+    metadata:
+      labels:
+        research.jira-telemetry/service-tier: dependency
+    spec:
+      containers:
+        - name: server
+          env:
+            - name: ENABLE_TRACING
+              value: "1"
+            - name: COLLECTOR_SERVICE_ADDR
+              value: "opentelemetrycollector.observability.svc.cluster.local:4317"
+            - name: OTEL_SERVICE_NAME
+              value: "shippingservice"
+            - name: DISABLE_PROFILER
+              value: "1"
+            - name: OTEL_RESOURCE_ATTRIBUTES
+              value: "deployment.environment=research-local,service.namespace=online-boutique,dataset.name=online-boutique-jira-telemetry,service.version=v5.0.0-otel"
+            - name: DATASET_RUN_ID
+              valueFrom:
+                configMapKeyRef:
+                  name: research-run-config
+                  key: DATASET_RUN_ID
+            - name: SCENARIO_ID
+              valueFrom:
+                configMapKeyRef:
+                  name: research-run-config
+                  key: SCENARIO_ID
+            - name: JIRA_MODE
+              valueFrom:
+                configMapKeyRef:
+                  name: research-run-config
+                  key: JIRA_MODE
 

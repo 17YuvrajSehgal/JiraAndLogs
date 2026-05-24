@@ -59,9 +59,18 @@ summaries are also attached to telemetry window features for new runs.
 
 ## Highest-value improvements
 
-1. Add `trace_id` and `span_id` to JSON logs for every service.
+> Status note (added 2026-05-24): items 1 and 3 are now formally planned
+> and partly executed under Phase D13 of `dataset-todo.md` (telemetry
+> upgrade). Per-RPC structured logs with `trace_id`/`span_id` correlation
+> are shipping for Go/.NET/Node/Python via shared interceptors under
+> `microservices-demo-google/src/_shared-<lang>/`. cartservice has full
+> OTel coverage for the first time. See `microservice-changes.md` and
+> `microservice-changes-todo.md` for the full design and execution plan,
+> and `docs/telemetry-implementation-decisions.md` for the M0 decisions.
+
+1. ~~Add `trace_id` and `span_id` to JSON logs for every service.~~ → IN PROGRESS via D13/M2.1.
 2. Add stable synthetic `request_id` propagation across service calls.
-3. Add low-cardinality business metrics for checkout, cart, payment, product lookup, and recommendation flows.
+3. ~~Add low-cardinality business metrics for checkout, cart, payment, product lookup, and recommendation flows.~~ → PLANNED via D13/M4.4 (post-gate).
 4. Add richer scenario actions for network latency, CPU pressure, memory pressure, and cascading multi-service faults.
 5. Add a dedicated alert webhook receiver that stores raw Alertmanager payloads before any transformation.
 6. Add schema validation with a real JSON Schema validator instead of only structural validation.

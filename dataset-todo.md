@@ -587,6 +587,96 @@ principle implicitly raises.
 
 ---
 
+## Phase D13 - Production-realistic instrumentation (logs + traces + metrics)
+**Goal:** today's Online Boutique services emit thin telemetry. cartservice
+has zero OpenTelemetry coverage; the rest emit only auto-generated gRPC
+RPC envelope spans with no internal structure, no `RecordError` on handler
+failures, and zero application-level Prometheus metrics. This is the
+single biggest dataset-quality lever we have not pulled.
+
+Full design lives in `microservice-changes.md`. Actionable execution plan
+lives in `microservice-changes-todo.md`. M0 decisions are recorded in
+`docs/telemetry-implementation-decisions.md`.
+
+- [x] **D13.1** Phase M0 decisions (interceptor placement, fork policy,
+      registry, collector/Loki sizing, fidelity disclosure).
+- [x] **D13.2** Phase M1.1: cartservice (.NET) OTel parity — packages,
+      Startup.cs wiring, deployment patch entry, Redis instrumentation.
+      This is the **highest-leverage single change in the entire D13**;
+      it makes the cart-redis fault family (720 windows in v4-large)
+      visible in traces for the first time.
+- [x] **D13.3** Phase M1.2: adservice (Java) OTel agent in Dockerfile.
+- [x] **D13.4** Phase M1.3: shippingservice (Go) OTel wiring.
+- [x] **D13.5** Phase M2.1: shared per-RPC structured logging interceptor
+      in Go, .NET, Node, and Python (Java covered by the agent's span
+      output; manual Logback-encoder work deferred).
+- [x] **D13.6** Phase M2.2: cartservice→Redis dependency-boundary error
+      logs. Other services covered by M2.1 client interceptor.
+- [x] **D13.7** Phase M3.1: RecordException + db.* tags fleetwide.
+      Cartservice (Redis), checkoutservice (PlaceOrder + 6 dep helpers
+      via recordDepError), frontend (renderHTTPError funnel),
+      productcatalogservice (NotFound), shippingservice (item_count attr),
+      paymentservice (invalid/unsupported/expired card paths via
+      recordChargeError), currencyservice (Convert catch), recommendationservice
+      (productcatalog dep call), emailservice (template + send errors).
+- [x] **D13.8** Phase M3.4: documented the 100% sampling divergence in
+      this doc, in `docs/dataset-v4-plan.md`, and in
+      `docs/telemetry-implementation-decisions.md` M0.6.
+- [x] **D13.9** Phase M4.1+M4.2+M4.3+M4.4 fleetwide:
+      - Go shared rpclog package emits RED metrics + client metrics from
+        the same interceptor (rpc_server_duration_seconds,
+        rpc_server_requests_total, rpc_client_duration_seconds,
+        rpc_client_errors_total).
+      - `rpclog.InitMetrics()` helper installed in checkoutservice,
+        frontend, productcatalogservice, shippingservice (port 9100).
+      - cartservice exposes `/metrics` via OpenTelemetry.Exporter.Prometheus.AspNetCore.
+      - paymentservice + recommendationservice: PrometheusMetricReader added.
+      - Business-event counters: `orders_placed_total`+`order_value_units_total`
+        (checkoutservice), `http_requests_total` (frontend),
+        `catalog_lookups_total` (productcatalogservice),
+        `cart_operations_total` (cartservice), `payments_total` (paymentservice),
+        `recommendations_served_total` (recommendationservice).
+- [x] **D13.10** Phase M5.1: validation script
+      `scripts/research-lab/validate-cartservice-telemetry-upgrade.ps1`
+      + companion Python evaluator. **User must run this before D13.11.**
+- [x] **D13.11** Phase M2.3 business event logs: order_placed
+      (checkoutservice), cart_size_changed (cartservice), payment_charged
+      (paymentservice), recommendation_returned (recommendationservice),
+      currency_conversion_completed (currencyservice).
+- [x] **D13.12** Phase M3.3 span events: catalog.reload span event in
+      productcatalogservice (the only real resilience-pattern code path
+      in Online Boutique).
+- [ ] **D13.13** Gate: M5.1 PASS required. Criterion: `trace_error_count`
+      newly fires on cartservice active_fault windows (pilot nonzero_frac
+      >= 0.5; baseline < 0.1). If FAIL, debug M1.1 wiring before continuing.
+- [ ] **D13.14** Phase M5.2: collect v5 with the upgraded telemetry.
+      Documented build-context fixes are in
+      `docs/telemetry-implementation-build-notes.md`.
+- [ ] **D13.15** Apply M0.4 collector capacity bumps (replicas=2,
+      memory=2Gi, batch=16k) and M0.5 Loki sizing (120 GB PVC, 1 TB disk)
+      before launching the full v5 sweep.
+- [ ] **D13.16** Cherry-pick upstream Google microservices-demo changes
+      from `master` into the fork per M0.2 quarterly cadence. First
+      cherry-pick should land before D13.14.
+
+**Acceptance:**
+- D13.11 GATE passes.
+- Every test-fixture RPC produces one L1 log line per direction.
+- Every error path produces both an L2 log AND a `RecordException` span event.
+- `curl <service>:<port>/metrics` returns RED + runtime metrics for every
+  service.
+- `promtool check metrics` clean — no unbounded cardinality.
+- `validate-run-feature-distribution.py` shows no new feature column
+  perfectly correlated with `scenario_id`, `scenario_family`, or
+  `triage_label` (leakage canary).
+
+**Status:** D13.1-D13.12 complete (all code changes); D13.13 (gate)
+pending user run; D13.14-D13.16 pending gate result + cluster access.
+**Blocks:** D4 (v5 collection) should use the upgraded telemetry; this
+phase lands before D4.
+
+---
+
 ## Suggested execution order (sprints)
 
 Adjudication and scenario authoring can run before any new collection.
@@ -598,8 +688,9 @@ v5 has validated the bigger-corpus hypothesis.
 | D-1    | D0           | 3-5 reviewer days   | nothing         |
 | D-2    | D1, D2       | 2 author days       | nothing         |
 | D-3    | D3, D7       | 3 dev days          | D2 (templates)  |
-| D-3.5  | **D11 tooling + D12 schema** | 3 dev days | nothing (chaos-mesh install + schema work) |
-| D-4    | D4 pilot     | 1 VM day            | D1, D2, D3, D11.1-2 |
+| D-3.5  | **D11 tooling + D12 schema + D13 telemetry M1-M3** | 5-6 dev days | nothing (chaos-mesh install + scenario schema + cartservice OTel) |
+| D-3.6  | **D13 M5.1 gate (cartservice validation)** | 0.5 VM day | D-3.5 done |
+| D-4    | D4 pilot     | 1 VM day            | D1, D2, D3, D11.1-2, D13 gate PASS |
 | D-5    | D4 full      | 4-5 VM days         | D-4 passes      |
 | D-6    | D5, D11, D12 collection | 2 author + 2 VM days | D-5 done; D11 tooling ready |
 | D-7    | D6           | 5 dev + 2 VM days   | D-5 done        |
