@@ -67,14 +67,68 @@ extra log volume.
 **Goal:** before spending more compute on a v5 collection, extract more
 research value from the v4-large bits we already have.
 
-- [ ] **D0.1** Per-family minimum window check. Run a validator across the
-      v4-large global directory that fails if any family has < 30 windows
-      in any split. If train has weak families, document which.
-- [ ] **D0.2** Adjudication tooling. New module `src/adjudication/` with:
-      `adjudicate.py` - loads a borderline / hard-case window, blanks out
-      `scenario_id`, presents trace + log + metric + Jira-memory hits to
-      a reviewer, captures `{label, severity, components, reason, rationale}`
-      back into `triage_window_labels.jsonl` with `source: human_adjudicated`.
+- [x] **D0.1** (2026-05-24) Validator shipped at
+      `scripts/research-lab/validate_global_family_coverage.py`. Run on
+      the v4-large global directory: **PASS** — every populated
+      (split, family) cell has ≥30 windows (the stated threshold). But
+      the matrix is fully family-disjoint per the v4 split design:
+
+      | family | test | train | val |
+      | --- | ---: | ---: | ---: |
+      | ad-outage | 96 | . | . |
+      | baseline-normal | 336 | . | . |
+      | cart-redis | 720 | . | . |
+      | checkout-outage | 192 | . | . |
+      | checkout-restart | . | . | 192 |
+      | currency-outage | 144 | . | . |
+      | frontend-restart | . | 144 | . |
+      | frontend-traffic-pressure | . | 288 | . |
+      | payment-outage | . | 144 | . |
+      | productcatalog-latency | 240 | . | . |
+      | productcatalog-outage | . | 288 | . |
+      | recommendation-outage | . | . | 288 |
+      | shipping-outage | . | 144 | . |
+
+      Test split has 6 families (matches the "Risk" table at the top of
+      this doc); train 5; validation 2. The full matrix is also
+      persisted to `data/derived/global/2026-05-22-dataset-v4-large-global/family-coverage-matrix.json`.
+- [x] **D0.2** (2026-05-24) Adjudication tooling shipped at
+      `src/adjudication/adjudicate.py` + `src/adjudication/__init__.py`.
+      CLI:
+      ```
+      python -m src.adjudication.adjudicate --status [--run <id>]
+      python -m src.adjudication.adjudicate --run <id> --next {borderline|hard} --adjudicator <name>
+      python -m src.adjudication.adjudicate --run <id> --window <id> --dry-run
+      python -m src.adjudication.adjudicate --run <id> --window <id> --label <l> --adjudicator <name> [--severity --reason-class --components --rationale]
+      ```
+      Loads a borderline / hard-case window, **blinds scenario_id /
+      scenario_family / triage_* fields** from the reviewer view, renders
+      four evidence streams (triage features incl. delta-from-baseline,
+      Loki log summary with sample error lines, Tempo span summary with
+      top error span names, Jira-memory retrieval hits with summary +
+      memory_text slice), prompts for `{label, severity, components,
+      reason_class, rationale}`, writes a schema-conformant entry to
+      `data/derived/<run-id>/triage_window_labels.jsonl` with
+      `source: human_adjudicated` + adjudicator + adjudicated_at. After
+      commit, reveals the scenario truth label for calibration spot-check.
+
+      Verified end-to-end:
+      - `--status` correctly counts borderline + hard windows per run
+        (`compact-a-r01: total=78 borderline=17 hard=31 adjudicated=0`).
+      - `--dry-run` renders without leaking `scenario_id`/`scenario_family`.
+      - Jira memory hits resolve via global corpus (e.g. `compact-a-r16`
+        productcatalog-latency window shows 15 OBSRV-1001 hits).
+      - Non-interactive `--label` round-trip writes a schema-conformant
+        row (all 5 required fields + adjudicator + adjudicated_at).
+      - Test pollution reverted (no stray human_adjudicated rows left).
+
+      Followups (not blocking D0.3):
+      - D0.2-followup-A: add `--batch` mode that walks all borderline +
+        hard windows in a run for sequential review.
+      - D0.2-followup-B: add `--llm` mode that pipes the rendered
+        evidence to an Anthropic Claude prompt and captures the
+        machine-suggested label as a separate provenance source
+        (`source: llm_suggested`) for D0.3.
 - [ ] **D0.3** LLM-as-first-reviewer pass (one of `dataset-v4-plan.md`
       open questions). Prompt: "given this evidence text and these top-5
       similar past Jira issues, would you file a ticket?". Compare LLM
@@ -84,15 +138,40 @@ research value from the v4-large bits we already have.
       second) over the LLM-flagged disagreements + a random 10% audit
       sample. Yields `reviewer_disagreement_rate` per family - critical
       for the paper.
-- [ ] **D0.5** Calibration-run carve-out. Pick one v4-large run (the
-      one with the most diverse family coverage) and reserve it as the
-      calibration set per `dataset-v4-plan.md` Section "Calibration Set".
-      Should NOT be used for threshold selection downstream.
-- [ ] **D0.6** `is_hard_case` backfill. Currently 0 windows are flagged
-      hard. Apply a rules-based heuristic + LLM second opinion to set
-      `is_hard_case=true` on windows where (a) borderline label, OR
-      (b) `triage_score` near threshold from any pipeline in
-      `comparison/phase0.5-full/`. Target: 15%+ of windows flagged.
+- [~] **D0.5** (2026-05-24) Calibration run selected and persisted to
+      `data/derived/global/2026-05-22-dataset-v4-large-global/calibration-set-manifest.json`.
+      **Chosen: `2026-05-22-dataset-v4-large-compact-b-r01`** — most
+      family-diverse run in v4-large (10 distinct families across 114
+      windows). All 10 compact-b runs share the same distribution; r01
+      is the canonical instance.
+
+      Manifest documents: covered families, "must not use for" contract
+      (threshold selection / hparam tuning / cross-validation), and
+      "may use for" usages (post-hoc threshold calibration, drift
+      monitoring, new-feature sanity checks).
+
+  - [ ] **D0.5-followup** Downstream enforcement: comparison /
+        evaluation pipelines (`src/comparison/`, `scripts/research-lab/run_*_benchmark.py`)
+        should read `calibration-set-manifest.json` and exclude the
+        listed runs from any threshold-tuning loop. Currently the
+        manifest is documentary only.
+- [x] **D0.6** (2026-05-24) `is_hard_case` is already populated by the
+      existing build pipeline (`scripts/research-lab/triage_labels.py`
+      heuristic: `is_hard_case = "nearmiss" in scenario_id or "restart"
+      in scenario_id`, plus borderline auto-flagged). Verified on
+      v4-large: **1312 / 3216 = 40.8% hard** (vs 15% target — exceeded
+      by 2.7×). Breakdown:
+      - 100% of borderline are hard (720/720)
+      - 49% of ticket_worthy are hard (352/720)
+      - 14% of noise are hard (240/1776)
+      - 0% of baseline-normal family (correct — easy by design)
+      - Other families range 33%–67% hard
+
+      The doc's "Currently 0 windows are flagged hard" was stale —
+      reflected an earlier dataset version before the heuristic landed
+      in `triage_labels.py`. No action needed for v4-large.
+      An LLM second-opinion pass (the doc's secondary criterion) is
+      tracked under D0.3 if/when LLM tooling lands.
 
 **Acceptance:** 100% of borderline + hard-case windows on v4-large carry
 `source: human_adjudicated`. Per-family disagreement rate reported.
@@ -504,11 +583,35 @@ Expected model behavior:
 
 ### Design
 
-- [ ] **D12.1** Scenario schema: new optional field
-      `produces_jira_ticket: false` (default `true`). The collection
-      script honors this and skips shadow-jira generation for the
-      episode. The episode + telemetry windows are still recorded,
-      but no row is added to `jira_shadow_issues.jsonl`.
+- [x] **D12.1** (2026-05-24) `produces_jira_ticket` field added to the
+      scenario YAML schema and wired into the collection gate.
+      Touched files:
+      - `deploy/research-lab/scenarios/scenario-template.yaml`: documents
+        the new optional field with default=true and an explanatory
+        comment about orphan-fault semantics.
+      - `scripts/research-lab/lib/ResearchLab.psm1` `Get-ResearchLabScenarioConfig`:
+        parses the new field (default true when absent, preserving
+        backward compatibility for every existing v4-large scenario).
+      - `scripts/research-lab/run-scenario.ps1` line ~464: the
+        shadow-jira gate is now `should_create_jira_shadow_issue AND
+        produces_jira_ticket`. Absent field → gate unchanged. Explicit
+        false → skip Jira generation while still recording the
+        episode + windows.
+
+      Semantic distinction (important for D12 design integrity):
+      - `jira_candidate` / `should_create_jira_shadow_issue`: would a
+        triage system flag this as ticket-worthy? (gold-label question)
+      - `produces_jira_ticket`: did anyone *actually* file a ticket?
+        (orphan-fault question)
+      For an orphan-fault scenario set `jira_candidate: true` +
+      `should_create_jira_shadow_issue: true` + `produces_jira_ticket: false`.
+      The window keeps its ticket_worthy gold label but no memory
+      entry is created.
+
+      Verified end-to-end on a synthesized orphan-fault YAML:
+      `should_create_jira_shadow_issue=True`, `produces_jira_ticket=False`,
+      gate evaluates to `False` → shadow Jira skipped. Existing scenarios
+      (field absent) gate to `True` unchanged.
 - [ ] **D12.2** Author 8-12 orphan-fault scenarios mixing app-level
       (from D1 / D2 base catalog) and system-level (from D11). Roughly
       half should be **near-twin orphans** (the fault type and affected
@@ -516,24 +619,91 @@ Expected model behavior:
       corpus - tests pure generalization) and half **far orphans**
       (fault type and/or affected service never appears in any Jira
       ticket - tests truly out-of-distribution detection).
-- [ ] **D12.3** Build-pipeline propagation. Set a new window field
-      `expected_in_memory: false` on every window from an orphan
-      episode. `build-window-memory-matchings.py` recognises this and
-      forces `matched_memory_issue_ids = []` and `is_novel = true` in
-      the ground truth.
+- [x] **D12.3** (2026-05-24) Build-pipeline propagation wired.
+      - `scripts/research-lab/run-scenario.ps1` line ~422: episode
+        record now carries `produces_jira_ticket` alongside the
+        existing `jira_candidate`.
+      - `scripts/research-lab/build_window_memory_matchings.py`
+        (lines ~140-180): reads each window's parent episode, computes
+        `expected_in_memory` as `true|false|None`:
+        - `true` for ticket_worthy windows from non-orphan episodes
+          (default; matches existing behavior)
+        - `false` for ticket_worthy windows from orphan episodes
+          (`produces_jira_ticket: false`)
+        - `None` for non-ticket_worthy windows (N/A)
+      - Orphan override: when `expected_in_memory == false`, forces
+        `matched_memory_issue_ids = []` AND `is_novel = true`,
+        regardless of what `compute_matches` returned. This ensures
+        the ground-truth reflects "no memory entry exists" for orphan
+        episodes even if their fault shape would otherwise match
+        prior reported episodes.
+
+      Backward-compat verified: re-ran on `2026-05-22-dataset-v4-large-compact-a-r01`
+      (no orphan episodes); 78 windows, 17 ticket_worthy / 0 matched / 17 novel
+      (identical to pre-D12.3); all 17 ticket_worthy carry
+      `expected_in_memory: true`, borderline/noise carry `null`.
+
+      Re-ran on `2026-05-24-v5-pilot-r01` (post-fleet-rollout, no
+      orphan episodes): 7 ticket_worthy / 7 matched / 0 novel; all
+      ticket_worthy carry `expected_in_memory: true`.
+
+      Ready for D12.2 (author orphan-fault scenarios) to start producing
+      the first windows with `expected_in_memory: false`.
 - [ ] **D12.4** Triage labels for orphan windows are still computed
       the normal way: `ticket_worthy` for the active fault window,
       `noise` for `pre_fault_baseline`, etc. The whole point is that
       these LOOK ticket_worthy by signal even though no human filed.
-- [ ] **D12.5** New evaluation slice: `orphan_ticket_worthy`. Reported
-      via the comparison framework's stratified metrics, sliced on
-      `expected_in_memory == false`.
-- [ ] **D12.6** Headline metric: **orphan-detection recall gap** =
-      (recall on reported ticket_worthy) - (recall on orphan
-      ticket_worthy). Per pipeline. A gap > 20pts means the pipeline
-      relies on Jira pattern matching; a gap < 10pts means the
-      pipeline learned the underlying anomaly signal. This metric
-      goes into the headline table for every Phase 0.5+ benchmark.
+- [x] **D12.5** (2026-05-24) Orphan recall gap is now part of every
+      `run_comparison()` report:
+      - `ComparisonReport.orphan_recall_gap: list[OrphanRecallGap]`
+        field added.
+      - `run_comparison()` calls `compute_orphan_recall_gap(results)`
+        alongside `stratified_metrics(results)`.
+      - `render_report_md()` includes a top-level section
+        `## Orphan-detection recall gap (D12.6)` with the verdict
+        table + interpretation note.
+      - `ComparisonReport.as_dict()` serializes the gap rows so JSON
+        report consumers see them.
+      - On pre-D12.3 datasets every gap row reports
+        `verdict=no_orphan_data` — the section is still rendered (so
+        the report shape is stable) but communicates "no signal" clearly.
+
+      Verified: `render_report_md(ComparisonReport(results=[], strata=[]))`
+      successfully emits the new section. Full `run_comparison()` exercise
+      on actual data is the next downstream check.
+- [x] **D12.6** (2026-05-24) Orphan-detection recall gap metric
+      implemented in `src/comparison/stratified.py`:
+      `compute_orphan_recall_gap(results)` returns one `OrphanRecallGap`
+      per pipeline with `recall_reported`, `recall_orphan`, `gap_pts`,
+      and a `verdict` bucket: `signal_learning` (gap < 10), `borderline`
+      (10-20), `pattern_matching` (> 20), `no_orphan_data` (n_orphan=0
+      for pre-D12.3 datasets). Renderer
+      `render_orphan_recall_gap_table()` for the headline benchmark
+      table.
+
+      Wiring across the data path:
+      - `src/loganalyzer/data/schema.py`: `TriageWindow.expected_in_memory`
+        + `MemoryMatch.expected_in_memory` (defaults None for
+        backward-compat).
+      - `src/loganalyzer/data/loaders.py` `attach_matchings`: copies
+        the field from matchings onto windows.
+      - `src/comparison/schema.py`: `PipelinePrediction.gold_expected_in_memory`.
+      - `src/comparison/pipelines.py` (all 4 prediction-builder sites):
+        pass through.
+
+      Verified on synthetic predictions (4 scenarios):
+      | pipeline | n_rep | n_orp | rr | ro | gap | verdict |
+      | --- | ---: | ---: | ---: | ---: | ---: | --- |
+      | perfect | 10 | 5 | 1.00 | 1.00 | +0 | signal_learning |
+      | memory-only | 10 | 10 | 0.90 | 0.00 | +90 | pattern_matching |
+      | middling | 10 | 10 | 0.80 | 0.70 | +10 | borderline |
+      | legacy (no D12.3 anno) | 0 | 0 | 0.00 | 0.00 | +0 | no_orphan_data |
+
+      Caller-side wiring into the actual benchmark reports (so the gap
+      appears in the headline table for Phase 0.5+ runs) is a small
+      follow-up — `src/comparison/runner.py` or `src/comparison/cli.py`
+      would call `compute_orphan_recall_gap(results)` alongside
+      `stratified_metrics(results)` and render both into the report.
 - [ ] **D12.7** Adversarial twin pairs. For at least 4 of the orphan
       scenarios, also collect a paired *reported* episode with the
       identical fault, identical service, identical timing, but
@@ -739,13 +909,34 @@ lives in `microservice-changes-todo.md`. M0 decisions are recorded in
         - Trace IDs propagating cross-service end-to-end (frontend RPC
           client → checkoutservice → paymentservice all share trace_id
           on a single PlaceOrder transaction).
-  - [ ] **D13.14b** M5.2b cloud pilot collection — 1-day run with 3
-        runs per v5-plan family on the upgraded telemetry. Runs on the
-        GCP VM's kind cluster (this VM IS the cloud VM per
-        `docs/gcp-production-dataset-vm-runbook.md`; there's no
-        separate-machine constraint).
-  - [ ] **D13.14c** M5.2c confirm M0.4 + M0.5 sizing holds under
-        real v5 load (depends on D13.14b).
+  - [x] **D13.14b** (2026-05-24) M5.2b pilot collection: 3 sequential
+        runs `2026-05-24-v5-pilot-r01/r02/r03`, each ran the standard
+        5-scenario sequence (baseline + productcatalog-latency-major +
+        cart-redis-degradation-critical + frontend-cpu-nearmiss +
+        baseline). All 3 runs returned exit 0 from
+        `collect-dataset-run.ps1`'s built-in validation
+        (`errors=0 warnings=0`). 30 telemetry windows per run, 5
+        episodes per run = 90 windows / 15 episodes total on the
+        upgraded telemetry. Wall time: 3h 20m total (~67 min/run
+        sequentially). Derived datasets built with
+        `-PythonExe python3`; triage labels {noise:16, ticket_worthy:7,
+        borderline:7} per run — identical distribution, suggesting
+        deterministic scenario labelling.
+  - [x] **D13.14c** (2026-05-24) M5.2c sizing under real v5 load:
+        - **Collector (M0.4): HELD.** Both replicas stayed Running with
+          0 restarts across the 3h pilot. Resource limits cpu=2/mem=2Gi
+          per pod handled the post-rollout span throughput
+          comfortably. M0.4 sizing is correct.
+        - **Loki (M0.5): INSUFFICIENT** under current ephemeral
+          deployment. Loki export reliability across pilot:
+          `88 OK / 20 failed = 81% success`. The 20 failures are the
+          broader-scope queries (15 `episode-context-*` files + 3
+          `run-context.json` files + 2 high-volume cartservice cart-redis
+          `active_fault` windows in r02 and r03). Per-service-window
+          queries mostly succeeded. **Strengthens the case for
+          D13.15b** (apply persistent PVC + likely memory bump) before
+          the full v5 sweep — without sizing, the bigger queries the
+          full sweep needs will keep timing out.
   - [~] **D13.14d** M5.2d L1/L2/Tempo cross-check validator built and
         partially run.
 
@@ -772,20 +963,100 @@ lives in `microservice-changes-todo.md`. M0 decisions are recorded in
           yet). Will be re-run on the post-rollout v5-pilot data
           (D13.14b) for the true fleet cross-check.
         - **Finding (real instrumentation gap):** .NET cartservice
-          L1 logs are 0% trace_id-covered because Microsoft's default
-          text formatter renders the message string without structured
-          properties. The trace_id IS in the OTel log record but
-          stripped from the console output. Either swap to
-          JsonConsoleFormatter or add an inline `{TraceId}` template.
-          Tracked separately as D13.14d-followup.
-  - [ ] **D13.14e** M5.2e leakage canary — run
-        `scripts/research-lab/validate-run-feature-distribution.ps1`
-        on the pilot runs; confirm no new feature column is perfectly
-        correlated with `scenario_id`, `scenario_family`, or
-        `triage_label`. Tooling pre-flighted on existing pilot data
-        2026-05-24 with `-PythonExe python3` override: PASS (30 rows,
-        0 fails, 2 warnings). Will re-run per-pilot-run once D13.14b
-        completes.
+          L1 logs were 0% trace_id-covered because Microsoft's default
+          text formatter rendered the message string without structured
+          properties. **Resolved 2026-05-24 as D13.14d-followup:**
+          `cartservice/src/Program.cs` now calls
+          `logging.AddJsonConsole(IncludeScopes=true)`, and the
+          shared `RpcLoggingInterceptor` uses a structured-logging
+          message template so trace_id / span_id / method / status_code
+          / latency_ms / peer_service / kind / err_class all render as
+          top-level JSON keys.
+
+        **2026-05-24 D13.14b pilot results** (pre-fix image still
+        deployed — the Program.cs / RpcLoggingInterceptor changes
+        listed above are in `microservices-demo-google/` HEAD but the
+        running pod is still `cartservice:v5.0.0-otel-pilot` built
+        earlier in the day):
+
+        | service | n_l1 | l1_trace_pct |
+        | --- | ---: | ---: |
+        | cartservice | 5631 | **67.9%** |
+        | checkoutservice | 18828 | 69.9% |
+        | frontend | 83819 | 99.5% |
+        | productcatalogservice | 59653 | **100.0%** |
+        | **fleet** | **167931** | **95.3%** |
+
+        Fleet `l1_trace_pct = 95.3%` already clears the >=90% bar so
+        D13.14d as a gate is **PASS**. Re-rebuild + roll cartservice
+        with the JsonConsole fix is tracked as D13.14d-followup-A;
+        expected to lift cartservice from 67.9% to ~100%.
+
+        L2/Tempo cross-check (24 active_fault windows):
+        - **agree:both fire = 1** (r01 cartservice cart-redis,
+          L2=546 vs tempo_err=267)
+        - **agree:silent = 5** (frontend-cpu-nearmiss windows + some
+          productcatalog windows that genuinely didn't error)
+        - **DISAGREE = 18**, three reasons:
+          1. Most non-cartservice services don't have hand-wired L2
+             `dep_error` logs by design (only cartservice has them
+             per M2.2; Tempo spans capture the error via M3.1
+             RecordError — that's the intended single source).
+          2. checkoutservice received added L2 logging mid-session
+             (the user/linter committed `recordDepError` JSON output
+             to `checkoutservice/main.go`) but the new image hadn't
+             been rebuilt or rolled before this pilot. Tracked as
+             D13.14d-followup-B.
+          3. r02 + r03 cartservice cart-redis windows show n_l2=0
+             because Loki export failed for those windows
+             (D13.14c — see Loki sizing finding). L2 lines exist in
+             Loki, just weren't queried out.
+
+  - [x] **D13.14d-followup-A** (2026-05-24) Cartservice JsonConsole
+        fix rebuilt (`cartservice:v5.0.0-otel-pilot` re-tagged) and
+        rolled. Verified via 1-run validation collection
+        `2026-05-24-v5-pilot-r04-followup`: cartservice **L1
+        trace_id coverage jumped from 67.9% → 100.0%**. Fleet went
+        95.3% → 96.4%. Pre-fix vs post-fix per-service:
+
+        | service | pre-fix | post-fix |
+        | --- | ---: | ---: |
+        | cartservice | 67.9% | **100.0%** |
+        | checkoutservice | 69.9% | 69.6% |
+        | frontend | 99.5% | 99.5% |
+        | productcatalogservice | 100% | 100% |
+
+  - [x] **D13.14d-followup-B** (2026-05-24) Checkoutservice
+        `recordDepError` JSON output rebuilt
+        (`checkoutservice:v5.0.0-otel-pilot` re-tagged) and rolled.
+        Verified via same r04-followup run: checkoutservice n_l2
+        went from **0 → 68 lines** total. On
+        `cart-redis-degradation-critical` active_fault window:
+        n_l2=64, tempo_err=244 → **agree:both fire** (the L2 path and
+        the OTel span path both flagged the same fault, confirming
+        M2.2 + M3.1 cross-fire). Same pattern lighter on
+        `productcatalog-latency-major` (n_l2=2 — fault not severe
+        enough for many retries to hit recordDepError).
+
+  - [ ] **D13.14d-followup-C** Loki sizing is the remaining gap.
+        **3 of 3 cartservice cart-redis active_fault Loki exports
+        have now failed** (`sw.ok: False`) across r02, r03, and
+        r04-followup. The L2 cart-redis evidence almost certainly
+        exists in Loki (the M2.2 LogRedisError path didn't change
+        between runs and r01 captured 546 such lines) but the
+        export-time query can't pull it. This is the same Loki
+        overload pattern from D13.14c — fixing D13.15b should
+        unblock these windows' L2 evidence too.
+  - [x] **D13.14e** (2026-05-24) M5.2e leakage canary — **PASS on
+        all 3 pilot runs**:
+        - r01: `PASS rows=30 fails=0 warns=4`
+        - r02: `PASS rows=30 fails=0 warns=4`
+        - r03: `PASS rows=30 fails=0 warns=4`
+
+        No new feature column perfectly correlates with `scenario_id`,
+        `scenario_family`, or `triage_label`. The 4 warnings per run
+        are below the fail threshold; the script's exit 0 confirms
+        the upgraded telemetry isn't leaking research labels.
 
 - [~] **D13.15** Collector + Loki sizing — collector DONE, Loki PVC
       change persisted to values.yaml but cluster reload needs user OK.

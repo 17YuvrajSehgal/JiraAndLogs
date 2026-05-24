@@ -1,5 +1,18 @@
 mode: deployment
 
+# M0.4a / D13.15 (2026-05-24): bumped resources + replicaCount to handle
+# projected post-M1-M4 span throughput (~9-15k spans/sec at v5 peak,
+# vs ~500 at v4-large peak). Pre-M5.2 the chart used Helm defaults; now
+# explicit so a future cluster rebuild gets the right sizing.
+replicaCount: 2
+resources:
+  requests:
+    cpu: 500m
+    memory: 1Gi
+  limits:
+    cpu: 2
+    memory: 2Gi
+
 image:
   repository: otel/opentelemetry-collector-contrib
 
@@ -36,7 +49,12 @@ config:
           endpoint: 0.0.0.0:4318
 
   processors:
-    batch: {}
+    # M0.4b / D13.15 (2026-05-24): bump batch sizes — chart default
+    # send_batch_size=8192 was a bottleneck at v5 projected span rates.
+    batch:
+      send_batch_size: 8192
+      send_batch_max_size: 16384
+      timeout: 200ms
     memory_limiter:
       check_interval: 5s
       limit_percentage: 80

@@ -418,6 +418,9 @@ $episode = [ordered]@{
     incident_type = $scenario.incident_type
     root_cause_category = $scenario.root_cause_category
     jira_candidate = [bool]$scenario.should_create_jira_shadow_issue
+    # D12.1: orphan-fault gate. True = scenario produces a Jira ticket
+    # (normal behavior); False = orphan fault, no ticket filed.
+    produces_jira_ticket = [bool]$scenario.produces_jira_ticket
     jira_shadow_issue_id = $null
     jira_issue_key = $null
     alert_fingerprints = @()
@@ -461,7 +464,14 @@ if (-not $NoTelemetryExport) {
     }
 }
 
-if ((-not $SkipJiraGeneration) -and [bool]$scenario.should_create_jira_shadow_issue) {
+# D12.1 (2026-05-24): produces_jira_ticket=false makes a scenario an
+# orphan fault — the system records the episode + windows but skips
+# shadow-jira generation entirely. The episode's jira_candidate /
+# should_create_jira_shadow_issue fields still describe whether a human
+# *would have* filed; produces_jira_ticket describes whether one
+# actually did.
+if ((-not $SkipJiraGeneration) -and [bool]$scenario.should_create_jira_shadow_issue `
+        -and [bool]$scenario.produces_jira_ticket) {
     $jiraArgs = @(
         "-NoProfile",
         "-ExecutionPolicy", "Bypass",

@@ -45,6 +45,11 @@ class TriageWindow:
     matched_memory_issue_ids: list[str] = field(default_factory=list)
     is_novel: bool | None = None
     fault_compatibility_class: str | None = None
+    # D12.3: per-window descendant of episode.produces_jira_ticket.
+    # True  → ticket_worthy window backed by a real Jira entry
+    # False → orphan fault (ticket_worthy but no Jira memory by design)
+    # None  → not applicable (window is borderline/noise)
+    expected_in_memory: bool | None = None
 
     @classmethod
     def from_row(cls, row: dict[str, Any]) -> "TriageWindow":
@@ -131,9 +136,16 @@ class MemoryMatch:
     triage_label: str
     is_novel: bool
     matched_memory_issue_ids: list[str]
+    # D12.3: orphan-fault ground truth flag — see TriageWindow above.
+    expected_in_memory: bool | None = None
 
     @classmethod
     def from_row(cls, row: dict[str, Any]) -> "MemoryMatch":
+        # `expected_in_memory` is the D12.3 field; absent in pre-D12.3
+        # matchings files. Default None preserves backward compat.
+        em = row.get("expected_in_memory")
+        if em is not None:
+            em = bool(em)
         return cls(
             window_id=row["window_id"],
             dataset_run_id=row.get("dataset_run_id", ""),
@@ -143,6 +155,7 @@ class MemoryMatch:
             triage_label=row.get("triage_label", ""),
             is_novel=bool(row.get("is_novel", False)),
             matched_memory_issue_ids=list(row.get("matched_memory_issue_ids", []) or []),
+            expected_in_memory=em,
         )
 
 

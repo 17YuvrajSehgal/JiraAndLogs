@@ -4,7 +4,8 @@
       "Bash(pip install *)",
       "Bash(python *)",
       "PowerShell(& \"C:\\\\workplace\\\\JiraAndLogs\\\\scripts\\\\research-lab\\\\check-prereqs.ps1\" 2>&1 | Select-Object -First 60)",
-      "PowerShell($ErrorActionPreference = 'Continue')"
+      "PowerShell($ErrorActionPreference = 'Continue')",
+      "Bash(grep -nA5 'func renderHTTPError' microservices-demo-google/src/frontend/handlers.go)"
     ]
   }
 }

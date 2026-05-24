@@ -138,6 +138,23 @@ def build_window_memory_matchings(
         fault_class = fault_compatibility_class(fault_type)
 
         triage_label = triage.get("triage_label", "noise")
+        # D12.3 (2026-05-24): orphan-fault propagation. If the episode
+        # was authored with produces_jira_ticket: false, force the
+        # matchings to "no memory, novel" so downstream evaluation can
+        # measure orphan-detection recall on signal-only features.
+        # `expected_in_memory` is the per-window descendant of the
+        # episode's produces_jira_ticket flag.
+        episode_produces_ticket = (
+            episode.get("produces_jira_ticket", True) if episode else True
+        )
+        # `expected_in_memory` semantics:
+        #   true  → ticket_worthy window with a real Jira entry expected
+        #   false → orphan fault (ticket_worthy but no Jira entry by design)
+        #   None  → not a ticket_worthy window (the question is N/A)
+        expected_in_memory: bool | None = None
+        if triage_label == "ticket_worthy":
+            expected_in_memory = bool(episode_produces_ticket)
+
         matches: list[str] = []
         is_novel = False
 
@@ -158,6 +175,14 @@ def build_window_memory_matchings(
                     is_novel = True
                     novel_count += 1
 
+        # D12.3 orphan-fault override: even if compute_matches found
+        # candidates (e.g. from twin reported episodes earlier in the
+        # corpus), an orphan fault has NO memory entry of its own — force
+        # the ground truth to reflect that.
+        if expected_in_memory is False:
+            matches = []
+            is_novel = True
+
         record = {
             "window_id": window_id,
             "dataset_run_id": dataset_run_id,
@@ -167,6 +192,7 @@ def build_window_memory_matchings(
             "fault_compatibility_class": fault_class,
             "matched_memory_issue_ids": matches,
             "is_novel": is_novel,
+            "expected_in_memory": expected_in_memory,
         }
         out_records.append(record)
 

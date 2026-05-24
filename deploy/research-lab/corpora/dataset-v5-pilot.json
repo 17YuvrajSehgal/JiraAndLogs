@@ -1,0 +1,64 @@
+{
+  "schema_version": 1,
+  "corpus_id": "dataset-v5-pilot",
+  "title": "Dataset v5 pilot — upgraded telemetry cross-check",
+  "description": "Tight pilot for M5.2b / D13.14b. Collects 3 runs per existing plan family on the upgraded telemetry layer (cartservice JsonConsole + dual-port metrics, paymentservice/currencyservice host-metrics, fleet-wide L1 + L2 + L3 logs and M1-M4 metrics). Validates that the post-rollout fleet emits the expected schema across enough independent runs for the L1/L2/Tempo cross-check (D13.14d) and the leakage canary (D13.14e). Does NOT include the 8 Phase D1 new families — those are authored in D4.1's v5-large corpus.",
+  "locked_baseline": null,
+  "development_stage": "v5 pilot for upgraded telemetry validation",
+  "default_dataset_run_prefix": "2026-05-24-dataset-v5-pilot",
+  "aggregate_id_suffix": "aggregate",
+  "holdout_id_suffix": "holdout",
+  "collection_strategy": {
+    "first_batch_runs": 3,
+    "recommended_batch_runs": 3,
+    "full_corpus_runs": 9,
+    "why_batch_collection": "3 runs per plan family is the minimum where mean trace_error_count and PR-AUC slice numbers become trustworthy. Smaller than v4-pilot-extended (13 runs) because the goal here is schema validation of the upgraded telemetry, not a corpus-balance check.",
+    "expected_full_scale": {
+      "dataset_runs": 9,
+      "episodes_per_compact_a_run": 10,
+      "episodes_per_compact_b_run": 13,
+      "episodes_per_control_run": 6,
+      "total_episodes": 87,
+      "total_telemetry_windows": "approx 800"
+    }
+  },
+  "plans": [
+    {
+      "plan_alias": "control",
+      "plan_file": "deploy\\research-lab\\run-plans\\control-baseline-only.json",
+      "repeat": 3,
+      "purpose": "Baseline-only runs. Anchor false-positive distribution under the upgraded telemetry; confirm no new L1/L2 fields fire on healthy traffic."
+    },
+    {
+      "plan_alias": "compact-a",
+      "plan_file": "deploy\\research-lab\\run-plans\\dataset-v3-diverse-compact-a.json",
+      "repeat": 3,
+      "purpose": "Latency, dep outage, restart, Redis degradation, bad-config, near-miss. Validates M2.2 dep-error logs + M3.1 RecordError at every error path."
+    },
+    {
+      "plan_alias": "compact-b",
+      "plan_file": "deploy\\research-lab\\run-plans\\dataset-v3-diverse-compact-b.json",
+      "repeat": 3,
+      "purpose": "Service-diverse outages, frontend + Redis restarts, intermittent Redis failure, noisy traffic. Validates M4.4 business counters move on the active-fault windows of each family."
+    }
+  ],
+  "benchmark_tracks": [
+    {
+      "track_id": "triage_classification",
+      "description": "Primary task: classify each telemetry window as ticket_worthy / borderline / noise."
+    },
+    {
+      "track_id": "triage_with_memory_retrieval",
+      "description": "Combined task: classification grounded in Jira memory corpus retrieval. Requires triage_evidence_text."
+    },
+    {
+      "track_id": "ranking_retrospective",
+      "description": "Secondary task: given a Jira issue, rank candidate telemetry episodes."
+    }
+  ],
+  "promotion_gates": {
+    "raw_runs": "Every collected run must pass validate-dataset-run.ps1 with 0 errors and validate-run-feature-distribution.py with 0 anomalies flagged.",
+    "derived_outputs": "Per-run triage_examples.jsonl must populate all FEATURE_COLUMNS with >=1 non-zero value across the run, and label distribution must include ticket_worthy + borderline + noise (control runs are exempt for ticket_worthy + borderline).",
+    "aggregate_outputs": "Global triage dataset must include the 13 v4 scenario families across runs; new feature columns (rpc_server_duration_seconds_*, host_metrics_*) must populate on >=80% of windows."
+  }
+}

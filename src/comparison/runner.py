@@ -22,7 +22,14 @@ from .pipelines import (
 )
 from .schema import PipelineResult
 from .significance import paired_bootstrap_ci, render_ci_table, render_pairwise_table
-from .stratified import StrataRow, render_strata_table, stratified_metrics
+from .stratified import (
+    OrphanRecallGap,
+    StrataRow,
+    compute_orphan_recall_gap,
+    render_orphan_recall_gap_table,
+    render_strata_table,
+    stratified_metrics,
+)
 
 
 KNOWN_PIPELINES: dict[str, type[PipelineRunner]] = {
@@ -40,6 +47,10 @@ class ComparisonReport:
     headline: dict[str, dict[str, float]] = field(default_factory=dict)
     ci_per_metric: dict[str, dict] = field(default_factory=dict)
     pairwise_per_metric: dict[str, list] = field(default_factory=dict)
+    # D12.6 (2026-05-24): orphan-detection recall gap per pipeline.
+    # Empty list if no pipeline's gold has expected_in_memory annotations
+    # (pre-D12.3 datasets).
+    orphan_recall_gap: list[OrphanRecallGap] = field(default_factory=list)
 
     def as_dict(self) -> dict[str, Any]:
         return {
@@ -86,6 +97,7 @@ class ComparisonReport:
                 }
                 for s in self.strata
             ],
+            "orphan_recall_gap": [g.as_dict() for g in self.orphan_recall_gap],
         }
 
 
@@ -126,6 +138,10 @@ def run_comparison(
 
     print("[comparison] computing stratified metrics")
     strata = stratified_metrics(results)
+    # D12.6 — only meaningful when the dataset has expected_in_memory
+    # annotations (D12.3+). On pre-D12.3 datasets every row reports
+    # verdict=no_orphan_data, which is the correct "N/A" signal.
+    orphan_gap = compute_orphan_recall_gap(results)
 
     headline = _headline_metrics(strata)
 
@@ -143,6 +159,7 @@ def run_comparison(
         headline=headline,
         ci_per_metric=ci_per_metric,
         pairwise_per_metric=pairwise_per_metric,
+        orphan_recall_gap=orphan_gap,
     )
 
 
@@ -154,6 +171,22 @@ def render_report_md(report: ComparisonReport) -> str:
             f"- `{r.pipeline_name}` (threshold={r.triage_threshold:.4f}, "
             f"fit={r.fit_seconds:.1f}s, predict={r.predict_seconds:.1f}s)"
         )
+
+    # D12.6 headline section — placed near the top so the
+     # memorization-vs-detection signal is the first thing a reader sees.
+    # On pre-D12.3 datasets all rows show verdict=no_orphan_data; we
+    # still render the table so the section is consistently present.
+    lines.append("")
+    lines.append("## Orphan-detection recall gap (D12.6)")
+    lines.append("")
+    lines.append(
+        "`gap_pts = 100 × (recall on reported ticket_worthy - recall on "
+        "orphan ticket_worthy)`. Verdict: < 10pts = signal_learning, "
+        "10-20 = borderline, > 20 = pattern_matching, "
+        "n_orphan=0 = no_orphan_data."
+    )
+    lines.append("")
+    lines.append(render_orphan_recall_gap_table(report.orphan_recall_gap))
 
     lines.append("")
     lines.append("## Headline (overall, with 95% bootstrap CIs)")

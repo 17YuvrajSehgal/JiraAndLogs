@@ -26,6 +26,8 @@ class PipelinePrediction:
     gold_label: str = ""
     gold_is_novel: bool | None = None
     gold_matched_issue_ids: list[str] = field(default_factory=list)
+    # D12.3 orphan-fault gold: True/False/None — see loganalyzer schema.
+    gold_expected_in_memory: bool | None = None
     # Stratification keys
     scenario_family: str = ""
     service_name: str = ""
@@ -42,6 +44,7 @@ class PipelinePrediction:
             "gold_label": self.gold_label,
             "gold_is_novel": self.gold_is_novel,
             "gold_matched_issue_ids": self.gold_matched_issue_ids,
+            "gold_expected_in_memory": self.gold_expected_in_memory,
             "scenario_family": self.scenario_family,
             "service_name": self.service_name,
             "window_type": self.window_type,
