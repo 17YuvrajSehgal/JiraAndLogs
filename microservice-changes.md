@@ -433,16 +433,5 @@ Every entry above is something a competent production SRE team would expect
 from a microservice in 2026. Nothing in this list encodes our research
 labels, scenario taxonomy, or injection mechanism.
 
-## Open questions to resolve before starting
-
-1. **Where does the interceptor live?** Per-service handwritten, or a shared
-   helper library checked into `microservices-demo-google/src/_shared/`?
-   Shared is cleaner but means maintaining a fork divergence from upstream
-   Google.
-2. **Image registry.** Local kind has its own registry already; cloud VM
-   needs GCR/Artifact Registry push. Confirm v5 cloud collection can pull
-   the modified images.
-3. **Upstream divergence policy.** Do we track upstream Google's
-   microservices-demo and rebase on it, or hard-fork? Hard-fork is simpler
-   now, but blocks free pickups of Google's improvements (new services,
-   updated tracing).
+For an actionable per-task breakdown of how to implement this, see
+`microservice-changes-todo.md`.
