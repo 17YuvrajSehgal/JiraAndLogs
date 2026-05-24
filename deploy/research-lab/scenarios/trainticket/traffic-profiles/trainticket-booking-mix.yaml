@@ -1,0 +1,29 @@
+traffic_profile_id: trainticket-booking-mix
+description: >
+  Realistic mix of train-ticket user behavior covering search, booking,
+  payment, and admin operations. Adapted from the upstream train-ticket-auto-query
+  Locust scripts.
+load_generator:
+  users: 20
+  spawn_rate: 2
+  wait_time_seconds:
+    min: 1
+    max: 8
+expected_behavior:
+  primary_paths:
+    - /api/v1/travelservice/trips/left
+    - /api/v1/orderservice/order
+    - /api/v1/preserveservice/preserve
+    - /api/v1/inside_pay_service/inside_payment
+    - /api/v1/cancelservice/cancel
+    - /api/v1/userservice/users
+  weight_mix:
+    search: 0.50
+    booking: 0.30
+    admin: 0.10
+    cancel_rebook: 0.10
+  normal_error_rate: very_low
+  normal_latency_profile: steady
+dataset_use:
+  include_as_negative_windows: true
+  include_for_baseline_training: true

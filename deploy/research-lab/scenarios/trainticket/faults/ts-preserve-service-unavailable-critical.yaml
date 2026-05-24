@@ -1,0 +1,83 @@
+schema_version: 1
+scenario_id: tt-preserve-service-unavailable-critical
+title: Reservation service outage blocks all bookings
+description: >
+  ts-preserve-service is scaled to zero replicas. The booking endpoint
+  (/api/v1/preserveservice/preserve) fails 100%; should be a clear
+  customer-visible critical incident.
+dataset_run_id: local-dev-run-001
+traffic_profile_id: trainticket-booking-mix
+environment: research-local
+jira_candidate: true
+expected_jira:
+  issue_type: Incident
+  priority: Critical
+  components:
+    - ts-preserve-service
+    - ts-order-service
+    - ts-ui-dashboard
+  labels:
+    - synthetic-incident
+    - dependency-failure
+    - ts-preserve-service
+    - trainticket
+    - telemetry-linked
+  summary_template: "Reservation service outage blocked all bookings"
+  description_template: |
+    Synthetic lab issue from scenario tt-preserve-service-unavailable-critical.
+    ts-preserve-service capacity was removed; every preserve call returns
+    upstream timeout / connection refused, propagating to ts-order-service
+    and the UI.
+fault:
+  fault_id: tt-preserve-service-scale-zero-001
+  fault_type: dependency_outage
+  affected_service: ts-preserve-service
+  suggested_mechanism: scale ts-preserve-service to zero replicas
+  expected_start_offset_seconds: 300
+  expected_duration_seconds: 600
+  blast_radius:
+    user_visible: true
+    expected_error_rate: high
+    expected_latency_impact: high
+labels:
+  severity: critical
+  incident_type: outage
+  root_cause_category: dependency_failure
+  should_alert: true
+  should_create_jira_shadow_issue: true
+execution:
+  action: ScaleDeployment
+  namespace: trainticket
+  target_kind: deployment
+  target_name: ts-preserve-service
+  replicas: 0
+  restore_replicas: 1
+triage:
+  schema_version: 1
+  scenario_family: tt-booking-outage
+  per_window:
+    pre_fault_baseline:
+      triage_label: noise
+      triage_severity: null
+      triage_components: null
+      triage_reason_class: null
+      is_hard_case: false
+      rationale: "Pre-fault baseline; preserve service healthy."
+    active_fault:
+      triage_label: ticket_worthy
+      triage_severity: critical
+      triage_components:
+        - ts-preserve-service
+        - ts-order-service
+        - ts-ui-dashboard
+      triage_reason_class: dependency_failure
+      is_hard_case: false
+      rationale: "All booking attempts fail during preserve outage."
+    recovery_window:
+      triage_label: borderline
+      triage_severity: minor
+      triage_components:
+        - ts-preserve-service
+      triage_reason_class: dependency_failure
+      is_hard_case: true
+      rationale: "Brief residual errors before nacos sees the recovered endpoint."

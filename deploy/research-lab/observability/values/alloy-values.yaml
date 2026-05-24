@@ -22,7 +22,7 @@ alloy:
 
         rule {
           source_labels = ["__meta_kubernetes_namespace"]
-          regex = "online-boutique-research|observability"
+          regex = "online-boutique-research|observability|trainticket"
           action = "keep"
         }
 

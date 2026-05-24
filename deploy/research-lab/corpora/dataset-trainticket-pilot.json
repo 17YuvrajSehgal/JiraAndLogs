@@ -1,0 +1,60 @@
+{
+  "schema_version": 1,
+  "corpus_id": "dataset-trainticket-pilot",
+  "title": "Train-ticket pilot corpus (cross-app feasibility)",
+  "description": "Pilot corpus for the train-ticket app. Sized to validate the trainticket scaffolding (apply-trainticket.ps1, alloy namespace allowlist, triage labels) end-to-end before committing to a full multi-day collection. About 1 VM-day at e2-standard-16.",
+  "locked_baseline": null,
+  "development_stage": "trainticket T7 pilot per trainticket-todo.md",
+  "default_dataset_run_prefix": "trainticket-pilot",
+  "aggregate_id_suffix": "aggregate",
+  "holdout_id_suffix": "holdout",
+  "collection_strategy": {
+    "first_batch_runs": 1,
+    "recommended_batch_runs": 3,
+    "full_corpus_runs": 6,
+    "why_batch_collection": "Control runs first anchor the false-positive distribution. Compact-a and compact-b alternate so an early-termination still gives balanced family coverage.",
+    "expected_full_scale": {
+      "dataset_runs": 6,
+      "episodes_per_compact_a_run": 7,
+      "episodes_per_compact_b_run": 5,
+      "episodes_per_control_run": 4,
+      "total_episodes": 38,
+      "total_telemetry_windows": "approx 270"
+    }
+  },
+  "plans": [
+    {
+      "plan_alias": "control",
+      "plan_file": "deploy\\research-lab\\run-plans\\trainticket-control-baseline-only.json",
+      "repeat": 2,
+      "purpose": "Pure baseline runs anchoring the train-ticket false-positive distribution."
+    },
+    {
+      "plan_alias": "compact-a",
+      "plan_file": "deploy\\research-lab\\run-plans\\trainticket-compact-a.json",
+      "repeat": 2,
+      "purpose": "Booking/search/payment outage and restart coverage."
+    },
+    {
+      "plan_alias": "compact-b",
+      "plan_file": "deploy\\research-lab\\run-plans\\trainticket-compact-b.json",
+      "repeat": 2,
+      "purpose": "Station, payment-restart, UI-restart coverage."
+    }
+  ],
+  "benchmark_tracks": [
+    {
+      "track_id": "triage_classification",
+      "description": "Primary task: classify each telemetry window as ticket_worthy / borderline / noise on train-ticket."
+    },
+    {
+      "track_id": "cross_app_holdout",
+      "description": "Train on Online Boutique v4-large, test on train-ticket pilot WITHOUT retraining. The headline cross-app generalization number."
+    }
+  ],
+  "promotion_gates": {
+    "raw_runs": "Every collected run must pass validate-dataset-run.ps1 with 0 errors.",
+    "derived_outputs": "Every run's triage_examples.jsonl populates non-zero log/trace counts for active_fault windows.",
+    "aggregate_outputs": "Global triage dataset includes >= 6 train-ticket scenario families across runs."
+  }
+}

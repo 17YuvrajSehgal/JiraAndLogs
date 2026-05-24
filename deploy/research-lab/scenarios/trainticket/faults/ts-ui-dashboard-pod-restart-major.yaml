@@ -1,0 +1,75 @@
+schema_version: 1
+scenario_id: tt-ui-dashboard-pod-restart-major
+title: UI dashboard pod restart causes frontend outage window
+description: >
+  ts-ui-dashboard pods are deleted while booking traffic is active. The
+  user-facing frontend goes unreachable until the new pod is Ready.
+  Direct analog of frontend-pod-restart-major in Online Boutique.
+dataset_run_id: local-dev-run-001
+traffic_profile_id: trainticket-booking-mix
+environment: research-local
+jira_candidate: true
+expected_jira:
+  issue_type: Incident
+  priority: Major
+  components:
+    - ts-ui-dashboard
+    - ts-gateway-service
+  labels:
+    - synthetic-incident
+    - frontend-restart
+    - ts-ui-dashboard
+    - trainticket
+    - telemetry-linked
+  summary_template: "UI dashboard restart caused brief frontend outage"
+  description_template: |
+    Synthetic lab issue from scenario tt-ui-dashboard-pod-restart-major.
+    ts-ui-dashboard pods restarted; the user-facing frontend was
+    unreachable during pod readiness.
+fault:
+  fault_id: tt-ui-dashboard-restart-001
+  fault_type: pod_restart
+  affected_service: ts-ui-dashboard
+  suggested_mechanism: kubectl delete pod -l app=ts-ui-dashboard
+  expected_start_offset_seconds: 300
+  expected_duration_seconds: 120
+  blast_radius:
+    user_visible: true
+    expected_error_rate: high
+    expected_latency_impact: low
+labels:
+  severity: major
+  incident_type: service_restart
+  root_cause_category: pod_restart
+  should_alert: true
+  should_create_jira_shadow_issue: true
+execution:
+  action: RestartPods
+  namespace: trainticket
+  selector: app=ts-ui-dashboard
+triage:
+  schema_version: 1
+  scenario_family: tt-frontend-restart
+  per_window:
+    pre_fault_baseline:
+      triage_label: noise
+      triage_severity: null
+      triage_components: null
+      triage_reason_class: null
+      is_hard_case: false
+      rationale: "Pre-fault baseline; UI dashboard healthy."
+    active_fault:
+      triage_label: ticket_worthy
+      triage_severity: major
+      triage_components:
+        - ts-ui-dashboard
+      triage_reason_class: restart_with_impact
+      is_hard_case: false
+      rationale: "Customer-visible frontend outage while UI pod restarts."
+    recovery_window:
+      triage_label: noise
+      triage_severity: null
+      triage_components: null
+      triage_reason_class: null
+      is_hard_case: false
+      rationale: "UI typically recovers cleanly; recovery window is quiet."

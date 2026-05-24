@@ -1,0 +1,51 @@
+schema_version: 1
+scenario_id: tt-baseline-normal-traffic
+title: Normal train-ticket traffic baseline
+description: >
+  Normal traffic window across booking, search, and admin flows with no
+  injected fault. Negative example for ranking; must not produce a Jira issue.
+dataset_run_id: local-dev-run-001
+traffic_profile_id: trainticket-booking-mix
+environment: research-local
+jira_candidate: false
+expected_jira:
+  issue_type: None
+  priority: None
+  components:
+    - ts-ui-dashboard
+    - ts-gateway-service
+    - ts-travel-service
+  labels:
+    - synthetic-baseline
+    - negative-window
+    - trainticket
+fault:
+  fault_id: null
+  fault_type: none
+  affected_service: ts-ui-dashboard
+  expected_start_offset_seconds: 0
+  expected_duration_seconds: 300
+  blast_radius:
+    user_visible: false
+    expected_error_rate: very_low
+    expected_latency_impact: low
+labels:
+  severity: none
+  incident_type: baseline
+  root_cause_category: none
+  should_alert: false
+  should_create_jira_shadow_issue: false
+execution:
+  action: RecordOnly
+  namespace: trainticket
+triage:
+  schema_version: 1
+  scenario_family: tt-baseline-normal
+  per_window:
+    observation_window:
+      triage_label: noise
+      triage_severity: null
+      triage_components: null
+      triage_reason_class: null
+      is_hard_case: false
+      rationale: "Normal train-ticket traffic with no injected fault; must not be flagged."

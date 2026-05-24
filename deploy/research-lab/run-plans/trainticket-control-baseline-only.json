@@ -1,0 +1,43 @@
+{
+  "schema_version": 1,
+  "plan_id": "trainticket-control-baseline-only",
+  "title": "TrainTicket control plan (baseline traffic only)",
+  "description": "Pure baseline run on train-ticket with no fault injection. Anchors false-positive distribution for the train-ticket corpus.",
+  "environment": "research-local",
+  "traffic_profile_id": "trainticket-booking-mix",
+  "default_post_window_seconds": 75,
+  "quick_duration_seconds": 240,
+  "quick_post_window_seconds": 60,
+  "realistic_jira_noise": false,
+  "target_use": "False-positive-rate anchor for train-ticket triage benchmarks.",
+  "scenarios": [
+    {
+      "scenario_file": "deploy\\research-lab\\scenarios\\trainticket\\baselines\\baseline-normal-traffic.yaml",
+      "role": "negative_baseline",
+      "duration_seconds": 240,
+      "post_window_seconds": 60,
+      "notes": "Healthy traffic window 1."
+    },
+    {
+      "scenario_file": "deploy\\research-lab\\scenarios\\trainticket\\baselines\\baseline-normal-traffic.yaml",
+      "role": "negative_baseline",
+      "duration_seconds": 240,
+      "post_window_seconds": 60,
+      "notes": "Healthy traffic window 2."
+    },
+    {
+      "scenario_file": "deploy\\research-lab\\scenarios\\trainticket\\baselines\\baseline-normal-traffic.yaml",
+      "role": "negative_baseline",
+      "duration_seconds": 240,
+      "post_window_seconds": 60,
+      "notes": "Healthy traffic window 3."
+    },
+    {
+      "scenario_file": "deploy\\research-lab\\scenarios\\trainticket\\baselines\\baseline-normal-traffic.yaml",
+      "role": "negative_baseline",
+      "duration_seconds": 240,
+      "post_window_seconds": 60,
+      "notes": "Healthy traffic window 4."
+    }
+  ]
+}

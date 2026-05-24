@@ -13,4 +13,13 @@ metadata:
   labels:
     app.kubernetes.io/part-of: jira-telemetry-lab
     research.jira-telemetry/role: workload
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: trainticket
+  labels:
+    app.kubernetes.io/part-of: jira-telemetry-lab
+    research.jira-telemetry/role: workload
+    research.jira-telemetry/app: trainticket
 

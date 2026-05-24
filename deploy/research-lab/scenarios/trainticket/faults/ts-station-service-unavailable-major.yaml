@@ -1,0 +1,82 @@
+schema_version: 1
+scenario_id: tt-station-service-unavailable-major
+title: Station lookup service outage breaks booking validation
+description: >
+  ts-station-service is scaled to zero. Station-name resolution fails;
+  downstream services that need station ID lookups (preserve, travel)
+  see elevated errors.
+dataset_run_id: local-dev-run-001
+traffic_profile_id: trainticket-booking-mix
+environment: research-local
+jira_candidate: true
+expected_jira:
+  issue_type: Incident
+  priority: Major
+  components:
+    - ts-station-service
+    - ts-travel-service
+    - ts-preserve-service
+  labels:
+    - synthetic-incident
+    - dependency-failure
+    - ts-station-service
+    - trainticket
+    - telemetry-linked
+  summary_template: "Station service outage propagated into booking validation"
+  description_template: |
+    Synthetic lab issue from scenario tt-station-service-unavailable-major.
+    ts-station-service was scaled to zero; station-name -> id resolution
+    fails across travel and preserve.
+fault:
+  fault_id: tt-station-service-scale-zero-001
+  fault_type: dependency_outage
+  affected_service: ts-station-service
+  suggested_mechanism: scale ts-station-service to zero replicas
+  expected_start_offset_seconds: 300
+  expected_duration_seconds: 600
+  blast_radius:
+    user_visible: true
+    expected_error_rate: medium
+    expected_latency_impact: medium
+labels:
+  severity: major
+  incident_type: outage
+  root_cause_category: dependency_failure
+  should_alert: true
+  should_create_jira_shadow_issue: true
+execution:
+  action: ScaleDeployment
+  namespace: trainticket
+  target_kind: deployment
+  target_name: ts-station-service
+  replicas: 0
+  restore_replicas: 1
+triage:
+  schema_version: 1
+  scenario_family: tt-search-outage
+  per_window:
+    pre_fault_baseline:
+      triage_label: noise
+      triage_severity: null
+      triage_components: null
+      triage_reason_class: null
+      is_hard_case: false
+      rationale: "Pre-fault baseline; station service healthy."
+    active_fault:
+      triage_label: ticket_worthy
+      triage_severity: major
+      triage_components:
+        - ts-station-service
+        - ts-travel-service
+        - ts-preserve-service
+      triage_reason_class: dependency_failure
+      is_hard_case: false
+      rationale: "Station resolution failure cascades into booking validation."
+    recovery_window:
+      triage_label: borderline
+      triage_severity: minor
+      triage_components:
+        - ts-station-service
+      triage_reason_class: dependency_failure
+      is_hard_case: true
+      rationale: "Brief residual cache-miss errors after recovery."

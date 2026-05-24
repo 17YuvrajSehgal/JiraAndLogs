@@ -1,0 +1,77 @@
+schema_version: 1
+scenario_id: tt-payment-service-pod-restart-major
+title: Payment service pod restart disrupts checkout
+description: >
+  ts-payment-service pods are deleted while checkout traffic is active.
+  Payment failures expected for ~60s while pod re-registers.
+dataset_run_id: local-dev-run-001
+traffic_profile_id: trainticket-booking-mix
+environment: research-local
+jira_candidate: true
+expected_jira:
+  issue_type: Incident
+  priority: Major
+  components:
+    - ts-payment-service
+    - ts-inside-payment-service
+    - ts-order-service
+  labels:
+    - synthetic-incident
+    - service-restart
+    - ts-payment-service
+    - trainticket
+    - telemetry-linked
+  summary_template: "Payment service restart caused checkout failures"
+  description_template: |
+    Synthetic lab issue from scenario tt-payment-service-pod-restart-major.
+    ts-payment-service pods restarted; checkout calls failed during
+    re-registration window.
+fault:
+  fault_id: tt-payment-service-restart-001
+  fault_type: pod_restart
+  affected_service: ts-payment-service
+  suggested_mechanism: kubectl delete pod -l app=ts-payment-service
+  expected_start_offset_seconds: 300
+  expected_duration_seconds: 120
+  blast_radius:
+    user_visible: true
+    expected_error_rate: medium
+    expected_latency_impact: medium
+labels:
+  severity: major
+  incident_type: service_restart
+  root_cause_category: pod_restart
+  should_alert: true
+  should_create_jira_shadow_issue: true
+execution:
+  action: RestartPods
+  namespace: trainticket
+  selector: app=ts-payment-service
+triage:
+  schema_version: 1
+  scenario_family: tt-payment-restart
+  per_window:
+    pre_fault_baseline:
+      triage_label: noise
+      triage_severity: null
+      triage_components: null
+      triage_reason_class: null
+      is_hard_case: false
+      rationale: "Pre-fault baseline; payment service healthy."
+    active_fault:
+      triage_label: ticket_worthy
+      triage_severity: major
+      triage_components:
+        - ts-payment-service
+        - ts-inside-payment-service
+      triage_reason_class: restart_with_impact
+      is_hard_case: false
+      rationale: "Checkout payment failures during restart re-registration."
+    recovery_window:
+      triage_label: borderline
+      triage_severity: minor
+      triage_components:
+        - ts-payment-service
+      triage_reason_class: restart_with_impact
+      is_hard_case: true
+      rationale: "Residual checkout errors before token caches refresh."

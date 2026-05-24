@@ -1,0 +1,70 @@
+schema_version: 1
+scenario_id: tt-config-service-unavailable-nearmiss
+title: Config service outage with no user-visible impact (near miss)
+description: >
+  ts-config-service is scaled to zero replicas. Other services have
+  cached config; user-visible impact is minimal. Tests whether the model
+  flags an outage that doesn't actually cause customer pain.
+dataset_run_id: local-dev-run-001
+traffic_profile_id: trainticket-booking-mix
+environment: research-local
+jira_candidate: false
+expected_jira:
+  issue_type: None
+  priority: None
+  components:
+    - ts-config-service
+  labels:
+    - synthetic-baseline
+    - near-miss
+    - trainticket
+fault:
+  fault_id: tt-config-service-scale-zero-nearmiss-001
+  fault_type: dependency_outage_nearmiss
+  affected_service: ts-config-service
+  suggested_mechanism: scale ts-config-service to zero replicas
+  expected_start_offset_seconds: 300
+  expected_duration_seconds: 240
+  blast_radius:
+    user_visible: false
+    expected_error_rate: very_low
+    expected_latency_impact: low
+labels:
+  severity: minor
+  incident_type: near_miss
+  root_cause_category: dependency_failure
+  should_alert: false
+  should_create_jira_shadow_issue: false
+execution:
+  action: ScaleDeployment
+  namespace: trainticket
+  target_kind: deployment
+  target_name: ts-config-service
+  replicas: 0
+  restore_replicas: 1
+triage:
+  schema_version: 1
+  scenario_family: tt-config-nearmiss
+  per_window:
+    pre_fault_baseline:
+      triage_label: noise
+      triage_severity: null
+      triage_components: null
+      triage_reason_class: null
+      is_hard_case: false
+      rationale: "Pre-fault baseline; config service healthy."
+    active_fault:
+      triage_label: borderline
+      triage_severity: minor
+      triage_components:
+        - ts-config-service
+      triage_reason_class: dependency_failure
+      is_hard_case: true
+      rationale: "Backend outage with no customer impact; reasonable engineers disagree on filing."
+    recovery_window:
+      triage_label: noise
+      triage_severity: null
+      triage_components: null
+      triage_reason_class: null
+      is_hard_case: false
+      rationale: "Quiet recovery; nothing customer-facing was disturbed."

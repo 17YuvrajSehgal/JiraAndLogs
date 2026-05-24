@@ -1,0 +1,64 @@
+{
+  "schema_version": 1,
+  "plan_id": "trainticket-compact-a",
+  "title": "TrainTicket compact-a: booking, search, payment faults",
+  "description": "Service-diverse booking, search and payment incidents on train-ticket. Mirrors the boutique compact-a plan shape.",
+  "environment": "research-local",
+  "traffic_profile_id": "trainticket-booking-mix",
+  "default_post_window_seconds": 75,
+  "quick_duration_seconds": 75,
+  "quick_post_window_seconds": 45,
+  "realistic_jira_noise": false,
+  "target_use": "Booking/search/payment outage and restart coverage for train-ticket.",
+  "scenarios": [
+    {
+      "scenario_file": "deploy\\research-lab\\scenarios\\trainticket\\baselines\\baseline-normal-traffic.yaml",
+      "role": "negative_baseline",
+      "duration_seconds": 90,
+      "post_window_seconds": 45,
+      "notes": "Pre-fault baseline 1."
+    },
+    {
+      "scenario_file": "deploy\\research-lab\\scenarios\\trainticket\\faults\\ts-auth-service-unavailable-critical.yaml",
+      "role": "positive_jira_candidate",
+      "duration_seconds": 90,
+      "post_window_seconds": 45,
+      "notes": "Critical auth outage; expected ticket_worthy + Jira shadow issue."
+    },
+    {
+      "scenario_file": "deploy\\research-lab\\scenarios\\trainticket\\faults\\ts-preserve-service-unavailable-critical.yaml",
+      "role": "positive_jira_candidate",
+      "duration_seconds": 90,
+      "post_window_seconds": 45,
+      "notes": "Critical reservation outage; should block booking flow."
+    },
+    {
+      "scenario_file": "deploy\\research-lab\\scenarios\\trainticket\\faults\\ts-travel-service-unavailable-major.yaml",
+      "role": "positive_jira_candidate",
+      "duration_seconds": 90,
+      "post_window_seconds": 45,
+      "notes": "Trip search outage."
+    },
+    {
+      "scenario_file": "deploy\\research-lab\\scenarios\\trainticket\\faults\\ts-order-service-pod-restart-major.yaml",
+      "role": "positive_jira_candidate",
+      "duration_seconds": 90,
+      "post_window_seconds": 45,
+      "notes": "Order service restart."
+    },
+    {
+      "scenario_file": "deploy\\research-lab\\scenarios\\trainticket\\faults\\ts-config-service-unavailable-nearmiss.yaml",
+      "role": "near_miss_borderline",
+      "duration_seconds": 90,
+      "post_window_seconds": 45,
+      "notes": "Near miss: config outage with cached fallbacks; borderline label."
+    },
+    {
+      "scenario_file": "deploy\\research-lab\\scenarios\\trainticket\\baselines\\baseline-normal-traffic.yaml",
+      "role": "negative_baseline",
+      "duration_seconds": 90,
+      "post_window_seconds": 45,
+      "notes": "Post-fault recovery baseline."
+    }
+  ]
+}

@@ -1,0 +1,85 @@
+schema_version: 1
+scenario_id: tt-auth-service-unavailable-critical
+title: Authentication service outage blocks logins and bookings
+description: >
+  ts-auth-service is scaled to zero replicas while booking traffic is
+  active. Every authenticated endpoint (booking, cancel, rebook, admin)
+  should fail. Direct analog of paymentservice-unavailable-critical from
+  the Online Boutique catalog.
+dataset_run_id: local-dev-run-001
+traffic_profile_id: trainticket-booking-mix
+environment: research-local
+jira_candidate: true
+expected_jira:
+  issue_type: Incident
+  priority: Critical
+  components:
+    - ts-auth-service
+    - ts-user-service
+    - ts-ui-dashboard
+  labels:
+    - synthetic-incident
+    - dependency-failure
+    - ts-auth-service
+    - trainticket
+    - telemetry-linked
+  summary_template: "Authentication outage caused login and booking failures"
+  description_template: |
+    Synthetic lab issue generated from scenario tt-auth-service-unavailable-critical.
+
+    ts-auth-service capacity was removed while booking traffic was active. This
+    should create user-visible login and booking failures through the
+    ts-ui-dashboard and ts-gateway-service traces.
+fault:
+  fault_id: tt-auth-service-scale-zero-001
+  fault_type: dependency_outage
+  affected_service: ts-auth-service
+  suggested_mechanism: scale ts-auth-service to zero replicas during booking traffic
+  expected_start_offset_seconds: 300
+  expected_duration_seconds: 600
+  blast_radius:
+    user_visible: true
+    expected_error_rate: high
+    expected_latency_impact: medium
+labels:
+  severity: critical
+  incident_type: outage
+  root_cause_category: dependency_failure
+  should_alert: true
+  should_create_jira_shadow_issue: true
+execution:
+  action: ScaleDeployment
+  namespace: trainticket
+  target_kind: deployment
+  target_name: ts-auth-service
+  replicas: 0
+  restore_replicas: 1
+triage:
+  schema_version: 1
+  scenario_family: tt-auth-outage
+  per_window:
+    pre_fault_baseline:
+      triage_label: noise
+      triage_severity: null
+      triage_components: null
+      triage_reason_class: null
+      is_hard_case: false
+      rationale: "Pre-fault baseline; auth service still healthy."
+    active_fault:
+      triage_label: ticket_worthy
+      triage_severity: critical
+      triage_components:
+        - ts-auth-service
+        - ts-user-service
+        - ts-ui-dashboard
+      triage_reason_class: dependency_failure
+      is_hard_case: false
+      rationale: "Customer-visible login and booking failures during auth outage."
+    recovery_window:
+      triage_label: borderline
+      triage_severity: minor
+      triage_components:
+        - ts-auth-service
+      triage_reason_class: dependency_failure
+      is_hard_case: true
+      rationale: "Recovery may show residual login errors before token caches refresh."

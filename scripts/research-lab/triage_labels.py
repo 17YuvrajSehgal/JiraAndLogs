@@ -63,6 +63,18 @@ SCENARIO_FAMILIES: dict[str, str] = {
     "frontend-cpu-nearmiss": "frontend-traffic-pressure",
     "loadgenerator-traffic-spike-nearmiss": "frontend-traffic-pressure",
     "loadgenerator-noisy-high-traffic-nearmiss": "frontend-traffic-pressure",
+    # TrainTicket scenarios (see deploy/research-lab/scenarios/trainticket/).
+    # Family names are prefixed `tt-` so train-ticket and Online Boutique
+    # can coexist in the corpus without family collisions.
+    "tt-baseline-normal-traffic": "tt-baseline-normal",
+    "tt-auth-service-unavailable-critical": "tt-auth-outage",
+    "tt-preserve-service-unavailable-critical": "tt-booking-outage",
+    "tt-order-service-pod-restart-major": "tt-booking-restart",
+    "tt-payment-service-pod-restart-major": "tt-payment-restart",
+    "tt-travel-service-unavailable-major": "tt-search-outage",
+    "tt-station-service-unavailable-major": "tt-search-outage",
+    "tt-ui-dashboard-pod-restart-major": "tt-frontend-restart",
+    "tt-config-service-unavailable-nearmiss": "tt-config-nearmiss",
 }
 
 # Fault-type compatibility classes used for memory-match ground truth.
@@ -192,11 +204,13 @@ def load_scenario_yaml(path: Path) -> dict[str, Any] | None:
 
 def scenario_yaml_path(scenarios_root: Path, scenario_id: str) -> Path | None:
     """Find the YAML file for a scenario_id under scenarios_root.
-    Searches baselines/, faults/, and the root."""
+    Searches baselines/, faults/, the trainticket/ subtree, and the root."""
     candidates = [
         scenarios_root / f"{scenario_id}.yaml",
         scenarios_root / "faults" / f"{scenario_id}.yaml",
         scenarios_root / "baselines" / f"{scenario_id}.yaml",
+        scenarios_root / "trainticket" / "faults" / f"{scenario_id}.yaml",
+        scenarios_root / "trainticket" / "baselines" / f"{scenario_id}.yaml",
     ]
     for candidate in candidates:
         if candidate.exists():

@@ -1,0 +1,77 @@
+schema_version: 1
+scenario_id: tt-order-service-pod-restart-major
+title: Order service pod restart disrupts in-flight bookings
+description: >
+  ts-order-service pods are deleted while booking flow traffic is active.
+  Customer-visible booking failures expected for ~30-60s while the new
+  pod registers with nacos.
+dataset_run_id: local-dev-run-001
+traffic_profile_id: trainticket-booking-mix
+environment: research-local
+jira_candidate: true
+expected_jira:
+  issue_type: Incident
+  priority: Major
+  components:
+    - ts-order-service
+    - ts-preserve-service
+    - ts-ui-dashboard
+  labels:
+    - synthetic-incident
+    - service-restart
+    - trainticket
+    - telemetry-linked
+  summary_template: "Order service restart disrupted booking flow"
+  description_template: |
+    Synthetic lab issue from scenario tt-order-service-pod-restart-major.
+    ts-order-service pods restarted; in-flight reservations failed during
+    re-registration with nacos.
+fault:
+  fault_id: tt-order-service-restart-001
+  fault_type: pod_restart
+  affected_service: ts-order-service
+  suggested_mechanism: kubectl delete pod -l app=ts-order-service
+  expected_start_offset_seconds: 300
+  expected_duration_seconds: 120
+  blast_radius:
+    user_visible: true
+    expected_error_rate: medium
+    expected_latency_impact: medium
+labels:
+  severity: major
+  incident_type: service_restart
+  root_cause_category: pod_restart
+  should_alert: true
+  should_create_jira_shadow_issue: true
+execution:
+  action: RestartPods
+  namespace: trainticket
+  selector: app=ts-order-service
+triage:
+  schema_version: 1
+  scenario_family: tt-booking-restart
+  per_window:
+    pre_fault_baseline:
+      triage_label: noise
+      triage_severity: null
+      triage_components: null
+      triage_reason_class: null
+      is_hard_case: false
+      rationale: "Pre-fault baseline; order service healthy."
+    active_fault:
+      triage_label: ticket_worthy
+      triage_severity: major
+      triage_components:
+        - ts-order-service
+        - ts-preserve-service
+      triage_reason_class: restart_with_impact
+      is_hard_case: false
+      rationale: "Booking-flow failures during order service restart."
+    recovery_window:
+      triage_label: borderline
+      triage_severity: minor
+      triage_components:
+        - ts-order-service
+      triage_reason_class: restart_with_impact
+      is_hard_case: true
+      rationale: "Residual errors as nacos re-registers the new pod."
