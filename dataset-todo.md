@@ -922,6 +922,14 @@ lives in `microservice-changes-todo.md`. M0 decisions are recorded in
         `-PythonExe python3`; triage labels {noise:16, ticket_worthy:7,
         borderline:7} per run — identical distribution, suggesting
         deterministic scenario labelling.
+
+        **Optional upgrade available**: a more rigorous "3 runs per
+        plan family" corpus
+        (`deploy/research-lab/corpora/dataset-v5-pilot.json`, 9 runs ×
+        ~10h) was authored on 2026-05-24 and launched but stopped at
+        4 of 6 episodes of control-r01 (per user request). Re-run when
+        a ~10h compute window is available — see M5.2b note in
+        `microservice-changes-todo.md` for the resume command.
   - [x] **D13.14c** (2026-05-24) M5.2c sizing under real v5 load:
         - **Collector (M0.4): HELD.** Both replicas stayed Running with
           0 restarts across the 3h pilot. Resource limits cpu=2/mem=2Gi

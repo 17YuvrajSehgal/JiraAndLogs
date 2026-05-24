@@ -15,7 +15,7 @@
 | M2 Logging | **complete** | L1 shared interceptors across Go/.NET/Node/Python; L2 dep-error logs at Redis + every gRPC client boundary; L3 emits 4 business events |
 | M3 Trace enrichment | **complete** | RecordError/SetStatus on every error path across 5 languages; dep child spans with semantic-convention attrs; sampling divergence documented |
 | M4 Metrics | **complete** (1 follow-up) | /metrics on every service; RED + client metrics via shared interceptors; 5 business counters; Node runtime gauges open follow-up |
-| M5 Validation | **complete** local, **pending** cloud pilot | D13.14a fleet rollout live; D13.14b (cloud pilot) is the remaining user-triggered step |
+| M5 Validation | **complete** local; **partial** cloud pilot (4 of 9 corpus runs touched, stopped 2026-05-24 23:50 UTC per user) | D13.14a fleet rollout live; D13.14b corpus paused — resume command and existing-data inventory in M5.2b below |
 
 See "Remaining work" near the bottom for the small open follow-ups.
 
@@ -508,11 +508,29 @@ Per `microservice-changes.md` "Updated recommended validation path":
       separate HTTP/1 metrics port 9100), paymentservice/currencyservice
       to `v5.0.0-otel-pilot2` (host-metrics added). All three live and
       verified on `jira-telemetry-lab` kind cluster.
-- [ ] **M5.2b** **PENDING.** 1-day cloud VM pilot collecting 3 runs per
-      v5-plan family on the upgraded telemetry. Runs on this GCP VM's
-      kind cluster (this VM IS the cloud VM per
-      `docs/gcp-production-dataset-vm-runbook.md`). Tracked as D13.14b.
-      User-triggered step.
+- [~] **M5.2b** **PARTIAL — pilot launched + stopped per user request
+      2026-05-24 23:50 UTC.** Definitive corpus
+      `deploy/research-lab/corpora/dataset-v5-pilot.json` (9 runs: 3
+      control + 3 compact-a + 3 compact-b). Detached launcher
+      `/tmp/v5-pilot-launcher-v2.sh` waited for two parallel pilots
+      (`2026-05-24-v5-pilot-r01..r04-followup` from earlier sessions)
+      to release Loki/Tempo port-forwards, then started corpus
+      collection at 23:22 UTC. Got 4 of 6 control episodes into
+      `2026-05-24-dataset-v5-pilot-20260524T232232Z-control-r01` before
+      user-requested stop. ETA for the full 9 runs was ~10h (1 day,
+      matching the M5.2b spec).
+
+      **To resume:** rerun
+      `pwsh -NoProfile -File scripts/research-lab/collect-dataset-corpus.ps1 -CorpusFile deploy/research-lab/corpora/dataset-v5-pilot.json -PythonExe python3 -ForceNewRun`
+      when there's a clear ~10h compute window. Make sure no
+      kubectl port-forwards from prior sessions are alive — use
+      `pgrep -af "kubectl.*port-forward"` to check, kill any leftovers
+      before starting.
+
+      **Existing run data** (from earlier and current sessions) covers
+      enough scenarios to do a first-pass L1/L2/Tempo cross-check
+      against the upgraded images: r01..r04-followup (4 runs × 5
+      episodes) + control-r01-partial (4 episodes) + smoke (5 episodes).
 - [ ] **M5.2c** Confirm collector capacity (M0.4) + Loki sizing (M0.5)
       hold under real v5 load — depends on D13.14b. Tracked as D13.14c.
 - [~] **M5.2d** L1/L2/Tempo cross-check **validator built** at
@@ -574,13 +592,20 @@ services and across the M3/M4 streams once M1 is done.
 
 ## Remaining work (post 2026-05-24 batch update)
 
-Substantially everything in M0–M5 except M5.2b (cloud pilot collection)
-is done and committed. Open follow-ups:
+Substantially everything in M0–M5 is done and committed. Open follow-ups:
 
-- [ ] **M5.2b** Run a 1-day cloud pilot on this VM's kind cluster
-      (D13.14b in `dataset-todo.md`). 3 runs per v5-plan family on the
-      upgraded telemetry. **User-triggered** — kicks off via the
-      existing collection scripts.
+- [~] **M5.2b** **Pilot launched + stopped 2026-05-24 23:50 UTC** per
+      user request to free the VM. Got control-r01 to 4 of 6 episodes
+      using corpus `deploy/research-lab/corpora/dataset-v5-pilot.json`.
+      Resume command:
+      ```
+      pwsh -NoProfile -File scripts/research-lab/collect-dataset-corpus.ps1 \
+        -CorpusFile deploy/research-lab/corpora/dataset-v5-pilot.json \
+        -PythonExe python3 -ForceNewRun
+      ```
+      Needs a ~10h compute window. Make sure no kubectl port-forwards
+      are alive first (`pgrep -af "kubectl.*port-forward"`); race against
+      them was the failure mode during this session.
 - [x] **D13.14d-followup** ✅ (2026-05-24) cartservice Program.cs now
       uses `AddJsonConsole(IncludeScopes=true)`; RpcLoggingInterceptor
       emits via a structured-logging message template so trace_id /
