@@ -700,15 +700,25 @@ lives in `microservice-changes-todo.md`. M0 decisions are recorded in
         on Linux pass `-PythonExe python3` (Linux only has `python3`,
         no `python` alias by default on this image).
 
-- [ ] **D13.13a** (added 2026-05-24) Refine the M5.1 gate criterion to
-      use relative lift before re-running it on the cloud pilot.
-      Proposed replacement: `pilot_mean / baseline_mean >= 2.0` AND
-      `pilot_nonzero_frac >= 0.8` AND `pilot_min >= baseline_p50`. The
-      current absolute-threshold criterion (`baseline < 0.1`) can't
-      distinguish "no upgrade" from "the window-level trace_error_count
-      feature aggregates cross-service errors", which is why a clear
-      3× lift looked like a fail. Implement in
+- [x] **D13.13a** (2026-05-24) Refined M5.1 gate criterion implemented in
       `scripts/research-lab/validate_cartservice_telemetry_upgrade.py`.
+      New criterion (relative lift, all three required):
+      1. `pilot_mean / baseline_mean >= 2.0` (with `baseline_mean == 0`
+         treated as "any pilot signal is infinite lift, PASS").
+      2. `pilot_nonzero_frac >= 0.8`.
+      3. `pilot_min >= baseline_p50`.
+
+      Verified against existing 2026-05-24 pilot data:
+      - Positive case (m5-1 pilot vs v4-large compact-a baseline):
+        ratio=**3.05×**, nonzero=**1.000**, min=275 ≥ p50=83 → **GATE PASS**
+        (exit 0).
+      - Negative control (v4-large as "pilot" vs m5-1 as "baseline"):
+        ratio=0.33×, nonzero=0.500, min=0 < p50=277.5 → GATE FAIL
+        (exit 1; all 3 sub-checks correctly fail).
+
+      Legacy absolute criterion still printed for transparency but no
+      longer gates. Module docstring updated; PR-AUC piece (criterion b)
+      still deferred to manual comparison-harness run.
 
 - [~] **D13.14** Phase M5.2 — local rollout DONE; cloud pilot PENDING.
 
@@ -810,8 +820,9 @@ Putting them here so they're not buried in chat history.
 - D13.13: gate ran, accepted as PASS by user judgment (relative-lift
   evidence, not harness criterion). Source-code bugs from the prior
   Windows session fixed in-tree.
-- D13.13a: gate-criterion refinement queued — implement before the
-  cloud pilot re-runs the gate.
+- D13.13a: gate-criterion refinement DONE; new relative-lift criterion
+  is live in the validator and verified PASS on existing pilot data,
+  FAIL on negative control.
 - D13.14a: fleet rolled out on local kind cluster, all 9 modified
   services running with `v5.0.0-otel-pilot`, telemetry shape verified
   by log sample.

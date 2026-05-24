@@ -4,8 +4,18 @@
 Computes the M5.1 validation metrics:
 
   (a) trace_error_count distribution on cartservice active_fault windows
-      from the pilot runs vs the v4-large baseline runs.
-  (b) loganalyzer PR-AUC on the cart-redis family slice, pilot vs baseline.
+      from the pilot runs vs the v4-large baseline runs. The gate uses a
+      RELATIVE-LIFT criterion (D13.13a, 2026-05-24) that requires all of:
+        1. pilot_mean / baseline_mean >= 2.0
+        2. pilot_nonzero_frac >= 0.8
+        3. pilot_min >= baseline_p50
+      Rationale: the original absolute-threshold criterion (pilot
+      nonzero_frac >= 0.5 AND baseline < 0.1) misled the first gate run
+      because client-side spans of OTHER services were already firing
+      errors on cartservice/active_fault windows, so baseline was 0.5
+      not <0.1. See dataset-todo.md D13.13/D13.13a.
+  (b) loganalyzer PR-AUC on the cart-redis family slice, pilot vs baseline
+      — deferred to manual comparison harness.
 
 Prints the GATE decision and writes a per-run report.
 
@@ -117,19 +127,65 @@ def main() -> int:
     print(f"{'n windows':20}  {baseline_stats['n']:>12}  {pilot_stats['n']:>12}")
     print(f"{'nonzero fraction':20}  {baseline_stats['nonzero_frac']:>12.3f}  {pilot_stats['nonzero_frac']:>12.3f}")
     print(f"{'mean':20}  {baseline_stats['mean']:>12.2f}  {pilot_stats['mean']:>12.2f}")
+    print(f"{'p50 (median)':20}  {baseline_stats.get('median', 0.0):>12.2f}  {pilot_stats.get('median', 0.0):>12.2f}")
+    print(f"{'min':20}  {baseline_stats['min']:>12.2f}  {pilot_stats['min']:>12.2f}")
     print(f"{'max':20}  {baseline_stats['max']:>12.2f}  {pilot_stats['max']:>12.2f}")
     print()
 
-    # Gate evaluation
-    # (a) trace_error_count now fires: nonzero_frac in pilot is >= 0.5
-    #     AND baseline nonzero_frac was < 0.1
-    trace_fires = (pilot_stats["nonzero_frac"] >= 0.5
-                   and baseline_stats["nonzero_frac"] < 0.1)
+    # --- Gate criterion (D13.13a, 2026-05-24) ---
+    #
+    # The original absolute-threshold check (pilot_nonzero_frac >= 0.5 AND
+    # baseline_nonzero_frac < 0.1) misled us during the 2026-05-24 gate run:
+    # it assumed pre-upgrade cartservice traces were invisible, but in fact
+    # client-side spans of frontend/checkout already recorded errors when
+    # cartservice failed, so baseline_nonzero_frac was 0.5 (not <0.1). The
+    # absolute check therefore couldn't distinguish "no upgrade" from "the
+    # window feature aggregates cross-service errors".
+    #
+    # The relative-lift criterion below requires that the upgrade clears
+    # all three of: (1) mean trace_error_count at least doubles, (2) every
+    # cartservice/active_fault window now fires (>=80%), (3) the pilot's
+    # worst window beats the baseline's median. (3) catches the case where
+    # the mean rose only because of a tail of strongly-affected windows
+    # while the typical window stayed silent.
+    pilot_mean = pilot_stats["mean"]
+    baseline_mean = baseline_stats["mean"]
+    pilot_nz = pilot_stats["nonzero_frac"]
+    pilot_min = pilot_stats["min"]
+    baseline_p50 = baseline_stats.get("median", 0.0)
 
-    print("--- GATE evaluation ---")
-    print(f"(a) trace_error_count newly fires on cartservice active_fault: "
-          f"{'YES' if trace_fires else 'no'}")
-    print("    (criterion: pilot nonzero_frac >= 0.5 AND baseline < 0.1)")
+    # mean-ratio: if baseline is zero, "any pilot signal" qualifies as
+    # infinite lift (going from invisible to visible is the original M5.1
+    # intent and shouldn't fail just because of the divisor).
+    if baseline_mean > 0:
+        mean_ratio = pilot_mean / baseline_mean
+        mean_ratio_pass = mean_ratio >= 2.0
+        mean_ratio_str = f"{mean_ratio:.2f}x"
+    else:
+        mean_ratio = float("inf") if pilot_mean > 0 else 0.0
+        mean_ratio_pass = pilot_mean > 0
+        mean_ratio_str = "inf (baseline 0)" if pilot_mean > 0 else "0 (no signal)"
+
+    nz_pass = pilot_nz >= 0.8
+    floor_pass = pilot_min >= baseline_p50
+
+    relative_pass = mean_ratio_pass and nz_pass and floor_pass
+
+    # Keep the legacy absolute check around for transparency; it no longer
+    # gates anything.
+    legacy_absolute_pass = (pilot_nz >= 0.5 and baseline_stats["nonzero_frac"] < 0.1)
+
+    print("--- GATE evaluation (D13.13a relative-lift criterion) ---")
+    print(f"  (1) pilot_mean / baseline_mean = {mean_ratio_str}   "
+          f"(>= 2.0?  {'YES' if mean_ratio_pass else 'no'})")
+    print(f"  (2) pilot_nonzero_frac        = {pilot_nz:.3f}       "
+          f"(>= 0.8?  {'YES' if nz_pass else 'no'})")
+    print(f"  (3) pilot_min >= baseline_p50 = {pilot_min:.2f} >= {baseline_p50:.2f}   "
+          f"({'YES' if floor_pass else 'no'})")
+    print()
+    print(f"  Legacy absolute criterion ({'PASS' if legacy_absolute_pass else 'fail'}, "
+          "for reference; no longer gates):")
+    print("    pilot_nonzero_frac >= 0.5 AND baseline_nonzero_frac < 0.1")
     print()
     print("(b) loganalyzer PR-AUC on cart-redis family slice:")
     print("    DEFERRED — requires running")
@@ -140,11 +196,20 @@ def main() -> int:
     print("    phase0.5-full/report.md for the baseline number.")
     print()
 
-    if trace_fires:
-        print("GATE: PASS  (criterion (a) met — proceed with M5.2 fleet rollout)")
+    if relative_pass:
+        print("GATE: PASS  (relative-lift criterion met — proceed with M5.2 fleet rollout)")
         rc = 0
     else:
-        print("GATE: NEEDS REVIEW  (criterion (a) not met — investigate before M5.2)")
+        # Identify which sub-check failed so the user can see it without
+        # re-reading the table.
+        reasons = []
+        if not mean_ratio_pass:
+            reasons.append(f"mean_ratio={mean_ratio_str} below 2.0")
+        if not nz_pass:
+            reasons.append(f"pilot_nonzero_frac={pilot_nz:.3f} below 0.8")
+        if not floor_pass:
+            reasons.append(f"pilot_min={pilot_min:.2f} below baseline_p50={baseline_p50:.2f}")
+        print(f"GATE: FAIL  ({'; '.join(reasons)} — investigate before M5.2)")
         rc = 1
 
     # Write report file
@@ -161,11 +226,20 @@ def main() -> int:
             f"| n windows | {baseline_stats['n']} | {pilot_stats['n']} |\n"
             f"| nonzero fraction | {baseline_stats['nonzero_frac']:.3f} | {pilot_stats['nonzero_frac']:.3f} |\n"
             f"| mean | {baseline_stats['mean']:.2f} | {pilot_stats['mean']:.2f} |\n"
+            f"| p50 (median) | {baseline_stats.get('median', 0.0):.2f} | {pilot_stats.get('median', 0.0):.2f} |\n"
+            f"| min | {baseline_stats['min']:.2f} | {pilot_stats['min']:.2f} |\n"
             f"| max | {baseline_stats['max']:.2f} | {pilot_stats['max']:.2f} |\n\n"
-            f"## Gate\n\n"
-            f"- (a) trace_error_count newly fires: **{'YES' if trace_fires else 'no'}**\n"
-            f"- (b) PR-AUC delta on cart-redis family: deferred to manual comparison harness run\n\n"
-            f"Result: **{'PASS' if trace_fires else 'NEEDS REVIEW'}**\n",
+            f"## Gate (D13.13a relative-lift criterion)\n\n"
+            f"- (1) pilot_mean / baseline_mean = **{mean_ratio_str}** (>= 2.0? "
+            f"**{'YES' if mean_ratio_pass else 'no'}**)\n"
+            f"- (2) pilot_nonzero_frac = **{pilot_nz:.3f}** (>= 0.8? "
+            f"**{'YES' if nz_pass else 'no'}**)\n"
+            f"- (3) pilot_min >= baseline_p50 → {pilot_min:.2f} >= {baseline_p50:.2f} "
+            f"(**{'YES' if floor_pass else 'no'}**)\n\n"
+            f"Legacy absolute criterion ({'PASS' if legacy_absolute_pass else 'fail'}, "
+            "for reference; no longer gates).\n\n"
+            f"(b) PR-AUC delta on cart-redis family: deferred to manual comparison harness run.\n\n"
+            f"Result: **{'PASS' if relative_pass else 'FAIL'}**\n",
             encoding="utf-8",
         )
 
