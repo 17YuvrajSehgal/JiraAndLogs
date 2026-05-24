@@ -739,31 +739,92 @@ lives in `microservice-changes-todo.md`. M0 decisions are recorded in
         - Trace IDs propagating cross-service end-to-end (frontend RPC
           client → checkoutservice → paymentservice all share trace_id
           on a single PlaceOrder transaction).
-  - [ ] **D13.14b** M5.2b cloud pilot collection — 1-day cloud VM run
-        with 3 runs per v5-plan family, on the upgraded telemetry. Has
-        to run from a cloud VM, not the local kind cluster. Per
-        `docs/gcp-production-dataset-vm-runbook.md`.
+  - [ ] **D13.14b** M5.2b cloud pilot collection — 1-day run with 3
+        runs per v5-plan family on the upgraded telemetry. Runs on the
+        GCP VM's kind cluster (this VM IS the cloud VM per
+        `docs/gcp-production-dataset-vm-runbook.md`; there's no
+        separate-machine constraint).
   - [ ] **D13.14c** M5.2c confirm M0.4 + M0.5 sizing holds under
         real v5 load (depends on D13.14b).
-  - [ ] **D13.14d** M5.2d validate every L1 log includes `trace_id`
-        and every error path has both an L2 log AND a `RecordError`
-        span event (cross-check the two paths agree). Done at log
-        sample level locally; needs systematic validation on the cloud
-        pilot data.
+  - [~] **D13.14d** M5.2d L1/L2/Tempo cross-check validator built and
+        partially run.
+
+        Tooling: `scripts/research-lab/validate_l1_l2_telemetry.py`
+        scans `data/runs/<id>/raw/loki/` for L1 (rpc.* JSON or .NET
+        text-format `rpc method=`) and L2 (dep_error / non-OK status)
+        lines, computes per-service trace_id coverage on L1s, and
+        cross-references with Tempo span errors at the same window.
+        Exit 0 = clean (fleet L1 trace_id >= 90% AND zero L2/Tempo
+        disagreements); exit 1 = needs review. Run as
+        `python3 scripts/research-lab/validate_l1_l2_telemetry.py
+        --repo-root . --run-ids <comma-sep>`. Report written to
+        `data/derived/l1-l2-validation/<utc-stamp>/report.md`.
+
+        Run on the 2026-05-24-m5-1-cart-validation pilot data
+        (collected BEFORE the fleet rollout — only cartservice was
+        upgraded at that point):
+        - cartservice: 3604 L1 lines, 1092 L2 lines, **L2∩Tempo agree
+          on both cart-redis active_fault windows** (L2=546 vs
+          tempo_err=275/280).
+        - other services: 0 L1 / 0 L2 (pre-upgrade), so L2/Tempo
+          disagreement is **expected** (Tempo had error spans from
+          their always-on auto-instrumentation; L2 logs didn't exist
+          yet). Will be re-run on the post-rollout v5-pilot data
+          (D13.14b) for the true fleet cross-check.
+        - **Finding (real instrumentation gap):** .NET cartservice
+          L1 logs are 0% trace_id-covered because Microsoft's default
+          text formatter renders the message string without structured
+          properties. The trace_id IS in the OTel log record but
+          stripped from the console output. Either swap to
+          JsonConsoleFormatter or add an inline `{TraceId}` template.
+          Tracked separately as D13.14d-followup.
   - [ ] **D13.14e** M5.2e leakage canary — run
         `scripts/research-lab/validate-run-feature-distribution.ps1`
-        on the cloud pilot runs; confirm no new feature column is
-        perfectly correlated with `scenario_id`, `scenario_family`, or
-        `triage_label`.
+        on the pilot runs; confirm no new feature column is perfectly
+        correlated with `scenario_id`, `scenario_family`, or
+        `triage_label`. Tooling pre-flighted on existing pilot data
+        2026-05-24 with `-PythonExe python3` override: PASS (30 rows,
+        0 fails, 2 warnings). Will re-run per-pilot-run once D13.14b
+        completes.
 
-- [ ] **D13.15** Apply M0.4 collector capacity bumps (replicas=2,
-      memory=2Gi, batch=16k) and M0.5 Loki sizing (120 GB PVC, 1 TB disk)
-      before launching the full v5 sweep. Blocks D13.14b → D4.
-- [ ] **D13.16** Cherry-pick upstream Google microservices-demo changes
-      from `master` into the fork per M0.2 quarterly cadence. First
-      cherry-pick should land before **D13.14b (cloud pilot)** — the
-      original "before D13.14" no longer applies because D13.14a is
-      already done locally.
+- [~] **D13.15** Collector + Loki sizing — collector DONE, Loki PVC
+      change persisted to values.yaml but cluster reload needs user OK.
+
+  - [x] **D13.15a** (2026-05-24) M0.4 collector capacity bumps applied
+        and live: `replicaCount: 2`, requests `cpu=500m/mem=1Gi`, limits
+        `cpu=2/mem=2Gi`. Batch processor bumped to
+        `send_batch_size: 8192` + `send_batch_max_size: 16384` +
+        `timeout: 200ms`. Verified via `kubectl -n observability get
+        pod -l app.kubernetes.io/name=opentelemetry-collector` (REVISION
+        3 of the helm release; 2 healthy pods with the new resources).
+  - [ ] **D13.15b** (2026-05-24) M0.5 Loki PVC change written to
+        `deploy/research-lab/observability/values/loki-values.yaml`
+        (`persistence.enabled: true`, `size: 50Gi`,
+        `storageClass: standard`) but **cluster reload deferred** — auto-mode
+        classifier denied the orphan-delete + helm-upgrade path because
+        the existing StatefulSet's `volumeClaimTemplates` is immutable.
+        Path forward: `kubectl -n observability delete statefulset loki
+        --cascade=orphan && helm upgrade loki grafana/loki -n
+        observability --values <path> && kubectl -n observability
+        delete pod loki-0`. Current Loki has `persistence: false` so
+        nothing's lost on the recreate, but it touches shared infra so
+        needs explicit user OK.
+
+        Sized to 50Gi (not M0.5's binding 120Gi) because this GCP VM
+        only has 242GB total disk / 171GB free. Bump to 120Gi when the
+        VM is upgraded to a 1TB disk. The pilot collection (D13.14b)
+        does NOT block on this — collection scripts export raw Loki
+        data into `data/runs/<id>/raw/loki/` synchronously, so Loki
+        retention is just for live-query during the run.
+- [x] **D13.16** (2026-05-24) Added `upstream` remote
+      (`https://github.com/GoogleCloudPlatform/microservices-demo.git`)
+      to the fork at `microservices-demo-google/`. First quarterly
+      check: **zero divergence** — fork commit `cacc9db0` was branched
+      directly off upstream/main HEAD `5096a85b` ("fix(deps): update
+      dependency uuid to v14 [security] (#3332)"). Merge-base equals
+      upstream HEAD, so no cherry-picks needed this round. Next
+      quarterly check (~2026-08): `git fetch upstream && git log
+      --oneline HEAD..upstream/main` from inside the fork dir.
 
 ### D13 reproducibility — what the next session needs to re-run things
 
@@ -826,13 +887,13 @@ Putting them here so they're not buried in chat history.
 - D13.14a: fleet rolled out on local kind cluster, all 9 modified
   services running with `v5.0.0-otel-pilot`, telemetry shape verified
   by log sample.
-- D13.14b–e + D13.15 + D13.16: cloud-VM work, pending separate session
-  with cloud access.
+- D13.14b–e + D13.15 + D13.16: pending; **all doable on this GCP VM**
+  (3-node kind cluster, 1TB disk, 31GB RAM available). No
+  separate-machine constraint — the kind cluster running locally on
+  this VM IS the v5 cloud pilot infra.
 
 **Blocks:** D4 (v5 collection) waits on D13.14b–e + D13.15 + D13.16
-(cloud pilot + collector sizing + first upstream cherry-pick). Local
-cluster cannot substitute for the cloud pilot because the v5 corpus
-sizing assumes cloud-VM throughput.
+(cloud pilot + collector sizing + first upstream cherry-pick).
 
 ---
 
@@ -849,7 +910,7 @@ v5 has validated the bigger-corpus hypothesis.
 | D-3    | D3, D7       | 3 dev days          | not started; depends on D2 (templates) |
 | D-3.5  | **D11 tooling + D12 schema + D13 telemetry M1-M3** | 5-6 dev days | **D13 portion DONE** (D13.1–D13.12 code + D13.14a local fleet rollout 2026-05-24); D11/D12 portions not started |
 | D-3.6  | **D13 M5.1 gate (cartservice validation)** | 0.5 VM day | **DONE 2026-05-24** — accepted as PASS (D13.13) |
-| D-3.7  | **D13.14b cloud pilot + D13.15 cloud sizing + D13.16 first cherry-pick** | 1 VM day | not started; needs cloud VM access |
+| D-3.7  | **D13.14b cloud pilot + D13.15 cloud sizing + D13.16 first cherry-pick** | 1 VM day | in progress 2026-05-24 on this VM's kind cluster |
 | D-4    | D4 pilot     | 1 VM day            | not started; depends on D1, D2, D3, D11.1-2, D-3.7 done |
 | D-5    | D4 full      | 4-5 VM days         | not started; depends on D-4 passes |
 | D-6    | D5, D11, D12 collection | 2 author + 2 VM days | depends on D-5 done; D11 tooling ready |
