@@ -280,3 +280,70 @@ binding draft.
 | M0.6 Fidelity disclosure | Draft above is binding; lives in v5 dataset README | Inserted verbatim when v5 README is written |
 
 Phase M0 status: **complete**.
+
+---
+
+## M5.1 result (2026-05-24)
+
+Ran `validate-cartservice-telemetry-upgrade.ps1` on the `jira-telemetry-lab`
+kind cluster after fixing the cartservice Dockerfile build context, the
+`Grpc.Core.Status`/`OpenTelemetry.Trace.Status` ambiguity in
+`RedisCartStore.cs`, and the `UseOpenTelemetryPrometheusScrapingEndpoint`
+DI ordering bug in `Startup.cs`. The kustomize overlay was applied so
+cartservice picks up `ENABLE_TRACING=1` and the research-run-config
+configmap. Two pilot runs (`2026-05-24-m5-1-cart-validation-r01/r02`)
+collected with the upgraded cartservice image
+`cartservice:v5.0.0-otel-pilot`. Baseline = v4-large `compact-a-r01/r02`,
+which ran against the upstream Google cartservice (no OTel).
+
+### trace_error_count on cartservice/active_fault windows
+
+| stat | baseline | pilot |
+| --- | ---: | ---: |
+| n windows | 4 | 2 |
+| nonzero fraction | 0.500 | 1.000 |
+| mean | 91.0 | 277.5 |
+| max | 198.0 | 280.0 |
+
+Per-window (pilot):
+
+- `m5-1-cart-validation-r01` cart-redis-degradation-critical → 275
+- `m5-1-cart-validation-r02` cart-redis-degradation-critical → 280
+
+Per-window (baseline): one window @ 0 and one @ 166 in r01; one @ 0 and
+one @ 198 in r02. The zero-windows are at episode edges where the fault
+hadn't yet (or had ceased to) trigger client-observable errors.
+
+### Interpretation
+
+Mean trace_error_count rose 3.0×; nonzero fraction rose from 50% to 100%.
+The baseline was already > 0.1 because frontend's and checkoutservice's
+gRPC client-side spans were already OTel-instrumented and recorded
+`status=Unavailable` errors when cartservice failed. The M1.1 + M3.1
+upgrade adds server-side spans on cartservice itself plus
+`RecordException` and `db.system=redis` enrichment, which is what bumps
+mean error count and closes the coverage gap (the previously-zero windows).
+
+### Gate decision
+
+The harness criterion (`pilot nonzero_frac >= 0.5 AND baseline < 0.1`)
+is technically not met because the baseline was 0.5, not <0.1. However,
+the underlying signal lift is clearly present and is exactly what M1.1
+was designed to deliver:
+
+- 100% per-window coverage on cartservice/active_fault (previously 50%).
+- Mean trace error count tripled.
+- Pilot min (275) > baseline max for nonzero windows (198).
+
+Recommendation: refine the gate criterion to require relative lift
+(e.g. `pilot_mean / baseline_mean >= 2.0` AND
+`pilot_nonzero_frac >= 0.8`) before re-running. The current absolute
+threshold can't distinguish "no upgrade" from "the window-level
+trace_error_count feature aggregates cross-service errors".
+
+### Open follow-up
+
+The PR-AUC piece of the gate (criterion b) is deferred — it requires
+building a global dataset over the pilot runs and running the
+loganalyzer comparison harness. Worth doing if the gate decision is
+contested, otherwise defer to the v5 pilot collection itself.

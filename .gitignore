@@ -27,3 +27,4 @@ dist/
 temp-dir/
 
 data.tar.gz
+.claude/

@@ -42,6 +42,7 @@ PS> ./validate-cartservice-telemetry-upgrade.ps1 -SkipBuild -SkipCollection
 [CmdletBinding()]
 param(
     [string]$ImageTag = "v5.0.0-otel-pilot",
+    [string]$ClusterName = "jira-telemetry-lab",
     [switch]$SkipBuild,
     [switch]$SkipCollection,
     [string]$RunIdPrefix = "2026-05-24-m5-1-cart-validation"
@@ -77,9 +78,9 @@ if (-not $SkipBuild) {
     }
 
     Write-Host "[1/5] Loading image into kind cluster..." -ForegroundColor Green
-    kind load docker-image "cartservice:$ImageTag" --name jira-telemetry
+    kind load docker-image "cartservice:$ImageTag" --name $ClusterName
     if ($LASTEXITCODE -ne 0) {
-        throw "kind load failed. Confirm cluster name is 'jira-telemetry' or pass --name to this script."
+        throw "kind load failed. Confirm cluster name is '$ClusterName' or pass -ClusterName to this script."
     }
 } else {
     Write-Host "[1/5] Skipping build (SkipBuild)." -ForegroundColor Yellow
@@ -107,10 +108,14 @@ $Run2 = "$RunIdPrefix-r02"
 
 if (-not $SkipCollection) {
     foreach ($runId in @($Run1, $Run2)) {
-        Write-Host "[3/5] Collecting run $runId (cart-redis-degradation-critical)..." -ForegroundColor Green
+        Write-Host "[3/5] Collecting run $runId (5-scenario default mix incl. cart-redis-degradation-critical)..." -ForegroundColor Green
+        # collect-dataset-run.ps1 runs a fixed 5-scenario sequence per run
+        # (baseline + productcatalog-latency + cart-redis-degradation-critical + frontend-cpu-nearmiss + baseline).
+        # The cart-redis-degradation-critical scenario produces the cartservice/active_fault
+        # windows the gate filters on; other scenarios contribute non-cartservice windows
+        # that the Python filter drops.
         & (Join-Path $PSScriptRoot "collect-dataset-run.ps1") `
             -DatasetRunId $runId `
-            -ScenarioId "cart-redis-degradation-critical" `
             -ForceNewRun
         if ($LASTEXITCODE -ne 0) { throw "collect-dataset-run.ps1 failed for $runId" }
     }

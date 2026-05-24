@@ -646,34 +646,182 @@ lives in `microservice-changes-todo.md`. M0 decisions are recorded in
 - [x] **D13.12** Phase M3.3 span events: catalog.reload span event in
       productcatalogservice (the only real resilience-pattern code path
       in Online Boutique).
-- [ ] **D13.13** Gate: M5.1 PASS required. Criterion: `trace_error_count`
-      newly fires on cartservice active_fault windows (pilot nonzero_frac
-      >= 0.5; baseline < 0.1). If FAIL, debug M1.1 wiring before continuing.
-- [ ] **D13.14** Phase M5.2: collect v5 with the upgraded telemetry.
-      Documented build-context fixes are in
-      `docs/telemetry-implementation-build-notes.md`.
+- [x] **D13.13** Gate: M5.1 ran on `jira-telemetry-lab` kind cluster on
+      2026-05-24. Harness's absolute-threshold criterion technically
+      failed, but **accepted as PASS** by user judgment on the same date
+      based on the relative-lift evidence below.
+
+      | trace_error_count on cartservice/active_fault | baseline (v4-large compact-a-r01+r02, pre-upgrade) | pilot (m5-1-cart-validation-r01+r02, post-upgrade) |
+      | --- | ---: | ---: |
+      | n windows | 4 | 2 |
+      | nonzero fraction | 0.500 | **1.000** |
+      | mean | 91.0 | **277.5** (3.0× lift) |
+      | max | 198.0 | 280.0 |
+
+      Why the harness criterion (`pilot nonzero_frac >= 0.5 AND baseline
+      < 0.1`) is misleading: it assumed pre-upgrade cartservice traces
+      were invisible. They were partly visible — frontend and checkout
+      client-side gRPC spans recorded errors when cartservice gRPC
+      returned Unavailable, contributing to baseline `trace_error_count`
+      even with cartservice itself uninstrumented. The M1.1+M3.1 upgrade
+      adds server-side spans + `RecordException` + `db.system` tags,
+      which is what tripled the mean and closed the coverage gap.
+
+      Source-code bugs from the previous (Windows) session that had to
+      be fixed before any build worked (so a future session can search
+      for them):
+      - `cartservice/src/cartstore/RedisCartStore.cs` — `using
+        OpenTelemetry.Trace;` clashed with `Grpc.Core.Status` /
+        `Grpc.Core.StatusCode` on three `throw new RpcException(new
+        Status(...))` lines; fully qualified to `Grpc.Core`.
+      - `cartservice/src/Startup.cs` — `app.UseOpenTelemetryPrometheusScrapingEndpoint()`
+        was unconditional in `Configure()` while OTel registration in
+        `ConfigureServices()` is gated on `ENABLE_TRACING == "1"`;
+        without the env var, `MeterProvider` isn't in DI → startup
+        crash. Guarded `Configure()` with the same env check.
+      - `checkoutservice/main.go` — used `metric.` API without
+        importing `"go.opentelemetry.io/otel/metric"`. Added.
+      - Node services' shared `@hipstershop/rpc-logging` package
+        required its own `node_modules` because Node module resolution
+        from `/src/_shared-node/rpc-logging/` walks up from the symlink
+        target, never into the consumer service's tree. Dockerfile now
+        runs `npm install` inside `_shared-node/rpc-logging` during the
+        builder stage; final stage keeps `/src/<service>/...` paths
+        aligned with the builder so the npm-created symlink resolves.
+
+      Harness patches needed to run the gate on Linux (Windows-original
+      script had several portability issues):
+      - `scripts/research-lab/validate-cartservice-telemetry-upgrade.ps1`
+        now accepts `-ClusterName` (default `jira-telemetry-lab`) and
+        no longer passes the unsupported `-ScenarioId` arg to
+        `collect-dataset-run.ps1`.
+      - Build scripts (`build-ranking-dataset.ps1`,
+        `build-triage-dataset.ps1`) default `-PythonExe = "python"`;
+        on Linux pass `-PythonExe python3` (Linux only has `python3`,
+        no `python` alias by default on this image).
+
+- [ ] **D13.13a** (added 2026-05-24) Refine the M5.1 gate criterion to
+      use relative lift before re-running it on the cloud pilot.
+      Proposed replacement: `pilot_mean / baseline_mean >= 2.0` AND
+      `pilot_nonzero_frac >= 0.8` AND `pilot_min >= baseline_p50`. The
+      current absolute-threshold criterion (`baseline < 0.1`) can't
+      distinguish "no upgrade" from "the window-level trace_error_count
+      feature aggregates cross-service errors", which is why a clear
+      3× lift looked like a fail. Implement in
+      `scripts/research-lab/validate_cartservice_telemetry_upgrade.py`.
+
+- [~] **D13.14** Phase M5.2 — local rollout DONE; cloud pilot PENDING.
+
+  - [x] **D13.14a** M5.2a fleet rollout (local kind cluster
+        `jira-telemetry-lab`, 2026-05-24). All 9 modified services
+        running with `v5.0.0-otel-pilot` images: cartservice, adservice,
+        shippingservice, frontend, checkoutservice, productcatalogservice,
+        paymentservice, currencyservice, recommendationservice,
+        emailservice. Verified at the log level:
+        - M2.1 structured per-RPC logs emitting with `trace_id` and
+          `span_id` from all 5 languages (Go, .NET, Node, Python; Java
+          agent path covers adservice).
+        - M2.3 business events firing: `cart_size_changed` (cartservice),
+          `order_placed` with `item_count_bucket` (checkoutservice),
+          `payment_charged` (paymentservice),
+          `currency_conversion_completed` (currencyservice),
+          `recommendation_returned` (recommendationservice).
+        - Trace IDs propagating cross-service end-to-end (frontend RPC
+          client → checkoutservice → paymentservice all share trace_id
+          on a single PlaceOrder transaction).
+  - [ ] **D13.14b** M5.2b cloud pilot collection — 1-day cloud VM run
+        with 3 runs per v5-plan family, on the upgraded telemetry. Has
+        to run from a cloud VM, not the local kind cluster. Per
+        `docs/gcp-production-dataset-vm-runbook.md`.
+  - [ ] **D13.14c** M5.2c confirm M0.4 + M0.5 sizing holds under
+        real v5 load (depends on D13.14b).
+  - [ ] **D13.14d** M5.2d validate every L1 log includes `trace_id`
+        and every error path has both an L2 log AND a `RecordError`
+        span event (cross-check the two paths agree). Done at log
+        sample level locally; needs systematic validation on the cloud
+        pilot data.
+  - [ ] **D13.14e** M5.2e leakage canary — run
+        `scripts/research-lab/validate-run-feature-distribution.ps1`
+        on the cloud pilot runs; confirm no new feature column is
+        perfectly correlated with `scenario_id`, `scenario_family`, or
+        `triage_label`.
+
 - [ ] **D13.15** Apply M0.4 collector capacity bumps (replicas=2,
       memory=2Gi, batch=16k) and M0.5 Loki sizing (120 GB PVC, 1 TB disk)
-      before launching the full v5 sweep.
+      before launching the full v5 sweep. Blocks D13.14b → D4.
 - [ ] **D13.16** Cherry-pick upstream Google microservices-demo changes
       from `master` into the fork per M0.2 quarterly cadence. First
-      cherry-pick should land before D13.14.
+      cherry-pick should land before **D13.14b (cloud pilot)** — the
+      original "before D13.14" no longer applies because D13.14a is
+      already done locally.
+
+### D13 reproducibility — what the next session needs to re-run things
+
+These pointers are quoted-verbatim values the next session will need.
+Putting them here so they're not buried in chat history.
+
+- Pilot image tag: `cartservice:v5.0.0-otel-pilot` (and same tag for
+  each of the other 9 services).
+- Cluster name on the local VM that ran the gate: `jira-telemetry-lab`
+  (3 nodes: control-plane + worker + worker2). Cluster context:
+  `kind-jira-telemetry-lab`.
+- Build context for the modified Dockerfiles: **all 8 non-Java services
+  now build from `microservices-demo-google/src/` as the context root**,
+  invoked as `docker build -t <svc>:<tag> -f <svc>/Dockerfile .` (or
+  `cartservice/src/Dockerfile`). adservice still builds from its own
+  dir. See `docs/telemetry-implementation-build-notes.md` for rationale.
+- The kustomize overlay
+  `deploy/research-lab/online-boutique/kustomization.yaml` MUST be
+  applied (`pwsh scripts/research-lab/apply-online-boutique.ps1`) for
+  cartservice to receive `ENABLE_TRACING=1` and the
+  `research-run-config` configmap reference. The first kind-deploy on
+  this VM was done with raw upstream manifests, so the overlay had to
+  be applied before the cartservice rollout would succeed.
+- Pilot runs collected during the gate live in
+  `data/runs/2026-05-24-m5-1-cart-validation-r01/` and `-r02/` (and
+  matching `data/derived/...` trees). Baseline runs they compared
+  against: `2026-05-22-dataset-v4-large-compact-a-r01/r02`.
+- Validation report: `data/derived/2026-05-24-m5-1-cart-validation-r01/m5-1-validation-report.md`.
 
 **Acceptance:**
-- D13.11 GATE passes.
-- Every test-fixture RPC produces one L1 log line per direction.
-- Every error path produces both an L2 log AND a `RecordException` span event.
-- `curl <service>:<port>/metrics` returns RED + runtime metrics for every
-  service.
-- `promtool check metrics` clean — no unbounded cardinality.
-- `validate-run-feature-distribution.py` shows no new feature column
-  perfectly correlated with `scenario_id`, `scenario_family`, or
-  `triage_label` (leakage canary).
+- [x] **D13.13 gate passes** (accepted as PASS on 2026-05-24 based on
+  3× mean lift + 100% nonzero coverage; criterion-text refinement
+  tracked as D13.13a).
+- [~] Every test-fixture RPC produces one L1 log line per direction —
+  spot-confirmed on the local fleet 2026-05-24 (cartservice,
+  paymentservice, currencyservice, checkoutservice, frontend,
+  recommendationservice). Systematic validation on cloud pilot data
+  pending (D13.14d).
+- [~] Every error path produces both an L2 log AND a `RecordException`
+  span event — wired in code; systematic cross-check pending
+  (D13.14d).
+- [ ] `curl <service>:<port>/metrics` returns RED + runtime metrics
+  for every service — not yet end-to-end verified (some services
+  emit on the gRPC port, not a separate scrape port; the kustomize
+  overlay's prometheus.io annotations may need verification).
+- [ ] `promtool check metrics` clean — no unbounded cardinality. Not
+  yet run.
+- [ ] `validate-run-feature-distribution.py` shows no new feature
+  column perfectly correlated with `scenario_id`, `scenario_family`,
+  or `triage_label` (leakage canary). Pending D13.14e.
 
-**Status:** D13.1-D13.12 complete (all code changes); D13.13 (gate)
-pending user run; D13.14-D13.16 pending gate result + cluster access.
-**Blocks:** D4 (v5 collection) should use the upgraded telemetry; this
-phase lands before D4.
+**Status (2026-05-24):**
+- D13.1–D13.12: code changes complete.
+- D13.13: gate ran, accepted as PASS by user judgment (relative-lift
+  evidence, not harness criterion). Source-code bugs from the prior
+  Windows session fixed in-tree.
+- D13.13a: gate-criterion refinement queued — implement before the
+  cloud pilot re-runs the gate.
+- D13.14a: fleet rolled out on local kind cluster, all 9 modified
+  services running with `v5.0.0-otel-pilot`, telemetry shape verified
+  by log sample.
+- D13.14b–e + D13.15 + D13.16: cloud-VM work, pending separate session
+  with cloud access.
+
+**Blocks:** D4 (v5 collection) waits on D13.14b–e + D13.15 + D13.16
+(cloud pilot + collector sizing + first upstream cherry-pick). Local
+cluster cannot substitute for the cloud pilot because the v5 corpus
+sizing assumes cloud-VM throughput.
 
 ---
 
@@ -683,20 +831,21 @@ Adjudication and scenario authoring can run before any new collection.
 Topology diversity and continuous mode are higher-effort and best after
 v5 has validated the bigger-corpus hypothesis.
 
-| Sprint | Phases       | Cost                | Depends on      |
-| ------ | ------------ | ------------------- | --------------- |
-| D-1    | D0           | 3-5 reviewer days   | nothing         |
-| D-2    | D1, D2       | 2 author days       | nothing         |
-| D-3    | D3, D7       | 3 dev days          | D2 (templates)  |
-| D-3.5  | **D11 tooling + D12 schema + D13 telemetry M1-M3** | 5-6 dev days | nothing (chaos-mesh install + scenario schema + cartservice OTel) |
-| D-3.6  | **D13 M5.1 gate (cartservice validation)** | 0.5 VM day | D-3.5 done |
-| D-4    | D4 pilot     | 1 VM day            | D1, D2, D3, D11.1-2, D13 gate PASS |
-| D-5    | D4 full      | 4-5 VM days         | D-4 passes      |
-| D-6    | D5, D11, D12 collection | 2 author + 2 VM days | D-5 done; D11 tooling ready |
-| D-7    | D6           | 5 dev + 2 VM days   | D-5 done        |
-| D-8    | D8           | 2 dev + 1 VM day    | D-5 done        |
-| D-9    | D9           | 2 research days     | D-5 done        |
-| D-10   | D10          | 1 dev day           | D-5 done        |
+| Sprint | Phases       | Cost                | Status / Depends on |
+| ------ | ------------ | ------------------- | ------------------- |
+| D-1    | D0           | 3-5 reviewer days   | not started; no deps |
+| D-2    | D1, D2       | 2 author days       | not started; no deps |
+| D-3    | D3, D7       | 3 dev days          | not started; depends on D2 (templates) |
+| D-3.5  | **D11 tooling + D12 schema + D13 telemetry M1-M3** | 5-6 dev days | **D13 portion DONE** (D13.1–D13.12 code + D13.14a local fleet rollout 2026-05-24); D11/D12 portions not started |
+| D-3.6  | **D13 M5.1 gate (cartservice validation)** | 0.5 VM day | **DONE 2026-05-24** — accepted as PASS (D13.13) |
+| D-3.7  | **D13.14b cloud pilot + D13.15 cloud sizing + D13.16 first cherry-pick** | 1 VM day | not started; needs cloud VM access |
+| D-4    | D4 pilot     | 1 VM day            | not started; depends on D1, D2, D3, D11.1-2, D-3.7 done |
+| D-5    | D4 full      | 4-5 VM days         | not started; depends on D-4 passes |
+| D-6    | D5, D11, D12 collection | 2 author + 2 VM days | depends on D-5 done; D11 tooling ready |
+| D-7    | D6           | 5 dev + 2 VM days   | depends on D-5 done |
+| D-8    | D8           | 2 dev + 1 VM day    | depends on D-5 done |
+| D-9    | D9           | 2 research days     | depends on D-5 done |
+| D-10   | D10          | 1 dev day           | depends on D-5 done |
 
 D-1, D-2 and D-3.5 are pure-thinking-and-writing-and-tooling sprints -
 they can start today and run in parallel with the existing `todo.md`
