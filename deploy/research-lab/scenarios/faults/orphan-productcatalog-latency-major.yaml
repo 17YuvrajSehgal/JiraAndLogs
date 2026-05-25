@@ -1,0 +1,74 @@
+schema_version: 1
+scenario_id: orphan-productcatalog-latency-major
+title: Productcatalog latency — orphan (real fault, no Jira filed)
+description: >
+  Identical fault to `productcatalog-latency-major` (productcatalog
+  briefly unavailable simulating latency) but no shadow Jira is filed.
+  D12 near-twin orphan.
+dataset_run_id: local-dev-run-001
+traffic_profile_id: baseline-checkout-mix
+environment: research-local
+jira_candidate: true
+produces_jira_ticket: false
+expected_jira:
+  issue_type: None
+  priority: None
+  components:
+    - productcatalogservice
+    - frontend
+  labels:
+    - synthetic-orphan
+    - service-latency
+    - no-jira-by-design
+fault:
+  fault_id: orphan-productcatalog-latency-001
+  fault_type: service_latency
+  affected_service: productcatalogservice
+  suggested_mechanism: scale productcatalog to 0 — same as the reported twin
+  expected_start_offset_seconds: 300
+  expected_duration_seconds: 240
+  blast_radius:
+    user_visible: true
+    expected_error_rate: medium
+    expected_latency_impact: high
+labels:
+  severity: major
+  incident_type: degradation
+  root_cause_category: service_latency
+  should_alert: true
+  should_create_jira_shadow_issue: true
+execution:
+  action: ScaleDeployment
+  namespace: online-boutique-research
+  target_kind: deployment
+  target_name: productcatalogservice
+  replicas: 0
+  restore_replicas: 1
+triage:
+  schema_version: 1
+  scenario_family: productcatalog-latency
+  per_window:
+    pre_fault_baseline:
+      triage_label: noise
+      triage_severity: null
+      triage_components: null
+      triage_reason_class: null
+      is_hard_case: false
+      rationale: "Pre-fault baseline."
+    active_fault:
+      triage_label: ticket_worthy
+      triage_severity: major
+      triage_components:
+        - productcatalogservice
+        - frontend
+      triage_reason_class: latency_regression
+      is_hard_case: true
+      rationale: "Identical to productcatalog-latency-major but no Jira filed."
+    recovery_window:
+      triage_label: borderline
+      triage_severity: minor
+      triage_components:
+        - productcatalogservice
+      triage_reason_class: latency_regression
+      is_hard_case: true
+      rationale: "Recovery may carry residual latency."

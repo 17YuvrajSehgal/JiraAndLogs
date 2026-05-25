@@ -1,8 +1,8 @@
 {
   "schema_version": 1,
   "corpus_id": "dataset-v5-large",
-  "title": "Dataset v5 large — 100-run production-scale corpus with 21 families on upgraded telemetry",
-  "description": "Per dataset-todo.md Phase D4.1 sizing: 100 runs = 8 control + 30 compact-a + 30 compact-b + 12 new-families-a + 12 new-families-b + 8 long-running. Builds on v4-large's 13 families with 8 new D1 families: post-deploy-churn, recovered-in-window, single-pod-restart-healthy-replication, third-party-blip, scheduled-job-spike, latency-near-miss-partial-recovery, flapping-pod, slow-leak-saturation. Collected against the M0-M5 upgraded telemetry layer (L1 shared interceptors, L2 dep-error logs, L3 business events, RecordError fleet-wide, RED + per-dependency + business + runtime metrics, PVC-backed Loki). Estimated runtime: 4-5 days on the GCP VM.",
+  "title": "Dataset v5 large — 100-run production-scale corpus with 22 families on upgraded telemetry",
+  "description": "Per dataset-todo.md Phase D4.1 sizing: 100 runs = 8 control + 17 compact-a + 17 compact-b + 12 new-families-a + 12 new-families-b + 9 long-running + 25 orphans. Builds on v4-large's 13 families with 8 new D1 families (post-deploy-churn, recovered-in-window, single-pod-restart-healthy-replication, third-party-blip, scheduled-job-spike, latency-near-miss-partial-recovery, flapping-pod, slow-leak-saturation) PLUS one new D12 family (email-outage from far-orphan emailservice-flake) for 22 families total. 25 orphan runs contribute 200 orphan ticket_worthy windows, meeting the D12 acceptance threshold. Collected against the M0-M5 upgraded telemetry layer (L1 shared interceptors, L2 dep-error logs, L3 business events, RecordError fleet-wide, RED + per-dependency + business + runtime metrics, PVC-backed Loki). Estimated runtime: 4-5 days on the GCP VM.",
   "locked_baseline": null,
   "development_stage": "v5 production-scale corpus",
   "default_dataset_run_prefix": "2026-05-25-dataset-v5-large",
@@ -15,16 +15,18 @@
     "why_batch_collection": "Batch-of-4 first to confirm the new D1 plans run cleanly end-to-end against the upgraded telemetry. Batch-of-10 thereafter so a single-run failure doesn't waste a half-day. The 8 long-running runs are split across the schedule so any leak-scenario harness bug surfaces early instead of after 5 days.",
     "expected_full_scale": {
       "dataset_runs": 100,
-      "scenario_families": 21,
+      "scenario_families": 22,
       "episodes_per_control_run": 6,
       "episodes_per_compact_a_run": 10,
       "episodes_per_compact_b_run": 13,
       "episodes_per_new_families_a_run": 12,
       "episodes_per_new_families_b_run": 8,
       "episodes_per_long_running_run": 4,
-      "total_episodes": "approx 1064",
-      "total_telemetry_windows": "approx 8000",
-      "long_window_episodes": "approx 96 (long-running's 2 fault episodes per run x 8 runs x 3 windows; D4.1 target was >=100)"
+      "episodes_per_orphan_run": 10,
+      "total_episodes": "approx 950",
+      "total_telemetry_windows": "approx 7600",
+      "long_window_episodes": "approx 108 (long-running's 2 fault episodes per run x 9 runs x 6 windows incl. extended observation)",
+      "orphan_ticket_worthy_windows": "200 (25 orphan runs x 8 orphan ticket_worthy windows per run; meets D12 acceptance threshold)"
     }
   },
   "plans": [
@@ -37,13 +39,13 @@
     {
       "plan_alias": "compact-a",
       "plan_file": "deploy\\research-lab\\run-plans\\dataset-v3-diverse-compact-a.json",
-      "repeat": 30,
+      "repeat": 17,
       "purpose": "Latency, dependency outage, restart, Redis degradation, bad configuration, near-miss coverage from the v4 family set."
     },
     {
       "plan_alias": "compact-b",
       "plan_file": "deploy\\research-lab\\run-plans\\dataset-v3-diverse-compact-b.json",
-      "repeat": 30,
+      "repeat": 17,
       "purpose": "Service-diverse outages, frontend and Redis restarts, intermittent Redis failure, noisy traffic coverage from the v4 family set."
     },
     {
@@ -61,8 +63,14 @@
     {
       "plan_alias": "long-running",
       "plan_file": "deploy\\research-lab\\run-plans\\dataset-v5-long-running.json",
-      "repeat": 8,
+      "repeat": 9,
       "purpose": "v5 D1.8 slow-leak-saturation. ~30 minutes per run; contributes the long-window (>=10 min) episodes required by dataset-todo sizing."
+    },
+    {
+      "plan_alias": "orphans",
+      "plan_file": "deploy\\research-lab\\run-plans\\dataset-v5-orphans.json",
+      "repeat": 25,
+      "purpose": "Phase D12: 6 near-twin + 2 far orphan scenarios with produces_jira_ticket:false. 8 orphan ticket_worthy windows per run x 25 runs = 200 orphan windows, meeting the D12 acceptance threshold. Enables the orphan_fault_detection benchmark track and the orphan-detection recall gap metric."
     }
   ],
   "benchmark_tracks": [

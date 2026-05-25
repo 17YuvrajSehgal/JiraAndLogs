@@ -1,0 +1,84 @@
+schema_version: 1
+scenario_id: orphan-adservice-outage-major
+title: Adservice outage — far orphan (adservice has no Jira-ticketed scenarios)
+description: >
+  Adservice unavailable for ~3 minutes during active traffic. Frontend
+  gracefully degrades — product pages render without the ad strip.
+  No customer purchase is blocked, but sustained ad-serving failure
+  warrants on-call attention (revenue impact, ML-team SLO).
+
+  D12 **far orphan**: adservice has only `adservice-unavailable-nearmiss`
+  in the v4-large corpus, which does NOT generate a Jira shadow issue
+  (`should_create_jira_shadow_issue: false`). So the model has never
+  seen an "adservice incident with a Jira ticket" — this is the
+  out-of-distribution test for a service whose entire prior history
+  is "we decided not to ticket it." Forces the model to triage on
+  signal alone for a service it has only ever ignored.
+dataset_run_id: local-dev-run-001
+traffic_profile_id: baseline-checkout-mix
+environment: research-local
+jira_candidate: true
+produces_jira_ticket: false
+expected_jira:
+  issue_type: None
+  priority: None
+  components:
+    - adservice
+    - frontend
+  labels:
+    - synthetic-orphan
+    - far-orphan
+    - service-outage
+    - no-jira-by-design
+fault:
+  fault_id: orphan-adservice-outage-001
+  fault_type: service_outage
+  affected_service: adservice
+  suggested_mechanism: scale adservice to 0 for 3 minutes
+  expected_start_offset_seconds: 300
+  expected_duration_seconds: 180
+  blast_radius:
+    user_visible: false
+    expected_error_rate: high
+    expected_latency_impact: low
+labels:
+  severity: major
+  incident_type: outage
+  root_cause_category: service_failure
+  should_alert: true
+  should_create_jira_shadow_issue: true
+execution:
+  action: ScaleDeployment
+  namespace: online-boutique-research
+  target_kind: deployment
+  target_name: adservice
+  replicas: 0
+  restore_replicas: 1
+triage:
+  schema_version: 1
+  scenario_family: ad-outage
+  per_window:
+    pre_fault_baseline:
+      triage_label: noise
+      triage_severity: null
+      triage_components: null
+      triage_reason_class: null
+      is_hard_case: false
+      rationale: "Pre-fault baseline; adservice healthy."
+    active_fault:
+      triage_label: ticket_worthy
+      triage_severity: major
+      triage_components:
+        - adservice
+        - frontend
+      triage_reason_class: outage
+      is_hard_case: true
+      rationale: "Sustained ad-serving outage; no prior adservice Jira exists. Pure telemetry-only detection test."
+    recovery_window:
+      triage_label: borderline
+      triage_severity: minor
+      triage_components:
+        - adservice
+      triage_reason_class: outage
+      is_hard_case: true
+      rationale: "Recovery — ad strip returns."

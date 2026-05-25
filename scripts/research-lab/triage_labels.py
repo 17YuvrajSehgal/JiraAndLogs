@@ -92,6 +92,25 @@ SCENARIO_FAMILIES: dict[str, str] = {
     # D1.8 slow-leak-saturation (ticket_worthy, long-running)
     "cartservice-memory-leak-ticket-worthy": "slow-leak-saturation",
     "paymentservice-connection-leak-ticket-worthy": "slow-leak-saturation",
+
+    # ---- Phase D12: 8 orphan-fault scenarios (2026-05-25) -----------------
+    # All use produces_jira_ticket: false so no Jira shadow row is created.
+    # The active_fault windows still gold-label as ticket_worthy and the
+    # build pipeline forces expected_in_memory=false + is_novel=true.
+    # Families match the reported twin so train/test stratification is
+    # consistent (the orphan distinction is encoded in expected_in_memory,
+    # not in the family label).
+    #
+    # 6 near-twin orphans (fault + service exist in the reported corpus):
+    "orphan-cart-redis-degradation-critical": "cart-redis",
+    "orphan-paymentservice-pod-restart-major": "payment-outage",
+    "orphan-frontend-pod-restart-major": "frontend-restart",
+    "orphan-productcatalog-latency-major": "productcatalog-latency",
+    "orphan-shippingservice-unavailable-major": "shipping-outage",
+    "orphan-currencyservice-unavailable-major": "currency-outage",
+    # 2 far orphans (service has zero Jira-ticketed scenarios anywhere):
+    "orphan-emailservice-flake-major": "email-outage",
+    "orphan-adservice-outage-major": "ad-outage",
 }
 
 # Fault-type compatibility classes used for memory-match ground truth.

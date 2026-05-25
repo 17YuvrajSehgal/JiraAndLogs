@@ -1,0 +1,74 @@
+schema_version: 1
+scenario_id: orphan-currencyservice-unavailable-major
+title: Currencyservice unavailable — orphan (real fault, no Jira filed)
+description: >
+  Identical fault to `currencyservice-unavailable-major` (currencyservice
+  scaled to 0) but no shadow Jira is filed.
+  D12 near-twin orphan.
+dataset_run_id: local-dev-run-001
+traffic_profile_id: baseline-checkout-mix
+environment: research-local
+jira_candidate: true
+produces_jira_ticket: false
+expected_jira:
+  issue_type: None
+  priority: None
+  components:
+    - currencyservice
+    - frontend
+  labels:
+    - synthetic-orphan
+    - service-outage
+    - no-jira-by-design
+fault:
+  fault_id: orphan-currency-outage-001
+  fault_type: service_outage
+  affected_service: currencyservice
+  suggested_mechanism: scale currencyservice to 0 — same as the reported twin
+  expected_start_offset_seconds: 300
+  expected_duration_seconds: 240
+  blast_radius:
+    user_visible: true
+    expected_error_rate: high
+    expected_latency_impact: low
+labels:
+  severity: major
+  incident_type: outage
+  root_cause_category: service_failure
+  should_alert: true
+  should_create_jira_shadow_issue: true
+execution:
+  action: ScaleDeployment
+  namespace: online-boutique-research
+  target_kind: deployment
+  target_name: currencyservice
+  replicas: 0
+  restore_replicas: 1
+triage:
+  schema_version: 1
+  scenario_family: currency-outage
+  per_window:
+    pre_fault_baseline:
+      triage_label: noise
+      triage_severity: null
+      triage_components: null
+      triage_reason_class: null
+      is_hard_case: false
+      rationale: "Pre-fault baseline."
+    active_fault:
+      triage_label: ticket_worthy
+      triage_severity: major
+      triage_components:
+        - currencyservice
+        - frontend
+      triage_reason_class: outage
+      is_hard_case: true
+      rationale: "Identical to currencyservice-unavailable-major but no Jira filed."
+    recovery_window:
+      triage_label: borderline
+      triage_severity: minor
+      triage_components:
+        - currencyservice
+      triage_reason_class: outage
+      is_hard_case: true
+      rationale: "Recovery."
