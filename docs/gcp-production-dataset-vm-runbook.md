@@ -9,6 +9,57 @@ VM instead of a laptop. The active product framing is the Jira-as-memory
 triage task; see `docs/triage-task-contract.md` and `docs/dataset-v4-plan.md`
 for what we collect and why.
 
+## v5-large sizing addendum (2026-05-25)
+
+`deploy/research-lab/corpora/dataset-v5-large.json` defines a 100-run sweep
+(2.5× v4-large) on the M0–M5 upgraded telemetry. Raw data growth vs v4-large:
+
+- Per-run log volume up ~3-5× because of the new L1/L2/L3 layers
+  (`microservice-changes-todo.md` M0.5 estimate). Estimated raw export per
+  run: 200-400 MB (vs ~80-130 MB on v4-large).
+- 100 runs × 300 MB ≈ **30-40 GB raw telemetry**.
+- Long-running plan (8 runs × ~30 min) adds ~5-8 GB.
+- Derived datasets add ~15-20 GB.
+- Loki PVC (persistent) holds another 50 GiB while runs are in flight.
+
+**Binding target sizing** (when starting fresh on a new GCP VM):
+
+| Setting | Binding target | This VM today (2026-05-25) |
+| --- | --- | --- |
+| Boot disk | **1 TB** `pd-balanced` | 242 GB (33% used) |
+| Loki PVC | **120 GiB** | 50 GiB (downsized; see D13.15b note in `microservice-changes-todo.md`) |
+| OTel collector | replicas=2, cpu=2/mem=2Gi limits, batch=16384 | Live as specified |
+| VM type | `e2-standard-8` (unchanged) | `e2-standard-8` |
+
+**This VM specifically** (the one a v5-large collection runs against until
+a fresh 1 TB GCP VM is provisioned):
+
+- 242 GB total disk, ~163 GB free at session start; expect ~50-60 GB free
+  after a full v5-large sweep.
+- Loki sized to 50 GiB; sufficient for the **largest single observed
+  cart-redis active_fault window** (~3-5 GB) but the cumulative 14-day
+  Loki retention may overflow. Cull old data with
+  `kubectl exec -n observability loki-0 -- du -sh /var/loki/chunks` and
+  prune as needed during the sweep.
+- Bump to 120 GiB on the next VM with a 1 TB disk: update
+  `deploy/research-lab/observability/values/loki-values.yaml`
+  `singleBinary.persistence.size: 120Gi` and re-apply per the D13.15b
+  upgrade sequence.
+- Bump boot disk to 1 TB: either provision a new VM at the binding size,
+  or `gcloud compute disks resize` the existing one (requires VM stop).
+
+**Image registry**: the M0–M5 telemetry-upgraded images
+(`cartservice:v5.0.0-otel-pilot3`, `paymentservice:v5.0.0-otel-pilot2`,
+etc.) are local-only in the kind cluster today. For a new VM you'll need
+to either rebuild from source (`docker build` then `kind load`) or push
+to Google Artifact Registry per the M0.3 decision in
+`docs/telemetry-implementation-decisions.md`.
+
+**Pre-flight before v5-large**: confirm the kustomize image pins
+(`deploy/research-lab/online-boutique/kustomization.yaml` `images:` block)
+match the rebuilt tags so an `apply -k` doesn't revert to upstream
+`v0.10.5` (which lacks all M0–M5 instrumentation).
+
 ## Recommended VM Shape
 
 Use a single Compute Engine VM running Ubuntu, Docker, kind, and the project
