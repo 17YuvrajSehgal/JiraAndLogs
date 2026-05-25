@@ -1,0 +1,71 @@
+schema_version: 1
+scenario_id: cartservice-1-of-3-restart
+title: Single cartservice pod restart with healthy replication (noise)
+description: >
+  One cartservice pod restarts while sibling replicas continue
+  serving. No customer impact. Family:
+  single-pod-restart-healthy-replication (D1.3).
+
+  Same harness caveat as frontend-1-of-3-restart: RestartPods today
+  recycles all matching pods; the noise label rests on quick recovery.
+dataset_run_id: local-dev-run-001
+traffic_profile_id: baseline-checkout-mix
+environment: research-local
+jira_candidate: false
+expected_jira:
+  issue_type: None
+  priority: None
+  components:
+    - cartservice
+  labels:
+    - synthetic-pod-restart
+    - healthy-replication
+    - negative-window
+fault:
+  fault_id: cartservice-1-of-3-restart-001
+  fault_type: pod_restart_nearmiss
+  affected_service: cartservice
+  suggested_mechanism: restart one cartservice pod out of N healthy replicas
+  expected_start_offset_seconds: 300
+  expected_duration_seconds: 45
+  blast_radius:
+    user_visible: false
+    expected_error_rate: very_low
+    expected_latency_impact: low
+labels:
+  severity: minor
+  incident_type: near_miss
+  root_cause_category: pod_restart
+  should_alert: false
+  should_create_jira_shadow_issue: false
+execution:
+  action: RestartPods
+  namespace: online-boutique-research
+  target_kind: deployment
+  target_name: cartservice
+  selector: app=cartservice
+triage:
+  schema_version: 1
+  scenario_family: single-pod-restart-healthy-replication
+  per_window:
+    pre_fault_baseline:
+      triage_label: noise
+      triage_severity: null
+      triage_components: null
+      triage_reason_class: null
+      is_hard_case: false
+      rationale: "Pre-restart baseline."
+    active_fault:
+      triage_label: noise
+      triage_severity: null
+      triage_components: null
+      triage_reason_class: null
+      is_hard_case: true
+      rationale: "Single-pod restart should be invisible at the user tier. Hard case: must NOT be confused with cartservice-pod-restart-nearmiss-major."
+    recovery_window:
+      triage_label: noise
+      triage_severity: null
+      triage_components: null
+      triage_reason_class: null
+      is_hard_case: false
+      rationale: "Pod restored; no residual impact."

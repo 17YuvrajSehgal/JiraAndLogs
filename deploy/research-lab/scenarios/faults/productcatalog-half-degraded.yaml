@@ -1,0 +1,83 @@
+schema_version: 1
+scenario_id: productcatalog-half-degraded
+title: Productcatalog brief partial degradation (borderline)
+description: >
+  Brief productcatalog outage (20s) that recovers before customer
+  flows fully fail. Frontend may show partial product lists; some
+  ListProducts calls fail and retries succeed. Borderline: looks
+  like latency at the edge but recovers in seconds.
+  Family: latency-near-miss-partial-recovery (D1.6).
+
+  Note: a true latency-injection (delay added to RPC responses
+  without making them fail) requires chaos-mesh NetworkChaos or
+  per-pod sidecar injection. Currently the harness uses brief
+  ScaleDeployment 0→1 as the closest approximation.
+dataset_run_id: local-dev-run-001
+traffic_profile_id: baseline-checkout-mix
+environment: research-local
+jira_candidate: true
+expected_jira:
+  issue_type: Incident
+  priority: Minor
+  components:
+    - productcatalogservice
+    - frontend
+  labels:
+    - synthetic-borderline
+    - latency-near-miss
+    - telemetry-linked
+  summary_template: "[{{severity}}] Productcatalog partial degradation — recovered"
+  description_template: |
+    Synthetic borderline event from {{scenario_id}}.
+
+    productcatalog briefly unavailable; partial recovery within 20s.
+fault:
+  fault_id: productcatalog-half-degraded-001
+  fault_type: partial_service_degradation
+  affected_service: productcatalogservice
+  suggested_mechanism: brief productcatalog scale-to-0 to simulate partial latency degradation
+  expected_start_offset_seconds: 300
+  expected_duration_seconds: 20
+  blast_radius:
+    user_visible: true
+    expected_error_rate: low
+    expected_latency_impact: medium
+labels:
+  severity: minor
+  incident_type: degradation
+  root_cause_category: service_latency
+  should_alert: maybe
+  should_create_jira_shadow_issue: true
+execution:
+  action: ScaleDeployment
+  namespace: online-boutique-research
+  target_kind: deployment
+  target_name: productcatalogservice
+  replicas: 0
+  restore_replicas: 1
+triage:
+  schema_version: 1
+  scenario_family: latency-near-miss-partial-recovery
+  per_window:
+    pre_fault_baseline:
+      triage_label: noise
+      triage_severity: null
+      triage_components: null
+      triage_reason_class: null
+      is_hard_case: false
+      rationale: "Pre-fault baseline."
+    active_fault:
+      triage_label: borderline
+      triage_severity: minor
+      triage_components:
+        - productcatalogservice
+      triage_reason_class: latency_regression
+      is_hard_case: true
+      rationale: "20s partial degradation; some calls fail and retries succeed. Borderline by design."
+    recovery_window:
+      triage_label: noise
+      triage_severity: null
+      triage_components: null
+      triage_reason_class: null
+      is_hard_case: false
+      rationale: "productcatalog recovered."

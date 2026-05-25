@@ -1,0 +1,68 @@
+schema_version: 1
+scenario_id: deploy-rolling-frontend-graceful
+title: Graceful rolling restart of frontend (deploy churn)
+description: >
+  Rolling restart of the frontend deployment — simulates a normal
+  user-tier deploy. Causes brief HTTP 503s during pod swap; does not
+  warrant a ticket. Family: post-deploy-churn (D1.1).
+dataset_run_id: local-dev-run-001
+traffic_profile_id: baseline-checkout-mix
+environment: research-local
+jira_candidate: false
+expected_jira:
+  issue_type: None
+  priority: None
+  components:
+    - frontend
+  labels:
+    - synthetic-deploy-churn
+    - rolling-deploy
+    - negative-window
+fault:
+  fault_id: deploy-rolling-frontend-001
+  fault_type: pod_restart_nearmiss
+  affected_service: frontend
+  suggested_mechanism: rolling restart frontend deployment
+  expected_start_offset_seconds: 300
+  expected_duration_seconds: 60
+  blast_radius:
+    user_visible: false
+    expected_error_rate: low
+    expected_latency_impact: low
+labels:
+  severity: minor
+  incident_type: near_miss
+  root_cause_category: pod_restart
+  should_alert: maybe
+  should_create_jira_shadow_issue: false
+execution:
+  action: RestartPods
+  namespace: online-boutique-research
+  target_kind: deployment
+  target_name: frontend
+  selector: app=frontend
+triage:
+  schema_version: 1
+  scenario_family: post-deploy-churn
+  per_window:
+    pre_fault_baseline:
+      triage_label: noise
+      triage_severity: null
+      triage_components: null
+      triage_reason_class: null
+      is_hard_case: false
+      rationale: "Pre-deploy baseline; frontend healthy."
+    active_fault:
+      triage_label: noise
+      triage_severity: null
+      triage_components: null
+      triage_reason_class: null
+      is_hard_case: true
+      rationale: "Rolling deploy produces brief 503s during pod swap; not Jira-worthy. Hard case: looks similar to frontend-pod-restart-major."
+    recovery_window:
+      triage_label: noise
+      triage_severity: null
+      triage_components: null
+      triage_reason_class: null
+      is_hard_case: false
+      rationale: "Frontend fully recovered post-deploy."

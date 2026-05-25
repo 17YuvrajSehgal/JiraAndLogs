@@ -1,0 +1,82 @@
+schema_version: 1
+scenario_id: paymentservice-flap-ticket-worthy
+title: Paymentservice flapping (repeated restarts) — ticket worthy
+description: >
+  Paymentservice pods restart repeatedly during active checkout
+  traffic. Each restart drops in-flight charge calls; the *repeated
+  pattern* makes this ticket-worthy regardless of any single
+  restart's blast radius. Family: flapping-pod (D1.7).
+
+  Same harness caveat as cartservice-flap-ticket-worthy: needs
+  a flap-pods.ps1 wrapper for true loop behaviour.
+dataset_run_id: local-dev-run-001
+traffic_profile_id: baseline-checkout-mix
+environment: research-local
+jira_candidate: true
+expected_jira:
+  issue_type: Incident
+  priority: Major
+  components:
+    - paymentservice
+    - checkoutservice
+  labels:
+    - synthetic-flap
+    - flapping-pod
+    - telemetry-linked
+  summary_template: "[{{severity}}] Paymentservice flapping — repeated restarts"
+  description_template: |
+    Synthetic ticket-worthy event from {{scenario_id}}.
+
+    paymentservice pods restarting repeatedly during checkout
+    traffic; charge calls dropping. On-call must investigate.
+fault:
+  fault_id: paymentservice-flap-001
+  fault_type: pod_restart
+  affected_service: paymentservice
+  suggested_mechanism: repeated paymentservice pod restarts (3-5x with 15s gap) — currently single restart
+  expected_start_offset_seconds: 300
+  expected_duration_seconds: 120
+  blast_radius:
+    user_visible: true
+    expected_error_rate: high
+    expected_latency_impact: medium
+labels:
+  severity: major
+  incident_type: service_restart
+  root_cause_category: pod_restart
+  should_alert: true
+  should_create_jira_shadow_issue: true
+execution:
+  action: RestartPods
+  namespace: online-boutique-research
+  target_kind: deployment
+  target_name: paymentservice
+  selector: app=paymentservice
+triage:
+  schema_version: 1
+  scenario_family: flapping-pod
+  per_window:
+    pre_fault_baseline:
+      triage_label: noise
+      triage_severity: null
+      triage_components: null
+      triage_reason_class: null
+      is_hard_case: false
+      rationale: "Pre-flap baseline."
+    active_fault:
+      triage_label: ticket_worthy
+      triage_severity: major
+      triage_components:
+        - paymentservice
+        - checkoutservice
+      triage_reason_class: restart_with_impact
+      is_hard_case: false
+      rationale: "Paymentservice flapping with customer impact (dropped charge calls)."
+    recovery_window:
+      triage_label: borderline
+      triage_severity: minor
+      triage_components:
+        - paymentservice
+      triage_reason_class: restart_with_impact
+      is_hard_case: true
+      rationale: "Borderline whether ticket stays open after flaps stop."

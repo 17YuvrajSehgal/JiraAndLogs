@@ -1,0 +1,85 @@
+schema_version: 1
+scenario_id: paymentservice-connection-leak-ticket-worthy
+title: Paymentservice connection leak — sustained outage (ticket worthy)
+description: >
+  Simulates a connection leak in paymentservice (e.g., not closing
+  HTTP keepalive connections to a downstream service) that
+  eventually exhausts the connection pool and causes sustained
+  outage. Long-running episode (~10 min).
+  Family: slow-leak-saturation (D1.8).
+
+  Same harness caveat as cartservice-memory-leak-ticket-worthy:
+  uses long ScaleDeployment 0 as the closest approximation.
+dataset_run_id: local-dev-run-001
+traffic_profile_id: baseline-checkout-mix
+environment: research-local
+jira_candidate: true
+expected_jira:
+  issue_type: Incident
+  priority: Critical
+  components:
+    - paymentservice
+    - checkoutservice
+  labels:
+    - synthetic-leak
+    - slow-leak-saturation
+    - long-running
+    - telemetry-linked
+  summary_template: "[{{severity}}] Paymentservice connection leak — sustained outage"
+  description_template: |
+    Synthetic ticket-worthy event from {{scenario_id}}.
+
+    paymentservice connection pool exhausted; sustained
+    checkout failures. On-call must intervene.
+fault:
+  fault_id: paymentservice-conn-leak-001
+  fault_type: resource_saturation
+  affected_service: paymentservice
+  suggested_mechanism: long ScaleDeployment 0 to approximate connection-pool exhaustion outage
+  expected_start_offset_seconds: 300
+  expected_duration_seconds: 600
+  blast_radius:
+    user_visible: true
+    expected_error_rate: high
+    expected_latency_impact: high
+labels:
+  severity: critical
+  incident_type: outage
+  root_cause_category: resource_saturation
+  should_alert: true
+  should_create_jira_shadow_issue: true
+execution:
+  action: ScaleDeployment
+  namespace: online-boutique-research
+  target_kind: deployment
+  target_name: paymentservice
+  replicas: 0
+  restore_replicas: 1
+triage:
+  schema_version: 1
+  scenario_family: slow-leak-saturation
+  per_window:
+    pre_fault_baseline:
+      triage_label: noise
+      triage_severity: null
+      triage_components: null
+      triage_reason_class: null
+      is_hard_case: false
+      rationale: "Pre-leak baseline."
+    active_fault:
+      triage_label: ticket_worthy
+      triage_severity: critical
+      triage_components:
+        - paymentservice
+        - checkoutservice
+      triage_reason_class: outage
+      is_hard_case: false
+      rationale: "Sustained paymentservice outage; checkout flow impacted."
+    recovery_window:
+      triage_label: borderline
+      triage_severity: minor
+      triage_components:
+        - paymentservice
+      triage_reason_class: outage
+      is_hard_case: true
+      rationale: "Pod restart clears leak temporarily; root cause unresolved."

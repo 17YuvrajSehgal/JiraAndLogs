@@ -1,0 +1,71 @@
+schema_version: 1
+scenario_id: deploy-rolling-cart-graceful
+title: Graceful rolling restart of cartservice (deploy churn)
+description: >
+  Simulates a normal rolling deploy of cartservice — pods are recycled,
+  causing a brief burst of init logs and possibly a few in-flight RPC
+  errors as connections are reset, but the system fully self-recovers.
+  This is the canonical false-positive shape: alerts may fire on the
+  short error spike, but on-call should NOT page Jira. Family:
+  post-deploy-churn (D1.1).
+dataset_run_id: local-dev-run-001
+traffic_profile_id: baseline-checkout-mix
+environment: research-local
+jira_candidate: false
+expected_jira:
+  issue_type: None
+  priority: None
+  components:
+    - cartservice
+  labels:
+    - synthetic-deploy-churn
+    - rolling-deploy
+    - negative-window
+fault:
+  fault_id: deploy-rolling-cart-001
+  fault_type: pod_restart_nearmiss
+  affected_service: cartservice
+  suggested_mechanism: rolling restart cartservice deployment (simulates kubectl rollout restart)
+  expected_start_offset_seconds: 300
+  expected_duration_seconds: 60
+  blast_radius:
+    user_visible: false
+    expected_error_rate: low
+    expected_latency_impact: low
+labels:
+  severity: minor
+  incident_type: near_miss
+  root_cause_category: pod_restart
+  should_alert: maybe
+  should_create_jira_shadow_issue: false
+execution:
+  action: RestartPods
+  namespace: online-boutique-research
+  target_kind: deployment
+  target_name: cartservice
+  selector: app=cartservice
+triage:
+  schema_version: 1
+  scenario_family: post-deploy-churn
+  per_window:
+    pre_fault_baseline:
+      triage_label: noise
+      triage_severity: null
+      triage_components: null
+      triage_reason_class: null
+      is_hard_case: false
+      rationale: "Pre-deploy baseline; cartservice fully healthy."
+    active_fault:
+      triage_label: noise
+      triage_severity: null
+      triage_components: null
+      triage_reason_class: null
+      is_hard_case: true
+      rationale: "Rolling deploy produces transient errors that look like an incident but resolve in seconds. Hard case: must NOT be confused with cartservice-restart-major."
+    recovery_window:
+      triage_label: noise
+      triage_severity: null
+      triage_components: null
+      triage_reason_class: null
+      is_hard_case: false
+      rationale: "Pods fully recovered post-deploy; no residual impact."

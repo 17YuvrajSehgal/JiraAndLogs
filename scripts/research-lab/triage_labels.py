@@ -63,6 +63,35 @@ SCENARIO_FAMILIES: dict[str, str] = {
     "frontend-cpu-nearmiss": "frontend-traffic-pressure",
     "loadgenerator-traffic-spike-nearmiss": "frontend-traffic-pressure",
     "loadgenerator-noisy-high-traffic-nearmiss": "frontend-traffic-pressure",
+
+    # ---- Phase D1: 8 new v5 families (2026-05-25) ---------------------------
+    # D1.1 post-deploy-churn (noise) — rolling deploys / canary churn
+    "deploy-rolling-cart-graceful": "post-deploy-churn",
+    "deploy-rolling-frontend-graceful": "post-deploy-churn",
+    "deploy-canary-rollback-quick": "post-deploy-churn",
+    # D1.2 recovered-in-window (borderline) — short fault, self-recovers
+    "redis-blip-30s-recovery": "recovered-in-window",
+    "paymentservice-flake-recovers": "recovered-in-window",
+    "currency-timeout-recovers": "recovered-in-window",
+    # D1.3 single-pod-restart-healthy-replication (noise) — silent at user tier
+    "frontend-1-of-3-restart": "single-pod-restart-healthy-replication",
+    "cartservice-1-of-3-restart": "single-pod-restart-healthy-replication",
+    # D1.4 third-party-blip (borderline) — external dep brief failure
+    "currency-api-blip-major": "third-party-blip",
+    "recommendation-model-blip-minor": "third-party-blip",
+    # D1.5 scheduled-job-spike (noise) — cron job collateral traffic shape
+    "analytics-job-burst": "scheduled-job-spike",
+    "cleanup-job-burst": "scheduled-job-spike",
+    # D1.6 latency-near-miss-partial-recovery (borderline)
+    "productcatalog-half-degraded": "latency-near-miss-partial-recovery",
+    "currency-partial-latency": "latency-near-miss-partial-recovery",
+    # D1.7 flapping-pod (ticket_worthy after N flaps) — single-flap until
+    #      the flap-pods.ps1 wrapper is authored
+    "cartservice-flap-ticket-worthy": "flapping-pod",
+    "paymentservice-flap-ticket-worthy": "flapping-pod",
+    # D1.8 slow-leak-saturation (ticket_worthy, long-running)
+    "cartservice-memory-leak-ticket-worthy": "slow-leak-saturation",
+    "paymentservice-connection-leak-ticket-worthy": "slow-leak-saturation",
 }
 
 # Fault-type compatibility classes used for memory-match ground truth.

@@ -1,0 +1,89 @@
+{
+  "schema_version": 1,
+  "plan_id": "dataset-v5-new-families-a",
+  "title": "Dataset v5 new-families plan A — post-deploy-churn + recovered + single-pod + third-party-blip",
+  "description": "Covers four of the eight Phase D1 v5 families: post-deploy-churn (noise), recovered-in-window (borderline), single-pod-restart-healthy-replication (noise), third-party-blip (borderline). Designed to give the model a thick mid-band of borderline/noise shapes that v4-large lacked. Each run alternates baseline windows with brief faults so the active_fault windows are surrounded by clean comparison context.",
+  "environment": "research-local",
+  "traffic_profile_id": "baseline-checkout-mix",
+  "default_post_window_seconds": 75,
+  "quick_duration_seconds": 60,
+  "quick_post_window_seconds": 30,
+  "realistic_jira_noise": true,
+  "target_use": "Adds D1.1, D1.2, D1.3, D1.4 family coverage to v5-large.",
+  "scenarios": [
+    {
+      "scenario_file": "deploy\\research-lab\\scenarios\\baselines\\baseline-normal-traffic.yaml",
+      "role": "negative_baseline",
+      "duration_seconds": 90,
+      "post_window_seconds": 0,
+      "notes": "Healthy pre-fault traffic."
+    },
+    {
+      "scenario_file": "deploy\\research-lab\\scenarios\\faults\\deploy-rolling-cart-graceful.yaml",
+      "role": "negative_near_miss",
+      "duration_seconds": 60,
+      "notes": "D1.1 rolling deploy noise."
+    },
+    {
+      "scenario_file": "deploy\\research-lab\\scenarios\\faults\\redis-blip-30s-recovery.yaml",
+      "role": "positive_incident",
+      "duration_seconds": 30,
+      "notes": "D1.2 brief redis-cart blip — borderline."
+    },
+    {
+      "scenario_file": "deploy\\research-lab\\scenarios\\faults\\deploy-rolling-frontend-graceful.yaml",
+      "role": "negative_near_miss",
+      "duration_seconds": 60,
+      "notes": "D1.1 frontend rolling deploy noise."
+    },
+    {
+      "scenario_file": "deploy\\research-lab\\scenarios\\faults\\paymentservice-flake-recovers.yaml",
+      "role": "positive_incident",
+      "duration_seconds": 45,
+      "notes": "D1.2 paymentservice flake — borderline."
+    },
+    {
+      "scenario_file": "deploy\\research-lab\\scenarios\\faults\\frontend-1-of-3-restart.yaml",
+      "role": "negative_near_miss",
+      "duration_seconds": 45,
+      "notes": "D1.3 single-pod restart with healthy replication — noise."
+    },
+    {
+      "scenario_file": "deploy\\research-lab\\scenarios\\faults\\currency-api-blip-major.yaml",
+      "role": "positive_incident",
+      "duration_seconds": 60,
+      "notes": "D1.4 third-party FX API blip — borderline."
+    },
+    {
+      "scenario_file": "deploy\\research-lab\\scenarios\\faults\\currency-timeout-recovers.yaml",
+      "role": "positive_incident",
+      "duration_seconds": 30,
+      "notes": "D1.2 currency timeout — borderline."
+    },
+    {
+      "scenario_file": "deploy\\research-lab\\scenarios\\faults\\cartservice-1-of-3-restart.yaml",
+      "role": "negative_near_miss",
+      "duration_seconds": 45,
+      "notes": "D1.3 cartservice single-pod restart — noise."
+    },
+    {
+      "scenario_file": "deploy\\research-lab\\scenarios\\faults\\deploy-canary-rollback-quick.yaml",
+      "role": "negative_near_miss",
+      "duration_seconds": 45,
+      "notes": "D1.1 canary rollback — noise."
+    },
+    {
+      "scenario_file": "deploy\\research-lab\\scenarios\\faults\\recommendation-model-blip-minor.yaml",
+      "role": "positive_incident",
+      "duration_seconds": 30,
+      "notes": "D1.4 recommendation blip — borderline."
+    },
+    {
+      "scenario_file": "deploy\\research-lab\\scenarios\\baselines\\baseline-normal-traffic.yaml",
+      "role": "negative_baseline",
+      "duration_seconds": 90,
+      "post_window_seconds": 0,
+      "notes": "Healthy post-fault traffic."
+    }
+  ]
+}

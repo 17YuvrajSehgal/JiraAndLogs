@@ -1,0 +1,80 @@
+schema_version: 1
+scenario_id: currency-api-blip-major
+title: Third-party currency API blip (borderline)
+description: >
+  Simulates a brief upstream FX API outage by taking currencyservice
+  offline for 60s. Frontend and shipping conversion calls fail
+  during the gap. Borderline: longer than the 30s recovery scenarios
+  in D1.2, but still self-resolves before user-visible impact persists.
+  Family: third-party-blip (D1.4).
+dataset_run_id: local-dev-run-001
+traffic_profile_id: baseline-checkout-mix
+environment: research-local
+jira_candidate: true
+expected_jira:
+  issue_type: Incident
+  priority: Major
+  components:
+    - currencyservice
+    - frontend
+  labels:
+    - synthetic-borderline
+    - third-party-blip
+    - telemetry-linked
+  summary_template: "[{{severity}}] External currency API blip — recovered"
+  description_template: |
+    Synthetic borderline event from {{scenario_id}}.
+
+    Currency conversion external API was unavailable for ~60s.
+    Downstream calls failed during the gap then recovered.
+fault:
+  fault_id: currency-api-blip-001
+  fault_type: dependency_intermittent_failure
+  affected_service: currencyservice
+  suggested_mechanism: scale currencyservice to 0 for 60s (simulates external FX API blip)
+  expected_start_offset_seconds: 300
+  expected_duration_seconds: 60
+  blast_radius:
+    user_visible: true
+    expected_error_rate: medium
+    expected_latency_impact: low
+labels:
+  severity: minor
+  incident_type: degradation
+  root_cause_category: dependency_failure
+  should_alert: maybe
+  should_create_jira_shadow_issue: true
+execution:
+  action: ScaleDeployment
+  namespace: online-boutique-research
+  target_kind: deployment
+  target_name: currencyservice
+  replicas: 0
+  restore_replicas: 1
+triage:
+  schema_version: 1
+  scenario_family: third-party-blip
+  per_window:
+    pre_fault_baseline:
+      triage_label: noise
+      triage_severity: null
+      triage_components: null
+      triage_reason_class: null
+      is_hard_case: false
+      rationale: "Pre-blip baseline."
+    active_fault:
+      triage_label: borderline
+      triage_severity: minor
+      triage_components:
+        - currencyservice
+        - frontend
+      triage_reason_class: dependency_failure
+      is_hard_case: true
+      rationale: "60s external dependency blip; visible errors but self-recovers."
+    recovery_window:
+      triage_label: noise
+      triage_severity: null
+      triage_components: null
+      triage_reason_class: null
+      is_hard_case: false
+      rationale: "currencyservice fully recovered."

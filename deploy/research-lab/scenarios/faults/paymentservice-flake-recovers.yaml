@@ -1,0 +1,80 @@
+schema_version: 1
+scenario_id: paymentservice-flake-recovers
+title: Paymentservice 45s flake with self-recovery (borderline)
+description: >
+  Paymentservice unavailable for ~45s then restored. A handful of
+  in-flight checkouts will fail with payment errors during the gap;
+  retried checkouts after recovery succeed. Borderline: 45s of payment
+  failure may or may not warrant a Jira issue depending on team SLOs.
+  Family: recovered-in-window (D1.2).
+dataset_run_id: local-dev-run-001
+traffic_profile_id: baseline-checkout-mix
+environment: research-local
+jira_candidate: true
+expected_jira:
+  issue_type: Incident
+  priority: Minor
+  components:
+    - paymentservice
+    - checkoutservice
+  labels:
+    - synthetic-borderline
+    - recovered-in-window
+    - telemetry-linked
+  summary_template: "[{{severity}}] Paymentservice flake — self-recovered"
+  description_template: |
+    Synthetic borderline event from {{scenario_id}}.
+
+    paymentservice was unavailable for ~45s. Some checkouts failed
+    during the gap but post-recovery retries succeeded.
+fault:
+  fault_id: payment-flake-recovery-001
+  fault_type: dependency_intermittent_failure
+  affected_service: paymentservice
+  suggested_mechanism: scale paymentservice to 0 for 45 seconds then restore
+  expected_start_offset_seconds: 300
+  expected_duration_seconds: 45
+  blast_radius:
+    user_visible: true
+    expected_error_rate: medium
+    expected_latency_impact: low
+labels:
+  severity: minor
+  incident_type: degradation
+  root_cause_category: dependency_failure
+  should_alert: maybe
+  should_create_jira_shadow_issue: true
+execution:
+  action: ScaleDeployment
+  namespace: online-boutique-research
+  target_kind: deployment
+  target_name: paymentservice
+  replicas: 0
+  restore_replicas: 1
+triage:
+  schema_version: 1
+  scenario_family: recovered-in-window
+  per_window:
+    pre_fault_baseline:
+      triage_label: noise
+      triage_severity: null
+      triage_components: null
+      triage_reason_class: null
+      is_hard_case: false
+      rationale: "Pre-flake baseline."
+    active_fault:
+      triage_label: borderline
+      triage_severity: minor
+      triage_components:
+        - paymentservice
+        - checkoutservice
+      triage_reason_class: dependency_failure
+      is_hard_case: true
+      rationale: "45s payment outage; some checkouts failed but service self-recovered."
+    recovery_window:
+      triage_label: noise
+      triage_severity: null
+      triage_components: null
+      triage_reason_class: null
+      is_hard_case: false
+      rationale: "Payment fully recovered; no residual impact."

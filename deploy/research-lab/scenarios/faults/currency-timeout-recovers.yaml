@@ -1,0 +1,80 @@
+schema_version: 1
+scenario_id: currency-timeout-recovers
+title: Currencyservice 30s timeout with self-recovery (borderline)
+description: >
+  Currencyservice unavailable for ~30s, causing currency-conversion
+  failures during the gap. Downstream services (frontend, shipping
+  quote) see brief errors but recover. Borderline: short blip with
+  customer-visible impact but no lasting damage.
+  Family: recovered-in-window (D1.2).
+dataset_run_id: local-dev-run-001
+traffic_profile_id: baseline-checkout-mix
+environment: research-local
+jira_candidate: true
+expected_jira:
+  issue_type: Incident
+  priority: Minor
+  components:
+    - currencyservice
+    - frontend
+  labels:
+    - synthetic-borderline
+    - recovered-in-window
+    - telemetry-linked
+  summary_template: "[{{severity}}] Currencyservice 30s timeout — self-recovered"
+  description_template: |
+    Synthetic borderline event from {{scenario_id}}.
+
+    currencyservice unavailable for ~30s; frontend and shipping
+    conversion calls failed during the gap.
+fault:
+  fault_id: currency-timeout-recovery-001
+  fault_type: dependency_intermittent_failure
+  affected_service: currencyservice
+  suggested_mechanism: scale currencyservice to 0 for 30s then restore
+  expected_start_offset_seconds: 300
+  expected_duration_seconds: 30
+  blast_radius:
+    user_visible: true
+    expected_error_rate: medium
+    expected_latency_impact: low
+labels:
+  severity: minor
+  incident_type: degradation
+  root_cause_category: dependency_failure
+  should_alert: maybe
+  should_create_jira_shadow_issue: true
+execution:
+  action: ScaleDeployment
+  namespace: online-boutique-research
+  target_kind: deployment
+  target_name: currencyservice
+  replicas: 0
+  restore_replicas: 1
+triage:
+  schema_version: 1
+  scenario_family: recovered-in-window
+  per_window:
+    pre_fault_baseline:
+      triage_label: noise
+      triage_severity: null
+      triage_components: null
+      triage_reason_class: null
+      is_hard_case: false
+      rationale: "Pre-fault baseline."
+    active_fault:
+      triage_label: borderline
+      triage_severity: minor
+      triage_components:
+        - currencyservice
+        - frontend
+      triage_reason_class: dependency_failure
+      is_hard_case: true
+      rationale: "Brief currencyservice outage with downstream impact; self-recovered."
+    recovery_window:
+      triage_label: noise
+      triage_severity: null
+      triage_components: null
+      triage_reason_class: null
+      is_hard_case: false
+      rationale: "currencyservice fully recovered."

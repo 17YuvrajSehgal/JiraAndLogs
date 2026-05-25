@@ -1,0 +1,81 @@
+schema_version: 1
+scenario_id: redis-blip-30s-recovery
+title: Redis cart 30s blip with self-recovery (borderline)
+description: >
+  Brief 30-second redis-cart outage that resolves before user-visible
+  impact accumulates. Cartservice retries succeed once redis comes
+  back. This is a textbook borderline case: telemetry shows an error
+  spike, but the system self-heals fast enough that whether to file a
+  ticket is genuinely debatable. Family: recovered-in-window (D1.2).
+dataset_run_id: local-dev-run-001
+traffic_profile_id: baseline-checkout-mix
+environment: research-local
+jira_candidate: true
+expected_jira:
+  issue_type: Incident
+  priority: Minor
+  components:
+    - redis-cart
+    - cartservice
+  labels:
+    - synthetic-borderline
+    - recovered-in-window
+    - telemetry-linked
+  summary_template: "[{{severity}}] Brief redis-cart blip — self-recovered"
+  description_template: |
+    Synthetic borderline event from scenario {{scenario_id}}.
+
+    redis-cart was unavailable for ~30s then recovered. Cartservice
+    error rate spiked briefly. Borderline: depends on team conventions
+    whether a 30s self-resolved blip warrants a Jira issue.
+fault:
+  fault_id: redis-blip-recovery-001
+  fault_type: dependency_intermittent_failure
+  affected_service: redis-cart
+  suggested_mechanism: scale redis-cart to 0 for 30 seconds then restore
+  expected_start_offset_seconds: 300
+  expected_duration_seconds: 30
+  blast_radius:
+    user_visible: true
+    expected_error_rate: medium
+    expected_latency_impact: low
+labels:
+  severity: minor
+  incident_type: degradation
+  root_cause_category: dependency_failure
+  should_alert: maybe
+  should_create_jira_shadow_issue: true
+execution:
+  action: ScaleDeployment
+  namespace: online-boutique-research
+  target_kind: deployment
+  target_name: redis-cart
+  replicas: 0
+  restore_replicas: 1
+triage:
+  schema_version: 1
+  scenario_family: recovered-in-window
+  per_window:
+    pre_fault_baseline:
+      triage_label: noise
+      triage_severity: null
+      triage_components: null
+      triage_reason_class: null
+      is_hard_case: false
+      rationale: "Pre-blip baseline."
+    active_fault:
+      triage_label: borderline
+      triage_severity: minor
+      triage_components:
+        - redis-cart
+        - cartservice
+      triage_reason_class: dependency_failure
+      is_hard_case: true
+      rationale: "30s blip recovers before lasting customer impact. Borderline by design — teams disagree on whether to ticket this."
+    recovery_window:
+      triage_label: noise
+      triage_severity: null
+      triage_components: null
+      triage_reason_class: null
+      is_hard_case: false
+      rationale: "redis-cart fully recovered; no residual impact."
