@@ -49,22 +49,30 @@ paired Jira, enabling the "detection vs memorization" benchmark track).
 Use a single Compute Engine VM running Ubuntu, Docker, kind, and the
 project scripts.
 
-| Setting | v5-large target | Workable lower bound |
-| --- | --- | --- |
-| VM type | `e2-standard-8` (8 vCPU, 32 GB RAM) | same |
-| OS | Ubuntu 24.04 LTS x86_64 | same |
-| Boot disk | **1 TB** `pd-balanced` | 500 GB (cull old data mid-run) |
-| Provisioning | Standard (not Spot) | same |
-| Region | `us-central1` unless you have a reason | same |
-| Kubernetes | kind cluster, 1 control-plane + 2 workers | same |
+| Setting | v5-large target | Workable lower bound | Workable alternative |
+| --- | --- | --- | --- |
+| VM type | `e2-standard-8` (8 vCPU, 32 GB RAM) | same | same |
+| OS | Ubuntu 24.04 LTS x86_64 | same | same |
+| Boot disk | **1 TB** `pd-balanced` | 500 GB (cull old data mid-run) | 250 GB root + **1 TB attached `pd-balanced` at `/data`** (see "Use the attached disk" section below — same total storage, just split across two volumes) |
+| Provisioning | Standard (not Spot) | same | same |
+| Region | `us-central1` unless you have a reason | same | same |
+| Kubernetes | kind cluster, 1 control-plane + 2 workers | same | same |
 
 **Why 1 TB**: v5-large produces ~30-40 GB raw + ~15-20 GB derived. The
 Loki PVC takes 120 GiB (or 50 GiB on a smaller disk — both supported by
 `deploy/research-lab/observability/values/loki-values.yaml`). Docker
 images for the rebuilt M0–M5 services + Online Boutique + kube
-components consume another ~30-40 GB. With 500 GB you'll fit but need
-to prune old Loki chunks mid-run; with 1 TB you don't have to think
-about it.
+components + chaos-mesh consume another ~30-40 GB. With 500 GB you'll
+fit but need to prune old Loki chunks mid-run; with 1 TB you don't have
+to think about it.
+
+**Attached-disk variant**: GCP often caps the root SSD around 250 GB
+depending on the image / quota. If you can't get a 1 TB root, attach a
+1 TB `pd-balanced` data disk and mount it at `/data`. Then follow the
+"VM: Use the Attached Disk for All Heavy Storage" section below
+**before** building images or cloning the repo — that step redirects
+Docker's data-root + the JiraAndLogs run outputs to `/data` so the
+small root never fills.
 
 Do NOT use GKE for this stage. A single VM with kind is cheaper,
 simpler, and matches the local research setup.
@@ -136,6 +144,36 @@ gcloud compute instances create jira-logs-dataset-v5-vm \
   --metadata=enable-oslogin=TRUE
 ```
 
+**Attached-disk variant** (if 1 TB boot disk isn't available, e.g.
+your project's image quota caps root at 250 GB): use a smaller root
+and attach a 1 TB data disk. The "VM: Use the Attached Disk for All
+Heavy Storage" section below moves Docker + run output to the
+attached disk so root never fills.
+
+```bash
+# Create the attached disk
+gcloud compute disks create jira-logs-dataset-v5-data \
+  --project=project-dfc1abf4-e3f9-44ce-8a3 \
+  --zone=us-central1-a \
+  --size=1000GB \
+  --type=pd-balanced
+
+# Create the VM with a smaller root + attach the data disk
+gcloud compute instances create jira-logs-dataset-v5-vm \
+  --project=project-dfc1abf4-e3f9-44ce-8a3 \
+  --zone=us-central1-a \
+  --machine-type=e2-standard-8 \
+  --provisioning-model=STANDARD \
+  --image-family=ubuntu-2404-lts-amd64 \
+  --image-project=ubuntu-os-cloud \
+  --boot-disk-size=250GB \
+  --boot-disk-type=pd-balanced \
+  --disk=name=jira-logs-dataset-v5-data,device-name=data-disk,auto-delete=yes \
+  --scopes=https://www.googleapis.com/auth/cloud-platform \
+  --labels=project=jiraandlogs,purpose=dataset-v5,env=research \
+  --metadata=enable-oslogin=TRUE
+```
+
 SSH in:
 
 ```bash
@@ -200,6 +238,11 @@ docker version
 docker run --rm hello-world
 ```
 
+**If you provisioned the attached-disk variant** (250 GB root + 1 TB
+attached at `/data`), do the "VM: Use the Attached Disk for All Heavy
+Storage" section now BEFORE going further. Otherwise images go to
+root and root fills mid-run.
+
 Also raise inotify limits so Go services don't hit "failed to create
 fsnotify watcher: too many open files" under sustained load (the
 checkoutservice L1 gap), AND so chaos-mesh's 22 CRD informers can
@@ -221,6 +264,136 @@ sudo sysctl --system | grep -E "inotify"
 sysctl fs.inotify.max_user_instances
 # Expect: 16384  (NOT the Ubuntu default of 128)
 ```
+
+---
+
+## VM: Use the Attached Disk for All Heavy Storage
+
+**Skip this section if your boot disk is 1 TB and there's no separate
+attached disk.** This is only for the 250 GB root + 1 TB attached
+variant from the VM-shape table above.
+
+Verify the attached disk is mounted at `/data` and has the expected
+capacity:
+
+```bash
+df -h /data
+# Expect: /dev/sdb (or similar) 984G ... mounted on /data
+```
+
+If it isn't mounted yet, format + mount before proceeding:
+
+```bash
+# DESTRUCTIVE — wipes the attached disk. Only run this on a fresh disk.
+sudo mkfs.ext4 -F /dev/sdb
+sudo mkdir -p /data
+sudo mount /dev/sdb /data
+# Persist across reboots:
+DISK_UUID=$(sudo blkid -s UUID -o value /dev/sdb)
+echo "UUID=${DISK_UUID} /data ext4 defaults 0 0" | sudo tee -a /etc/fstab
+```
+
+### Move Docker's data-root to /data (must happen before image build)
+
+This is the single highest-leverage step. Docker container layers,
+images, and **every kind PVC** (because kind nodes ARE Docker
+containers) follow Docker's data-root. Without this, 30-40 GB of
+images + the Loki PVC + chaos-mesh CRDs all land on the small root.
+
+```bash
+# Stop Docker
+sudo systemctl stop docker.socket
+sudo systemctl stop docker
+
+# Copy anything already in /var/lib/docker to /data/docker (preserves
+# pulled images / built layers from earlier steps if Docker has
+# already been used).
+sudo mkdir -p /data/docker
+sudo rsync -aHX /var/lib/docker/ /data/docker/
+
+# Update daemon.json to point at /data
+sudo tee /etc/docker/daemon.json >/dev/null <<'JSON'
+{
+  "data-root": "/data/docker",
+  "log-driver": "json-file",
+  "log-opts": {
+    "max-size": "50m",
+    "max-file": "5"
+  }
+}
+JSON
+
+# Restart Docker
+sudo systemctl start docker
+
+# Verify
+docker info | grep "Docker Root Dir"
+# Expect: Docker Root Dir: /data/docker
+
+docker run --rm hello-world
+# Should succeed.
+
+# Reclaim space (only AFTER you see the expected output above)
+sudo rm -rf /var/lib/docker
+df -h / /data
+```
+
+### Redirect JiraAndLogs `data/` and `logs/` to /data
+
+The collection outputs (`data/runs/...`, `data/derived/...`, `logs/`)
+grow to 50-60 GB during a v5-large run. Send them to `/data` too. Do
+this AFTER cloning the repo (next section) — listed here for
+reference.
+
+```bash
+# Run after `git clone ... JiraAndLogs && cd JiraAndLogs`
+mkdir -p /data/jiraandlogs/data /data/jiraandlogs/logs
+
+# If data/ or logs/ already exist in the repo as real dirs, move
+# their contents to /data first:
+if [ -d data ] && [ ! -L data ]; then
+  [ -n "$(ls -A data 2>/dev/null)" ] && sudo mv data/* /data/jiraandlogs/data/ 2>/dev/null
+  rmdir data
+fi
+if [ -d logs ] && [ ! -L logs ]; then
+  [ -n "$(ls -A logs 2>/dev/null)" ] && sudo mv logs/* /data/jiraandlogs/logs/ 2>/dev/null
+  rmdir logs
+fi
+
+# Create the symlinks
+ln -s /data/jiraandlogs/data data
+ln -s /data/jiraandlogs/logs logs
+
+# Verify
+ls -la data logs
+# Expect both lines to show "-> /data/jiraandlogs/..."
+```
+
+### Final sanity check
+
+```bash
+echo "=== root disk ==="
+df -h /
+
+echo "=== attached disk ==="
+df -h /data
+
+echo "=== Docker on /data? ==="
+docker info | grep "Docker Root Dir"
+
+echo "=== JiraAndLogs storage on /data? ==="
+ls -la ~/workplace/JiraAndLogs/data ~/workplace/JiraAndLogs/logs
+```
+
+Expected after these steps + a full v5-large run: root stays around
+10-20 GB used (system + package install); `/data` grows to ~100-200 GB
+used (Docker images ~30-40 GB, kind PVCs incl. Loki ~20-50 GB,
+run output ~50-60 GB).
+
+**Why not put `/var/lib/docker` on a symlink instead of using
+`data-root`?** Docker explicitly does not support a symlinked
+`/var/lib/docker` — file-locking and overlayfs behaviour break.
+`data-root` in `daemon.json` is the supported path.
 
 ---
 
