@@ -193,17 +193,26 @@ docker version
 docker run --rm hello-world
 ```
 
-Also raise the inotify limit so Go services don't hit
-"failed to create fsnotify watcher: too many open files" under sustained
-load (this is the issue called out in checkoutservice's L1 trace_id
-gap):
+Also raise inotify limits so Go services don't hit "failed to create
+fsnotify watcher: too many open files" under sustained load (the
+checkoutservice L1 gap), AND so chaos-mesh's 22 CRD informers can
+start without hitting Ubuntu's default `max_user_instances = 128`
+(verified 2026-05-25 — without this bump, every chaos-mesh
+controller-manager pod CrashLoopBackOffs with "too many open files"
+the moment NetworkChaos / IOChaos / StressChaos resources are
+referenced):
 
 ```bash
 sudo tee /etc/sysctl.d/99-jira-logs-inotify.conf >/dev/null <<'EOF'
-fs.inotify.max_user_watches = 524288
-fs.inotify.max_user_instances = 8192
+fs.inotify.max_user_watches = 1048576
+fs.inotify.max_user_instances = 16384
+fs.inotify.max_queued_events = 32768
 EOF
 sudo sysctl --system | grep -E "inotify"
+
+# Confirm:
+sysctl fs.inotify.max_user_instances
+# Expect: 16384  (NOT the Ubuntu default of 128)
 ```
 
 ---
