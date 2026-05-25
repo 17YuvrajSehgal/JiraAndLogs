@@ -1,8 +1,9 @@
 # GCP VM Runbook For Production Dataset Collection (v5-large)
 
 This runbook is the **single source of truth** for collecting the
-**Dataset v5 large** triage corpus (100 runs, ~4-5 days, 21 scenario
-families, M0–M5 upgraded telemetry) on a fresh Google Cloud VM. Follow
+**Dataset v5 large** triage corpus (100 runs, ~4-5 days, 27 scenario
+families, M0–M5 upgraded telemetry + chaos-mesh system faults +
+orphan-fault detection coverage) on a fresh Google Cloud VM. Follow
 top-to-bottom for an unattended production run.
 
 The active product framing is the Jira-as-memory triage task; see
@@ -20,20 +21,26 @@ For a one-shot index of what gets collected, see
 | Item | Value |
 | --- | ---: |
 | Corpus manifest | `deploy/research-lab/corpora/dataset-v5-large.json` |
-| Total runs | 100 (8 control + 30 compact-a + 30 compact-b + 12 new-families-a + 12 new-families-b + 8 long-running) |
-| Scenario families | 21 (13 from v4 + 8 from D1) |
-| Expected episodes | ~1,064 |
-| Expected telemetry windows | ~8,000 |
+| Total runs | 100 (8 control + 14 compact-a + 14 compact-b + 11 new-families-a + 11 new-families-b + 8 long-running + 24 orphans + 10 system-faults) |
+| Scenario families | 27 (13 from v4 + 8 from D1 + 1 D12 email-outage + 5 D11 system-fault) |
+| Expected episodes | ~920 |
+| Expected telemetry windows | ~7,400 |
 | Long-window episodes (≥10 min) | ~96 (from long-running plan) |
+| Orphan ticket_worthy windows (D12) | 192 (orphans plan, no Jira filed) |
+| System-fault active windows (D11) | 50 (chaos-mesh injected via system-faults plan) |
 | Raw telemetry on disk | ~30-40 GB |
 | Derived datasets | ~15-20 GB |
 | **Total VM disk needed** | **1 TB recommended, 500 GB workable with care** |
 | Collection wall time | ~4-5 days unattended |
 
 Compared with v4-large (40 runs, ~24-30 hours, 13 families): 2.5× more
-runs, ~3× scenario diversity, ~3-5× per-window log volume from the new
-M0–M5 telemetry layer (L1 per-RPC logs, L2 dep-error logs, L3 business
-events, structured spans, RED/runtime metrics).
+runs, **2× scenario diversity** (27 vs 13 families), ~3-5× per-window
+log volume from the new M0–M5 telemetry layer (L1 per-RPC logs, L2
+dep-error logs, L3 business events, structured spans, RED/runtime
+metrics), **5 new system-level fault shapes** via chaos-mesh (DNS,
+network partition, packet loss, network latency, memory pressure), and
+**orphan-fault detection** coverage (200 ticket-worthy windows with no
+paired Jira, enabling the "detection vs memorization" benchmark track).
 
 ---
 
@@ -420,8 +427,9 @@ kubectl get crd | grep chaos-mesh.org
 # podchaos.chaos-mesh.org, iochaos.chaos-mesh.org, dnschaos.chaos-mesh.org
 ```
 
-Quick smoke (apply a 5-second NetworkChaos against nothing real, verify
-the controller acknowledges it, delete it):
+Quick smoke (apply a NetworkChaos resource, verify the webhook accepts
+it, force-delete via finalizer patch so we don't depend on the chaos
+actually injecting against anything):
 
 ```bash
 cat <<'EOF' | kubectl apply -f -
@@ -441,24 +449,44 @@ spec:
     latency: "100ms"
   duration: "5s"
 EOF
-sleep 8
-kubectl -n chaos-testing get networkchaos smoke-test -o yaml | grep -E "phase|message" | head -5
-kubectl -n chaos-testing delete networkchaos smoke-test
+# Resource creates, but with no matching pods chaos-mesh status stays
+# at AllInjected: False forever. That's fine for the smoke — we only
+# need to verify the admission webhook and CRD path work. Force-clean:
+kubectl -n chaos-testing patch networkchaos smoke-test \
+  --type=merge -p '{"metadata":{"finalizers":[]}}'
+kubectl -n chaos-testing delete networkchaos smoke-test --grace-period=0 --force --ignore-not-found
 ```
 
-If `phase: Finished` (or similar terminal state) appears within ~10s,
-chaos-mesh is healthy. If `phase: Failed` with a controller error,
-check the chaos-controller-manager logs:
+If `networkchaos.chaos-mesh.org/smoke-test created` appears and the
+patch+delete cycle completes within ~3s, chaos-mesh is healthy and
+the admission webhook is up. If the `kubectl apply` itself fails with
+a webhook error like "dial tcp ... connection refused", the
+controller-manager pods aren't Ready — check:
 
 ```bash
-kubectl -n chaos-testing logs deploy/chaos-controller-manager --tail=50
+kubectl -n chaos-testing get pods -l app.kubernetes.io/component=controller-manager
+kubectl -n chaos-testing logs -l app.kubernetes.io/component=controller-manager --tail=30 | grep -E "ERROR|too many open"
 ```
 
-**If you want to skip the system-faults plan entirely**: remove the
-`system-faults` entry from the `plans` array in
-`deploy/research-lab/corpora/dataset-v5-large.json` and rebalance the
-other plans to keep `repeat` totals at 100. The rest of v5-large
-collects normally without chaos-mesh installed.
+The most common failure mode is `too many open files` — that means the
+inotify sysctl bump above didn't actually apply. Re-run the
+`sysctl --system` step and `kubectl -n chaos-testing delete pods --all`
+to recycle the controller-managers.
+
+**Escape hatches** (if you want to skip chaos-mesh or orphan coverage):
+
+- **Skip system-faults entirely**: remove the `system-faults` entry
+  from the `plans` array in
+  `deploy/research-lab/corpora/dataset-v5-large.json` and rebalance the
+  remaining `repeat` totals to 100 (e.g. bump `compact-a` from 14 to
+  19, `compact-b` from 14 to 19). The rest of v5-large collects
+  normally without chaos-mesh installed.
+- **Skip orphan-fault coverage**: remove the `orphans` entry from the
+  same `plans` array and rebalance. The orphan_fault_detection
+  benchmark track will then report `no_orphan_data` (unmeasurable),
+  but other tracks (triage_classification, ranking) are unaffected.
+- **Skip both** (minimal v5 = upgraded telemetry but no D11/D12):
+  remove both plans, rebalance to 100 across the v4 + D1 plans.
 
 ---
 
@@ -607,39 +635,112 @@ You should have at least 800 GB free on a 1 TB disk (or 350 GB on a
 
 ---
 
-## VM: Mandatory Smoke Test Before v5-Large
+## VM: Mandatory Smoke Tests Before v5-Large
 
-Before launching the 4-5 day collection, run **one** new-families-a
-plan end-to-end. This catches harness issues against the new D1
-scenarios in ~60-90 minutes instead of mid-way through day 3 of v5-large.
+Before launching the 4-5 day collection, run **three short plan smokes**
+to validate each of the new code paths (D1 family scenarios, D11
+chaos-mesh, D12 orphan-fault gate). Each smoke is one run of one plan
+(~45-90 min). Catching a harness issue here costs ~1.5 hours total;
+catching it mid-way through day 3 of v5-large costs 3 days.
+
+### Smoke 1 — D1 new families (~60-90 min)
+
+Validates the 8 new scenario YAMLs + run plan against the M0–M5
+telemetry layer.
 
 ```bash
 cd ~/workplace/JiraAndLogs
 source .venv/bin/activate
 
-export SMOKE_RUN_ID="smoke-$(date -u +%Y%m%dT%H%M%SZ)"
+export SMOKE_RUN_ID="smoke-newfam-$(date -u +%Y%m%dT%H%M%SZ)"
 
 pwsh -NoProfile -ExecutionPolicy Bypass \
   -File scripts/research-lab/collect-dataset-plan.ps1 \
   -DatasetRunId "$SMOKE_RUN_ID" \
   -PlanFile "deploy/research-lab/run-plans/dataset-v5-new-families-a.json" \
-  -PythonExe python3 \
-  -ForceNewRun \
-  -BuildDerived \
-  -PostWindowSeconds 30 \
-  2>&1 | tee logs/smoke-$SMOKE_RUN_ID.log
+  -PythonExe python3 -ForceNewRun -BuildDerived -PostWindowSeconds 30 \
+  2>&1 | tee logs/$SMOKE_RUN_ID.log
 ```
 
-Expected at completion (~60-90 min):
+Expected: exit 0, 12 episodes, ~75 windows, 5 Jira shadow issues,
+recall@3 = 1.0 on the derived ranking dataset.
 
-| Signal | Expected value |
-| --- | --- |
-| Exit code | 0 |
-| Episodes recorded | 12 |
-| Telemetry windows | ~75 |
-| Jira shadow issues | 5 (one per borderline/ticket-worthy scenario in the plan) |
-| Raw Loki size | ~900 MB - 1 GB |
-| Derived ranking dataset recall@3 | 1.0 across 5 queries |
+### Smoke 2 — D12 orphan-fault gate (~50-70 min)
+
+Validates `produces_jira_ticket: false` end-to-end: orphan episodes
+record windows but skip Jira generation.
+
+```bash
+export SMOKE_RUN_ID="smoke-orphans-$(date -u +%Y%m%dT%H%M%SZ)"
+
+pwsh -NoProfile -ExecutionPolicy Bypass \
+  -File scripts/research-lab/collect-dataset-plan.ps1 \
+  -DatasetRunId "$SMOKE_RUN_ID" \
+  -PlanFile "deploy/research-lab/run-plans/dataset-v5-orphans.json" \
+  -PythonExe python3 -ForceNewRun -BuildDerived -PostWindowSeconds 30 \
+  2>&1 | tee logs/$SMOKE_RUN_ID.log
+
+# After the smoke completes, build the matchings to validate
+# expected_in_memory + is_novel invariants:
+pwsh -NoProfile -ExecutionPolicy Bypass \
+  -File scripts/research-lab/build-triage-dataset.ps1 \
+  -DatasetRunId "$SMOKE_RUN_ID" -PythonExe python3 -Force
+
+pwsh -NoProfile -ExecutionPolicy Bypass \
+  -File scripts/research-lab/build-jira-memory-corpus.ps1 \
+  -DatasetRunPrefix "smoke-orphans" \
+  -GlobalDatasetId "smoke-orphans-global" \
+  -PythonExe python3 -Force
+
+pwsh -NoProfile -ExecutionPolicy Bypass \
+  -File scripts/research-lab/build-window-memory-matchings.ps1 \
+  -DatasetRunId "$SMOKE_RUN_ID" \
+  -GlobalDatasetId "smoke-orphans-global" \
+  -PythonExe python3 -Force
+```
+
+Expected: exit 0, **10 episodes, 0 Jira shadow issues** (the critical
+D12 invariant), final matchings line: `N ticket-worthy, 0 matched,
+N novel` where every ticket-worthy window has `expected_in_memory:
+false` + `is_novel: true`.
+
+If `jira_shadow_issues.jsonl` line count is non-zero on this smoke,
+the D12 gate is broken — do not proceed to v5-large.
+
+### Smoke 3 — D11 system-faults via chaos-mesh (~45-60 min)
+
+Validates the `ChaosMeshChaos` harness action: each chaos resource
+applied, scenario runs, resource cleaned up (no lingering finalizers).
+
+```bash
+export SMOKE_RUN_ID="smoke-d11-$(date -u +%Y%m%dT%H%M%SZ)"
+
+pwsh -NoProfile -ExecutionPolicy Bypass \
+  -File scripts/research-lab/collect-dataset-plan.ps1 \
+  -DatasetRunId "$SMOKE_RUN_ID" \
+  -PlanFile "deploy/research-lab/run-plans/dataset-v5-system-faults.json" \
+  -PythonExe python3 -ForceNewRun -BuildDerived -PostWindowSeconds 30 \
+  2>&1 | tee logs/$SMOKE_RUN_ID.log
+
+# After completion, verify no chaos resources are stuck:
+kubectl -n chaos-testing get networkchaos,dnschaos,stresschaos
+```
+
+Expected: exit 0, 7 episodes, ~50 windows, 5 Jira shadow issues
+(1 per chaos), `No resources found` for the final
+`kubectl get networkchaos,dnschaos,stresschaos`.
+
+If chaos resources are stuck after the smoke completes, the bounded
+delete / finalizer fallback in the harness isn't working — diagnose
+before launching v5-large.
+
+### Standard smoke expectations table
+
+| Smoke | Plan | Episodes | Jira | Critical invariant |
+| --- | --- | ---: | ---: | --- |
+| newfam | `dataset-v5-new-families-a.json` | 12 | 5 | recall@3 = 1.0 |
+| orphans | `dataset-v5-orphans.json` | 10 | **0** | every orphan window: `expected_in_memory: false` + `is_novel: true` |
+| d11 | `dataset-v5-system-faults.json` | 7 | 5 | `kubectl get networkchaos,dnschaos,stresschaos` returns empty after the run |
 
 Check the summary:
 
@@ -672,7 +773,8 @@ pwsh -NoProfile -ExecutionPolicy Bypass \
   -PlanOnly
 ```
 
-You should see:
+You should see (run index boundaries from the v5-large plan repeats:
+8 / 14 / 14 / 11 / 11 / 8 / 24 / 10):
 
 ```text
 Dataset corpus plan:
@@ -683,14 +785,17 @@ Dataset corpus plan:
   [2]  2026-05-25-dataset-v5-large-control-r02            -> ...
   ...
   [9]  2026-05-25-dataset-v5-large-compact-a-r01          -> compact-a
-  [39] 2026-05-25-dataset-v5-large-compact-b-r01          -> compact-b
-  [69] 2026-05-25-dataset-v5-large-new-families-a-r01     -> new-families-a
-  [81] 2026-05-25-dataset-v5-large-new-families-b-r01     -> new-families-b
-  [93] 2026-05-25-dataset-v5-large-long-running-r01       -> long-running
+  [23] 2026-05-25-dataset-v5-large-compact-b-r01          -> compact-b
+  [37] 2026-05-25-dataset-v5-large-new-families-a-r01     -> new-families-a
+  [48] 2026-05-25-dataset-v5-large-new-families-b-r01     -> new-families-b
+  [59] 2026-05-25-dataset-v5-large-long-running-r01       -> long-running
+  [67] 2026-05-25-dataset-v5-large-orphans-r01            -> orphans
+  [91] 2026-05-25-dataset-v5-large-system-faults-r01      -> system-faults
 ```
 
-Control runs come first as the false-positive anchor; long-running
-runs come last because they're slowest.
+Control runs come first as the false-positive anchor; long-running and
+chaos-mesh runs come later because they're slower and have more
+stringent prerequisites.
 
 ---
 
@@ -852,9 +957,14 @@ reports:
 
 - Headline PR-AUC / ROC-AUC / ECE on held-out test families
 - Precision@FPR=1% and 5% operating points
-- Leave-one-family-out macro PR-AUC / ROC-AUC across all 21 families
+- Leave-one-family-out macro PR-AUC / ROC-AUC across all **27 families**
 - Per-family and per-`is_hard_case` stratified metrics
 - Feature weights for inspection
+- **Orphan-detection recall gap** (D12.6): `recall_reported` vs
+  `recall_orphan` vs `gap_pts` per pipeline. Verdict bucket:
+  `signal_learning` (gap < 10pts), `borderline` (10-20),
+  `pattern_matching` (> 20). This is the headline "memorisation vs
+  detection" answer the v5 corpus is designed to give.
 
 Read the headline:
 
@@ -898,12 +1008,15 @@ done
 | Asset | Expected |
 | --- | ---: |
 | Entries in corpus manifest with `status: completed` | 100 |
-| Rows in `global-triage-examples.jsonl` | ~8,000 |
-| Entries in `jira-memory-corpus.jsonl` | ~500 |
-| Scenario families in the split manifest | 21 |
+| Rows in `global-triage-examples.jsonl` | ~7,400 |
+| Entries in `jira-memory-corpus.jsonl` | ~430 (orphan windows do NOT contribute Jira entries by design) |
+| Scenario families in the split manifest | 27 |
 | Long-window (≥10 min) episodes | ~96 |
+| **Orphan ticket_worthy windows** (D12) | **192** (24 orphan runs × 8 orphan ticket_worthy windows/run) |
+| **Chaos-mesh ticket_worthy windows** (D11) | **40** (10 system-fault runs × 4 ticket_worthy chaos scenarios/run; the 5th chaos is borderline) |
 | `"passed": false` data-quality reports | 0 |
 | Leakage canary fails | 0 |
+| **Lingering chaos resources** (`kubectl -n chaos-testing get networkchaos,dnschaos,stresschaos`) | **empty** (every chaos resource cleaned up by the bounded delete + finalizer fallback) |
 
 ---
 
@@ -1015,9 +1128,17 @@ vs v4-large:
   per run: 200-400 MB (vs ~80-130 MB on v4-large).
 - 100 runs × 300 MB ≈ **30-40 GB raw telemetry**.
 - Long-running plan (8 runs × ~30 min) adds ~5-8 GB.
+- Orphans plan (24 runs × ~50 min each) adds ~10-15 GB (orphan runs
+  produce the same telemetry as their non-orphan twins, just no Jira
+  shadow rows).
+- System-faults plan (10 runs × ~50 min each) adds ~5-10 GB.
+  chaos-mesh injects produce noisier telemetry (more error logs, more
+  span errors) than the equivalent application-level scenarios.
 - Derived datasets add ~15-20 GB.
 - Loki PVC (persistent) holds another 50-120 GiB while runs are in
   flight.
+- chaos-mesh container images: another ~300 MB on the kind nodes (the
+  chaos-daemon, controller-manager, and chaos-dns-server images).
 
 **Binding target sizing** (when starting fresh on a new GCP VM):
 
