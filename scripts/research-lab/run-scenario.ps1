@@ -216,6 +216,13 @@ function Invoke-ScenarioAction {
         # Prerequisite: chaos-mesh must be installed in the cluster
         # (chaos-testing namespace + CRDs). See install steps in
         # docs/gcp-production-dataset-vm-runbook.md "Install chaos-mesh".
+        #
+        # Hardening (2026-05-25): chaos-mesh resources have finalizers
+        # that block deletion until `AllRecovered: True`. If the inject
+        # failed (e.g. safe-mode blocks targeting kube-system pods),
+        # AllRecovered stays False forever and `kubectl delete` hangs.
+        # We use a bounded delete (--timeout=45s) and fall back to
+        # patching the finalizer off if the bounded delete fails.
         $manifest = $Scenario.execution_chaos_manifest
         if (-not $manifest) {
             throw "ChaosMeshChaos action requires execution.chaos_manifest (path to a chaos-mesh resource yaml)."
@@ -230,9 +237,17 @@ function Invoke-ScenarioAction {
             throw "ChaosMeshChaos manifest not found: $manifestPath"
         }
 
-        Write-Host "ChaosMeshChaos applying: $manifestPath"
+        # Parse name/kind/namespace from the manifest for finalizer-fallback.
+        $chaosKind = (Get-Content -LiteralPath $manifestPath | Select-String -Pattern "^kind:" | Select-Object -First 1).Line -replace "^kind:\s*", ""
+        $chaosName = (Get-Content -LiteralPath $manifestPath | Select-String -Pattern "^\s+name:" | Select-Object -First 1).Line -replace "^\s+name:\s*", ""
+        $chaosNs = (Get-Content -LiteralPath $manifestPath | Select-String -Pattern "^\s+namespace:" | Select-Object -First 1).Line -replace "^\s+namespace:\s*", ""
+        $chaosResource = "$($chaosKind.ToLower())/$chaosName"
+
+        Write-Host "ChaosMeshChaos applying: $manifestPath ($chaosResource in $chaosNs)"
         Invoke-ResearchLabKubectlText -ArgumentList @("apply", "-f", $manifestPath) | Out-Host
         $restore.chaos_manifest = $manifestPath
+        $restore.chaos_resource = $chaosResource
+        $restore.chaos_namespace = $chaosNs
 
         # Brief settle so the chaos-controller has time to schedule the
         # action onto the affected pods before we start the active-fault
@@ -242,8 +257,45 @@ function Invoke-ScenarioAction {
         Start-Sleep -Seconds $ActiveDurationSeconds
 
         if (-not $DoNotRestore) {
-            Write-Host "ChaosMeshChaos deleting: $manifestPath"
-            Invoke-ResearchLabKubectlText -ArgumentList @("delete", "-f", $manifestPath, "--ignore-not-found=true") | Out-Host
+            Write-Host "ChaosMeshChaos deleting (bounded 45s): $chaosResource"
+            $deleteOk = $false
+            try {
+                Invoke-ResearchLabKubectlText -ArgumentList @(
+                    "delete", "-f", $manifestPath,
+                    "--ignore-not-found=true",
+                    "--timeout=45s"
+                ) | Out-Host
+                $deleteOk = ($LASTEXITCODE -eq 0)
+            } catch {
+                Write-Warning "Bounded delete threw: $($_.Exception.Message)"
+                $deleteOk = $false
+            }
+
+            if (-not $deleteOk) {
+                # Finalizer fallback: patch finalizers to [] then force-delete.
+                # Happens when chaos-mesh's AllInjected stayed False (e.g. the
+                # chaos couldn't be applied to the targeted pods at all),
+                # so AllRecovered also stays False and the finalizer blocks
+                # the normal delete forever.
+                Write-Warning "Bounded delete failed; patching finalizer + force-delete: $chaosResource"
+                try {
+                    Invoke-ResearchLabKubectlText -ArgumentList @(
+                        "patch", $chaosResource, "-n", $chaosNs,
+                        "--type=merge", "-p", '{"metadata":{"finalizers":[]}}'
+                    ) | Out-Host
+                } catch {
+                    Write-Warning "Finalizer patch failed: $($_.Exception.Message)"
+                }
+                try {
+                    Invoke-ResearchLabKubectlText -ArgumentList @(
+                        "delete", $chaosResource, "-n", $chaosNs,
+                        "--grace-period=0", "--force",
+                        "--ignore-not-found=true"
+                    ) | Out-Host
+                } catch {
+                    Write-Warning "Force-delete failed: $($_.Exception.Message)"
+                }
+            }
             # Brief settle so cleanup actions (iptables rules, sidecar
             # removals) finish before the recovery window starts.
             Start-Sleep -Seconds 5

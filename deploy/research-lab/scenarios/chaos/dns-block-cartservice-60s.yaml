@@ -1,22 +1,24 @@
 apiVersion: chaos-mesh.org/v1alpha1
-kind: NetworkChaos
+kind: DNSChaos
 metadata:
   name: dns-block-cartservice
   namespace: chaos-testing
 spec:
-  action: partition
+  # DNSChaos intercepts DNS queries inside the targeted pods using
+  # the chaos-mesh DNS sidecar (chaos-dns-server). All resolutions
+  # return errors for the duration.
+  #
+  # Switched from NetworkChaos partition (which would have required
+  # modifying kube-system/kube-dns pods, blocked by chaos-mesh safe-mode)
+  # to DNSChaos on the cartservice side only. Net effect on telemetry
+  # is the same: cartservice DNS lookups fail.
+  action: error
   mode: all
   selector:
     namespaces:
       - online-boutique-research
     labelSelectors:
       app: cartservice
-  direction: to
-  target:
-    mode: all
-    selector:
-      namespaces:
-        - kube-system
-      labelSelectors:
-        k8s-app: kube-dns
+  patterns:
+    - "*"
   duration: "60s"
