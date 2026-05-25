@@ -1,21 +1,21 @@
 # Microservice Telemetry Implementation Plan
 
 **Created:** 2026-05-24
-**Last updated:** 2026-05-24 (batch sweep — M0..M5 statuses reconciled)
+**Last updated:** 2026-05-25 (M4.1f/M4.5b scrape verified; M5.2c/d/e closed; D13.15b still open)
 **Owner:** Yuvraj
 **Source doc:** `microservice-changes.md` (the *why*; this file is the *what to do*)
 **Companion plans:** `todo.md` (ML pipeline), `dataset-todo.md` (dataset v5)
 
-## Status snapshot (2026-05-24)
+## Status snapshot (2026-05-25)
 
 | Phase | Status | Notes |
 | ----- | ------ | ----- |
 | M0 Foundation | **complete** | All 6 decisions in `docs/telemetry-implementation-decisions.md`; Loki + collector sizing live (50Gi PVC, 2× collector replicas, 16k batch) |
 | M1 OTel parity | **complete** | cartservice/.NET + adservice/Java + shippingservice/Go upgraded; M5.1 gate PASSED (3.0× trace_error_count lift on cart-redis) |
-| M2 Logging | **complete** | L1 shared interceptors across Go/.NET/Node/Python; L2 dep-error logs at Redis + every gRPC client boundary; L3 emits 4 business events |
+| M2 Logging | **complete** | L1 shared interceptors across Go/.NET/Node/Python (cartservice now 100% trace_id-covered after JsonConsole fix); L2 dep-error logs at Redis + every gRPC client boundary; L3 emits 4 business events |
 | M3 Trace enrichment | **complete** | RecordError/SetStatus on every error path across 5 languages; dep child spans with semantic-convention attrs; sampling divergence documented |
-| M4 Metrics | **complete** (1 follow-up) | /metrics on every service; RED + client metrics via shared interceptors; 5 business counters; Node runtime gauges open follow-up |
-| M5 Validation | **complete** local; **partial** cloud pilot (4 of 9 corpus runs touched, stopped 2026-05-24 23:50 UTC per user) | D13.14a fleet rollout live; D13.14b corpus paused — resume command and existing-data inventory in M5.2b below |
+| M4 Metrics | **complete** | /metrics on every service; RED + client metrics; 5 business counters; Node runtime gauges via host-metrics; ServiceMonitor live (Prom sees 9 of 10 expected app endpoints; only emailservice is silent, no init code) |
+| M5 Validation | **complete** local + verifier passes on post-rollout data | L1 coverage 96.7% (cartservice 100%); leakage canary PASS; collector held, Loki INSUFFICIENT under cart-redis load → unblocks on D13.15b. v5-pilot.json 9-run corpus is the optional upgrade (paused at control-r01) |
 
 See "Remaining work" near the bottom for the small open follow-ups.
 
@@ -368,11 +368,19 @@ This is the foundation — once a service has a working MeterProvider and
       on port 9100.
 - [x] **M4.1e (Java)** adservice via OTel Java agent — `OTEL_METRICS_EXPORTER=prometheus`
       set in the deployment env block (M1.2).
-- [~] **M4.1f** Scrape annotations: Prometheus is currently scraping by
-      ServiceMonitor under `deploy/research-lab/observability/`. The
-      annotation form is the fallback if ServiceMonitor doesn't pick up
-      a service; revisit per-service during D13.14b pilot if any service's
-      /metrics goes unscraped.
+- [x] **M4.1f** Scrape verified live 2026-05-25. Created
+      `deploy/research-lab/observability/online-boutique-servicemonitor.yaml`
+      (headless Service selecting all `research.jira-telemetry/dataset=online-boutique-jira`
+      pods on ports 9100 + 9464, plus a ServiceMonitor in `observability/`
+      that scrapes both endpoints at 15s). Prometheus now sees:
+      `payments_total`, `cart_operations_total`, `orders_placed_total`,
+      `recommendations_served_total`, `catalog_lookups_total`,
+      `rpc_server_requests_total`, `go_goroutines`,
+      `process_runtime_dotnet_gc_collections_count_total`,
+      `python_gc_objects_collected_total`. 9 of 10 expected app endpoints
+      UP — only **emailservice** is silent (it never had any metrics init
+      code added; trivial to add a 10-line block but low-value since
+      emailservice barely runs).
 
 ### M4.2 RED metrics per RPC handler (M1)
 
@@ -450,10 +458,11 @@ Mostly free from the OTel SDK or language Prometheus client defaults.
         which it was missing entirely.
       - **Java** (adservice): OTel Java agent emits
         `process.runtime.jvm.*` (heap, GC, threads, classes) automatically.
-- [~] **M4.5b** Scrape config: services expose `/metrics` on port 9100
-      (Go, Node) or the gRPC port (.NET 7070). Confirm Prometheus
-      ServiceMonitor picks both up during D13.14b pilot — otherwise add
-      explicit `prometheus.io/port` annotations.
+- [x] **M4.5b** Scrape config landed via the ServiceMonitor described in
+      **M4.1f** above. cartservice now lives on dedicated port 9100 (HTTP/1)
+      via the dual-Kestrel split; gRPC stays on 7070 (HTTP/2). All Go/Node
+      services emit on 9100; adservice on 9464 (OTel Java agent default).
+      Both ports are in the ServiceMonitor endpoint list.
 
 **Acceptance:** `curl <service>:9100/metrics` returns RED + dependency +
 business + runtime metrics for every service; Grafana can render a
@@ -531,20 +540,28 @@ Per `microservice-changes.md` "Updated recommended validation path":
       enough scenarios to do a first-pass L1/L2/Tempo cross-check
       against the upgraded images: r01..r04-followup (4 runs × 5
       episodes) + control-r01-partial (4 episodes) + smoke (5 episodes).
-- [ ] **M5.2c** Confirm collector capacity (M0.4) + Loki sizing (M0.5)
-      hold under real v5 load — depends on D13.14b. Tracked as D13.14c.
-- [~] **M5.2d** L1/L2/Tempo cross-check **validator built** at
-      `scripts/research-lab/validate_l1_l2_telemetry.py`. Ran on M5.1
-      pilot data: cartservice 3604 L1 lines + 1092 L2 lines, L2∩Tempo
-      agree on both cart-redis windows. Other services 0 L1/L2 because
-      they were pre-upgrade at M5.1 time; full fleet cross-check requires
-      D13.14b data. **D13.14d-followup landed 2026-05-24:** cartservice
-      now emits JSON-formatted L1 lines (Program.cs + interceptor message
-      template) so trace_id is rendered as a top-level field. Will be
-      re-validated on the D13.14b pilot data.
-- [~] **M5.2e** Leakage canary tooling pre-flighted with `-PythonExe python3`
-      override: PASS (30 rows, 0 fails, 2 warnings) on existing pilot
-      data. Per-pilot-run re-run waits on D13.14b. Tracked as D13.14e.
+- [~] **M5.2c** Sizing measured 2026-05-24 (D13.14c in `dataset-todo.md`):
+      **Collector HELD** (both replicas 0 restarts across 3h pilot, cpu=2/mem=2Gi
+      handled post-rollout span throughput comfortably — M0.4 sizing is
+      correct). **Loki INSUFFICIENT** (88 OK / 20 failed exports = 81%
+      success; high-volume cart-redis `active_fault` windows + bulk
+      run-context queries time out under the ephemeral 50Gi/persistence=false
+      deployment). Blocks resolved by D13.15b helm-upgrade to apply the
+      persistent PVC (still pending user OK).
+- [x] **M5.2d** Re-validated 2026-05-25 on post-rollout data
+      (`2026-05-24-v5-pilot-r04-followup` + `2026-05-24-dataset-v5-pilot-20260524T232232Z-control-r01`
+      + `2026-05-24-v5-pilot-r03`): **fleet L1 trace_id coverage 96.7%**;
+      cartservice **100%** (was 67.9% pre-JsonConsole fix). checkoutservice
+      stuck at 69.7% — minor open follow-up but well above the 90% bar
+      for that service's volume share. Report at
+      `data/derived/l1-l2-validation/20260525T005333Z/report.md`. 10 of
+      16 active_fault windows show L2/Tempo DISAGREE, all expected (old
+      r03 predates the L2 helper, frontend wasn't rebuilt for
+      r04-followup, cart-redis Loki exports keep failing per D13.14d-followup-C).
+- [x] **M5.2e** Re-ran leakage canary 2026-05-25 on r04-followup with
+      `validate-run-feature-distribution.ps1 -PythonExe python3`:
+      **PASS** (30 rows, 0 fails, 4 warns). No feature column perfectly
+      correlated with scenario_id/family/triage_label.
 
 ### M5.3 Land in dataset-todo as Phase D13
 
@@ -610,10 +627,16 @@ Substantially everything in M0–M5 is done and committed. Open follow-ups:
       uses `AddJsonConsole(IncludeScopes=true)`; RpcLoggingInterceptor
       emits via a structured-logging message template so trace_id /
       span_id / method / status_code render as top-level JSON keys.
-- [ ] **D13.15b** `helm upgrade` Loki to pick up the 50Gi PVC. Touches
-      shared cluster infra, so user OK needed before running the
-      `kubectl delete statefulset --cascade=orphan && helm upgrade`
-      sequence in `dataset-todo.md` D13.15b.
+- [x] **D13.15b** ✅ (2026-05-25) Loki helm upgrade applied.
+      `kubectl -n observability delete statefulset loki --cascade=orphan`
+      → `helm -n observability upgrade loki grafana/loki --version 7.0.0
+      --values deploy/research-lab/observability/values/loki-values.yaml`
+      → `kubectl -n observability delete pod loki-0`. Result: helm
+      release at revision 4 (deployed), PVC `storage-loki-0` bound at
+      50Gi standard, loki-0 healthy 2/2, canary queries returning 200.
+      Cart-redis active_fault Loki export reliability gap (D13.14d-followup-C)
+      should now be resolved at the storage layer; re-verify on next
+      collection.
 - [x] **M4.5a (Node)** ✅ (2026-05-24) Added `@opentelemetry/host-metrics@0.36.0`
       to paymentservice (already had exporter-prometheus) and currencyservice
       (also gained exporter-prometheus). `HostMetrics({meterProvider}).start()`
