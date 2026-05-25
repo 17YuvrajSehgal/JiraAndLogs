@@ -1,0 +1,86 @@
+schema_version: 1
+scenario_id: memory-pressure-cartservice-120s
+title: Cartservice memory pressure 100MB for 120 seconds (system fault)
+description: >
+  chaos-mesh StressChaos starts a memory-stressor sidecar process
+  inside the cartservice pod that consumes 100 MB of RAM for ~120
+  seconds. Cartservice's container memory limit (128 MiB) is mostly
+  saturated; the .NET runtime hits GC pressure, request latency
+  climbs, and if the limit is exceeded the kubelet OOM-kills the
+  container.
+
+  D11.9 system fault: tests the "node-level resource pressure" shape
+  — the model needs to recognise the dotnet.gc.* metric explosion
+  (M4.5 runtime gauges) + the pod restart count + the inotify watchers
+  saturating as a coordinated signal that's distinct from a pure
+  pod_restart fault.
+
+  Requires chaos-mesh installed in the cluster.
+dataset_run_id: local-dev-run-001
+traffic_profile_id: baseline-checkout-mix
+environment: research-local
+jira_candidate: true
+expected_jira:
+  issue_type: Incident
+  priority: Major
+  components:
+    - cartservice
+  labels:
+    - synthetic-system-fault
+    - resource-saturation
+    - memory-pressure
+    - chaos-mesh
+    - telemetry-linked
+  summary_template: "Cartservice memory pressure / saturation"
+  description_template: |
+    Synthetic system-fault event from {{scenario_id}}.
+    chaos-mesh StressChaos consumed 100MB inside cartservice pods
+    for 120s, causing GC pressure / OOM risk.
+fault:
+  fault_id: memory-pressure-cartservice-001
+  fault_type: resource_saturation
+  affected_service: cartservice
+  suggested_mechanism: chaos-mesh StressChaos memory size=100MB on cartservice
+  expected_start_offset_seconds: 300
+  expected_duration_seconds: 120
+  blast_radius:
+    user_visible: true
+    expected_error_rate: medium
+    expected_latency_impact: high
+labels:
+  severity: major
+  incident_type: degradation
+  root_cause_category: resource_saturation
+  should_alert: true
+  should_create_jira_shadow_issue: true
+execution:
+  action: ChaosMeshChaos
+  namespace: online-boutique-research
+  chaos_manifest: deploy\research-lab\scenarios\chaos\memory-pressure-cartservice-100mb.yaml
+triage:
+  schema_version: 1
+  scenario_family: resource-saturation
+  per_window:
+    pre_fault_baseline:
+      triage_label: noise
+      triage_severity: null
+      triage_components: null
+      triage_reason_class: null
+      is_hard_case: false
+      rationale: "Pre-fault baseline; cartservice memory headroom normal."
+    active_fault:
+      triage_label: ticket_worthy
+      triage_severity: major
+      triage_components:
+        - cartservice
+      triage_reason_class: resource_saturation
+      is_hard_case: true
+      rationale: "Memory pressure causes GC churn, latency spikes, potential OOM. M4.5 runtime gauges should fire visibly."
+    recovery_window:
+      triage_label: borderline
+      triage_severity: minor
+      triage_components:
+        - cartservice
+      triage_reason_class: resource_saturation
+      is_hard_case: true
+      rationale: "Stressor stopped; GC catches up."

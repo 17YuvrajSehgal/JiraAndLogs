@@ -1,0 +1,84 @@
+schema_version: 1
+scenario_id: network-latency-currency-500ms
+title: 500ms network latency added to currencyservice (system fault)
+description: >
+  chaos-mesh NetworkChaos adds 500ms ± 100ms jitter latency on the
+  currencyservice pod's network interface for ~120 seconds. Every
+  currency-conversion call from frontend / shippingservice /
+  checkoutservice slows dramatically; checkout-flow p95 latency
+  triples; some upstream timeouts fire.
+
+  D11.6 system fault: tests the canonical "added latency" shape —
+  the symptom looks identical to a service-internal latency
+  regression, but the root cause is network-layer.
+
+  Requires chaos-mesh installed in the cluster.
+dataset_run_id: local-dev-run-001
+traffic_profile_id: baseline-checkout-mix
+environment: research-local
+jira_candidate: true
+expected_jira:
+  issue_type: Incident
+  priority: Major
+  components:
+    - currencyservice
+    - frontend
+  labels:
+    - synthetic-system-fault
+    - network-latency
+    - chaos-mesh
+    - telemetry-linked
+  summary_template: "500ms added latency on currencyservice"
+  description_template: |
+    Synthetic system-fault event from {{scenario_id}}.
+    chaos-mesh NetworkChaos added 500ms latency on currencyservice
+    for 120s. Customer-visible p95 regression.
+fault:
+  fault_id: network-latency-currency-001
+  fault_type: network_latency
+  affected_service: currencyservice
+  suggested_mechanism: chaos-mesh NetworkChaos delay=500ms on currencyservice
+  expected_start_offset_seconds: 300
+  expected_duration_seconds: 120
+  blast_radius:
+    user_visible: true
+    expected_error_rate: medium
+    expected_latency_impact: high
+labels:
+  severity: major
+  incident_type: degradation
+  root_cause_category: network_latency
+  should_alert: true
+  should_create_jira_shadow_issue: true
+execution:
+  action: ChaosMeshChaos
+  namespace: online-boutique-research
+  chaos_manifest: deploy\research-lab\scenarios\chaos\network-latency-currency-500ms.yaml
+triage:
+  schema_version: 1
+  scenario_family: network-latency
+  per_window:
+    pre_fault_baseline:
+      triage_label: noise
+      triage_severity: null
+      triage_components: null
+      triage_reason_class: null
+      is_hard_case: false
+      rationale: "Pre-fault baseline."
+    active_fault:
+      triage_label: ticket_worthy
+      triage_severity: major
+      triage_components:
+        - currencyservice
+        - frontend
+      triage_reason_class: network_latency
+      is_hard_case: true
+      rationale: "Sustained 500ms latency injection; customer-visible. Similar shape to productcatalog-latency-major but network root cause."
+    recovery_window:
+      triage_label: borderline
+      triage_severity: minor
+      triage_components:
+        - currencyservice
+      triage_reason_class: network_latency
+      is_hard_case: true
+      rationale: "Latency cleared."

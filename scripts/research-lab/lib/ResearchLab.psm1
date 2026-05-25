@@ -804,6 +804,12 @@ function Get-ResearchLabScenarioConfig {
         execution_restore_replicas = Get-ResearchLabYamlScalar -Path $ScenarioFile -KeyPath @("execution", "restore_replicas")
         execution_env = Get-ResearchLabYamlMap -Path $ScenarioFile -KeyPath @("execution", "env") -ValuesAsString
         execution_restore_env = Get-ResearchLabYamlMap -Path $ScenarioFile -KeyPath @("execution", "restore_env")
+        # D11 (2026-05-25): chaos-mesh manifest path for ChaosMeshChaos
+        # action. The scenario YAML stays orchestration-only; the actual
+        # NetworkChaos/StressChaos/DNSChaos resource lives in a separate
+        # file under deploy/research-lab/scenarios/chaos/. Keeps the
+        # scenario YAML schema unchanged for non-chaos scenarios.
+        execution_chaos_manifest = Get-ResearchLabYamlScalar -Path $ScenarioFile -KeyPath @("execution", "chaos_manifest") -AsString
     }
 }
 

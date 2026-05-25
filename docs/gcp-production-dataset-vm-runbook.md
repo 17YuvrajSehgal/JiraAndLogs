@@ -369,6 +369,90 @@ Online Boutique isn't deployed — that happens after image build.
 
 ---
 
+## VM: Install chaos-mesh (required by the system-faults plan)
+
+The v5-large corpus's `system-faults` plan (10 runs, 5 D11 scenarios per
+run) injects DNS / network-partition / packet-loss / network-latency /
+memory-pressure faults via chaos-mesh CRDs. Without chaos-mesh those 10
+runs will fail at the first `kubectl apply -f <chaos manifest>` call.
+
+Install chaos-mesh into its own `chaos-testing` namespace:
+
+```bash
+helm repo add chaos-mesh https://charts.chaos-mesh.org
+helm repo update
+
+kubectl create namespace chaos-testing
+helm install chaos-mesh chaos-mesh/chaos-mesh \
+  --namespace chaos-testing \
+  --version 2.7.2 \
+  --set chaosDaemon.runtime=containerd \
+  --set chaosDaemon.socketPath=/run/containerd/containerd.sock \
+  --set dashboard.create=false
+
+kubectl wait --for=condition=Ready pods --all -n chaos-testing --timeout=300s
+```
+
+Notes:
+
+- `chaosDaemon.runtime=containerd` + the matching socket path are
+  correct for kind (which uses containerd). For Docker-runtime clusters
+  use the chart's Docker defaults instead.
+- `dashboard.create=false` skips the web UI — we don't need it for an
+  unattended sweep and skipping saves ~150 MB of image pulls.
+- Version pinned to `2.7.2` (the version validated against this
+  repo's chaos manifests as of 2026-05-25).
+
+Verify the CRDs are registered:
+
+```bash
+kubectl get crd | grep chaos-mesh.org
+# Expect at least: networkchaos.chaos-mesh.org, stresschaos.chaos-mesh.org,
+# podchaos.chaos-mesh.org, iochaos.chaos-mesh.org, dnschaos.chaos-mesh.org
+```
+
+Quick smoke (apply a 5-second NetworkChaos against nothing real, verify
+the controller acknowledges it, delete it):
+
+```bash
+cat <<'EOF' | kubectl apply -f -
+apiVersion: chaos-mesh.org/v1alpha1
+kind: NetworkChaos
+metadata:
+  name: smoke-test
+  namespace: chaos-testing
+spec:
+  action: delay
+  mode: all
+  selector:
+    namespaces: [chaos-testing]
+    labelSelectors:
+      this-label: does-not-exist
+  delay:
+    latency: "100ms"
+  duration: "5s"
+EOF
+sleep 8
+kubectl -n chaos-testing get networkchaos smoke-test -o yaml | grep -E "phase|message" | head -5
+kubectl -n chaos-testing delete networkchaos smoke-test
+```
+
+If `phase: Finished` (or similar terminal state) appears within ~10s,
+chaos-mesh is healthy. If `phase: Failed` with a controller error,
+check the chaos-controller-manager logs:
+
+```bash
+kubectl -n chaos-testing logs deploy/chaos-controller-manager --tail=50
+```
+
+**If you want to skip the system-faults plan entirely**: remove the
+`system-faults` entry from the `plans` array in
+`deploy/research-lab/corpora/dataset-v5-large.json` and rebalance the
+other plans to keep `repeat` totals at 100. The rest of v5-large
+collects normally without chaos-mesh installed.
+
+---
+
 ## VM: Build the M0–M5 Telemetry-Upgraded Images
 
 The kustomize overlay pins **specific image tags** (e.g.

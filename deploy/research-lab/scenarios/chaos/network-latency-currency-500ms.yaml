@@ -1,0 +1,18 @@
+apiVersion: chaos-mesh.org/v1alpha1
+kind: NetworkChaos
+metadata:
+  name: latency-currency
+  namespace: chaos-testing
+spec:
+  action: delay
+  mode: all
+  selector:
+    namespaces:
+      - online-boutique-research
+    labelSelectors:
+      app: currencyservice
+  delay:
+    latency: "500ms"
+    correlation: "0"
+    jitter: "100ms"
+  duration: "120s"

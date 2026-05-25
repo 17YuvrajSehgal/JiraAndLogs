@@ -1,0 +1,22 @@
+apiVersion: chaos-mesh.org/v1alpha1
+kind: NetworkChaos
+metadata:
+  name: dns-block-cartservice
+  namespace: chaos-testing
+spec:
+  action: partition
+  mode: all
+  selector:
+    namespaces:
+      - online-boutique-research
+    labelSelectors:
+      app: cartservice
+  direction: to
+  target:
+    mode: all
+    selector:
+      namespaces:
+        - kube-system
+      labelSelectors:
+        k8s-app: kube-dns
+  duration: "60s"

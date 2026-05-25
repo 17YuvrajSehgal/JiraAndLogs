@@ -111,6 +111,15 @@ SCENARIO_FAMILIES: dict[str, str] = {
     # 2 far orphans (service has zero Jira-ticketed scenarios anywhere):
     "orphan-emailservice-flake-major": "email-outage",
     "orphan-adservice-outage-major": "ad-outage",
+
+    # ---- Phase D11: system-level fault scenarios (2026-05-25) -------------
+    # All injected via chaos-mesh CRDs (NetworkChaos / StressChaos).
+    # Require chaos-mesh installed in the cluster (chaos-testing namespace).
+    "dns-block-cartservice-60s": "dns-outage",
+    "network-partition-cart-redis": "network-partition",
+    "packet-loss-frontend-30pct-90s": "network-packet-loss",
+    "network-latency-currency-500ms": "network-latency",
+    "memory-pressure-cartservice-120s": "resource-saturation",
 }
 
 # Fault-type compatibility classes used for memory-match ground truth.

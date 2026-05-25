@@ -6,7 +6,7 @@ param(
     [Parameter(Mandatory = $true)]
     [string]$ScenarioFile,
 
-    [ValidateSet("Auto", "RecordOnly", "SetEnv", "RestartPods", "ScaleDeployment")]
+    [ValidateSet("Auto", "RecordOnly", "SetEnv", "RestartPods", "ScaleDeployment", "ChaosMeshChaos")]
     [string]$Action = "Auto",
 
     [int]$DurationSeconds = 0,
@@ -201,6 +201,52 @@ function Invoke-ScenarioAction {
             }
             Invoke-ResearchLabKubectlText -ArgumentList @("scale", "deployment/$target", "-n", $TargetNamespace, "--replicas=$restoreReplicas") | Out-Host
             Wait-ResearchLabDeployment -Name $target -TargetNamespace $TargetNamespace
+        }
+
+        return $restore
+    }
+
+    if ($SelectedAction -eq "ChaosMeshChaos") {
+        # D11 (2026-05-25): apply a chaos-mesh resource (NetworkChaos,
+        # StressChaos, DNSChaos, IOChaos, etc.) for ActiveDurationSeconds
+        # then delete it. The chaos resource lives in its own manifest
+        # file under deploy/research-lab/scenarios/chaos/ so the scenario
+        # YAML stays orchestration-only.
+        #
+        # Prerequisite: chaos-mesh must be installed in the cluster
+        # (chaos-testing namespace + CRDs). See install steps in
+        # docs/gcp-production-dataset-vm-runbook.md "Install chaos-mesh".
+        $manifest = $Scenario.execution_chaos_manifest
+        if (-not $manifest) {
+            throw "ChaosMeshChaos action requires execution.chaos_manifest (path to a chaos-mesh resource yaml)."
+        }
+        $repoRoot = Get-ResearchLabRepoRoot
+        $manifestPath = if ([System.IO.Path]::IsPathRooted($manifest)) {
+            $manifest
+        } else {
+            Join-ResearchLabPath @($repoRoot, $manifest)
+        }
+        if (-not (Test-Path -LiteralPath $manifestPath)) {
+            throw "ChaosMeshChaos manifest not found: $manifestPath"
+        }
+
+        Write-Host "ChaosMeshChaos applying: $manifestPath"
+        Invoke-ResearchLabKubectlText -ArgumentList @("apply", "-f", $manifestPath) | Out-Host
+        $restore.chaos_manifest = $manifestPath
+
+        # Brief settle so the chaos-controller has time to schedule the
+        # action onto the affected pods before we start the active-fault
+        # window timer.
+        Start-Sleep -Seconds 5
+
+        Start-Sleep -Seconds $ActiveDurationSeconds
+
+        if (-not $DoNotRestore) {
+            Write-Host "ChaosMeshChaos deleting: $manifestPath"
+            Invoke-ResearchLabKubectlText -ArgumentList @("delete", "-f", $manifestPath, "--ignore-not-found=true") | Out-Host
+            # Brief settle so cleanup actions (iptables rules, sidecar
+            # removals) finish before the recovery window starts.
+            Start-Sleep -Seconds 5
         }
 
         return $restore

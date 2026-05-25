@@ -1,0 +1,22 @@
+apiVersion: chaos-mesh.org/v1alpha1
+kind: NetworkChaos
+metadata:
+  name: partition-cart-redis
+  namespace: chaos-testing
+spec:
+  action: partition
+  mode: all
+  selector:
+    namespaces:
+      - online-boutique-research
+    labelSelectors:
+      app: cartservice
+  direction: to
+  target:
+    mode: all
+    selector:
+      namespaces:
+        - online-boutique-research
+      labelSelectors:
+        app: redis-cart
+  duration: "120s"

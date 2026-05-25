@@ -1,8 +1,8 @@
 {
   "schema_version": 1,
   "corpus_id": "dataset-v5-large",
-  "title": "Dataset v5 large — 100-run production-scale corpus with 22 families on upgraded telemetry",
-  "description": "Per dataset-todo.md Phase D4.1 sizing: 100 runs = 8 control + 17 compact-a + 17 compact-b + 12 new-families-a + 12 new-families-b + 9 long-running + 25 orphans. Builds on v4-large's 13 families with 8 new D1 families (post-deploy-churn, recovered-in-window, single-pod-restart-healthy-replication, third-party-blip, scheduled-job-spike, latency-near-miss-partial-recovery, flapping-pod, slow-leak-saturation) PLUS one new D12 family (email-outage from far-orphan emailservice-flake) for 22 families total. 25 orphan runs contribute 200 orphan ticket_worthy windows, meeting the D12 acceptance threshold. Collected against the M0-M5 upgraded telemetry layer (L1 shared interceptors, L2 dep-error logs, L3 business events, RecordError fleet-wide, RED + per-dependency + business + runtime metrics, PVC-backed Loki). Estimated runtime: 4-5 days on the GCP VM.",
+  "title": "Dataset v5 large — 100-run production-scale corpus with 27 families on upgraded telemetry",
+  "description": "Per dataset-todo.md Phase D4.1 sizing: 100 runs = 8 control + 14 compact-a + 14 compact-b + 11 new-families-a + 11 new-families-b + 8 long-running + 24 orphans + 10 system-faults. Builds on v4-large's 13 families with 8 new D1 families (post-deploy-churn, recovered-in-window, single-pod-restart-healthy-replication, third-party-blip, scheduled-job-spike, latency-near-miss-partial-recovery, flapping-pod, slow-leak-saturation), 1 new D12 family (email-outage), and 5 new D11 system-fault families (dns-outage, network-partition, network-packet-loss, network-latency, resource-saturation) for 27 families total. 24 orphan runs contribute 192 orphan ticket_worthy windows (under the D12 200-window target by 8 — acceptable for v5; v5.1 can top up). 10 system-fault runs contribute 50 system-fault ticket_worthy/borderline windows (under the dataset-todo 'D11 >=14 scenarios / >=200 windows' target — see harness_caveats). Collected against the M0-M5 upgraded telemetry layer (L1 shared interceptors, L2 dep-error logs, L3 business events, RecordError fleet-wide, RED + per-dependency + business + runtime metrics, PVC-backed Loki). Estimated runtime: 4-5 days on the GCP VM.",
   "locked_baseline": null,
   "development_stage": "v5 production-scale corpus",
   "default_dataset_run_prefix": "2026-05-25-dataset-v5-large",
@@ -15,7 +15,7 @@
     "why_batch_collection": "Batch-of-4 first to confirm the new D1 plans run cleanly end-to-end against the upgraded telemetry. Batch-of-10 thereafter so a single-run failure doesn't waste a half-day. The 8 long-running runs are split across the schedule so any leak-scenario harness bug surfaces early instead of after 5 days.",
     "expected_full_scale": {
       "dataset_runs": 100,
-      "scenario_families": 22,
+      "scenario_families": 27,
       "episodes_per_control_run": 6,
       "episodes_per_compact_a_run": 10,
       "episodes_per_compact_b_run": 13,
@@ -23,10 +23,12 @@
       "episodes_per_new_families_b_run": 8,
       "episodes_per_long_running_run": 4,
       "episodes_per_orphan_run": 10,
-      "total_episodes": "approx 950",
-      "total_telemetry_windows": "approx 7600",
-      "long_window_episodes": "approx 108 (long-running's 2 fault episodes per run x 9 runs x 6 windows incl. extended observation)",
-      "orphan_ticket_worthy_windows": "200 (25 orphan runs x 8 orphan ticket_worthy windows per run; meets D12 acceptance threshold)"
+      "episodes_per_system_faults_run": 7,
+      "total_episodes": "approx 920",
+      "total_telemetry_windows": "approx 7400",
+      "long_window_episodes": "approx 96 (long-running's 2 fault episodes per run x 8 runs x 6 windows incl. extended observation)",
+      "orphan_ticket_worthy_windows": "192 (24 orphan runs x 8 orphan ticket_worthy windows per run; close to but slightly under D12 200-window target — v5.1 can top up)",
+      "system_fault_active_windows": "50 (10 system-faults runs x 5 chaos active_fault windows per run; under the dataset-todo D11 200-window target — this is a first-batch coverage, deferred to v5.1 for full scale)"
     }
   },
   "plans": [
@@ -39,38 +41,44 @@
     {
       "plan_alias": "compact-a",
       "plan_file": "deploy\\research-lab\\run-plans\\dataset-v3-diverse-compact-a.json",
-      "repeat": 17,
+      "repeat": 14,
       "purpose": "Latency, dependency outage, restart, Redis degradation, bad configuration, near-miss coverage from the v4 family set."
     },
     {
       "plan_alias": "compact-b",
       "plan_file": "deploy\\research-lab\\run-plans\\dataset-v3-diverse-compact-b.json",
-      "repeat": 17,
+      "repeat": 14,
       "purpose": "Service-diverse outages, frontend and Redis restarts, intermittent Redis failure, noisy traffic coverage from the v4 family set."
     },
     {
       "plan_alias": "new-families-a",
       "plan_file": "deploy\\research-lab\\run-plans\\dataset-v5-new-families-a.json",
-      "repeat": 12,
+      "repeat": 11,
       "purpose": "v5 D1.1-D1.4 families: post-deploy-churn, recovered-in-window, single-pod-restart-healthy-replication, third-party-blip."
     },
     {
       "plan_alias": "new-families-b",
       "plan_file": "deploy\\research-lab\\run-plans\\dataset-v5-new-families-b.json",
-      "repeat": 12,
+      "repeat": 11,
       "purpose": "v5 D1.5-D1.7 families: scheduled-job-spike, latency-near-miss-partial-recovery, flapping-pod."
     },
     {
       "plan_alias": "long-running",
       "plan_file": "deploy\\research-lab\\run-plans\\dataset-v5-long-running.json",
-      "repeat": 9,
+      "repeat": 8,
       "purpose": "v5 D1.8 slow-leak-saturation. ~30 minutes per run; contributes the long-window (>=10 min) episodes required by dataset-todo sizing."
     },
     {
       "plan_alias": "orphans",
       "plan_file": "deploy\\research-lab\\run-plans\\dataset-v5-orphans.json",
-      "repeat": 25,
-      "purpose": "Phase D12: 6 near-twin + 2 far orphan scenarios with produces_jira_ticket:false. 8 orphan ticket_worthy windows per run x 25 runs = 200 orphan windows, meeting the D12 acceptance threshold. Enables the orphan_fault_detection benchmark track and the orphan-detection recall gap metric."
+      "repeat": 24,
+      "purpose": "Phase D12: 6 near-twin + 2 far orphan scenarios with produces_jira_ticket:false. 8 orphan ticket_worthy windows per run x 24 runs = 192 orphan windows. Enables the orphan_fault_detection benchmark track and the orphan-detection recall gap metric."
+    },
+    {
+      "plan_alias": "system-faults",
+      "plan_file": "deploy\\research-lab\\run-plans\\dataset-v5-system-faults.json",
+      "repeat": 10,
+      "purpose": "Phase D11: 5 chaos-mesh injected system-level faults per run (DNS, network partition, packet loss, network latency, memory pressure). 5 chaos active_fault windows per run x 10 runs = 50 system-fault windows. PREREQUISITE: chaos-mesh installed in the cluster (chaos-testing namespace + CRDs). See docs/gcp-production-dataset-vm-runbook.md 'Install chaos-mesh'."
     }
   ],
   "benchmark_tracks": [
@@ -106,6 +114,8 @@
     "Latency-partial-recovery (D1.6) uses brief ScaleDeployment 0; true latency injection requires chaos-mesh NetworkChaos or per-pod sidecar.",
     "Slow-leak-saturation (D1.8) uses long ScaleDeployment 0 to approximate the eventual outage; the saturation curve won't be realistic until a memory/connection-leak injection mechanism exists.",
     "Scheduled-job-spike (D1.5) is a loadgenerator restart approximation; a proper CronJob + resource ballast would be more realistic.",
-    "These caveats are noted in each scenario YAML's description field and tracked for the Phase D11 chaos-mesh extension."
+    "Phase D11 system-faults plan REQUIRES chaos-mesh installed in the cluster (chaos-testing namespace + NetworkChaos / StressChaos CRDs). Without chaos-mesh those 10 runs will fail at apply-manifest time. Install via the runbook 'Install chaos-mesh' section.",
+    "Phase D11 covers only 5 of the 7+ scenarios from dataset-todo D11 catalog. IOChaos (D11.7 disk latency) needs sidecar injection setup; TimeChaos (clock skew) needs privileged init; disk-fill (D11.8) needs a PV that v5-large doesn't provision. Deferred to v5.1.",
+    "These caveats are noted in each scenario YAML's description field."
   ]
 }
