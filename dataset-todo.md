@@ -1,11 +1,75 @@
 # Dataset Expansion Plan (v5 and beyond)
 
 **Created:** 2026-05-23
+**Last sweep:** 2026-05-25 (Sessions on 2026-05-24 + 2026-05-25)
 **Owner:** Yuvraj
 **Status doc:** complements `docs/dataset-v4-plan.md` (canonical v4 spec)
 and `docs/triage-task-contract.md` (metrics contract). This file is the
 **actionable plan for growing the dataset past v4-large**, so ML/AI models
 in `todo.md` Phases 1+ have enough signal to train without overfitting.
+
+---
+
+## Status snapshot (2026-05-25)
+
+Phase-level state; per-item details live in the body below.
+
+| Phase | State | What's left |
+| --- | --- | --- |
+| **D0** Squeeze v4-large dry | ~50% | D0.3 needs LLM SDK + `ANTHROPIC_API_KEY`; D0.4 needs human reviewer time (D0.2 tool is ready) |
+| **D1** 8 deferred families | not started | 8 × 2-3 YAMLs (pure authoring) |
+| **D2** Existing-family densification | not started | 5 × 2 YAMLs (pure authoring) |
+| **D3** Extended-window scenarios | not started | Pipeline + 3 fault injectors |
+| **D4** v5 collection itself | not started | Blocked on D1+D2+D3+D11.1-2+D13 cloud pilot |
+| **D5** Cascading faults | not started | Schema + 3 scenarios + matchings update |
+| **D6** Cross-app (Sock Shop / TrainTicket) | not started | Decision needed first (D6.1) |
+| **D7** Memory corpus diversity | not started | Multi-author templates + sparse-info + false-alarm |
+| **D8** Continuous / temporal | not started | New `run-continuous.ps1` + day/night loadgen |
+| **D9** Real-world anchoring | not started | Postmortem ingestion + LogHub anchor |
+| **D10** Reproducibility hardening | not started | Pin docker digests + commit SHAs + repro doc |
+| **D11** System-fault scenarios | not started | chaos-mesh install + schema + 14 scenarios |
+| **D12** Orphan-fault foundation | ~60% | D12.2/D12.4/D12.7 are scenario authoring + collection; **D12.1/D12.3/D12.5/D12.6 schema+metric DONE** |
+| **D13** Production telemetry (logs+traces+metrics) | **fully closed except D13.15b** | D13.15b Loki PVC reload waits on your OK for orphan-delete |
+
+### Done in the 2026-05-24/25 sessions
+
+- D13: D13.1–D13.14 (a/b/c/d/e) + D13.13a refined gate criterion + D13.15a collector bumps + D13.16 upstream remote. D13.14d-followup-A (.NET trace_id 67.9% → 100%) and -B (checkoutservice L2 0 → 68) both verified post-rebuild.
+- D0: D0.1 family-coverage validator; D0.2 adjudication CLI; D0.5 calibration carve-out (`compact-b-r01`); D0.6 already done by pipeline (40.8% hard vs 15% target).
+- D12: D12.1 `produces_jira_ticket` field; D12.3 `expected_in_memory` window propagation; D12.5 wire-up into `ComparisonReport` + `render_report_md`; D12.6 orphan-detection recall gap metric with verdict bucketing.
+
+### Pending — grouped by what unblocks them
+
+**Needs your OK on shared infra (1 item):**
+- D13.15b Loki orphan-delete + helm-upgrade with `persistence: 50Gi`. Path: `kubectl -n observability delete statefulset loki --cascade=orphan && helm upgrade loki ... && kubectl delete pod loki-0`. Auto-mode classifier rejected the destructive path without explicit approval. Current Loki has `persistence: false` so the data-loss surface is nil; only concern is "touches shared infra".
+
+**Needs external resources:**
+- D0.3 LLM-as-first-reviewer: `pip install anthropic` + `ANTHROPIC_API_KEY` in env.
+- D0.4 human reviewer pass: tool is ready (`python -m src.adjudication.adjudicate ...`); 720 borderline + 1312 hard windows to review.
+
+**Pure authoring (you or me, anytime):**
+- D1 8 new family YAMLs (~16-24 scenario files).
+- D2 5 densification scenarios for single-scenario families.
+- D7.3 false-alarm Jira generation design.
+- D12.2 8-12 orphan-fault scenario YAMLs.
+- D12.7 4 adversarial twin-pair scenarios.
+
+**Needs cluster perturbation (this VM):**
+- D11.1 chaos-mesh install + D11.2 `system_fault` schema extension; then D11.3-14 scenarios.
+- D13.14d-followup-C reruns once D13.15b Loki sizing lands.
+
+**Needs cloud / VM-size change:**
+- D13.15b's 120Gi upgrade target (current 50Gi PVC is sized for this VM's 242GB disk; doc target assumes 1TB).
+- D8 continuous-mode collection (24h runs).
+
+**Downstream of the above:**
+- D4 full v5 collection (waits on D1+D2+D3+D11.1-2 and the cloud pilot).
+- D5/D6/D8/D9/D10 each have their own prerequisites described per-phase.
+
+### Git state
+
+- `JiraAndLogs` on `master-bigger-dataset`: **2 commits ahead of origin** (`99b61f9`, `f965403`) — not pushed.
+- `microservices-demo-google` fork on `main`: **1 commit ahead of origin** (`1b49b701`) — not pushed.
+- Both working trees clean.
 
 ---
 
