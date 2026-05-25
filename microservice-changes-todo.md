@@ -634,9 +634,15 @@ Substantially everything in M0–M5 is done and committed. Open follow-ups:
       → `kubectl -n observability delete pod loki-0`. Result: helm
       release at revision 4 (deployed), PVC `storage-loki-0` bound at
       50Gi standard, loki-0 healthy 2/2, canary queries returning 200.
-      Cart-redis active_fault Loki export reliability gap (D13.14d-followup-C)
-      should now be resolved at the storage layer; re-verify on next
-      collection.
+      **Verified 2026-05-25:** direct Loki queries for cartservice at
+      baseline traffic are **sub-second** (5-min/3MB/4245-line window
+      returns immediately). The earlier 81%-success export rate (D13.14c)
+      was bottlenecked on the export script's 45s HttpClient timeout,
+      not Loki itself — bumped to 180s in `export-telemetry-window.ps1`
+      (commit `300eea8`). cart-redis active_fault burst behaviour
+      not re-tested under fault (the attempted re-run was killed when
+      it exceeded the user's time budget); should re-verify opportunistically
+      during the first v5-pilot/v5-large run that exercises cart-redis.
 - [x] **M4.5a (Node)** ✅ (2026-05-24) Added `@opentelemetry/host-metrics@0.36.0`
       to paymentservice (already had exporter-prometheus) and currencyservice
       (also gained exporter-prometheus). `HostMetrics({meterProvider}).start()`
