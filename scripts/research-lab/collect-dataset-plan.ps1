@@ -10,7 +10,13 @@ param(
     [switch]$ForceNewRun,
     [switch]$BuildDerived,
     [int]$ScenarioDurationSeconds = 0,
-    [int]$PostWindowSeconds = -1
+    [int]$PostWindowSeconds = -1,
+    # 2026-05-25: added so callers on systems where `python` is not on PATH
+    # (e.g. the GCP VM where only `python3` exists) can forward to the
+    # downstream build-ranking-dataset.ps1 which defaults PythonExe to
+    # "python". collect-dataset-corpus.ps1 already had this; collect-dataset-plan.ps1
+    # did not, so v5-large smoke runs would fail at the derived-build step.
+    [string]$PythonExe = "python"
 )
 
 $ErrorActionPreference = "Stop"
@@ -217,6 +223,7 @@ if ($LASTEXITCODE -ne 0) {
 if ($BuildDerived) {
     & $powerShell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $PSScriptRoot "build-ranking-dataset.ps1") `
         -DatasetRunId $DatasetRunId `
+        -PythonExe $PythonExe `
         -Force
     if ($LASTEXITCODE -ne 0) {
         throw "Derived ranking dataset build failed for $DatasetRunId."

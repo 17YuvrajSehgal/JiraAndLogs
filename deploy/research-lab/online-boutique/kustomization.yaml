@@ -61,7 +61,7 @@ images:
     newTag: v5.0.0-otel-pilot2
   - name: us-central1-docker.pkg.dev/google-samples/microservices-demo/emailservice
     newName: emailservice
-    newTag: v5.0.0-otel-pilot2
+    newTag: v5.0.0-otel-pilot4
   - name: us-central1-docker.pkg.dev/google-samples/microservices-demo/frontend
     newName: frontend
     newTag: v5.0.0-otel-pilot
