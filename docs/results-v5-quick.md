@@ -79,7 +79,7 @@ Random Forest results across all iterations:
 | v5-quick AS-IS (28 features) | 0.68 | 0.71 | 0.115 |
 | v5-quick + M0–M5 features (66 cols) | 0.63 | **0.81** | 0.269 |
 | v5-quick + per-language fix | 0.64 | **0.81** | **0.346** |
-| v5-quick + rich evidence text | (running) | (running) | (running) |
+| v5-quick + rich evidence text | 0.64 | **0.81** | 0.346 |
 
 **Reading this table:**
 
@@ -190,13 +190,14 @@ We tried `sentence-transformers/all-MiniLM-L6-v2` (384-dim semantic
 embeddings of `triage_evidence_text`) to see if a richer text
 representation could beat numeric features.
 
-| Pipeline | PR-AUC |
-| --- | ---: |
-| HGB numeric-only baseline | **0.60** |
-| Bi-encoder + numeric concat | 0.32 |
-| Bi-encoder text-only | 0.25 |
+| Pipeline | PR-AUC (sparse text) | PR-AUC (rich text) |
+| --- | ---: | ---: |
+| HGB numeric-only baseline | **0.60** | **0.60** (unchanged) |
+| Bi-encoder + numeric concat | 0.32 | 0.31 |
+| Bi-encoder text-only | 0.25 | 0.21 |
 
-**The bi-encoder made things WORSE, not better.** Why?
+**The bi-encoder made things WORSE, not better — and enriching the text
+made it slightly worse still.** Why?
 
 For triage classification on this dataset, the discriminative signal is
 **count-based** ("how many errors happened?") not **semantic** ("what
@@ -207,11 +208,25 @@ directly. A 384-dim embedding compresses 20 identical error lines into
 roughly the same vector as 2 of them.
 
 Even after we enriched evidence text with structured fields (`dep`,
-`op`, `err_class`, `peer_service`), the bi-encoder still trailed.
+`op`, `err_class`, `peer_service`), the bi-encoder *still* trailed.
 The structured tokens (`RedisConnectionException`, `redis-cart`,
 `GetCart`) ARE there in the embedding — but they don't distinguish
 fault windows from baseline because cartservice serves GetCart calls all
 the time.
+
+We confirmed this by re-running the full comparison harness on the
+rich-text dataset (`v5-quick-m05v3`):
+
+| Pipeline | m05v2 (sparse text) | m05v3 (rich text) | Δ |
+| --- | ---: | ---: | ---: |
+| HGB numeric | 0.60 | 0.60 | 0 (numeric unchanged) |
+| RF numeric | 0.63 | 0.64 | +0.01 |
+| RF inclusive | 0.81 | 0.81 | 0 |
+| loganalyzer (uses text) | 0.35 | 0.33 | −0.02 |
+| jira_only (uses memory) | 0.29 | 0.27 | −0.02 |
+
+The text cleanup was a **fidelity improvement** (removed the WINDOW
+header label leak — see §7) but didn't unlock new ML performance.
 
 **What this means:**
 
@@ -224,6 +239,9 @@ the time.
 - **For Jira memory retrieval:** different task. Text similarity matters
   there (matching window evidence to past ticket descriptions). Phase 4
   LM reranking is still meaningful for that task.
+- **For honest reporting:** removing the WINDOW header leak was the right
+  thing to do regardless. Now any future text/LM result is measured
+  cleanly, not inflated by lab-only substring tokens.
 
 ---
 
