@@ -498,6 +498,24 @@ _M05_SUPPLEMENT_FEATURE_KEYS: tuple[str, ...] = (
     "m05_svc_go_goroutines_max",
     "m05_svc_dotnet_gc_per_sec",
     "m05_svc_python_gc_per_sec",
+    # --- Categorical breakdowns (Phase 4 follow-on, 2026-05-26) ---
+    # cart_operations_total split by op × result
+    "m05_cart_add_success_per_sec",
+    "m05_cart_add_error_per_sec",
+    "m05_cart_get_success_per_sec",
+    "m05_cart_get_error_per_sec",
+    "m05_cart_empty_success_per_sec",
+    "m05_cart_empty_error_per_sec",
+    # payments_total result breakdown
+    "m05_payments_invalid_per_sec",
+    "m05_payments_expired_per_sec",
+    "m05_payments_unsupported_per_sec",
+    # rpc_server_requests_total status breakdown
+    "m05_rpc_status_ok_per_sec",
+    "m05_rpc_status_internal_per_sec",
+    "m05_rpc_status_unavailable_per_sec",
+    "m05_rpc_status_failed_precondition_per_sec",
+    "m05_rpc_status_deadline_exceeded_per_sec",
 )
 
 _BASE_FEATURE_COLUMNS: tuple[str, ...] = _BASE_FEATURE_COLUMNS_V4 + tuple(

@@ -112,7 +112,7 @@ SERVICE_LANG_MAP: dict[str, str] = {
 # {label="value"} curly braces inside PromQL. %(ns)s and %(pod)s are filled
 # at query time; %(dur)s is the window duration in seconds.
 _CLUSTER_QUERIES: list[tuple[str, str]] = [
-    # Business counters
+    # Business counters (cluster-wide totals)
     ("m05_payments_success_per_sec",
      'sum(rate(payments_total{%(ns)s,result="success"}[%(dur)ss])) or vector(0)'),
     ("m05_payments_error_per_sec",
@@ -137,6 +137,48 @@ _CLUSTER_QUERIES: list[tuple[str, str]] = [
     # Latency: p95 across all RPCs via histogram_quantile
     ("m05_rpc_server_duration_p95_seconds",
      'histogram_quantile(0.95, sum by (le) (rate(rpc_server_duration_seconds_bucket{%(ns)s}[%(dur)ss]))) or vector(0)'),
+
+    # --- Categorical breakdowns (Phase 4 follow-on, 2026-05-26) ---
+    # cart_operations_total{op, result} — discovers WHICH cart op is failing.
+    # During cart-redis active_fault we see all 3 ops fail; during single-
+    # service faults only some fail. This is the highest-value categorical
+    # split because cart-redis is the largest family (138 windows).
+    ("m05_cart_add_success_per_sec",
+     'sum(rate(cart_operations_total{%(ns)s,op="add",result="success"}[%(dur)ss])) or vector(0)'),
+    ("m05_cart_add_error_per_sec",
+     'sum(rate(cart_operations_total{%(ns)s,op="add",result!="success"}[%(dur)ss])) or vector(0)'),
+    ("m05_cart_get_success_per_sec",
+     'sum(rate(cart_operations_total{%(ns)s,op="get",result="success"}[%(dur)ss])) or vector(0)'),
+    ("m05_cart_get_error_per_sec",
+     'sum(rate(cart_operations_total{%(ns)s,op="get",result!="success"}[%(dur)ss])) or vector(0)'),
+    ("m05_cart_empty_success_per_sec",
+     'sum(rate(cart_operations_total{%(ns)s,op="empty",result="success"}[%(dur)ss])) or vector(0)'),
+    ("m05_cart_empty_error_per_sec",
+     'sum(rate(cart_operations_total{%(ns)s,op="empty",result!="success"}[%(dur)ss])) or vector(0)'),
+    # payments_total{result} — splits the 4 documented result classes.
+    # invalid/expired/unsupported all wrap up as "error" in the aggregate;
+    # splitting may distinguish e.g. payment-outage (invalid spike) from
+    # cart-redis (no payment activity at all).
+    ("m05_payments_invalid_per_sec",
+     'sum(rate(payments_total{%(ns)s,result="invalid"}[%(dur)ss])) or vector(0)'),
+    ("m05_payments_expired_per_sec",
+     'sum(rate(payments_total{%(ns)s,result="expired"}[%(dur)ss])) or vector(0)'),
+    ("m05_payments_unsupported_per_sec",
+     'sum(rate(payments_total{%(ns)s,result="unsupported"}[%(dur)ss])) or vector(0)'),
+    # rpc_server_requests_total{status} — different fault types give
+    # different gRPC status codes (cart-redis -> Internal/FailedPrecondition;
+    # productcatalog-outage -> Unavailable; ad-outage -> DeadlineExceeded).
+    # Splitting lets the model learn the fault->status mapping.
+    ("m05_rpc_status_ok_per_sec",
+     'sum(rate(rpc_server_requests_total{%(ns)s,status="OK"}[%(dur)ss])) or vector(0)'),
+    ("m05_rpc_status_internal_per_sec",
+     'sum(rate(rpc_server_requests_total{%(ns)s,status="Internal"}[%(dur)ss])) or vector(0)'),
+    ("m05_rpc_status_unavailable_per_sec",
+     'sum(rate(rpc_server_requests_total{%(ns)s,status="Unavailable"}[%(dur)ss])) or vector(0)'),
+    ("m05_rpc_status_failed_precondition_per_sec",
+     'sum(rate(rpc_server_requests_total{%(ns)s,status="FailedPrecondition"}[%(dur)ss])) or vector(0)'),
+    ("m05_rpc_status_deadline_exceeded_per_sec",
+     'sum(rate(rpc_server_requests_total{%(ns)s,status="DeadlineExceeded"}[%(dur)ss])) or vector(0)'),
 ]
 
 # Per-service metrics — keyed by output column name. Each entry maps
