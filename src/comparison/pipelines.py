@@ -118,6 +118,8 @@ class LoganalyzerPipeline(PipelineRunner):
                     scenario_family=w.scenario_family,
                     service_name=w.service_name,
                     window_type=w.window_type,
+                    is_hard_case=getattr(w, "is_hard_case", False),
+                    triage_reason_class=getattr(w, "triage_reason_class", None),
                 )
             )
         predict_seconds = time.time() - t0
@@ -203,6 +205,8 @@ class LoganalyzerWithJiraPipeline(PipelineRunner):
                     scenario_family=w.scenario_family,
                     service_name=w.service_name,
                     window_type=w.window_type,
+                    is_hard_case=getattr(w, "is_hard_case", False),
+                    triage_reason_class=getattr(w, "triage_reason_class", None),
                 )
             )
         predict_seconds = time.time() - t0
@@ -292,6 +296,8 @@ class JiraOnlyPipeline(PipelineRunner):
                     scenario_family=w.scenario_family,
                     service_name=w.service_name,
                     window_type=w.window_type,
+                    is_hard_case=getattr(w, "is_hard_case", False),
+                    triage_reason_class=getattr(w, "triage_reason_class", None),
                 )
             )
         predict_seconds = time.time() - t0
@@ -381,6 +387,8 @@ class LogsensePipeline(PipelineRunner):
                     scenario_family=lw.scenario_family,
                     service_name=lw.logs.service_name,
                     window_type=lw.logs.window_type,
+                    is_hard_case=getattr(lw.label, "is_hard_case", False),
+                    triage_reason_class=getattr(lw.label, "triage_reason_class", None),
                 )
             )
         predict_seconds = time.time() - t0
@@ -497,6 +505,8 @@ class _NumericClassifierPipeline(PipelineRunner):
                     scenario_family=w.scenario_family,
                     service_name=w.service_name,
                     window_type=w.window_type,
+                    is_hard_case=getattr(w, "is_hard_case", False),
+                    triage_reason_class=getattr(w, "triage_reason_class", None),
                 )
             )
 

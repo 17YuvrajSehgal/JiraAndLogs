@@ -48,7 +48,7 @@ from sklearn.metrics import (
 from sklearn.preprocessing import StandardScaler
 
 
-REPO_ROOT = Path(__file__).resolve().parent.parent
+REPO_ROOT = Path(__file__).resolve().parent.parent.parent  # src/experiments/X.py -> repo root
 DEFAULT_GLOBAL_ID = "2026-05-25-dataset-v5-quick-m05v2"
 DEFAULT_MODEL = "sentence-transformers/all-MiniLM-L6-v2"
 

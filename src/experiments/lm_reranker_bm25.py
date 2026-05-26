@@ -1,34 +1,31 @@
 #!/usr/bin/env python3
-"""LM reranker with Nomic embeddings as the cheap retriever.
+"""LM reranker for Jira-memory retrieval — Phase 4 of the dev plan.
 
-Same overall design as `experiments/lm_reranker_qwen.py`, but swaps BM25
-for `text-embedding-nomic-embed-text-v1.5` (768-dim) cosine similarity
-in the cheap-retrieval stage. The hypothesis tested by this script:
+For each ticket_worthy test window:
+  1. BM25-rank Jira memory candidates (cheap retriever)
+  2. Send top-k to the LM with the window evidence text
+  3. LM returns its top pick (or rank-order)
+  4. Compute recall@1/3/5 + MRR against the ground-truth matched memory issue id(s)
 
-  BM25 R@10 on v5-quick caps the LM rerank at R@5 ≈ 0.308. The
-  bottleneck is BM25 missing the gold from its top-10 entirely for
-  some families (checkout-outage, productcatalog-latency). A semantic
-  retriever should put the gold inside top-10 for more families, and
-  the LM rerank should then promote it.
+Uses a local OpenAI-compatible chat endpoint (LM Studio default
+http://localhost:1234) so it works without ANTHROPIC_API_KEY.
 
-Two endpoints used:
-  POST http://localhost:1234/v1/embeddings   (Nomic)
-  POST http://localhost:1234/v1/chat/completions   (Qwen 2.5 Coder 14B)
-
-Both are OpenAI-compatible (LM Studio default).
-
-Reports three pipelines:
-  bm25_only                     -- baseline for comparison
-  nomic_only                    -- nomic embed + cosine, no rerank
-  nomic_then_lm_rerank          -- nomic top-pool_size + Qwen rerank
+Why this matters:
+  The Phase 4 bi-encoder result (docs/results-v5-quick.md §6) showed
+  text features can't outperform numeric for TRIAGE CLASSIFICATION
+  because that task is count-based. Jira-memory RETRIEVAL is a
+  different task — matching window evidence text to past ticket
+  descriptions IS semantic. An LM should be able to read both texts
+  and reason about which past ticket is the closest match, which is
+  beyond what BM25 (lexical overlap) can do.
 
 Usage:
-    python experiments/lm_reranker_nomic_qwen.py
-    python experiments/lm_reranker_nomic_qwen.py --pool-size 10
-    python experiments/lm_reranker_nomic_qwen.py --no-llm   # nomic+bm25 only
+    python experiments/lm_reranker_qwen.py
+    python experiments/lm_reranker_qwen.py --top-k 5 --max-windows 50
+    python experiments/lm_reranker_qwen.py --no-llm  # BM25-only baseline
 
-Expected runtime: ~6-10 min for 26 windows at pool=10 (embeddings
-batched once at startup; only LM rerank dominates wall clock).
+Expected runtime: ~2-5 min for ~44 ticket_worthy test windows on
+v5-quick with Qwen 2.5 Coder 14B running locally.
 """
 
 from __future__ import annotations
@@ -47,17 +44,10 @@ from pathlib import Path
 from typing import Any
 
 
-REPO_ROOT = Path(__file__).resolve().parent.parent
+REPO_ROOT = Path(__file__).resolve().parent.parent.parent  # src/experiments/X.py -> repo root
 DEFAULT_GLOBAL_ID = "2026-05-25-dataset-v5-quick-m05v4"
 DEFAULT_BASE_URL = "http://localhost:1234"
-DEFAULT_CHAT_MODEL = "qwen/qwen2.5-coder-14b"
-DEFAULT_EMBED_MODEL = "text-embedding-nomic-embed-text-v1.5"
-
-
-# ---------------------------------------------------------------------------
-# Common helpers (duplicated from lm_reranker_qwen.py — kept self-contained
-# so this script can run standalone without internal-import refactors)
-# ---------------------------------------------------------------------------
+DEFAULT_MODEL = "qwen/qwen2.5-coder-14b"
 
 
 def _read_jsonl(path: Path) -> list[dict[str, Any]]:
@@ -75,7 +65,7 @@ def _strip_window_header(text: str) -> str:
 
 
 # ---------------------------------------------------------------------------
-# Minimal BM25 (for the baseline comparison only)
+# Minimal BM25 (stdlib, ~50 lines — avoids the rank_bm25 install)
 # ---------------------------------------------------------------------------
 
 
@@ -88,6 +78,8 @@ def _tokenize(text: str) -> list[str]:
 
 @dataclass
 class BM25:
+    """Standard Okapi BM25. k1=1.5, b=0.75 are textbook defaults."""
+
     docs: list[list[str]]
     k1: float = 1.5
     b: float = 0.75
@@ -96,14 +88,14 @@ class BM25:
         self.n = len(self.docs)
         self.doc_lens = [len(d) for d in self.docs]
         self.avg_len = sum(self.doc_lens) / max(self.n, 1)
+        self.idf: dict[str, float] = {}
         df: dict[str, int] = defaultdict(int)
         for doc in self.docs:
             for t in set(doc):
                 df[t] += 1
-        self.idf = {
-            t: math.log((self.n - count + 0.5) / (count + 0.5) + 1)
-            for t, count in df.items()
-        }
+        for t, count in df.items():
+            # Standard BM25 IDF: log((N - df + 0.5) / (df + 0.5) + 1)
+            self.idf[t] = math.log((self.n - count + 0.5) / (count + 0.5) + 1)
         self.tfs: list[Counter[str]] = [Counter(d) for d in self.docs]
 
     def score(self, query: list[str]) -> list[float]:
@@ -123,92 +115,11 @@ class BM25:
     def topk(self, query: list[str], k: int) -> list[tuple[int, float]]:
         scores = self.score(query)
         ranked = sorted(enumerate(scores), key=lambda x: -x[1])
-        return ranked[:k]
+        return [(i, s) for i, s in ranked[:k]]
 
 
 # ---------------------------------------------------------------------------
-# Nomic embeddings + cosine retriever
-# ---------------------------------------------------------------------------
-
-
-def _embed(
-    base_url: str,
-    model: str,
-    texts: list[str],
-    *,
-    batch_size: int = 32,
-    timeout: float = 120.0,
-) -> list[list[float]]:
-    """Batch-embed a list of texts via OpenAI-compatible /v1/embeddings.
-
-    Nomic embed expects up to ~8k tokens per input. We truncate each text
-    to 6000 chars (very conservative — should never exceed 2k tokens) to
-    stay safely under any model-side limit."""
-    out: list[list[float] | None] = [None] * len(texts)
-    for batch_start in range(0, len(texts), batch_size):
-        batch = texts[batch_start : batch_start + batch_size]
-        clipped = [t[:6000] for t in batch]
-        payload = {"model": model, "input": clipped}
-        req = urllib.request.Request(
-            f"{base_url.rstrip('/')}/v1/embeddings",
-            data=json.dumps(payload).encode("utf-8"),
-            headers={"Content-Type": "application/json"},
-        )
-        with urllib.request.urlopen(req, timeout=timeout) as resp:
-            data = json.load(resp)
-        for entry in data.get("data", []):
-            idx = entry.get("index", 0)
-            out[batch_start + idx] = entry.get("embedding") or []
-    # Fill any holes (shouldn't happen but be defensive)
-    return [v if v is not None else [] for v in out]
-
-
-def _cosine(a: list[float], b: list[float]) -> float:
-    if not a or not b or len(a) != len(b):
-        return 0.0
-    dot = sum(x * y for x, y in zip(a, b))
-    na = math.sqrt(sum(x * x for x in a))
-    nb = math.sqrt(sum(y * y for y in b))
-    if na == 0 or nb == 0:
-        return 0.0
-    return dot / (na * nb)
-
-
-class NomicRetriever:
-    """Pre-computes memory embeddings; cosine-similarity scoring per query."""
-
-    def __init__(self, base_url: str, model: str, docs: list[str]) -> None:
-        self.base_url = base_url
-        self.model = model
-        self.docs = docs
-        t0 = time.time()
-        print(
-            f"  embedding {len(docs)} memory docs via {model} ...",
-            file=sys.stderr,
-        )
-        self.doc_embeddings = _embed(base_url, model, docs)
-        elapsed = time.time() - t0
-        non_empty = sum(1 for e in self.doc_embeddings if e)
-        dim = len(self.doc_embeddings[0]) if self.doc_embeddings and self.doc_embeddings[0] else 0
-        print(
-            f"  embedded {non_empty}/{len(docs)} docs in {elapsed:.1f}s "
-            f"(dim={dim})",
-            file=sys.stderr,
-        )
-
-    def topk(self, query_text: str, k: int) -> list[tuple[int, float]]:
-        q_emb = _embed(self.base_url, self.model, [query_text])[0]
-        if not q_emb:
-            return []
-        scored = [
-            (i, _cosine(q_emb, e)) for i, e in enumerate(self.doc_embeddings)
-        ]
-        scored.sort(key=lambda x: -x[1])
-        return scored[:k]
-
-
-# ---------------------------------------------------------------------------
-# Chat API client (same as lm_reranker_qwen.py)
+# Chat API client (OpenAI-compatible, works with LM Studio)
 # ---------------------------------------------------------------------------
 
 
@@ -219,7 +130,7 @@ def _chat(
     *,
     temperature: float = 0.0,
     max_tokens: int = 200,
-    timeout: float = 180.0,
+    timeout: float = 120.0,
 ) -> str:
     payload = {
         "model": model,
@@ -243,15 +154,23 @@ def _chat(
     return choices[0].get("message", {}).get("content", "") or ""
 
 
-_MD_FENCE_RE = re.compile(r"^```(?:json)?\s*(.*?)\s*```$", re.S | re.I)
+_RANK_RE = re.compile(r"\b(?:rank|choice|top|best|answer|pick)\s*[:=]?\s*\[?(\d+(?:\s*,\s*\d+)*)\]?", re.I)
 _INT_LIST_RE = re.compile(r"(\d+)")
 
 
+_MD_FENCE_RE = re.compile(r"^```(?:json)?\s*(.*?)\s*```$", re.S | re.I)
+
+
 def _parse_lm_ranking(response: str, k: int) -> list[int]:
+    """Extract an ordered list of 1-based candidate indices from the LM
+    response. Tolerant — accepts JSON `{"ranks":[1,3,2]}`, bare `[1,3,2]`,
+    `Answer: 1, 3, 2`, or just `1`. Strips ```json fences first."""
     response = response.strip()
+    # Strip optional ```json ... ``` markdown fences
     m = _MD_FENCE_RE.match(response)
     if m:
         response = m.group(1).strip()
+    # Try JSON first
     try:
         obj = json.loads(response)
         if isinstance(obj, dict):
@@ -262,6 +181,7 @@ def _parse_lm_ranking(response: str, k: int) -> list[int]:
             return [int(x) for x in obj if isinstance(x, (int, float))][:k]
     except (json.JSONDecodeError, ValueError, TypeError):
         pass
+    # Regex fallback: pull all integers and take them in order, capped at k
     nums = [int(m) for m in _INT_LIST_RE.findall(response)]
     seen = set()
     out = []
@@ -275,7 +195,12 @@ def _parse_lm_ranking(response: str, k: int) -> list[int]:
 
 
 def _build_prompt(window_text: str, candidates: list[tuple[int, str]]) -> list[dict[str, str]]:
-    cand_block = "\n\n".join(f"[{idx}] {text[:500]}" for idx, text in candidates)
+    """Format the rerank request as a chat message.
+
+    candidates is a list of (1-based_index, candidate_text)."""
+    cand_block = "\n\n".join(
+        f"[{idx}] {text[:500]}" for idx, text in candidates
+    )
     user = (
         "You are ranking past Jira incident tickets by how well they "
         "match a current telemetry window. Read the window evidence, "
@@ -287,16 +212,19 @@ def _build_prompt(window_text: str, candidates: list[tuple[int, str]]) -> list[d
         f"{len(candidates)} candidate numbers exactly once."
     )
     return [
-        {"role": "system", "content": (
-            "You are a triage assistant. Respond with JSON only — no prose, "
-            "no markdown fences."
-        )},
+        {
+            "role": "system",
+            "content": (
+                "You are a triage assistant. Respond with JSON only — "
+                "no prose, no markdown fences."
+            ),
+        },
         {"role": "user", "content": user},
     ]
 
 
 # ---------------------------------------------------------------------------
-# Metrics
+# Retrieval metrics
 # ---------------------------------------------------------------------------
 
 
@@ -316,10 +244,6 @@ def _mrr(predicted: list[str], gold: list[str]) -> float:
     return 0.0
 
 
-def _avg(xs: list[float]) -> float:
-    return sum(xs) / len(xs) if xs else 0.0
-
-
 # ---------------------------------------------------------------------------
 # Main
 # ---------------------------------------------------------------------------
@@ -329,18 +253,33 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--global-id", default=DEFAULT_GLOBAL_ID)
     parser.add_argument("--derived-root", default=str(REPO_ROOT / "data" / "derived"))
-    parser.add_argument("--top-k", type=int, default=5,
-                        help="Top-k slot count we score (R@1/R@3/R@5)")
-    parser.add_argument("--pool-size", type=int, default=10,
-                        help="Top-N from cheap retriever handed to the LM")
+    parser.add_argument(
+        "--top-k", type=int, default=5,
+        help="Top-k slot count we score (R@1/R@3/R@5)",
+    )
+    parser.add_argument(
+        "--pool-size", type=int, default=0,
+        help="BM25 pool size handed to the LM for reranking. Default 0 = "
+             "same as --top-k (no extra reach). Set larger (e.g. 10, 20) to "
+             "let the LM promote candidates BM25 ranked 6+ into the top-k.",
+    )
     parser.add_argument("--base-url", default=DEFAULT_BASE_URL)
-    parser.add_argument("--chat-model", default=DEFAULT_CHAT_MODEL)
-    parser.add_argument("--embed-model", default=DEFAULT_EMBED_MODEL)
-    parser.add_argument("--no-llm", action="store_true",
-                        help="Skip LM rerank; report nomic-only + bm25-only")
-    parser.add_argument("--max-windows", type=int, default=0)
+    parser.add_argument("--model", default=DEFAULT_MODEL)
+    parser.add_argument(
+        "--no-llm",
+        action="store_true",
+        help="Skip LM rerank; just report BM25-only baseline",
+    )
+    parser.add_argument(
+        "--max-windows",
+        type=int,
+        default=0,
+        help="Limit to first N ticket_worthy test windows (0 = all)",
+    )
     parser.add_argument("--temperature", type=float, default=0.0)
     parser.add_argument("--max-tokens", type=int, default=200)
+    parser.add_argument("--debug-responses", action="store_true",
+                        help="Print every LM response for debugging")
     args = parser.parse_args()
 
     global_dir = Path(args.derived_root) / "global" / args.global_id
@@ -362,6 +301,9 @@ def main() -> int:
     )
 
     test_rows = [r for r in rows if r.get("split") == "test"]
+    # Score only ticket_worthy windows that have a non-empty gold match set.
+    # Orphan windows (D12) have empty gold by design and aren't measurable
+    # here. Non-ticket_worthy windows have no expected match.
     scorable = []
     for r in test_rows:
         if r.get("triage_label") != "ticket_worthy":
@@ -374,9 +316,12 @@ def main() -> int:
         scorable = scorable[: args.max_windows]
     print(f"Scorable windows: {len(scorable)}", file=sys.stderr)
     if not scorable:
+        print("nothing to score; exiting", file=sys.stderr)
         return 0
 
-    # Build memory text corpus
+    # Build BM25 over the memory corpus. Each entry has a top-level
+    # `memory_text` field already containing the Jira-shaped summary +
+    # components + labels — see build_jira_memory_corpus.py for shape.
     memory_texts: list[str] = []
     memory_ids: list[str] = []
     for issue in memory:
@@ -390,18 +335,16 @@ def main() -> int:
         )
         memory_texts.append(text)
         memory_ids.append(issue.get("jira_shadow_issue_id") or "")
-
-    # BM25 baseline (for direct comparison)
     bm25 = BM25([_tokenize(t) for t in memory_texts])
+    print(
+        f"BM25 indexed {len(memory_texts)} memory entries; avg doc len "
+        f"{bm25.avg_len:.0f}",
+        file=sys.stderr,
+    )
 
-    # Nomic retriever (one-time batch embed of memory)
-    print(f"Building Nomic retriever ({args.embed_model})", file=sys.stderr)
-    nomic = NomicRetriever(args.base_url, args.embed_model, memory_texts)
-
+    # Score each window
     bm25_recalls = {1: [], 3: [], 5: []}
     bm25_mrrs: list[float] = []
-    nomic_recalls = {1: [], 3: [], 5: []}
-    nomic_mrrs: list[float] = []
     lm_recalls = {1: [], 3: [], 5: []}
     lm_mrrs: list[float] = []
     lm_errors = 0
@@ -411,49 +354,50 @@ def main() -> int:
 
     t0 = time.time()
     for i, (window, match) in enumerate(scorable, start=1):
-        gold = match["matched_memory_issue_ids"]
+        wid = window["window_id"]
         family = window.get("scenario_family", "?")
+        gold = match["matched_memory_issue_ids"]
         evidence = _strip_window_header(window.get("triage_evidence_text") or "")
 
-        # BM25 baseline
-        bm25_hits = bm25.topk(_tokenize(evidence), k=max(args.pool_size, 10))
-        bm25_pred = [memory_ids[idx] for idx, _ in bm25_hits]
+        pool_size = max(args.pool_size or args.top_k, args.top_k)
+        bm25_hits = bm25.topk(_tokenize(evidence), k=max(pool_size, 10))
+        bm25_pred = [memory_ids[i] for i, _ in bm25_hits]
+
+        # BM25-only metrics — use the FULL ranking, not just top-k
         for k in (1, 3, 5):
             bm25_recalls[k].append(_recall_at_k(bm25_pred, gold, k))
         bm25_mrrs.append(_mrr(bm25_pred, gold))
 
-        # Nomic cheap retriever
-        nomic_hits = nomic.topk(evidence, k=max(args.pool_size, 10))
-        nomic_pred = [memory_ids[idx] for idx, _ in nomic_hits]
-        for k in (1, 3, 5):
-            nomic_recalls[k].append(_recall_at_k(nomic_pred, gold, k))
-        nomic_mrrs.append(_mrr(nomic_pred, gold))
-
         if args.no_llm:
             continue
 
-        # LM rerank of Nomic top-pool_size
-        pool_candidates = nomic_pred[: args.pool_size]
-        pool_texts = [memory_texts[nomic_hits[j][0]] for j in range(args.pool_size)]
+        # LM rerank of top-pool_size (LM sees up to pool_size candidates,
+        # we score whichever it ranks top-k of)
+        pool_candidates = bm25_pred[:pool_size]
+        pool_texts = [memory_texts[bm25_hits[j][0]] for j in range(pool_size)]
         messages = _build_prompt(
             evidence,
-            [(j + 1, pool_texts[j]) for j in range(args.pool_size)],
+            [(j + 1, pool_texts[j]) for j in range(pool_size)],
         )
         resp = _chat(
-            args.base_url, args.chat_model, messages,
+            args.base_url, args.model, messages,
             temperature=args.temperature, max_tokens=args.max_tokens,
         )
+        if args.debug_responses:
+            print(f"  [{wid[:60]}] LM resp: {resp[:200]!r}", file=sys.stderr)
         if resp.startswith("__ERROR__"):
             lm_errors += 1
-            ranks = list(range(1, args.pool_size + 1))
+            ranks = list(range(1, pool_size + 1))  # fall back to BM25 order
         else:
-            ranks = _parse_lm_ranking(resp, args.pool_size)
+            ranks = _parse_lm_ranking(resp, pool_size)
             if not ranks:
                 lm_errors += 1
-                if lm_errors == 1:
+                if not args.debug_responses and lm_errors == 1:
                     print(f"  first LM parse failure: {resp[:300]!r}", file=sys.stderr)
-                ranks = list(range(1, args.pool_size + 1))
-        lm_pred = [pool_candidates[r - 1] for r in ranks if 1 <= r <= args.pool_size]
+                ranks = list(range(1, pool_size + 1))
+        # Map LM's 1-based candidate indices to issue_ids
+        lm_pred = [pool_candidates[r - 1] for r in ranks if 1 <= r <= pool_size]
+        # Ensure all pool candidates represented even if LM omitted some
         for cid in pool_candidates:
             if cid not in lm_pred:
                 lm_pred.append(cid)
@@ -465,7 +409,7 @@ def main() -> int:
         per_family_lm[family]["r3"].append(_recall_at_k(lm_pred, gold, 3))
         per_family_lm[family]["mrr"].append(_mrr(lm_pred, gold))
 
-        if i % 5 == 0:
+        if i % 10 == 0:
             elapsed = time.time() - t0
             eta = (elapsed / i) * (len(scorable) - i)
             print(
@@ -474,26 +418,24 @@ def main() -> int:
                 file=sys.stderr,
             )
 
+    def _avg(xs: list[float]) -> float:
+        return sum(xs) / len(xs) if xs else 0.0
+
     print()
-    print(f"=== Retrieval leaderboard ({args.global_id}, n={len(scorable)}) ===")
-    print(f"Chat: {args.chat_model}  Embed: {args.embed_model}")
-    print(f"Pool size: {args.pool_size}")
+    print(f"=== LM rerank leaderboard ({args.global_id}, n={len(scorable)}) ===")
+    print(f"Model: {args.model} via {args.base_url}")
+    print(f"BM25 top-k pool size: {args.top_k}")
     print()
-    print(f"{'pipeline':<32} {'R@1':>6} {'R@3':>6} {'R@5':>6} {'MRR':>6}")
-    print("-" * 60)
+    print(f"{'pipeline':<28} {'R@1':>6} {'R@3':>6} {'R@5':>6} {'MRR':>6}")
+    print("-" * 56)
     print(
-        f"{'bm25_only':<32} "
+        f"{'bm25_only':<28} "
         f"{_avg(bm25_recalls[1]):>6.3f} {_avg(bm25_recalls[3]):>6.3f} "
         f"{_avg(bm25_recalls[5]):>6.3f} {_avg(bm25_mrrs):>6.3f}"
     )
-    print(
-        f"{'nomic_only':<32} "
-        f"{_avg(nomic_recalls[1]):>6.3f} {_avg(nomic_recalls[3]):>6.3f} "
-        f"{_avg(nomic_recalls[5]):>6.3f} {_avg(nomic_mrrs):>6.3f}"
-    )
     if not args.no_llm:
         print(
-            f"{'nomic_then_lm_rerank':<32} "
+            f"{'bm25_then_lm_rerank':<28} "
             f"{_avg(lm_recalls[1]):>6.3f} {_avg(lm_recalls[3]):>6.3f} "
             f"{_avg(lm_recalls[5]):>6.3f} {_avg(lm_mrrs):>6.3f}"
         )
@@ -502,7 +444,7 @@ def main() -> int:
 
     if not args.no_llm and per_family_lm:
         print()
-        print("=== nomic + LM rerank per scenario_family ===")
+        print("=== LM rerank per scenario_family ===")
         print(f"{'family':<48} {'n':>4} {'R@1':>6} {'R@3':>6} {'MRR':>6}")
         print("-" * 74)
         for fam in sorted(per_family_lm.keys()):

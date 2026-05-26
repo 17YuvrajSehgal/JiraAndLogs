@@ -28,10 +28,18 @@ class PipelinePrediction:
     gold_matched_issue_ids: list[str] = field(default_factory=list)
     # D12.3 orphan-fault gold: True/False/None — see loganalyzer schema.
     gold_expected_in_memory: bool | None = None
-    # Stratification keys
+    # Stratification keys — these drive the per-axis breakdowns the
+    # corporate report needs. Added 2026-05-26:
+    #   - is_hard_case: dataset's design label for windows engineered to
+    #     confuse simple models (target product axis: hard-case PR-AUC)
+    #   - triage_reason_class: outage / latency_regression / restart_with_
+    #     impact / bad_config / capacity / dependency_failure /
+    #     data_consistency. None on noise/borderline windows.
     scenario_family: str = ""
     service_name: str = ""
     window_type: str = ""
+    is_hard_case: bool = False
+    triage_reason_class: str | None = None
 
     def as_dict(self) -> dict[str, Any]:
         return {
@@ -48,6 +56,8 @@ class PipelinePrediction:
             "scenario_family": self.scenario_family,
             "service_name": self.service_name,
             "window_type": self.window_type,
+            "is_hard_case": self.is_hard_case,
+            "triage_reason_class": self.triage_reason_class,
         }
 
 

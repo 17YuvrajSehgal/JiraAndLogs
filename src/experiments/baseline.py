@@ -57,7 +57,7 @@ from sklearn.metrics import (
 from sklearn.preprocessing import StandardScaler
 
 
-REPO_ROOT = Path(__file__).resolve().parent.parent
+REPO_ROOT = Path(__file__).resolve().parent.parent.parent  # src/experiments/X.py -> repo root
 DEFAULT_GLOBAL_ID = "2026-05-22-dataset-v4-large-global"
 
 

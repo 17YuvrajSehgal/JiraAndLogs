@@ -36,6 +36,13 @@ from .stratified import (
 )
 
 
+from .pipelines_retrieval import (
+    BM25RetrievalPipeline,
+    NomicLMRerankPipeline,
+    NomicRetrievalPipeline,
+)
+
+
 KNOWN_PIPELINES: dict[str, type[PipelineRunner]] = {
     "loganalyzer": LoganalyzerPipeline,
     "loganalyzer_with_jira": LoganalyzerWithJiraPipeline,
@@ -47,6 +54,12 @@ KNOWN_PIPELINES: dict[str, type[PipelineRunner]] = {
     "hgb": GradientBoostingPipeline,
     "rf": CalibratedRandomForestPipeline,
     "logistic_sklearn": LogisticNumericPipeline,
+    # Phase 4 retrieval-track pipelines (2026-05-26). BM25 is the cheap
+    # baseline; Nomic is the production-recommended retriever; LM rerank
+    # is gated on LM Studio reachability.
+    "bm25_retrieval": BM25RetrievalPipeline,
+    "nomic_retrieval": NomicRetrievalPipeline,
+    "nomic_lm_rerank": NomicLMRerankPipeline,
 }
 
 
@@ -239,6 +252,98 @@ def run_comparison(
     )
 
 
+def _render_jira_helps_section(report: ComparisonReport) -> list[str]:
+    """Direct pairwise comparison of the with-Jira vs without-Jira variants.
+
+    Answers the central corporate research thesis: 'does adding historical
+    Jira data to triage actually help vs telemetry-only triage?'.
+
+    Compares (when both are present):
+      loganalyzer_hybrid_bm25            vs  loganalyzer_hybrid_with_jira
+      <any numeric/telemetry baseline>   vs  jira_only
+
+    Verdict in plain English based on the strict-PR-AUC delta + bootstrap
+    significance from `report.pairwise_per_metric['pr_auc']`."""
+    lines: list[str] = []
+    by_name = {r.pipeline_name: r for r in report.results}
+    pairs = []
+    if "loganalyzer_hybrid_bm25" in by_name and "loganalyzer_hybrid_with_jira" in by_name:
+        pairs.append(("loganalyzer_hybrid_bm25", "loganalyzer_hybrid_with_jira",
+                      "Same loganalyzer model, with vs without Jira-derived features"))
+    if "jira_only" in by_name:
+        # Compare jira_only to whatever numeric baseline is present
+        for baseline in ("hist_gradient_boosting_numeric", "calibrated_random_forest_numeric",
+                         "loganalyzer_hybrid_bm25"):
+            if baseline in by_name:
+                pairs.append((baseline, "jira_only",
+                              "Telemetry-only baseline vs Jira-memory-only"))
+                break
+    if not pairs:
+        return lines
+
+    lines.append("## Research thesis: does Jira memory help log triage?")
+    lines.append("")
+    lines.append(
+        "Direct head-to-head between pipelines that DO and DO NOT use the "
+        "Jira memory corpus, on the strict triage task. This is the central "
+        "claim the dataset was built to test — whether historical Jira "
+        "tickets carry signal beyond what telemetry features alone can "
+        "extract."
+    )
+    lines.append("")
+    headline = report.headline or {}
+    pair_ci = report.pairwise_per_metric.get("pr_auc", [])
+    lines.append("| Comparison | Without Jira PR-AUC | With Jira PR-AUC | Δ (with − without) | 95% CI | p-value | Significant? | Verdict |")
+    lines.append("| --- | ---: | ---: | ---: | --- | ---: | :---: | --- |")
+    for a, b, description in pairs:
+        pa = headline.get(a, {}).get("triage.pr_auc", 0.0)
+        pb = headline.get(b, {}).get("triage.pr_auc", 0.0)
+        delta = pb - pa
+        # Pull the matching CI from paired bootstrap, if present (the
+        # significance.py rows store both directions sorted by name)
+        ci_row = next((d for d in pair_ci
+                       if (d.pipeline_a == a and d.pipeline_b == b)
+                       or (d.pipeline_a == b and d.pipeline_b == a)), None)
+        if ci_row is None:
+            ci_str, p_str, sig = "n/a", "n/a", "n/a"
+        else:
+            # If the CI row is in the opposite direction, flip
+            if ci_row.pipeline_a == b:
+                lo, hi, d = -ci_row.ci.hi, -ci_row.ci.lo, -ci_row.delta
+            else:
+                lo, hi, d = ci_row.ci.lo, ci_row.ci.hi, ci_row.delta
+            ci_str = f"[{lo:+.4f}, {hi:+.4f}]"
+            p_str = f"{ci_row.p_value:.3f}"
+            sig = "yes" if ci_row.p_value < 0.05 else "no"
+            delta = d
+        # Verdict in plain English
+        if abs(delta) < 0.01:
+            verdict = "Jira makes no measurable difference"
+        elif delta > 0 and sig == "yes":
+            verdict = "**Jira HELPS** (significant)"
+        elif delta > 0:
+            verdict = "Jira helps slightly (not significant)"
+        elif delta < 0 and sig == "yes":
+            verdict = "**Jira HURTS** (significant)"
+        else:
+            verdict = "Jira hurts slightly (not significant)"
+        lines.append(
+            f"| `{a}` vs `{b}` | {pa:.4f} | {pb:.4f} | "
+            f"{delta:+.4f} | {ci_str} | {p_str} | {sig} | {verdict} |"
+        )
+    lines.append("")
+    lines.append(
+        "_Interpretation guide:_ A positive Δ with `Significant=yes` means "
+        "the Jira-aware pipeline beats the non-Jira pipeline beyond what "
+        "bootstrap-resampling could explain by chance. A negative Δ means "
+        "Jira features confused the model more than they helped — usually "
+        "a sign that the Jira memory corpus is too small, too template-y, "
+        "or that the test windows fall in scenario families absent from "
+        "the memory."
+    )
+    return lines
+
+
 def render_report_md(report: ComparisonReport) -> str:
     lines: list[str] = ["# Comparison Report", ""]
     lines.append("Pipelines:")
@@ -247,6 +352,11 @@ def render_report_md(report: ComparisonReport) -> str:
             f"- `{r.pipeline_name}` (threshold={r.triage_threshold:.4f}, "
             f"fit={r.fit_seconds:.1f}s, predict={r.predict_seconds:.1f}s)"
         )
+
+    # Corporate thesis section — placed near the top so it answers the
+    # "is the Jira-as-memory idea actually working?" question first.
+    lines.append("")
+    lines.extend(_render_jira_helps_section(report))
 
     # D12.6 headline section — placed near the top so the
      # memorization-vs-detection signal is the first thing a reader sees.
@@ -312,6 +422,54 @@ def render_report_md(report: ComparisonReport) -> str:
             pipelines=[r.pipeline_name for r in report.results],
         )
     )
+
+    # --- Corporate-report stratification axes (2026-05-26) ----------------
+    # is_hard_case, triage_reason_class, is_novel — added per the corporate
+    # ask. is_hard_case in particular surfaces "are we serving the hard
+    # cases?" which is the most product-relevant stratification.
+    for axis_label, axis_prefix, metric, group, description in (
+        (
+            "is_hard_case (True = engineered to confuse simple models)",
+            "is_hard_case=",
+            "f1_at_fpr_5pct",
+            "triage",
+            "F1 here directly answers 'does the pipeline handle hard cases?'. "
+            "The gap between true and false is the practical hard-case headroom.",
+        ),
+        (
+            "triage_reason_class",
+            "triage_reason_class=",
+            "pr_auc",
+            "triage",
+            "Per fault category — `outage`, `latency_regression`, `restart_with_"
+            "impact`, etc. Rows where PR-AUC is low identify the fault types "
+            "your model doesn't detect well.",
+        ),
+        (
+            "is_novel (true = no matching past Jira; false = match exists; unscored = not ticket_worthy)",
+            "is_novel=",
+            "pr_auc",
+            "triage",
+            "Novel incidents are the product axis where Jira pattern matching "
+            "fundamentally cannot help — the model must detect from telemetry "
+            "alone. If pipelines drop substantially on `novel` vs `known`, "
+            "they're leaning on memory pattern matching.",
+        ),
+    ):
+        rows = [s for s in report.strata if s.strata_key.startswith(axis_prefix)]
+        if not rows:
+            continue
+        lines.append("")
+        lines.append(f"## Stratified by {axis_label}")
+        lines.append("")
+        lines.append(description)
+        lines.append("")
+        lines.append(
+            render_strata_table(
+                rows, metric=metric, metric_group=group,
+                pipelines=[r.pipeline_name for r in report.results],
+            )
+        )
 
     # --- Phase 2: inclusive borderline + LOFO macros (2026-05-26) ---------
     if report.inclusive_strata:

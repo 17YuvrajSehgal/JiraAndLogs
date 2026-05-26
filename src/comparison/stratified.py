@@ -43,17 +43,24 @@ def _triage_metrics(scores: list[float], labels: list[int]) -> dict[str, float]:
             "ece": 0.0,
             "precision_at_fpr_5pct": 0.0,
             "recall_at_fpr_5pct": 0.0,
+            "f1_at_fpr_5pct": 0.0,
             "f_beta_2_at_fpr_5pct": 0.0,
             "n_pos": int(sum(labels)),
             "n_neg": int(len(labels) - sum(labels)),
         }
     p5, r5, _t5 = precision_at_fpr(scores, labels, 0.05)
+    # F1 = harmonic mean of precision and recall (beta=1 special case of f_beta).
+    # Added 2026-05-26 as a corporate-report headline metric — the standard
+    # binary-classification single-number summary that non-ML stakeholders
+    # expect alongside PR-AUC.
+    f1 = (2 * p5 * r5 / (p5 + r5)) if (p5 + r5) > 0 else 0.0
     return {
         "pr_auc": pr_auc(scores, labels),
         "roc_auc": roc_auc(scores, labels),
         "ece": expected_calibration_error(scores, labels),
         "precision_at_fpr_5pct": p5,
         "recall_at_fpr_5pct": r5,
+        "f1_at_fpr_5pct": f1,
         "f_beta_2_at_fpr_5pct": f_beta(p5, r5, beta=2.0),
         "n_pos": int(sum(labels)),
         "n_neg": int(len(labels) - sum(labels)),
@@ -111,13 +118,24 @@ def _key_extractors() -> dict[str, Callable[[Any], str]]:
         "family": lambda p: f"family={p.scenario_family}",
         "service": lambda p: f"service={p.service_name}",
         "window_type": lambda p: f"window_type={p.window_type}",
+        # Added 2026-05-26: corporate-report product axes.
+        "is_hard_case": lambda p: f"is_hard_case={'true' if p.is_hard_case else 'false'}",
+        "triage_reason_class": lambda p: f"triage_reason_class={p.triage_reason_class or 'unknown'}",
+        # is_novel — only meaningful on ticket_worthy windows (the rest
+        # have no retrieval gold). Bucketed into novel / known / unscored.
+        "is_novel": lambda p: (
+            f"is_novel={'novel' if p.gold_is_novel else ('known' if p.gold_is_novel is False else 'unscored')}"
+        ),
     }
 
 
 def stratified_metrics(
     results: list[PipelineResult],
     *,
-    include: tuple[str, ...] = ("overall", "family", "service", "window_type"),
+    include: tuple[str, ...] = (
+        "overall", "family", "service", "window_type",
+        "is_hard_case", "triage_reason_class", "is_novel",
+    ),
     borderline_inclusive: bool = False,
 ) -> list[StrataRow]:
     """Compute metrics per (pipeline, strata key) cell.
