@@ -33,11 +33,15 @@ phases of experiments, the clearest findings:
    `triage_evidence_text` field was embedding lab-only identifiers
    (`window_type`, `window_id`) as substring tokens, silently inflating
    any text-based pipeline's numbers. Both are now fixed.
-6. **LM reranking on the Jira-memory retrieval task gives 2× lift**
-   (R@3 0.115 → 0.231, R@5 0.154 → 0.308, MRR 0.087 → 0.176) using
-   a local Qwen 2.5 Coder 14B. The retrieval task IS semantic (matching
-   window evidence to past ticket text), so LMs help here even though
-   they didn't help on count-based classification.
+6. **LM reranking on Jira-memory retrieval gives 2× lift OVER BM25**
+   (R@5 0.154 → 0.308). But — important corrective — **a dense Nomic
+   embedding retriever beats both BM25 and BM25+LM rerank** with
+   R@5 **0.385**, at 10× lower cost (no LM call per window). On a
+   strong cheap retriever, the LM rerank actually HURTS R@5
+   (0.385 → 0.269) because it second-guesses good orderings. The
+   architectural lesson: LM rerank only helps when the cheap retriever
+   is weak. **Best single change for v5-large retrieval: swap BM25 →
+   Nomic.**
 
 **What this predicts for the full v5 corpus** (7,400 windows, 27 families,
 arriving in ~3 days): orphan detection numbers will tighten (more data,
@@ -355,9 +359,60 @@ which would lift BM25 top-10 recall itself).
 - Headline numbers are still LOW (R@5 = 31%) because the v5-quick memory corpus has only 48 entries and the memory text is generic ("Synthetic lab issue generated from Online Boutique telemetry" appears in EVERY entry, diluting IDF).
 - **Cost:** 26 windows × pool=10 candidates × ~10s per Qwen call ≈ 5 min local-CPU. Free with local model. On v5-large with ~430 memory entries and ~600 ticket-worthy test windows, expect ~2 hours.
 
-**This is the cleanest Phase 4 win.** It validates the thesis from
-`docs/ml-ai-pipeline-benchmark-plan.md` §LM reranking — that LMs add
-value over lexical retrievers when the relevance signal is semantic.
+**This validates the thesis** from `docs/ml-ai-pipeline-benchmark-plan.md`
+§LM reranking — LMs add value over **lexical** retrievers when the
+relevance signal is semantic. **But** see §6d below for the corrective:
+with a **dense** retriever, the LM rerank may not help.
+
+---
+
+## 6d. Nomic dense retriever (the corrective)
+
+Swapping BM25 for `text-embedding-nomic-embed-text-v1.5` (768-dim,
+served locally on LM Studio) in the cheap retriever stage gives a
+result that reframes the LM rerank story:
+
+| Pipeline | R@1 | R@3 | R@5 | MRR | Wall time |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| bm25_only | 0.000 | 0.115 | 0.154 | 0.087 | <1s |
+| **nomic_only** (no LM) | 0.000 | **0.231** | **0.385** | 0.148 | ~7s embed + cosine |
+| nomic + LM rerank pool=10 | 0.000 | 0.231 | **0.269** | 0.160 | 308s |
+| bm25 + LM rerank pool=10 | 0.077 | 0.231 | 0.308 | 0.176 | 296s |
+| bm25 + LM rerank pool=20 | 0.077 | 0.269 | 0.308 | 0.203 | 524s |
+
+**Three big findings:**
+
+1. **Nomic alone CRUSHES BM25** — R@5 went 0.154 → **0.385 (2.5×)** with no LM at all. Semantic similarity beats lexical matching on this template-y Jira memory text. Cost: a one-time batch embed of the 48 memory entries (~7s).
+2. **Nomic alone matches or beats BM25+LM at the same operating points.** R@3 is tied (0.231); R@5 Nomic wins (0.385 vs 0.308). And it's ~10× faster.
+3. **The LM rerank on top of Nomic HURTS R@5** (0.385 → 0.269). The LM second-guesses Nomic's ordering and demotes legitimate matches out of top-5. MRR ticks up slightly (0.148 → 0.160) because the LM gets a few specific windows right at rank 1-2, but it loses more at rank 4-5.
+
+**The architectural lesson:**
+
+| Cheap retriever | Does LM rerank help? |
+| --- | --- |
+| BM25 (lexical) | **YES** — R@3, R@5, MRR all lift 2× |
+| Nomic (semantic) | **NO** — R@5 drops, MRR barely moves |
+
+LM rerank only helps when the cheap retriever is **weak**. Strong dense
+retrievers like Nomic already capture the semantic signal the LM would
+add; piling another reasoning layer on top introduces noise more than
+signal — especially without calibration training.
+
+**What this means for v5-large and the product:**
+
+- **Best single change for retrieval:** swap BM25 → Nomic in the
+  `loganalyzer_hybrid_bm25` pipeline (and rename it). Free 2.5× lift
+  on R@5, no LM cost, no API dependency.
+- **LM rerank may still help on v5-large** if the cheap retriever is
+  weaker against the bigger 430-entry corpus (more chances to
+  mis-rank near-duplicates), but should not be assumed.
+- **Worth testing on v5-large:** Nomic-only vs Nomic+LM-rerank
+  side-by-side; the comparison can go either way depending on how
+  dense the memory corpus is.
+- **Even the LM-rerank-hurts result is useful** — it tells us we don't
+  need to pay LM inference for triage. A 768-dim Nomic embedding +
+  cosine is enough, fits in 60MB RAM at the index, and runs in a few
+  ms per query.
 
 ---
 

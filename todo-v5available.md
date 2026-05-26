@@ -295,10 +295,31 @@ Expected lift on v5-large should be **larger** than on v5-quick because:
 
 If the local Qwen is too slow on the larger corpus (~600 LM calls × ~10s = ~100 min), set `ANTHROPIC_API_KEY` and swap to claude-haiku-4-5 — cost estimate ~$5–10 for the full pass.
 
-**Variants worth running on v5-large:**
-1. `--pool-size 10` (baseline — what v5-quick showed worked)
-2. `--pool-size 20` (give LM wider net; check if it helps families where gold isn't in BM25 top-10)
-3. Replace BM25 with Nomic embed model (already running on LM Studio at `/v1/embeddings`) for the cheap retriever stage — should beat BM25 R@10 because of semantic similarity
+**Variants worth running on v5-large** (in priority order based on
+v5-quick findings — see `docs/results-v5-quick.md` §6d):
+
+1. **`experiments/lm_reranker_nomic_qwen.py --no-llm`** — **HIGHEST
+   PRIORITY**. Just Nomic embed + cosine, no LM rerank. v5-quick
+   showed this beats BM25 by 2.5× on R@5 (0.154 → 0.385) at 10× lower
+   cost. On v5-large this is the cheapest meaningful win on retrieval.
+2. **`experiments/lm_reranker_nomic_qwen.py --pool-size 10`** — Nomic +
+   Qwen rerank. v5-quick showed this **HURTS R@5** vs Nomic alone
+   (0.385 → 0.269) because the LM second-guesses good orderings. But
+   v5-large with ~430 memory entries may have more legitimate
+   near-duplicates where LM disambiguation actually helps. Worth
+   verifying — the comparison can go either way.
+3. **`experiments/lm_reranker_qwen.py --pool-size 10`** — original
+   BM25 + Qwen rerank. Only useful as a baseline now that we know
+   Nomic dominates. Keep for the comparison table.
+
+**Architectural conclusion from v5-quick:** for v5-large the production
+path is **Nomic embed → cosine top-k**, NOT BM25 → LM rerank. The
+v5-large work should:
+- swap the BM25 retriever inside `LoganalyzerPipeline` /
+  `LoganalyzerWithJiraPipeline` for a Nomic-based dense retriever,
+- recompute the retrieval-track metrics (recall@k, MRR) — expect
+  ~2× lift on R@5,
+- only add LM rerank if it lifts further on the v5-large evaluation.
 
 ### 4.2 Cross-encoder for hard cases only
 
