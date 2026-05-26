@@ -28,3 +28,5 @@ temp-dir/
 
 data.tar.gz
 .claude/*
+
+logs
