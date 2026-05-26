@@ -17,6 +17,7 @@ plan lives in docs/dataset-v4-plan.md.
 from __future__ import annotations
 
 import json
+import re
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Iterable
@@ -924,6 +925,70 @@ def numeric_features_from_raw(
     return base
 
 
+_PER_REQUEST_IDS_RE = re.compile(
+    r"\b(trace_id|span_id|TraceId|SpanId|parent_span_id|request_id|session_id|"
+    r"correlation_id|EventId)\s*[=:]\s*[^,\s}\"]+",
+    re.IGNORECASE,
+)
+_STRUCTURED_KV_RE = re.compile(r"\b(\w+)\s*=\s*([^,\s}\"]+)")
+_KEEP_KEYS = frozenset(
+    {"dep", "op", "method", "status_code", "err_class", "err",
+     "peer_service", "retry_attempt", "latency_ms", "kind"}
+)
+
+
+def _summarize_log_body(body: dict) -> str:
+    """Build a compact production-realistic representation of one log line.
+
+    Pulls only the structured fields a real triage system would key on —
+    err_class, peer_service, op, dep, status_code, retry_attempt — from
+    either top-level keys (Go logrus, Python stdlib logging), .NET's
+    nested `State` dict, or the .NET Dict.ToString()-formatted Message text.
+
+    The lab-only fields (trace_id, span_id, EventId, Category, Exception
+    stacktrace, instance hash) are STRIPPED — they leak run identity and
+    add no production signal. See docs/results-v5-quick.md §7."""
+    # .NET cartservice logs have a nested State dict with the structured
+    # fields. Go services emit the same fields at top-level (logrus JSON).
+    # Merge both into one flat dict so the extraction logic is uniform.
+    state = body.get("State") if isinstance(body.get("State"), dict) else {}
+    merged = {**body, **state}
+
+    fields_in_order = (
+        "dep", "op", "method", "status_code", "err_class", "err",
+        "peer_service", "retry_attempt", "latency_ms", "kind",
+    )
+    parts: list[str] = []
+    seen_keys: set[str] = set()
+    for key in fields_in_order:
+        if key in merged and merged[key] not in (None, ""):
+            value = str(merged[key])[:60]
+            parts.append(f"{key}={value}")
+            seen_keys.add(key)
+
+    # Human message text. .NET capitalises Message; Python/Go use
+    # message/msg. Also parse embedded key=value pairs from the message
+    # text (the .NET JsonConsole formatter renders State as
+    # "{ key = value, key = value }" inside Message text).
+    message = merged.get("message") or merged.get("Message") or merged.get("msg") or ""
+    if message:
+        msg = str(message)
+        msg = _PER_REQUEST_IDS_RE.sub("", msg)
+        for k, v in _STRUCTURED_KV_RE.findall(msg):
+            kl = k.lower()
+            if kl in _KEEP_KEYS and kl not in seen_keys:
+                parts.append(f"{kl}={v[:60]}")
+                seen_keys.add(kl)
+        # If we already extracted >=3 structured fields, drop the redundant
+        # message-text echo to save budget for more log lines. Otherwise
+        # keep a short message snippet so unstructured logs aren't lost.
+        if len(seen_keys) < 3:
+            msg_clean = " ".join(msg.split())[:120]
+            if msg_clean:
+                parts.append(f'msg="{msg_clean}"')
+    return " ".join(parts) if parts else ""
+
+
 def evidence_text_from_raw(
     run_dir: Path,
     window_id: str,
@@ -937,13 +1002,18 @@ def evidence_text_from_raw(
     limits.
 
     Sections (in order):
-      LOG-ERRORS   -- up to 12 error/warning log messages, body parsed
+      LOG-EVENTS   -- up to 20 structured log lines (severity-prioritized,
+                      with key=value extraction for err_class/dep/op/method/
+                      peer_service/etc.)
       TRACES       -- top root span names by frequency, span/error counts
-      K8S-EVENTS   -- warning events for this service, with reason+message
-      WINDOW       -- window_id, service_name (header line)
+      (No WINDOW header — that line embedded the lab-only window_id /
+       scenario_id / window_type as substring tokens, which lexical and
+       embedding pipelines were silently using as label proxies. See
+       docs/results-v5-quick.md §7.)
 
     Production-safe: does NOT include scenario_id, severity, jira_candidate,
-    triage_label, or any ground-truth field. Only raw observation content.
+    triage_label, window_id, window_type, or any ground-truth/lab field.
+    Only structured fields a real production observability stack emits.
     """
     raw = run_dir / "raw"
     loki = _safe_read_json(raw / "loki" / f"{window_id}.json") or {}
@@ -951,14 +1021,15 @@ def evidence_text_from_raw(
     tempo = _safe_read_json(raw / "tempo" / f"{window_id}.json") or {}
 
     service_name = (k8s.get("service_name") or "").strip()
-    window_meta = k8s.get("window") or {}
-    start = window_meta.get("start_time") or ""
-    end = window_meta.get("end_time") or ""
 
     sections: list[str] = []
-    sections.append(f"WINDOW window_id={window_id} service={service_name} start={start} end={end}")
+    # Service is fine — it's a stable production field. NO window_id,
+    # window_type, or timestamps (those leak run identity).
+    sections.append(f"SERVICE {service_name}")
 
-    # --- Logs: pick error/warning level messages from body ---
+    # --- Logs: emit ALL error/warning + L2 dep_error lines with structured
+    # fields preserved. Up to 20 lines (was 12) since the new compact format
+    # is shorter than the truncated-message format.
     log_lines: list[str] = []
     loki_streams = (
         (loki.get("service_window") or {}).get("response", {}).get("data", {}).get("result")
@@ -969,24 +1040,36 @@ def evidence_text_from_raw(
     for stream in loki_streams:
         for entry in stream.get("values") or []:
             try:
-                ts, line = entry[0], entry[1]
+                _ts, line = entry[0], entry[1]
             except (IndexError, TypeError):
                 continue
             level = _log_severity_from_body(line)
-            if level is None or level not in error_levels | warning_levels:
-                continue
             try:
                 body = json.loads(line)
-                message = str(body.get("message") or body.get("msg") or line)[:200]
             except json.JSONDecodeError:
-                message = str(line)[:200]
-            log_lines.append(f"[{level}] {message}")
-            if len(log_lines) >= 12:
+                body = {}
+            # Also catch L2 dep_error lines emitted at Information level
+            # (the .NET interceptor emits these as Info per .NET logging
+            # conventions, but the body content carries the error info).
+            msg_text = (
+                str(body.get("message") or body.get("Message") or body.get("msg") or "")
+                .lower()
+            )
+            is_dep_error = "dep_error" in msg_text or body.get("dep")
+            is_severity_match = level is not None and level in error_levels | warning_levels
+            if not (is_severity_match or is_dep_error):
+                continue
+            summary = _summarize_log_body(body) if body else str(line)[:200]
+            if not summary:
+                continue
+            level_tag = (level or "info")[:5]
+            log_lines.append(f"[{level_tag}] {summary}")
+            if len(log_lines) >= 20:
                 break
-        if len(log_lines) >= 12:
+        if len(log_lines) >= 20:
             break
     if log_lines:
-        sections.append("LOG-ERRORS")
+        sections.append("LOG-EVENTS")
         sections.extend(log_lines)
 
     # --- Traces: top root names + counts + error span summary ---

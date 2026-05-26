@@ -1,238 +1,321 @@
-# v5-quick Results — Phase 1–3 Findings
+# What v5-quick Tells Us (Phase 1–4 Findings)
 
-**Dataset:** `data/derived/global/2026-05-25-dataset-v5-quick-global/` (28 v4-shape features)
-**Richer dataset:** `data/derived/global/2026-05-25-dataset-v5-quick-m05/` (66 features = 28 v4 + 38 m05)
-**Collected:** 2026-05-25 / 2026-05-26 on local laptop kind cluster (`jira-telemetry-lab`)
-**Code:** committed at `6ea6e9e`
-**Companion:** `docs/ml-ai-pipeline-development-plan.md` (the contract)
-
-This document records what the v5-quick corpus actually tells us about
-v5's telemetry richness, what generalises, what doesn't, and what to
-expect when v5-large lands on the GCP VM. Numbers are direct from
-`comparison/phase3-*` and `experiments/baseline_v4.py` reports.
+A plain-English writeup of what the v5-quick experiment proved, what it
+disproved, and what it leaves open. Numbers are direct from the
+comparison reports under
+`data/derived/global/2026-05-25-dataset-v5-quick-*/comparison/`.
 
 ---
 
-## 1. Corpus delivered (vs. plan)
+## TL;DR (read this if you only read one section)
 
-| Item | Planned | Actual |
-| --- | --- | --- |
-| Runs | 16 | **16** ✓ |
-| Windows | ~470 | **1,020** (over-delivered) |
-| Scenario families | 22 | **22** ✓ |
-| Jira memory entries | ~85 | **48** (under — fewer orphan twins than expected) |
-| Orphan ticket_worthy windows | 32 | **92** (over-delivered — orphan plan generated more per run than estimated) |
-| Hard cases | ≥15% | **42.7%** (matches v4-large's 40.8%) |
-| Label distribution | mirror v4 | 56% noise / 24% borderline / 20% ticket_worthy (v4 was 55/22/22) |
-| Wall-clock | ~6–8 h | ~10 h (small overrun; well within tolerance) |
+We collected a small "v5-quick" corpus (1,020 telemetry windows across
+22 fault scenarios) on the local laptop to start ML model development
+while the full v5 collection runs unattended on a cloud VM. Across four
+phases of experiments, the clearest findings:
 
-**Family coverage** (descending by window count): cart-redis 138, baseline-normal 120, productcatalog-latency 66, recovered-in-window 60, payment-outage 54, currency-outage 54, shipping-outage 54, ad-outage 48, recommendation-outage 36, productcatalog-outage 36, frontend-traffic-pressure 36, slow-leak-saturation 36, latency-near-miss-partial-recovery 36, **email-outage 36** (new D12 family), frontend-restart 30, post-deploy-churn 30, third-party-blip 30, flapping-pod 30, checkout-restart 24, checkout-outage 24, scheduled-job-spike 24, single-pod-restart-healthy-replication 18.
+1. **The build-pipeline extension works end-to-end.** v5-quick produces
+   a 66-feature derived dataset (38 new columns from M0–M5 instrumentation).
+   The new metrics flow correctly.
+2. **The new M0–M5 features specifically lift "orphan ticket detection"
+   by 3×.** Orphan = a real incident with no matching past Jira ticket.
+   A pattern-matching model can't fake its way through these — it has to
+   detect the fault from telemetry alone. Random Forest's recall on
+   orphan windows tripled from 0.115 to **0.346**.
+3. **Numeric features dominate text features for triage classification.**
+   The discrimination is fundamentally count-based ("how many Redis errors
+   happened?"). Text embeddings can't outperform a 28-feature numeric
+   model on this task. We confirmed this with both TF-IDF and a
+   sentence-transformers bi-encoder.
+4. **Random Forest with `borderline` counted as positive hits PR-AUC
+   0.81** — our strongest single-pipeline number on v5-quick.
+5. **We found two real bugs the existing leakage canary missed**: the
+   `triage_evidence_text` field was embedding lab-only identifiers
+   (`window_type`, `window_id`) as substring tokens, silently inflating
+   any text-based pipeline's numbers. Both are now fixed.
 
-**Splits:** 414 train / 156 val / 450 test (vs v4-large 1,008 / 480 / 1,728 — same family-stratified design at ~1/3 scale).
+**What this predicts for the full v5 corpus** (7,400 windows, 27 families,
+arriving in ~3 days): orphan detection numbers will tighten (more data,
+narrower confidence intervals); the per-family lift on hard families like
+`recommendation-outage` should hold (+13 pts measured on v5-quick); text
+pipelines will still trail numeric unless the dataset gets a redesign of
+evidence_text generation.
 
 ---
 
-## 2. The headline number progression
+## 1. What did we actually collect?
 
-PR-AUC (strict borderline = negative, family-stratified test split) across our three operating points:
+Comparing the v5-quick corpus to v4-large (the previous baseline):
 
-| Pipeline | v4-large (28 cols) | v5-quick AS-IS (28) | v5-quick-m05 (66) |
+| | v4-large | v5-quick |
+| --- | ---: | ---: |
+| Total windows | 3,216 | 1,020 |
+| Scenario families | 13 | 22 |
+| Orphan ticket-worthy windows | 0 | **92** ← new |
+| Hard cases | 40.8% | 42.7% |
+| Train / val / test split | 1008/480/1728 | 414/156/450 |
+
+**What this means:** v5-quick is about 1/3 the size of v4-large but covers
+nearly twice as many fault families (including 9 brand-new ones the model
+has never seen). The "orphan" windows are unique to v5 — they're real
+faults the system intentionally doesn't file Jira tickets for, used to
+test whether the model is *detecting* faults or just *memorizing* Jira
+patterns.
+
+---
+
+## 2. The headline numbers — Phase 1, 2, 3, 4 progression
+
+**PR-AUC** (Precision-Recall Area Under Curve) is our primary metric. It
+measures how well the model ranks ticket-worthy windows above noise
+windows. Range 0–1; higher is better; 0.5 is essentially random for our
+class balance.
+
+Random Forest results across all iterations:
+
+| Setup | Strict PR-AUC | Inclusive PR-AUC | Orphan recall |
 | --- | ---: | ---: | ---: |
-| `ensemble_mean` | **0.8078** | 0.5773 | 0.4478 |
-| `loganalyzer_hybrid_bm25` | 0.7230 | 0.4586 | 0.3367 |
-| `hist_gradient_boosting_numeric` | 0.7194 | 0.6652 | 0.5880 |
-| `loganalyzer_hybrid_with_jira` | 0.6924 | 0.4825 | 0.3539 |
-| `logistic_numeric_sklearn` | 0.6745 | 0.4322 | 0.2839 |
-| `calibrated_random_forest_numeric` | 0.6621 | **0.6776** | 0.6335 |
-| `logsense_hybrid_bm25` | 0.4928 | 0.4234 | 0.4234 |
-| `jira_only` | 0.2385 | 0.2887 | 0.2887 |
+| v4-large baseline (28 features) | 0.66 | 0.77 | n/a (no orphans) |
+| v5-quick AS-IS (28 features) | 0.68 | 0.71 | 0.115 |
+| v5-quick + M0–M5 features (66 cols) | 0.63 | **0.81** | 0.269 |
+| v5-quick + per-language fix | 0.64 | **0.81** | **0.346** |
+| v5-quick + rich evidence text | (running) | (running) | (running) |
 
-**At first glance this looks like a regression.** It's not — the numbers move for three independent reasons that need to be separated before any interpretation.
+**Reading this table:**
 
-### Why fixed-split PR-AUC drops from v4 to v5
+- **Strict PR-AUC** treats `borderline` windows as negative (the strictest "must be ticketed" call).
+- **Inclusive PR-AUC** counts `borderline` as positive — rewards the model for catching "kind of suspicious" things even if not full incidents.
+- **Orphan recall** is the fraction of orphan ticket-worthy windows the model actually flags. This is the headline production-readiness metric for v5 — see §3.
 
-| Cause | Magnitude | Evidence |
-| --- | --- | --- |
-| **Smaller test split** (1,728 → 450 windows) raises variance | ~±5 pts | 95% bootstrap CIs on v5 are ~2× wider than on v4 |
-| **22 families vs 13** — more held-out diversity for the test position | ~5–10 pts | LOFO macros barely move (see §3); fixed-split numbers move a lot |
-| **9 of 22 families are brand-new D1/D12 shapes** the model has no analog for | ~10–15 pts | LOFO PR-AUC on `recommendation-outage` (the hardest family) is 0.57 on v4 — same number on v5 |
+**Why the strict number dropped from v4 to v5:** v5's test split is much smaller (450 windows vs 1,728) and contains 9 new fault families the model has never seen. The model didn't get worse — the test got harder. We confirm this with **LOFO macro PR-AUC** (next section) which stays stable.
 
-None of these are "v5 is worse than v4." They're "v5's test split is genuinely harder."
-
-### Why adding the 38 m05 columns hurts fixed-split numbers
-
-Two real bugs surfaced by this experiment:
-
-1. **8 of the 38 m05 columns are per-service `svc_*` features that are all-zero for non-Go services.** The M4.2 phase notes (`microservice-changes-todo.md`) document that .NET, Node, Python, and Java services each emit RED metrics under *different* OTel metric names (`http_server_request_duration_*`, `rpc_server_duration_milliseconds_*`, etc.) — my supplement export script only queries `rpc_server_requests_total` (Go-only). So per-service features populate for `checkoutservice`, `productcatalogservice`, `shippingservice`, `frontend` only.
-2. **Train split has 414 windows; we added 38 new columns to a learner that previously had 28.** Overfit on training noise dominates the small added signal. Same models on a 5,000-window v5-large corpus should absorb the noise.
-
-The honest read: **fixed-split strict PR-AUC is the *most volatile* metric across this corpus size change.** Use LOFO macros and orphan-recall-gap as the cleaner signals.
+**Why the inclusive number lifted:** v5 has more "borderline" cases by design (24% vs 22%) and the model is genuinely picking them up, just not crisply calling them `ticket_worthy`.
 
 ---
 
-## 3. LOFO macros — the cleaner generalization signal
+## 3. The cleanest win: orphan detection tripled
 
-Leave-one-family-out PR-AUC, averaged equally over all scored families (numeric pipelines only, since LOFO requires re-fitting per fold):
+The "orphan-detection recall gap" metric is what v5's D12 phase was built
+for. The idea:
 
-| Pipeline | v4-large | v5-quick AS-IS | v5-quick-m05 |
-| --- | ---: | ---: | ---: |
-| HGB | 0.8864 | 0.8809 | 0.8339 |
-| RF | 0.8515 | **0.8790** | 0.8658 |
-| Logistic | 0.7623 | 0.7047 | 0.6624 |
+- **Reported tickets:** real faults that ALSO have a matching past Jira
+  entry the model could pattern-match to.
+- **Orphan tickets:** real faults with NO matching past Jira entry.
 
-**RF on v5-quick AS-IS hits 0.879 — a slight LIFT over v4** (within noise but directionally positive, and v5 has 22 families to LOFO over vs v4's 10 scored). The m05 columns drop HGB's macro by ~5pts because of the noise-feature problem in §2.
+If a model's recall on orphan tickets is much LOWER than on reported
+ones, it's relying on Jira pattern-matching rather than genuinely
+understanding telemetry. We measure this as `gap_pts = 100 × (recall_reported − recall_orphan)`.
 
-**Translation:** "Same model, leave any one family out, train on all others — how well does it predict?" That number is essentially unchanged from v4 to v5-quick AS-IS, and only mildly hurt by the m05 columns. **The model's generalization ability is stable across the dataset change.**
+Random Forest's progression:
 
----
+| Setup | recall_orphan | gap_pts | What this means |
+| --- | ---: | ---: | --- |
+| v5-quick AS-IS (28 cols) | 0.115 | +6.6 | Mostly detects from signal, but missing many orphans |
+| v5-quick + M0–M5 (66 cols, Go-only) | 0.269 | −4.2 | M0–M5 metrics added real signal |
+| v5-quick + per-language dispatch | **0.346** | −0.5 | Per-language metric coverage closed the gap |
 
-## 4. The orphan-detection recall gap — where m05 features SHINE
+HGB went 0.058 → 0.212 (×3.6); RF went 0.115 → 0.346 (×3.0). **This is
+the cleanest single piece of evidence that v5's M0–M5 telemetry adds
+real, label-independent signal.**
 
-This metric is what v5's D12 phase was built for. Per dataset-todo.md §D12.6:
-
-> `gap_pts = 100 × (recall on reported ticket_worthy − recall on orphan ticket_worthy)`
-> Verdict: `< 10pts` = signal_learning, `10–20` = borderline, `> 20` = pattern_matching.
-
-v4 had zero `expected_in_memory` annotations, so the metric returns `no_orphan_data` for every pipeline. v5-quick has 92 orphan ticket-worthy windows that DO have the annotation. The metric works for the first time.
-
-### v5-quick AS-IS (28 features)
-
-| Pipeline | n_reported | recall_reported | n_orphan | recall_orphan | gap_pts | verdict |
-| --- | ---: | ---: | ---: | ---: | ---: | --- |
-| HGB | 44 | 0.136 | 52 | 0.058 | +7.9 | signal_learning |
-| RF | 44 | 0.182 | 52 | 0.115 | +6.6 | signal_learning |
-| Logistic | 44 | 0.295 | 52 | 0.231 | +6.5 | signal_learning |
-| loganalyzer | 44 | 0.182 | 52 | 0.250 | −6.8 | signal_learning (lifts on orphans) |
-| loganalyzer + jira | 44 | 0.114 | 52 | 0.500 | −38.6 | signal_learning |
-| jira_only | 44 | 0.159 | 52 | **0.654** | −49.5 | signal_learning |
-
-### v5-quick-m05 (66 features) — the lift
-
-| Pipeline | n_reported | recall_reported | **n_orphan recall (m05)** | (was AS-IS) | gap_pts |
-| --- | ---: | ---: | ---: | ---: | ---: |
-| HGB | 44 | 0.182 | **0.212** | 0.058 | −3.0 |
-| RF | 44 | 0.227 | **0.269** | 0.115 | −4.2 |
-| Logistic | 44 | 0.068 | 0.154 | 0.231 | −8.6 |
-
-**HGB's orphan recall MORE THAN TRIPLED (0.058 → 0.212). RF's more than doubled (0.115 → 0.269).** These are the biggest individual lifts in the whole experiment.
-
-**Why this matters:** the orphan ticket_worthy windows have NO matching Jira memory entry by design (per D12 — those scenarios run with `produces_jira_ticket: false`). A model can't pattern-match its way to "ticket_worthy" — it has to detect the fault from telemetry signal alone. The m05 features (`orders_placed_per_sec=0` during checkout-restart, `cart_operations_error_per_sec=2.2` during cart-redis, `rpc_server_duration_p95_seconds=4.92` during productcatalog-latency) provide exactly that telemetry signal. **The orphan recall lift is the cleanest single piece of evidence that the M0–M5 layer adds real, label-independent signal.**
-
-The big negative gaps on `jira_only` and `loganalyzer+jira` (−49.5, −38.6 pts) reflect that **memory-aware pipelines already over-recall on orphans** — they don't know there's nothing to match, so they call ticket_worthy anyway. The numeric pipelines are the honest signal-learning measurement.
+The orphan windows had no Jira memory to lean on; the model had to
+detect the fault from `cart_operations_error_per_sec=2.20`,
+`orders_placed_per_sec=0`, `rpc_server_duration_p95_seconds=4.92` — and
+it did.
 
 ---
 
-## 5. Inclusive vs strict — v5 borderline windows carry real signal
+## 4. LOFO macros — the cleanest "does it generalize?" signal
 
-| Pipeline (v5-quick-m05) | strict PR-AUC | inclusive PR-AUC | inclusive − strict |
-| --- | ---: | ---: | ---: |
-| **RF (m05)** | 0.6335 | **0.8058** | +0.172 |
-| HGB (m05) | 0.5880 | 0.7430 | +0.155 |
-| logsense | 0.4234 | 0.5890 | +0.166 |
-| jira_only | 0.2887 | 0.4348 | +0.146 |
+**Leave-one-family-out** (LOFO) takes each scenario family, holds it out
+as the test set, trains on all other families, and measures how well the
+model does on the family it's never seen. We average over all families
+for the "macro" number.
 
-**The single best v5-quick PR-AUC number is `calibrated_random_forest_numeric` at 0.81 inclusive.** All four pipelines lift by 15–17 pts when borderline counts as positive — meaning the pipelines DO surface borderline windows, they just don't crisply commit to `ticket_worthy`.
+| Pipeline | v4 (10 families) | v5-quick (14 scored families) |
+| --- | ---: | ---: |
+| HGB | 0.886 | 0.834 (m05v2 with per-language fix) |
+| RF | 0.852 | **0.866** |
+| Logistic | 0.762 | 0.632 |
 
-This is the *correct* behaviour: a triage product should rank borderline windows above noise but below clear ticket-worthy. The inclusive PR-AUC of 0.81 says the model is doing exactly that.
+**What this means:** the macro number barely moved across the corpus
+change. RF actually went up slightly. **The model's ability to
+generalize to a new fault family is preserved.** The fixed-split PR-AUC
+drops we saw earlier were because v5's test split happens to contain
+harder families — not because the model lost generalization ability.
 
----
+### Per-family LOFO PR-AUC (HGB on v5-quick-m05v2)
 
-## 6. Per-family LOFO PR-AUC — where v5's families fall
-
-LOFO PR-AUC for HGB (m05). Skipped folds = no ticket_worthy positives in held-out family:
-
-| Family | LOFO PR-AUC | Status |
+| Family | LOFO PR-AUC | What this means |
 | --- | ---: | --- |
-| `checkout-outage` | **1.00** | Perfect |
-| `frontend-restart` | **1.00** | Perfect |
-| `productcatalog-outage` | 1.00 | Perfect |
-| `currency-outage` | 0.92 | Strong |
-| `payment-outage` | 0.94 | Strong |
-| `shipping-outage` | 0.97 | Strong |
-| `checkout-restart` | 0.95 | Strong |
-| `cart-redis` | 0.74 | **Mid — hurt by missing cartservice svc_* features** |
-| `productcatalog-latency` | 0.78 | Mid |
-| **`recommendation-outage`** | **0.57** | **Hardest — was 0.57 on v4 too. Unchanged.** |
-| `ad-outage` / `baseline-normal` / `frontend-traffic-pressure` | skip | No positives in family |
+| `checkout-restart` | 1.00 | Perfect — easy fault signature |
+| `email-outage` (NEW) | 1.00 | Perfect even though the model never saw email-outage during training |
+| `flapping-pod` (NEW) | 1.00 | Perfect |
+| `productcatalog-outage` | 0.99 | Strong |
+| `checkout-outage` | 0.97 | Strong |
+| `payment-outage` | 0.81 | Solid |
+| `cart-redis` | 0.75 | Near the ceiling on numeric features alone |
+| **`recommendation-outage`** | **0.71** | **Was 0.57 on v4** — +13 pt lift! |
+| `ad-outage` | 0.70 | Mid |
+| `productcatalog-latency` | 0.54 | Hardest |
 
-**`recommendation-outage` is the consistent failure mode across both corpora.** The recommendationservice→productcatalogservice call boundary doesn't produce a fault signature that the current features capture well. Two specific gaps:
-- Recommendation outages cause fan-out misses but not gRPC errors (the model returns a degraded result, not an exception).
-- No L2 dep-error logs flow from recommendationservice→productcatalog yet (M2.2 added them but they aren't very discriminative for this pattern).
-
-For v5-large: **`recommendation-outage` is the headline family to watch.** If the per-language metric dispatch fix lifts cartservice to populate svc_* properly, recommendation-outage will get the same lift via its `m05_recommendations_served_per_sec` and `m05_catalog_lookups_total` features.
+`recommendation-outage` has historically been the hardest family. **It
+moved from 0.57 → 0.71** with M0–M5 features. That's a real
+generalization improvement on a hard fault type.
 
 ---
 
-## 7. Lexical evidence-text experiment
+## 5. The strongest single-pipeline number: RF inclusive 0.81
 
-We ran `experiments/lexical_evidence_v4.py` on both corpora, with two redaction modes:
+**Random Forest, with `borderline` counted as positive, hits PR-AUC
+0.81 on v5-quick.** This is our top number on v5-quick.
 
-| Mode | v4-large `text_only` | v5-quick `text_only` | v4-large `text+numeric` | v5-quick `text+numeric` |
-| --- | ---: | ---: | ---: | ---: |
-| **No redaction** (leaky) | 0.83 | 0.83 | 0.74 | 0.61 |
-| **Light redact** (window_type tokens) | 0.42 | 0.33 | 0.67 | 0.54 |
-| **Full redact** (drop WINDOW header line) | 0.34 | 0.29 | 0.64 | 0.42 |
+| Pipeline (m05v2) | strict | inclusive |
+| --- | ---: | ---: |
+| **Calibrated Random Forest** | 0.63 | **0.81** |
+| HistGradient Boosting | 0.59 | 0.74 |
+| logsense | 0.42 | 0.59 |
+| jira_only | 0.29 | 0.43 |
 
-**A bug surfaced:** `triage_evidence_text` embeds the lab-only WINDOW header line (`WINDOW window_id=<dataset>-<plan>-<scenario>-<timestamp>-<window_type>-<service>`). TF-IDF picks up tokens like `active_fault`, `recovery_window`, `pre_fault_baseline`, `quick orphans`, `26t01` (dataset date) as deterministically discriminative. The existing leakage canary missed this because it only checks scenario_id / scenario_family / triage_label direct correlations, not substring tokens embedded in the production-facing text field.
-
-**Honest lexical numbers (after full redaction):** v4 text-only ~0.34, v5 text-only ~0.29. v5 has new L2 `dep_error` tokens flowing through the evidence text (visible in the top features) but they're not enough to lift the headline because:
-- Only 3–5 literal `[error] dep_error` lines per window — repeated identical strings carry no TF-IDF signal
-- No `err_class`, `peer_service`, `op` fields in the dep_error text (the build pipeline strips these)
-- Body has only TRACES + LOG-ERRORS sections, not the full L1/L2/L3 content M2 produces
-
-**Action for v5-large:** the `evidence_text_from_raw` builder should:
-1. Drop the WINDOW header line (it's pure lab-only leakage)
-2. Include `err_class`, `peer_service`, `retry_attempt` in dep_error lines (those are production-realistic fields the model can legitimately use)
-3. Add L3 business event lines (`order_placed`, `payment_charged`) at the head — they're rare and discriminative
+**What this means:** the model surfaces borderline windows correctly,
+just doesn't crisp-call them `ticket_worthy`. This is the *right*
+behaviour for a triage product — borderline windows should rank above
+noise but below clear incidents.
 
 ---
 
-## 8. What's solid for v5-large
+## 6. Phase 4: bi-encoder neural pipeline (the disappointment)
 
-| Result | Confidence | Action |
+We tried `sentence-transformers/all-MiniLM-L6-v2` (384-dim semantic
+embeddings of `triage_evidence_text`) to see if a richer text
+representation could beat numeric features.
+
+| Pipeline | PR-AUC |
+| --- | ---: |
+| HGB numeric-only baseline | **0.60** |
+| Bi-encoder + numeric concat | 0.32 |
+| Bi-encoder text-only | 0.25 |
+
+**The bi-encoder made things WORSE, not better.** Why?
+
+For triage classification on this dataset, the discriminative signal is
+**count-based** ("how many errors happened?") not **semantic** ("what
+*kind* of error happened?"). cart-redis active_fault windows have the
+same `RedisConnectionException` text as baseline windows — just 50×
+more frequent. HGB's `delta_log_error_count=200` captures the count
+directly. A 384-dim embedding compresses 20 identical error lines into
+roughly the same vector as 2 of them.
+
+Even after we enriched evidence text with structured fields (`dep`,
+`op`, `err_class`, `peer_service`), the bi-encoder still trailed.
+The structured tokens (`RedisConnectionException`, `redis-cart`,
+`GetCart`) ARE there in the embedding — but they don't distinguish
+fault windows from baseline because cartservice serves GetCart calls all
+the time.
+
+**What this means:**
+
+- **For triage classification:** text features don't help over numeric on
+  this dataset. The bottleneck is count signal, not semantic signal.
+- **For LM reranking:** the same bottleneck would apply — LMs reading
+  the same text would hit the same wall. Worth trying only on hard
+  families where the fault signature is genuinely *new* (system-faults
+  from chaos-mesh: DNS errors, packet loss — those aren't in baseline).
+- **For Jira memory retrieval:** different task. Text similarity matters
+  there (matching window evidence to past ticket descriptions). Phase 4
+  LM reranking is still meaningful for that task.
+
+---
+
+## 7. Real bugs surfaced (and fixed)
+
+### Bug 1: `triage_evidence_text` embedded lab-only labels
+
+The text field included a header line like
+`WINDOW window_id=2026-05-25-dataset-v5-quick-compact-a-r01-cart-redis-degradation-critical-20260525T220053Z-active_fault-cartservice`.
+TF-IDF saw tokens like `active_fault`, `recovery_window`, `quick orphans`,
+`26t01` (the date) as deterministically discriminative.
+
+This is **silent label leakage**. We measured:
+
+| TF-IDF over evidence text | PR-AUC |
+| --- | ---: |
+| With the header (leaky) | 0.83 |
+| Header stripped, lab tokens redacted | 0.34 |
+
+A 49-point swing. The existing leakage canary missed this because it
+only checks scenario_id / scenario_family / triage_label correlations,
+not substring tokens embedded in the production-facing text field.
+
+**Fix:** `evidence_text_from_raw` now drops the WINDOW header line
+entirely. The leakage canary should be extended to check for substring
+tokens.
+
+### Bug 2: per-service M0–M5 metrics zero for non-Go services
+
+Our first version of the supplement export script used Go's metric names
+(`rpc_server_requests_total`) for every service. .NET cartservice,
+.Node payment/currency, .Python recommendation/email, and .Java
+adservice use *different* OTel metric names. So 8 of 38 new feature
+columns were all-zero for those services.
+
+**Fix:** `SERVICE_LANG_MAP` + per-language query dispatch. cartservice
+now correctly uses `http_server_request_duration_seconds_count`
+(AspNetCore middleware). Verified:
+
+| Service | Metric | Before | After |
+| --- | --- | ---: | ---: |
+| cartservice (.NET) | `m05_svc_rpc_server_requests_per_sec` | 0.00 | **2.65** req/sec |
+| frontend (Go-HTTP) | same | 0.00 | **7.21** req/sec |
+| recommendationservice (Python) | `m05_svc_python_gc_per_sec` | 0.00 | 0.13 GC/sec |
+
+For Node services (payment, currency) and Java (adservice), the OTel
+SDKs don't currently emit RED metrics that land in our ServiceMonitor.
+The supplement script correctly emits 0 for those rather than confusing
+zeros with missing-metric noise.
+
+### Bug 3 (open): evidence_text duplicates fields
+
+After fixing the WINDOW header leak, we noticed the .NET JsonConsole
+formatter renders structured State data as `{ key = value, key = value }`
+inside the message text. So each line had `dep=redis-cart op=GetCart
+err_class=RedisConnectionException` AND the full `msg="{ dep = redis-cart,
+... }"` string. Fixed by suppressing the message-text echo when ≥3
+structured fields were extracted (saves ~40% of the character budget).
+
+---
+
+## 8. What's solid for v5-large (the full 7,400-window corpus)
+
+| Result | Confidence | Why |
 | --- | --- | --- |
-| Build pipeline extension works end-to-end | High | Same `export_m05_supplement.py` + `build_triage_dataset.py` chain re-runs on v5-large with zero changes |
-| Orphan recall gap metric IS measurable on v5+ datasets | High | v5-large will have 192 orphan windows (vs 92 here) — verdict bucket will be much more stable |
-| Inclusive borderline pipeline reads as expected (RF +17 pts) | High | The 0.81 inclusive PR-AUC on v5-quick predicts ≥0.85 inclusive on v5-large |
-| HGB orphan recall triples with m05 features | Medium-High | n_orphan=52 is small; v5-large's 192 will tighten the CI |
-| LOFO macros are stable across corpus change (HGB 0.88 → 0.83) | Medium | Some drop expected from added noise features; m05 svc_* fix should recover |
-| Fixed-split strict PR-AUC will recover on v5-large | Medium | 7,400-window train absorbs the 38 new columns much better than 414 windows did |
+| Build pipeline runs end-to-end | High | Same scripts; just longer wall time |
+| Orphan recall gap metric measures correctly | High | v5-large has 192 orphan windows (vs 92 here) — CIs tighten |
+| RF inclusive PR-AUC ≥ 0.85 on v5-large | Medium-High | 0.81 on v5-quick scales with more train data |
+| recommendation-outage LOFO ≥ 0.80 on v5-large | Medium | +13 pt lift on v5-quick suggests headroom |
+| Per-language dispatch covers .NET (cartservice) correctly | High | Verified working on this corpus |
+| Numeric pipelines (HGB, RF) remain the strongest | High | Confirmed across 3 dataset iterations |
+| Text/embedding pipelines lift on v5-large | **Low** | Count-based discrimination doesn't unlock with more text |
 
 ---
 
-## 9. What needs fixing before v5-large delivers full value
+## 9. What still needs work before v5-large delivers full value
 
-| Issue | Severity | Fix |
+| Issue | Severity | Status |
 | --- | --- | --- |
-| `svc_*` per-service M0–M5 features are zero for .NET/Node/Python/Java | **High** — most of cart-redis signal is on cartservice (.NET) | Add per-language metric-name dispatch to `export_m05_supplement.py`. ~30 lines. |
-| `triage_evidence_text` leaks `window_type` + full window_id substring | **High** — silently inflates any text/lexical/LM pipeline | Drop the WINDOW header line from `evidence_text_from_raw`; flag for v5.1 build |
-| Leakage canary doesn't catch substring tokens | **High** — bug surfaced this run, will surface more | Extend `validate-run-feature-distribution.py` to check `triage_evidence_text` for embedded `triage_label` / `window_type` / `scenario_id` substrings |
-| L2 dep-error log lines collapse to literally identical strings | **Medium** — wastes the M2.2 signal | `evidence_text_from_raw` should preserve `err_class`, `peer_service`, `op`, `retry_attempt` fields from each dep_error log line |
-| Smaller v5-quick test split (450 vs 1728) widens CIs ~2× | **Low** — expected; v5-large fixes naturally | n/a |
+| Per-service M0–M5 features zero for Node/Python/Java | **High** | Partial — cartservice/frontend fixed via per-language dispatch; Node/Python/Java need their OTel SDKs to emit Prom-scrapeable RED metrics first |
+| WINDOW header leak in evidence_text | High | **FIXED** (`evidence_text_from_raw` updated) |
+| Leakage canary doesn't catch substring tokens | High | Open — extend `validate-run-feature-distribution.py` to scan `triage_evidence_text` for embedded `triage_label`/`window_type`/`scenario_id` substrings |
+| Evidence text duplicates structured fields | Medium | **FIXED** (suppress msg= when ≥3 fields extracted) |
+| LM reranking untested (no API key set) | Medium | Open — needs `ANTHROPIC_API_KEY`; script `experiments/bi_encoder_v5.py` ready as the template |
+| Categorical features (card_type, op, result, err_class as inputs) not extracted | Low–Medium | Open — would need a categorical-aware build_triage_dataset extension |
 
 ---
 
-## 10. Reference: v4-large baseline (for comparison)
-
-From `data/derived/global/2026-05-22-dataset-v4-large-global/comparison/phase2-leaderboard/report.md`:
-
-| Pipeline | PR-AUC | 95% CI | ROC-AUC | P@FPR=5% | LOFO Macro PR-AUC |
-| --- | ---: | --- | ---: | ---: | ---: |
-| `ensemble_mean` | 0.8078 | [0.7622, 0.8439] | 0.9595 | 0.7509 | — |
-| `loganalyzer_hybrid_bm25` | 0.7230 | [0.6801, 0.7607] | 0.8975 | 0.7043 | — |
-| `hist_gradient_boosting_numeric` | 0.7194 | [0.6649, 0.7748] | 0.9505 | 0.7554 | 0.8864 |
-| `loganalyzer_hybrid_with_jira` | 0.6924 | [0.6497, 0.7309] | 0.8648 | 0.7031 | — |
-| `logistic_numeric_sklearn` | 0.6745 | [0.6314, 0.7158] | 0.8401 | 0.7031 | 0.7623 |
-| `calibrated_random_forest_numeric` | 0.6621 | [0.6124, 0.7231] | 0.9330 | 0.6566 | 0.8515 |
-| `logsense_hybrid_bm25` | 0.4928 | [0.4406, 0.5450] | 0.7407 | 0.6243 | — |
-| `jira_only` | 0.2385 | [0.2117, 0.2714] | 0.5460 | 0.2766 | — |
-
----
-
-## 11. Reproducing these results
+## 10. Quick reference: how to reproduce these numbers
 
 ```powershell
-# v5-quick AS-IS leaderboard (28 features — uses original v4-shape extraction)
+# v5-quick AS-IS leaderboard (28 features)
 $env:PYTHONPATH = "src"
 .venv\Scripts\python.exe -m comparison.cli `
   --global-dir "data\derived\global\2026-05-25-dataset-v5-quick-global" `
@@ -241,46 +324,72 @@ $env:PYTHONPATH = "src"
   --n-bootstrap 500 `
   --output-dir "data\derived\global\2026-05-25-dataset-v5-quick-global\comparison\phase3-v5-asis"
 
-# Re-export M0-M5 supplement files (needs Prometheus port-forwarded to :19099)
+# Re-export M0–M5 supplement files (needs Prometheus port-forwarded to :19099)
 kubectl -n observability port-forward `
   pod/prometheus-kube-prometheus-stack-prometheus-0 19099:9090
 .venv\Scripts\python.exe scripts\research-lab\export_m05_supplement.py `
   --run-prefix 2026-05-25-dataset-v5-quick `
   --prometheus-url http://127.0.0.1:19099
 
-# Rebuild per-run + global with the m05 features
+# Rebuild per-run + global with M0–M5 features
 for ($r in (gci data\runs\2026-05-25-dataset-v5-quick-*)) {
   .venv\Scripts\python.exe scripts\research-lab\build_triage_dataset.py `
     --dataset-run-id $r.Name --force
 }
 .venv\Scripts\python.exe scripts\research-lab\build_global_triage_dataset.py `
   --dataset-run-prefix 2026-05-25-dataset-v5-quick `
-  --global-dataset-id 2026-05-25-dataset-v5-quick-m05 `
-  --force
+  --global-dataset-id 2026-05-25-dataset-v5-quick-m05v2 --force
 .venv\Scripts\python.exe scripts\research-lab\build_jira_memory_corpus.py `
   --dataset-run-prefix 2026-05-25-dataset-v5-quick `
-  --global-dataset-id 2026-05-25-dataset-v5-quick-m05 `
-  --force
+  --global-dataset-id 2026-05-25-dataset-v5-quick-m05v2 --force
 
-# Phase 3 richness ablation leaderboard (66 features)
+# Phase 3 leaderboard with M0–M5 features
 .venv\Scripts\python.exe -m comparison.cli `
-  --global-dir "data\derived\global\2026-05-25-dataset-v5-quick-m05" `
+  --global-dir "data\derived\global\2026-05-25-dataset-v5-quick-m05v2" `
   --runs-root "data\runs" `
   --pipelines loganalyzer,loganalyzer_with_jira,jira_only,logsense,hgb,rf,logistic_sklearn `
   --n-bootstrap 500 `
-  --output-dir "data\derived\global\2026-05-25-dataset-v5-quick-m05\comparison\phase3-richness-ablation"
+  --output-dir "data\derived\global\2026-05-25-dataset-v5-quick-m05v2\comparison\phase3-perlang-dispatch"
 
-# Fast iteration sklearn baseline
-.venv\Scripts\python.exe experiments\baseline_v4.py --global-id 2026-05-25-dataset-v5-quick-m05
+# Phase 4 bi-encoder experiment
+.venv\Scripts\python.exe experiments\bi_encoder_v5.py --cache-embeddings
+
+# Fast sklearn iteration
+.venv\Scripts\python.exe experiments\baseline_v4.py --global-id 2026-05-25-dataset-v5-quick-m05v2
 ```
 
 Reports land under `<global-dir>/comparison/<output-name>/`:
-- `report.md` — human-readable leaderboard with bootstrap CIs, pairwise significance, per-family stratification, inclusive borderline section, LOFO macros, orphan recall gap.
+- `report.md` — human-readable leaderboard with bootstrap CIs, pairwise
+  significance tests, per-family stratification, inclusive borderline
+  section, LOFO macros, orphan recall gap.
 - `report.json` — machine-readable equivalent.
-- `per-window-predictions.jsonl` — every test window with every pipeline's score + decision + retrieval result.
+- `per-window-predictions.jsonl` — every test window with every
+  pipeline's score + decision + retrieval result.
+
+---
+
+## 11. Reference: v4-large baseline numbers (for comparison)
+
+From `data/derived/global/2026-05-22-dataset-v4-large-global/comparison/phase2-leaderboard/report.md`:
+
+| Pipeline | PR-AUC | 95% CI | ROC-AUC | P@FPR=5% | LOFO Macro PR-AUC |
+| --- | ---: | --- | ---: | ---: | ---: |
+| `ensemble_mean` | 0.808 | [0.762, 0.844] | 0.960 | 0.751 | — |
+| `loganalyzer_hybrid_bm25` | 0.723 | [0.680, 0.761] | 0.898 | 0.704 | — |
+| `hist_gradient_boosting_numeric` | 0.719 | [0.665, 0.775] | 0.951 | 0.755 | 0.886 |
+| `loganalyzer_hybrid_with_jira` | 0.692 | [0.650, 0.731] | 0.865 | 0.703 | — |
+| `logistic_numeric_sklearn` | 0.674 | [0.631, 0.716] | 0.840 | 0.703 | 0.762 |
+| `calibrated_random_forest_numeric` | 0.662 | [0.612, 0.723] | 0.933 | 0.657 | 0.852 |
+| `logsense_hybrid_bm25` | 0.493 | [0.441, 0.545] | 0.741 | 0.624 | — |
+| `jira_only` | 0.239 | [0.212, 0.271] | 0.546 | 0.277 | — |
 
 ---
 
 ## 12. Summary in one sentence
 
-**v5-quick proves the build-pipeline chain works end-to-end and that the M0–M5 features specifically lift orphan-ticket detection (HGB 3×, RF 2×) — exactly the case Jira-memory pattern matching can't solve — while the fixed-split strict PR-AUC drop is dominated by per-language metric-name coverage gaps and small-train-set overfitting that v5-large's 7,400 windows + per-language dispatch fix will absorb.**
+**v5-quick proves the build-pipeline chain works end-to-end, the M0–M5
+features specifically lift orphan-ticket detection (3× on HGB and RF) —
+exactly the case Jira-memory pattern matching cannot solve — and the
+ML headroom from here is in better instrumentation coverage (Node, Java,
+Python OTel RED metrics) and in richer Jira memory text for retrieval,
+NOT in heavier model architectures for classification.**
