@@ -33,6 +33,11 @@ phases of experiments, the clearest findings:
    `triage_evidence_text` field was embedding lab-only identifiers
    (`window_type`, `window_id`) as substring tokens, silently inflating
    any text-based pipeline's numbers. Both are now fixed.
+6. **LM reranking on the Jira-memory retrieval task gives 2× lift**
+   (R@3 0.115 → 0.231, R@5 0.154 → 0.308, MRR 0.087 → 0.176) using
+   a local Qwen 2.5 Coder 14B. The retrieval task IS semantic (matching
+   window evidence to past ticket text), so LMs help here even though
+   they didn't help on count-based classification.
 
 **What this predicts for the full v5 corpus** (7,400 windows, 27 families,
 arriving in ~3 days): orphan detection numbers will tighten (more data,
@@ -300,6 +305,49 @@ slightly hurts other families:
 
 The 14 new columns ARE worth keeping. v5-large should run with
 categorical extraction enabled from the start.
+
+---
+
+## 6c. Phase 4 (cont.): LM reranker for Jira-memory retrieval (the targeted win)
+
+Bi-encoder failed because triage classification is count-based. But
+**memory retrieval is fundamentally semantic** — matching a window's
+evidence to a past Jira ticket's text. We tested an LM reranker on this
+task using a local Qwen 2.5 Coder 14B (LM Studio on `:1234`) so it
+works without an external API key.
+
+**Setup:** for each ticket_worthy test window (n=26), BM25 ranks all 48
+Jira memory entries, takes top-10, and asks Qwen to rerank them. We
+score recall@1/3/5 and MRR against the ground-truth matched memory
+issue id from `window-memory-matchings.jsonl`.
+
+| Pipeline | R@1 | R@3 | R@5 | MRR |
+| --- | ---: | ---: | ---: | ---: |
+| BM25 only | 0.000 | 0.115 | 0.154 | 0.087 |
+| **BM25 + LM rerank (Qwen, pool=10)** | **0.077** | **0.231** | **0.308** | **0.176** |
+| Lift | +7.7pt | **+11.5pt (2×)** | **+15.4pt (2×)** | **+8.8pt (2×)** |
+
+Per-family:
+
+| Family | n | BM25 R@3 | LM R@3 |
+| --- | ---: | ---: | ---: |
+| cart-redis | 16 | 0.062 | **0.188** |
+| currency-outage | 3 | 0.667 | **1.000** |
+| checkout-outage | 4 | 0.000 | 0.000 (gold not in top-10) |
+| productcatalog-latency | 3 | 0.000 | 0.000 (gold not in top-10) |
+
+**What this means:**
+
+- The LM rerank works **exactly as Phase 4 hoped** for the retrieval
+  task. ~2× lift on R@3, R@5, MRR.
+- It works because the LM reads BOTH the window evidence (`dep=redis-cart op=GetCart err_class=RedisConnectionException`) AND the candidate Jira text (`Summary: Intermittent slowness... Components: checkoutservice, frontend, productcatalogservice`) and reasons about which is the closer semantic match — beyond surface token overlap that BM25 measures.
+- **The ceiling is BM25's top-10 recall.** When the gold issue isn't in BM25's top-10 (e.g. productcatalog-latency, checkout-outage), no reranker can recover it. The fix is either: a larger memory corpus (v5-large should have 4× more entries), a better cheap retriever (embedding-based, e.g. Nomic embed for the BM25 stage), or a wider pool (pool=20 or pool=full-corpus).
+- Headline numbers are still LOW (R@5 = 31%) because the v5-quick memory corpus has only 48 entries and the memory text is generic ("Synthetic lab issue generated from Online Boutique telemetry" appears in EVERY entry, diluting IDF).
+- **Cost:** 26 windows × pool=10 candidates × ~10s per Qwen call ≈ 5 min local-CPU. Free with local model. On v5-large with ~430 memory entries and ~600 ticket-worthy test windows, expect ~2 hours.
+
+**This is the cleanest Phase 4 win.** It validates the thesis from
+`docs/ml-ai-pipeline-benchmark-plan.md` §LM reranking — that LMs add
+value over lexical retrievers when the relevance signal is semantic.
 
 ---
 

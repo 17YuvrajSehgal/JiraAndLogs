@@ -268,24 +268,37 @@ candidate for a `M6 — chaos-fault telemetry parity` future phase.
 These were on the v5-quick Phase 4 plan but skipped due to dependency
 gaps. All apply equally to v5-large.
 
-### 4.1 LM reranker for Jira memory retrieval
+### 4.1 LM reranker for Jira memory retrieval (PROVEN ON v5-quick, scale to v5-large)
 
-The bi-encoder finding (`docs/results-v5-quick.md` §6) shows text
-features don't help classification on this dataset (count-based
-discrimination). But Jira memory retrieval is a DIFFERENT task —
-matching a window's evidence to a past Jira issue's text. Text
-similarity is the right tool there.
+**Status: VALIDATED on v5-quick** with local Qwen 2.5 Coder 14B on
+LM Studio. The reranker gave 2× lift on R@3, R@5, MRR. See
+`experiments/lm_reranker_qwen.py` and `docs/results-v5-quick.md` §6c.
+Numbers on v5-quick (n=26 scorable windows):
 
-**Action when v5-large + ANTHROPIC_API_KEY both available:**
-1. Take top-k Jira memory candidates from a cheap retriever (BM25 over jira-memory-corpus)
-2. Format as Claude prompt: "given this window evidence, which of these k Jira issues is the closest match, and why?"
-3. Use rationale-then-score response format
-4. Calibrate temperature on val split before scoring test (per ml-ai-pipeline-benchmark-plan.md)
-5. Score against the `recall_at_k` / `mrr` metrics already in the comparison harness
+| Pipeline | R@3 | R@5 | MRR |
+| --- | ---: | ---: | ---: |
+| BM25 only | 0.115 | 0.154 | 0.087 |
+| BM25 + Qwen rerank (pool=10) | 0.231 | 0.308 | 0.176 |
 
-Likely candidate model: claude-haiku-4-5 (fast, cheap, sufficient for this reasoning task).
+**Action on v5-large:**
 
-**Cost estimate:** ~7,400 test windows × ~10 candidates each × ~500 tokens in + ~200 tokens out per call = ~52M tokens. At Haiku 4.5 pricing, ~$15–30 for a single benchmark pass. Reasonable.
+```powershell
+# Same script, just different --global-id
+.venv\Scripts\python.exe experiments\lm_reranker_qwen.py `
+  --global-id 2026-05-25-dataset-v5-large-m05 `
+  --pool-size 10  # try 20 too if Qwen handles the longer prompts well
+```
+
+Expected lift on v5-large should be **larger** than on v5-quick because:
+- More memory entries (~430 vs 48) → BM25 top-10 recall improves → LM has more good candidates to choose from
+- More scorable windows (~600 ticket_worthy with gold vs 26) → tighter CIs
+
+If the local Qwen is too slow on the larger corpus (~600 LM calls × ~10s = ~100 min), set `ANTHROPIC_API_KEY` and swap to claude-haiku-4-5 — cost estimate ~$5–10 for the full pass.
+
+**Variants worth running on v5-large:**
+1. `--pool-size 10` (baseline — what v5-quick showed worked)
+2. `--pool-size 20` (give LM wider net; check if it helps families where gold isn't in BM25 top-10)
+3. Replace BM25 with Nomic embed model (already running on LM Studio at `/v1/embeddings`) for the cheap retriever stage — should beat BM25 R@10 because of semantic similarity
 
 ### 4.2 Cross-encoder for hard cases only
 
