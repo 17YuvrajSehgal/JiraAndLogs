@@ -321,20 +321,30 @@ Jira memory entries, takes top-10, and asks Qwen to rerank them. We
 score recall@1/3/5 and MRR against the ground-truth matched memory
 issue id from `window-memory-matchings.jsonl`.
 
-| Pipeline | R@1 | R@3 | R@5 | MRR |
-| --- | ---: | ---: | ---: | ---: |
-| BM25 only | 0.000 | 0.115 | 0.154 | 0.087 |
-| **BM25 + LM rerank (Qwen, pool=10)** | **0.077** | **0.231** | **0.308** | **0.176** |
-| Lift | +7.7pt | **+11.5pt (2×)** | **+15.4pt (2×)** | **+8.8pt (2×)** |
+| Pipeline | R@1 | R@3 | R@5 | MRR | Wall time |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| BM25 only | 0.000 | 0.115 | 0.154 | 0.087 | n/a |
+| **BM25 + LM rerank pool=10** | **0.077** | **0.231** | **0.308** | **0.176** | 296s |
+| **BM25 + LM rerank pool=20** | **0.077** | **0.269** | **0.308** | **0.203** | 524s |
+| Lift (pool=20 vs BM25) | +7.7pt | **+15.4pt (2.3×)** | **+15.4pt (2×)** | **+10.4pt (2.3×)** | |
 
-Per-family:
+Per-family (pool=20):
 
 | Family | n | BM25 R@3 | LM R@3 |
 | --- | ---: | ---: | ---: |
-| cart-redis | 16 | 0.062 | **0.188** |
+| cart-redis | 16 | 0.062 | **0.250** |
 | currency-outage | 3 | 0.667 | **1.000** |
-| checkout-outage | 4 | 0.000 | 0.000 (gold not in top-10) |
-| productcatalog-latency | 3 | 0.000 | 0.000 (gold not in top-10) |
+| checkout-outage | 4 | 0.000 | 0.000 (gold not in BM25 top-20) |
+| productcatalog-latency | 3 | 0.000 | 0.000 (gold not in BM25 top-20) |
+
+**Pool-size sweep:** wider pool helps R@3 + MRR but not R@1/R@5 — R@5
+is capped by "is gold in BM25's top-N?", and pool=20 only covers 42%
+of the 48-entry corpus. Pool=10 → pool=20 cost 1.77× more wall time
+for +3.8pt R@3 and +2.7pt MRR. **Pool=10 is the cost/quality sweet
+spot for the local Qwen.** On v5-large with ~430 memory entries,
+pool=10 covers only ~2% of corpus — pool will need to scale (or
+better: replace BM25 with a semantic retriever like Nomic embed,
+which would lift BM25 top-10 recall itself).
 
 **What this means:**
 
