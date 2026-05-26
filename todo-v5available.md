@@ -12,6 +12,32 @@ the v5-large derived build.
 
 ---
 
+## 0. Collection health verified GREEN on 2026-05-26
+
+All three "is the raw collection producing valid data?" checks passed
+on the GCP VM mid-run:
+
+| Check | Status | Detail |
+| --- | --- | --- |
+| M0–M5 instrumented images deployed | ✅ PASS | all 10 services on `v5.0.0-otel-pilot*` tags |
+| M0–M5 metrics flowing into Prometheus | ✅ PASS | 10/10 metrics report non-zero series (payments=1, cart_ops=3, orders_placed=6, recommendations=1, catalog=1, rpc_server=9, rpc_duration=9, http_server=11, go_goroutines=21, dotnet_gc=3) |
+| Prometheus retention ≥ 15d | ✅ PASS | `retention: 15d` — covers 5d collection + 10d post-process |
+
+**The v5-large collection is producing exactly the raw data we need.**
+Every fix from the v5-quick session is recoverable via post-collection
+re-derivation against the durable raw exports. No re-run needed.
+
+**Re-run the health check daily** during the rest of the collection:
+
+```bash
+bash scripts/research-lab/check-v5-large-health.sh
+```
+
+Exit 0 = healthy; exit 1 = something regressed and the run should be
+investigated before letting more wall-time accumulate.
+
+---
+
 ## 1. Fixes already in code (just verify they're still there)
 
 These were all fixed during the v5-quick session and are committed to
