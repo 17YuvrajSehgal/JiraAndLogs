@@ -71,6 +71,43 @@ REPO_ROOT = Path(__file__).resolve().parent.parent.parent
 
 NS = 'namespace="online-boutique-research"'
 
+# Per-language metric-name dispatch (added 2026-05-26 after per-service
+# coverage discovery showed only Go services emit `rpc_server_*`):
+#
+#   "go-rpc"  : checkout/productcatalog/shipping — emit rpc_server_* via the
+#               shared hipstershop/rpclog interceptor (M2.1 / M4.2).
+#   "go-http" : frontend — gRPC-client-side only for downstream calls
+#               (rpc_client_*), HTTP server side via the otelhttp middleware
+#               (http_server_request_duration_seconds_*).
+#   "dotnet"  : cartservice — Kestrel + AspNetCore middleware emit
+#               http_server_request_duration_seconds_* (with
+#               http_response_status_code label). Runtime via
+#               process_runtime_dotnet_gc_*.
+#   "node"    : paymentservice, currencyservice — NO server-side RED metrics
+#               scraped today (the OTel Grpc/Node SDK isn't wired into a
+#               Prom exporter that lands in our ServiceMonitor). Business
+#               counter `payments_total` is cluster-wide and works.
+#   "python"  : recommendationservice, emailservice — NO server-side RED
+#               metrics, but python_gc_* runtime is exposed.
+#   "java"    : adservice — NO server-side RED, NO runtime metrics scraped
+#               (the OTel Java agent's Prometheus exporter doesn't appear in
+#               our ServiceMonitor scrape config). Future M0-M5 follow-up.
+#
+# Services not in this map fall through to language=unknown which emits 0
+# for every per-service query (same behavior as missing metric).
+SERVICE_LANG_MAP: dict[str, str] = {
+    "frontend": "go-http",
+    "checkoutservice": "go-rpc",
+    "productcatalogservice": "go-rpc",
+    "shippingservice": "go-rpc",
+    "cartservice": "dotnet",
+    "paymentservice": "node",
+    "currencyservice": "node",
+    "recommendationservice": "python",
+    "emailservice": "python",
+    "adservice": "java",
+}
+
 # Templates use percent-style placeholders so they don't collide with the
 # {label="value"} curly braces inside PromQL. %(ns)s and %(pod)s are filled
 # at query time; %(dur)s is the window duration in seconds.
@@ -102,29 +139,90 @@ _CLUSTER_QUERIES: list[tuple[str, str]] = [
      'histogram_quantile(0.95, sum by (le) (rate(rpc_server_duration_seconds_bucket{%(ns)s}[%(dur)ss]))) or vector(0)'),
 ]
 
-# Per-service metrics — pod selector ties to the window's service.
-_PER_SERVICE_QUERIES: list[tuple[str, str]] = [
-    ("m05_svc_rpc_server_requests_per_sec",
-     'sum(rate(rpc_server_requests_total{%(ns)s,pod=~"%(pod)s"}[%(dur)ss])) or vector(0)'),
-    ("m05_svc_rpc_server_errors_per_sec",
-     'sum(rate(rpc_server_requests_total{%(ns)s,pod=~"%(pod)s",status!="OK"}[%(dur)ss])) or vector(0)'),
-    ("m05_svc_rpc_client_requests_per_sec",
-     'sum(rate(rpc_client_duration_seconds_count{%(ns)s,pod=~"%(pod)s"}[%(dur)ss])) or vector(0)'),
-    ("m05_svc_rpc_client_errors_per_sec",
-     'sum(rate(rpc_client_errors_total{%(ns)s,pod=~"%(pod)s"}[%(dur)ss])) or vector(0)'),
-    # Runtime: peak RSS during the window
-    ("m05_svc_process_memory_rss_max",
-     'max(max_over_time(process_resident_memory_bytes{%(ns)s,pod=~"%(pod)s"}[%(dur)ss])) or vector(0)'),
-    # Go runtime
-    ("m05_svc_go_goroutines_max",
-     'max(max_over_time(go_goroutines{%(ns)s,pod=~"%(pod)s"}[%(dur)ss])) or vector(0)'),
-    # .NET runtime (sum across generations)
-    ("m05_svc_dotnet_gc_per_sec",
-     'sum(rate(process_runtime_dotnet_gc_collections_count_total{%(ns)s,pod=~"%(pod)s"}[%(dur)ss])) or vector(0)'),
-    # Python runtime
-    ("m05_svc_python_gc_per_sec",
-     'sum(rate(python_gc_objects_collected_total{%(ns)s,pod=~"%(pod)s"}[%(dur)ss])) or vector(0)'),
-]
+# Per-service metrics — keyed by output column name. Each entry maps
+# language -> PromQL template (or None when that language doesn't emit
+# this metric). At query time we look up SERVICE_LANG_MAP[service_name]
+# and pick the right template, falling back to 0 when the entry is None
+# or the service isn't mapped.
+#
+# Column names use the legacy "rpc_server"/"rpc_client" prefixes (the names
+# already exist in the build pipeline + derived data), but for HTTP-emitting
+# services (frontend/cartservice) they're filled by http_server_* queries —
+# semantically still "server-side request rate", just the wire protocol
+# differs. Same logic for memory_rss_max which is general-purpose.
+_PER_SERVICE_QUERIES: dict[str, dict[str, str | None]] = {
+    "m05_svc_rpc_server_requests_per_sec": {
+        "go-rpc": 'sum(rate(rpc_server_duration_seconds_count{%(ns)s,pod=~"%(pod)s"}[%(dur)ss])) or vector(0)',
+        "go-http": 'sum(rate(http_server_request_duration_seconds_count{%(ns)s,pod=~"%(pod)s"}[%(dur)ss])) or vector(0)',
+        "dotnet": 'sum(rate(http_server_request_duration_seconds_count{%(ns)s,pod=~"%(pod)s"}[%(dur)ss])) or vector(0)',
+        "node": None,
+        "python": None,
+        "java": None,
+    },
+    "m05_svc_rpc_server_errors_per_sec": {
+        "go-rpc": 'sum(rate(rpc_server_duration_seconds_count{%(ns)s,pod=~"%(pod)s",status!="OK"}[%(dur)ss])) or vector(0)',
+        "go-http": 'sum(rate(http_server_request_duration_seconds_count{%(ns)s,pod=~"%(pod)s",http_response_status_code=~"5.."}[%(dur)ss])) or vector(0)',
+        "dotnet": 'sum(rate(http_server_request_duration_seconds_count{%(ns)s,pod=~"%(pod)s",http_response_status_code=~"5.."}[%(dur)ss])) or vector(0)',
+        "node": None,
+        "python": None,
+        "java": None,
+    },
+    "m05_svc_rpc_client_requests_per_sec": {
+        "go-rpc": 'sum(rate(rpc_client_duration_seconds_count{%(ns)s,pod=~"%(pod)s"}[%(dur)ss])) or vector(0)',
+        "go-http": 'sum(rate(rpc_client_duration_seconds_count{%(ns)s,pod=~"%(pod)s"}[%(dur)ss])) or vector(0)',
+        # cartservice has only Redis client calls (StackExchange.Redis) which
+        # don't emit rpc_client_*. Future: extract from db.* span attrs.
+        "dotnet": None,
+        "node": None,
+        "python": None,
+        "java": None,
+    },
+    "m05_svc_rpc_client_errors_per_sec": {
+        "go-rpc": 'sum(rate(rpc_client_errors_total{%(ns)s,pod=~"%(pod)s"}[%(dur)ss])) or vector(0)',
+        "go-http": 'sum(rate(rpc_client_errors_total{%(ns)s,pod=~"%(pod)s"}[%(dur)ss])) or vector(0)',
+        "dotnet": None,
+        "node": None,
+        "python": None,
+        "java": None,
+    },
+    "m05_svc_process_memory_rss_max": {
+        "go-rpc": 'max(max_over_time(process_resident_memory_bytes{%(ns)s,pod=~"%(pod)s"}[%(dur)ss])) or vector(0)',
+        "go-http": 'max(max_over_time(process_resident_memory_bytes{%(ns)s,pod=~"%(pod)s"}[%(dur)ss])) or vector(0)',
+        # .NET emits memory via process_runtime_dotnet_total_allocated_bytes
+        # which is cumulative — not directly comparable to RSS. Use the
+        # GC committed bytes as a proxy when needed; for now leave at 0
+        # rather than mix dimensions.
+        "dotnet": None,
+        # Node/Python: no process_resident_memory_bytes scraped today.
+        "node": None,
+        "python": None,
+        "java": None,
+    },
+    "m05_svc_go_goroutines_max": {
+        "go-rpc": 'max(max_over_time(go_goroutines{%(ns)s,pod=~"%(pod)s"}[%(dur)ss])) or vector(0)',
+        "go-http": 'max(max_over_time(go_goroutines{%(ns)s,pod=~"%(pod)s"}[%(dur)ss])) or vector(0)',
+        "dotnet": None,
+        "node": None,
+        "python": None,
+        "java": None,
+    },
+    "m05_svc_dotnet_gc_per_sec": {
+        "go-rpc": None,
+        "go-http": None,
+        "dotnet": 'sum(rate(process_runtime_dotnet_gc_collections_count_total{%(ns)s,pod=~"%(pod)s"}[%(dur)ss])) or vector(0)',
+        "node": None,
+        "python": None,
+        "java": None,
+    },
+    "m05_svc_python_gc_per_sec": {
+        "go-rpc": None,
+        "go-http": None,
+        "dotnet": None,
+        "node": None,
+        "python": 'sum(rate(python_gc_objects_collected_total{%(ns)s,pod=~"%(pod)s"}[%(dur)ss])) or vector(0)',
+        "java": None,
+    },
+}
 
 
 def _parse_iso(value: str) -> float:
@@ -187,14 +285,23 @@ def _supplement_for_window(
         "values": {},
     }
     subs = {"ns": NS, "dur": duration_s, "pod": pod_regex}
+    lang = SERVICE_LANG_MAP.get(service_name, "unknown")
+    out["language"] = lang
     for key, query_template in _CLUSTER_QUERIES:
         q = query_template % subs
         out["queries"][key] = q
         out["values"][key] = _instant_query(prom_url, q, end_sec)
-    for key, query_template in _PER_SERVICE_QUERIES:
-        q = query_template % subs
-        out["queries"][key] = q
-        out["values"][key] = _instant_query(prom_url, q, end_sec)
+    for key, lang_dispatch in _PER_SERVICE_QUERIES.items():
+        query_template = lang_dispatch.get(lang) if lang_dispatch else None
+        if query_template is None:
+            # This language doesn't emit the metric (or the service isn't
+            # in SERVICE_LANG_MAP) — zero is the correct value, not noise.
+            out["queries"][key] = None
+            out["values"][key] = 0.0
+        else:
+            q = query_template % subs
+            out["queries"][key] = q
+            out["values"][key] = _instant_query(prom_url, q, end_sec)
     return out
 
 
