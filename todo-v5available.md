@@ -30,7 +30,7 @@ will use them automatically. If anyone reverted them in the meantime,
 | `evidence_text_from_raw` drops WINDOW header (label leak fix) | `fb94129` | `scripts/research-lab/triage_labels.py` | `grep -A 2 "No WINDOW header" triage_labels.py` returns a hit |
 | `evidence_text_from_raw` strips per-request IDs (trace_id, span_id, EventId) | `fb94129` | `scripts/research-lab/triage_labels.py` | `grep "_PER_REQUEST_IDS_RE" triage_labels.py` returns a hit |
 | `evidence_text_from_raw` extracts structured fields (dep, op, err_class, etc.) | `fb94129` | `scripts/research-lab/triage_labels.py` | `grep "_KEEP_KEYS" triage_labels.py` returns a hit |
-| Categorical features (cart op×result, payment results, rpc statuses) — 14 new cols | (this session) | `scripts/research-lab/export_m05_supplement.py` + `triage_labels.py` | `grep "m05_cart_get_error_per_sec" triage_labels.py` returns a hit |
+| Categorical features (cart op×result, payment results, rpc statuses) — 14 new cols → 94 total features | `c50d163` | `scripts/research-lab/export_m05_supplement.py` + `triage_labels.py` | `grep "m05_cart_get_error_per_sec" triage_labels.py` returns a hit; cart-redis LOFO HGB lifted +5pt on v5-quick |
 
 If any of these fail the quick check, restore from the listed commit.
 
@@ -315,12 +315,13 @@ From `docs/results-v5-quick.md` §8, listed here in checkable form:
 | Prediction | v5-quick number | v5-large target | If misses |
 | --- | --- | --- | --- |
 | RF inclusive PR-AUC | 0.81 | **≥ 0.85** | Investigate: probably feature-distribution shift |
-| HGB LOFO macro PR-AUC | 0.83 | **≥ 0.85** | Investigate: smaller drops here would suggest dataset shift |
+| HGB LOFO macro PR-AUC | 0.82 (m05v4) | **≥ 0.85** | Investigate: smaller drops here would suggest dataset shift |
 | RF orphan recall | 0.346 (n=52) | **0.30–0.50** (n≈192) | Investigate: probably the per-language dispatch broke for some service |
-| RF orphan gap_pts | −0.5 | **−5 to +5** | If much more negative: pipeline relies on Jira memory; if much more positive: pattern_matching verdict |
-| recommendation-outage LOFO HGB | 0.71 | **≥ 0.80** | Investigate: probably recommendationservice still doesn't emit usable RED metrics |
-| cart-redis LOFO HGB | 0.75 | **≥ 0.78** | Investigate: cartservice .NET coverage; per-language dispatch verification |
+| RF orphan gap_pts | +1.7 (m05v4) | **−5 to +5** | If much more negative: pipeline relies on Jira memory; if much more positive: pattern_matching verdict |
+| recommendation-outage LOFO HGB | 0.73 (m05v4) | **≥ 0.80** | Investigate: probably recommendationservice still doesn't emit usable RED metrics |
+| **cart-redis LOFO HGB** | **0.80 (m05v4)** | **≥ 0.85** | The categorical features lifted this +5pt on v5-quick; v5-large should compound |
 | `cart_get_error_per_sec` discriminates cart-redis from baseline | 1.93 vs 0 in cartservice fault | Same pattern v5-large | If 0 even during cart-redis fault: categorical query mis-configured |
+| Categorical-feature noise penalty on small train | -2pt macro on v5-quick | Should be **POSITIVE** on v5-large | If macro drops further: the 94-col catalog is too many features for the data size |
 | Bi-encoder text-only PR-AUC | 0.21 | Similar (≤ 0.30) | If much higher: residual text leak we didn't catch |
 
 ---
@@ -350,6 +351,8 @@ For clarity — these are "not bugs, just not in scope":
 ## 8. Commits from this session (for `git log` lookup)
 
 ```
+c50d163 Phase 4.5: categorical feature breakdowns + cart-redis +5pt lift
+7a1df0f todo: checklist for everything that needs to flow into v5-large
 47e0571 docs: add Phase 4 rich-text leaderboard finding
 fb94129 Phase 4: bi-encoder + evidence_text fix + simpler results doc
 9bcc216 supplement: per-language metric dispatch for cartservice + frontend RED metrics
