@@ -451,7 +451,7 @@ def build_triage_label_record(
     return record
 
 
-_BASE_FEATURE_COLUMNS: tuple[str, ...] = (
+_BASE_FEATURE_COLUMNS_V4: tuple[str, ...] = (
     "triage_feature_log_total_count",
     "triage_feature_log_error_count",
     "triage_feature_log_warning_count",
@@ -466,6 +466,41 @@ _BASE_FEATURE_COLUMNS: tuple[str, ...] = (
     "triage_feature_k8s_restart_count",
     "triage_feature_k8s_pod_unavailable_count",
     "triage_feature_k8s_warning_event_count",
+)
+
+# Phase 3 (2026-05-26): supplementary features from the M0-M5 telemetry
+# layer (RED metrics, business counters, runtime gauges). These keys MUST
+# match the output of scripts/research-lab/export_m05_supplement.py. The
+# build pipeline emits a `triage_feature_m05_<key>` column per entry,
+# zero-filled when the supplement file is missing — preserving backward
+# compat with v4 runs that have no supplement.
+_M05_SUPPLEMENT_FEATURE_KEYS: tuple[str, ...] = (
+    # Cluster-wide business counters
+    "m05_payments_success_per_sec",
+    "m05_payments_error_per_sec",
+    "m05_cart_operations_success_per_sec",
+    "m05_cart_operations_error_per_sec",
+    "m05_orders_placed_per_sec",
+    "m05_recommendations_served_per_sec",
+    "m05_catalog_lookups_hit_per_sec",
+    "m05_catalog_lookups_miss_per_sec",
+    # Cluster-wide RED metrics
+    "m05_rpc_server_requests_per_sec",
+    "m05_rpc_server_errors_per_sec",
+    "m05_rpc_server_duration_p95_seconds",
+    # Per-service RED + runtime (filtered by window's service)
+    "m05_svc_rpc_server_requests_per_sec",
+    "m05_svc_rpc_server_errors_per_sec",
+    "m05_svc_rpc_client_requests_per_sec",
+    "m05_svc_rpc_client_errors_per_sec",
+    "m05_svc_process_memory_rss_max",
+    "m05_svc_go_goroutines_max",
+    "m05_svc_dotnet_gc_per_sec",
+    "m05_svc_python_gc_per_sec",
+)
+
+_BASE_FEATURE_COLUMNS: tuple[str, ...] = _BASE_FEATURE_COLUMNS_V4 + tuple(
+    f"triage_feature_{key}" for key in _M05_SUPPLEMENT_FEATURE_KEYS
 )
 
 # Delta features are computed by build_triage_dataset.py against the
@@ -854,7 +889,7 @@ def numeric_features_from_raw(
     p50 = _percentile(durations_ms, 50.0)
     p95 = _percentile(durations_ms, 95.0)
 
-    return {
+    base = {
         "triage_feature_log_total_count": float(log_total),
         "triage_feature_log_error_count": float(log_error),
         "triage_feature_log_warning_count": float(log_warning),
@@ -870,6 +905,23 @@ def numeric_features_from_raw(
         "triage_feature_k8s_pod_unavailable_count": float(unavailable),
         "triage_feature_k8s_warning_event_count": float(warning_events),
     }
+
+    # Phase 3 (2026-05-26): M0-M5 supplementary metrics produced by
+    # scripts/research-lab/export_m05_supplement.py. Each window may have a
+    # raw/prometheus_supplement/<window_id>.json file with extra business
+    # counter, RED metric, and runtime gauge readings. Emit one
+    # triage_feature_m05_* column per supplement key; zero-fill when missing
+    # (the file might be absent on older runs or runs collected before the
+    # M0-M5 layer was instrumented).
+    supplement = _safe_read_json(raw / "prometheus_supplement" / f"{window_id}.json") or {}
+    sup_values = supplement.get("values") or {}
+    for key in _M05_SUPPLEMENT_FEATURE_KEYS:
+        col = f"triage_feature_{key}"
+        try:
+            base[col] = float(sup_values.get(key) or 0.0)
+        except (TypeError, ValueError):
+            base[col] = 0.0
+    return base
 
 
 def evidence_text_from_raw(
