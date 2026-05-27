@@ -46,6 +46,16 @@ from .pipelines_neural import (
     XgboostGPUPipeline,
 )
 
+# memorygraph lives in its own top-level package under src/.
+# Soft-import so the comparison harness still works on installs that
+# haven't pulled the optional package — the pipeline simply won't appear
+# in KNOWN_PIPELINES if the import fails.
+try:
+    from memorygraph.pipeline import MemoryGraphPipeline
+    _HAS_MEMORYGRAPH = True
+except ImportError:
+    _HAS_MEMORYGRAPH = False
+
 
 KNOWN_PIPELINES: dict[str, type[PipelineRunner]] = {
     "loganalyzer": LoganalyzerPipeline,
@@ -71,6 +81,39 @@ KNOWN_PIPELINES: dict[str, type[PipelineRunner]] = {
     "bi_encoder_hybrid": BiEncoderHybridPipeline,
     "xgb_gpu": XgboostGPUPipeline,
 }
+
+if _HAS_MEMORYGRAPH:
+    # memorygraph: agentic cross-context retrieval. Builds a typed graph
+    # of entities extracted from both observability windows and Jira
+    # memory entries, then uses a skill-chain agent (rule-based by
+    # default, LLM-planned optionally) to score + explain matches.
+    KNOWN_PIPELINES["memorygraph"] = MemoryGraphPipeline
+
+    # memorygraph_hybrid: same agent + graph, plus a NumericBlendSkill
+    # that fits a HistGradientBoosting head on the train-split numeric
+    # features and blends the per-window probability into the per-
+    # candidate graph+similarity score inside triage_decide. Targets the
+    # observation that on v5-quick the numeric pipelines (hgb, rf) carry
+    # most of the triage PR-AUC while memorygraph carries the
+    # *explanation*.
+    class _MemoryGraphHybrid(MemoryGraphPipeline):
+        name = "memorygraph_hybrid"
+
+        def __init__(self) -> None:
+            super().__init__(with_numeric=True)
+
+    KNOWN_PIPELINES["memorygraph_hybrid"] = _MemoryGraphHybrid
+
+    # memorygraph_full: hybrid + Nomic dense similarity (via LM Studio).
+    # Falls back gracefully to BM25-only if LM Studio is unreachable, so
+    # this pipeline is always safe to include in a leaderboard run.
+    class _MemoryGraphFull(MemoryGraphPipeline):
+        name = "memorygraph_full"
+
+        def __init__(self) -> None:
+            super().__init__(with_numeric=True, with_embeddings=True)
+
+    KNOWN_PIPELINES["memorygraph_full"] = _MemoryGraphFull
 
 
 @dataclass
