@@ -172,7 +172,12 @@ class NomicRetrievalPipeline(_RetrievalPipelineBase):
     """Dense semantic retrieval via Nomic embed (LM Studio).
 
     v5-quick result: R@5 0.385 vs BM25's 0.154 (2.5×) with no LM call.
-    The cheapest meaningful retrieval upgrade vs the BM25 default."""
+    The cheapest meaningful retrieval upgrade vs the BM25 default.
+
+    Fail-soft: if LM Studio isn't reachable (no embedding server on
+    base_url), falls back to BM25 internally + sets metadata flag so the
+    report can flag the degradation. This keeps the harness from
+    crashing on machines that don't have the embedding server."""
 
     name = "nomic_retrieval_only"
 
@@ -186,9 +191,33 @@ class NomicRetrievalPipeline(_RetrievalPipelineBase):
         self.base_url = base_url
         self.model = model
         self.retrieval_top_k = retrieval_top_k
+        self._fell_back_to_bm25 = False
 
     def _build_retriever(self, memory_texts: list[str]) -> Any:
+        # Probe the embedding server once with a tiny test input. If it
+        # fails we fall back to BM25 rather than crashing the harness.
+        import urllib.error
+        try:
+            from .retrievers import embed_via_lm_studio
+            probe = embed_via_lm_studio(
+                self.base_url, self.model, ["probe"], timeout=5.0
+            )
+            if not probe or not probe[0]:
+                raise RuntimeError("empty embedding")
+        except (urllib.error.URLError, RuntimeError, ConnectionError, OSError) as exc:
+            import sys
+            print(
+                f"WARN nomic_retrieval_only: LM Studio embedding endpoint "
+                f"{self.base_url} unreachable ({exc!r}); falling back to BM25",
+                file=sys.stderr,
+            )
+            self._fell_back_to_bm25 = True
+            return BM25Retriever([tokenize(t) for t in memory_texts])
         return NomicRetriever(self.base_url, self.model, memory_texts)
+
+    def _query_arg(self, text: str) -> Any:
+        # When fallen back to BM25 we need tokenized queries
+        return tokenize(text) if self._fell_back_to_bm25 else text
 
 
 class NomicLMRerankPipeline(_RetrievalPipelineBase):

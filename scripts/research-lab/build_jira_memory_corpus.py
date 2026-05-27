@@ -65,8 +65,21 @@ def _memory_text(issue: dict[str, Any]) -> str:
     components_text = ", ".join(str(c) for c in components)
     labels = metadata.get("labels") or []
     labels_text = ", ".join(str(label) for label in labels)
-    comments_body = metadata.get("comments_body") or []
-    first_comment = _coerce_text(comments_body[0]) if comments_body else ""
+    # comments_body may be a string (single blob, as our generator emits)
+    # OR a list-of-strings (legacy schema). Handle both — splitting a
+    # string on "---" lets us recover individual comments when the
+    # humanizer (src/jira_humanizer/rewrite.py) has joined them with
+    # `\n\n---\n\n` as separators. Take up to first 3 comments to keep
+    # memory_text scannable.
+    raw_comments = metadata.get("comments_body") or []
+    comment_chunks: list[str] = []
+    if isinstance(raw_comments, str):
+        for chunk in raw_comments.split("\n---\n"):
+            chunk = chunk.strip()
+            if chunk:
+                comment_chunks.append(chunk)
+    elif isinstance(raw_comments, list):
+        comment_chunks = [_coerce_text(c) for c in raw_comments if _coerce_text(c)]
 
     parts: list[str] = []
     if summary:
@@ -77,16 +90,22 @@ def _memory_text(issue: dict[str, Any]) -> str:
         parts.append(f"Labels: {labels_text}")
     if description:
         parts.append(f"Description: {description}")
-    if first_comment:
-        parts.append(f"First comment: {first_comment}")
+    for i, chunk in enumerate(comment_chunks[:3], start=1):
+        # Cap each chunk length so a few long comments don't drown
+        # description / labels in BM25 scoring.
+        parts.append(f"Comment {i}: {chunk[:300]}")
     return "\n".join(parts)
 
 
 def _resolution_notes(issue: dict[str, Any]) -> str | None:
     metadata = issue.get("metadata") or {}
-    comments_body = metadata.get("comments_body") or []
-    if comments_body and len(comments_body) > 1:
-        return _coerce_text(comments_body[-1])
+    raw_comments = metadata.get("comments_body") or []
+    if isinstance(raw_comments, str):
+        chunks = [c.strip() for c in raw_comments.split("\n---\n") if c.strip()]
+        if len(chunks) > 1:
+            return chunks[-1][:300]
+    elif isinstance(raw_comments, list) and len(raw_comments) > 1:
+        return _coerce_text(raw_comments[-1])
     return _first_nonempty(metadata.get("resolution"), metadata.get("resolution_note"))
 
 

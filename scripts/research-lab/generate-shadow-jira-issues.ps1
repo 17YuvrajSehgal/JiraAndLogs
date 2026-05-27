@@ -98,19 +98,10 @@ function Get-RealisticComponents {
     return $values
 }
 
-function Get-HumanTriageNote {
-    param(
-        [object]$Episode,
-        [int]$Bucket
-    )
-
-    switch ($Bucket) {
-        0 { return "Initial report is noisy. Checking whether this is customer traffic, a recent rollout, or a dependency issue." }
-        1 { return "Support saw intermittent failures before the automated alert stabilized. Priority may need adjustment after owner review." }
-        2 { return "Component mapping is not fully confirmed yet; starting with the most visible impacted service and adding owners as evidence improves." }
-        default { return "Correlating logs, alerts, and traces. There may be more than one symptom in the same customer journey." }
-    }
-}
+# Get-HumanTriageNote removed 2026-05-26. The placeholder description /
+# comment in the issue body now have no lab-metadata content; richer
+# human-style content is the responsibility of
+# src/jira_humanizer/rewrite.py applied as a post-processing step.
 
 function New-JiraHistoryItem {
     param(
@@ -262,15 +253,35 @@ foreach ($episode in $episodes) {
         $jiraComponents = @(Get-RealisticComponents -Components $components -Bucket $realismBucket | Sort-Object -Unique)
     }
 
+    # Build labels WITHOUT lab leakage. The user-visible fields of a real
+    # Jira ticket would never reference "dataset-...", "scenario-...",
+    # "synthetic-incident", or "telemetry-linked". Those tokens previously
+    # made the synthetic tickets look obviously fake (corporate-credibility
+    # risk) AND silently leaked the scenario_id/dataset_run_id to any
+    # text-based pipeline.
+    #
+    # Telemetry-link fields (window_ids, trace_ids, alert_fingerprints)
+    # live in the `telemetry_links` SIBLING field — NOT in description,
+    # comments, or labels. That field is the retrieval ground truth and is
+    # invisible in production Jira.
+    #
+    # The 2026-05-26 humanizer in src/jira_humanizer/rewrite.py is the
+    # canonical source for description / comment templates (per family).
+    # This generator emits a minimal placeholder description so that runs
+    # before the humanizer is applied still work — the humanizer is
+    # idempotent and will rewrite over this if invoked post-collection.
     $labels = @(
-        "synthetic-incident",
-        "telemetry-linked",
-        "dataset-$DatasetRunId",
-        "scenario-$($episode.scenario_id)",
-        "severity-$($episode.severity)"
+        "incident",
+        "production"
     )
-    if ($episode.root_cause_category) {
-        $labels += "root-$($episode.root_cause_category)"
+    if ($episode.severity -eq "critical") {
+        $labels += "p0"
+        $labels += "customer-impact"
+    } elseif ($episode.severity -eq "major") {
+        $labels += "p1"
+        $labels += "customer-impact"
+    } elseif ($episode.severity -eq "minor") {
+        $labels += "p3"
     }
 
     $logQuery = '{namespace="online-boutique-research", app=~"' + (($jiraComponents | ForEach-Object { [regex]::Escape($_) }) -join "|") + '"}'
@@ -280,52 +291,17 @@ foreach ($episode in $episodes) {
         $traceQuery = ($traceIds -join ",")
     }
 
-    $description = @"
-Synthetic lab issue generated from Online Boutique telemetry.
+    # Placeholder human-style description. The humanizer post-processor
+    # (src/jira_humanizer/rewrite.py) generates richer family-specific
+    # templates; this default keeps the field non-empty and gives a usable
+    # default for runs that aren't post-processed.
+    $primaryService = if ($components.Count -gt 0) { $components[0] } else { "the service" }
+    $description = "Observed $($episode.incident_type) on $primaryService. Investigating root cause."
 
-Dataset run: $DatasetRunId
-Episode: $episodeId
-Scenario: $($episode.scenario_id)
-Fault id: $($episode.fault_id)
-Incident type: $($episode.incident_type)
-Root cause category: $($episode.root_cause_category)
-Affected services: $($components -join ", ")
-Jira components at creation: $($jiraComponents -join ", ")
-Incident window: $($episode.start_time) to $($episode.end_time)
-
-Telemetry windows:
-$($telemetryWindowIds -join "`n")
-
-Alert fingerprints:
-$($alertFingerprints -join "`n")
-
-Trace ids:
-$($traceIds -join "`n")
-"@
-
-    $humanTriageNote = $null
-    if ($RealisticNoise) {
-        $humanTriageNote = Get-HumanTriageNote -Episode $episode -Bucket $realismBucket
-    }
-
-    $commentsBody = @"
-Generated during the research lab workflow. The issue is intentionally linked to raw telemetry exports so ranking experiments can be audited.
-
-Triage note: $humanTriageNote
-
-Log query: $logQuery
-Metric query: $metricQuery
-Trace ids: $traceQuery
-"@
-    if (-not $RealisticNoise) {
-        $commentsBody = @"
-Generated during the research lab workflow. The issue is intentionally linked to raw telemetry exports so ranking experiments can be audited.
-
-Log query: $logQuery
-Metric query: $metricQuery
-Trace ids: $traceQuery
-"@
-    }
+    # Placeholder single comment. Humanizer replaces with multi-author
+    # conversational thread. Telemetry-link fields stay OUT of user
+    # text and ONLY appear in the telemetry_links sibling below.
+    $commentsBody = "Picked up by on-call. Looking at recent deploys and dependency health."
 
     $history = @()
     $history += New-JiraHistoryItem -Id "$issueKey-h1" -Author $Reporter -Created $createdAt.ToString("o") -Field "status" -From $null -To "Needs Triage"
