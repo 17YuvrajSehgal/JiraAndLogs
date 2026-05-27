@@ -52,6 +52,11 @@ REPO_ROOT = Path(__file__).resolve().parent.parent.parent  # src/experiments/X.p
 DEFAULT_GLOBAL_ID = "2026-05-25-dataset-v5-quick-m05v2"
 DEFAULT_MODEL = "sentence-transformers/all-MiniLM-L6-v2"
 
+# Make `from util.device import ...` work no matter where this script is invoked
+# from. We're already living under src/, so this just resolves to it.
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+from util.device import resolve_device, safe_batch_size  # noqa: E402
+
 
 def _read_jsonl(path: Path) -> list[dict[str, Any]]:
     rows: list[dict[str, Any]] = []
@@ -238,7 +243,26 @@ def main() -> int:
         action="store_true",
         help="Save / reuse a .npz cache of the embeddings (lets you swap models without recompute)",
     )
+    parser.add_argument(
+        "--device",
+        choices=("auto", "cuda", "cpu"),
+        default="auto",
+        help="Where to run the encoder. 'auto' (default) picks GPU when usable.",
+    )
+    parser.add_argument(
+        "--batch-size",
+        type=int,
+        default=0,
+        help="Override the auto-picked encoder batch size. 0 = auto from device.",
+    )
     args = parser.parse_args()
+
+    device = resolve_device(prefer=None if args.device == "auto" else args.device)
+    # MiniLM-512tok ~ 150KB activations/item; cross-encoders ~ 1MB. Pick conservatively.
+    batch_size = args.batch_size or safe_batch_size(
+        bytes_per_item=200_000, default_cpu=64, default_gpu=256
+    )
+    print(f"[bi_encoder] device={device} batch_size={batch_size}", file=sys.stderr)
 
     global_dir = Path(args.derived_root) / "global" / args.global_id
     examples_path = global_dir / "global-triage-examples.jsonl"
@@ -285,14 +309,18 @@ def main() -> int:
         t0 = time.time()
         from sentence_transformers import SentenceTransformer
 
-        model = SentenceTransformer(args.model)
-        print(f"  loaded in {time.time() - t0:.1f}s", file=sys.stderr)
+        model = SentenceTransformer(args.model, device=device)
+        print(f"  loaded in {time.time() - t0:.1f}s on {device}", file=sys.stderr)
         t0 = time.time()
         embeddings = model.encode(
-            texts, batch_size=64, show_progress_bar=True, convert_to_numpy=True
+            texts,
+            batch_size=batch_size,
+            show_progress_bar=True,
+            convert_to_numpy=True,
+            device=device,
         )
         print(
-            f"Embedded {len(texts)} windows -> shape {embeddings.shape} in {time.time() - t0:.1f}s",
+            f"Embedded {len(texts)} windows -> shape {embeddings.shape} in {time.time() - t0:.1f}s on {device}",
             file=sys.stderr,
         )
         if args.cache_embeddings:

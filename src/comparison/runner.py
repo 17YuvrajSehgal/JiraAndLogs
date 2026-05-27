@@ -41,6 +41,10 @@ from .pipelines_retrieval import (
     NomicLMRerankPipeline,
     NomicRetrievalPipeline,
 )
+from .pipelines_neural import (
+    BiEncoderHybridPipeline,
+    XgboostGPUPipeline,
+)
 
 
 KNOWN_PIPELINES: dict[str, type[PipelineRunner]] = {
@@ -60,6 +64,12 @@ KNOWN_PIPELINES: dict[str, type[PipelineRunner]] = {
     "bm25_retrieval": BM25RetrievalPipeline,
     "nomic_retrieval": NomicRetrievalPipeline,
     "nomic_lm_rerank": NomicLMRerankPipeline,
+    # GPU-aware neural pipelines (2026-05-26). Auto-detect CUDA via
+    # util.device; fall back to CPU when no GPU is usable. Run
+    # `python -m util.device_check` (or see src/util/device.py) to verify
+    # the GPU stack before including these in a leaderboard run.
+    "bi_encoder_hybrid": BiEncoderHybridPipeline,
+    "xgb_gpu": XgboostGPUPipeline,
 }
 
 

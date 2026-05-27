@@ -63,6 +63,95 @@ strong everywhere except the two endpoints above.
 
 ---
 
+## 1.05 GPU strategy (RTX 5060, 8 GB)
+
+This box has an NVIDIA RTX 5060 (Blackwell, sm_120). The ML pipelines
+**already use it for the heavy work** — and the in-Python pipelines are
+written to use it automatically once the venv has a CUDA-enabled torch.
+
+### What's already on the GPU
+
+| Workload | Where it runs | GPU? |
+| --- | --- | --- |
+| Qwen 14B chat (LLM Jira humanizer, `nomic_lm_rerank`) | LM Studio server :1234 | **Yes** (LM Studio's own CUDA runtime; ~6 GB VRAM) |
+| Nomic text embedding (`nomic_retrieval`, future bi-encoders that hit LM Studio) | LM Studio server :1234 | **Yes** (~1 GB VRAM) |
+
+Everything that goes through LM Studio's HTTP API is GPU-accelerated by
+LM Studio itself — Python just orchestrates HTTP calls. **No code change
+in this repo can speed that up;** it's already at the GPU's mercy.
+
+### What can be moved to the in-Python GPU
+
+| Workload | Today | With CUDA torch |
+| --- | --- | --- |
+| `bi_encoder_hybrid` pipeline (sentence-transformers MiniLM) | CPU encoder (~30 s / 1,020 windows on this box) | ~1–2 s on RTX 5060 |
+| `xgb_gpu` pipeline (xgboost over numeric features) | not installed | sub-second on current dataset; meaningful at v5-large scale |
+| Future cross-encoder rerankers | CPU only | GPU expected to be 20-50× faster |
+
+What does **not** benefit from in-Python GPU:
+- sklearn `hgb`/`rf`/`logistic_sklearn` over 3,216 rows × 28 features — already sub-second on CPU; GPU overhead exceeds the win.
+- BM25 (`bm25_retrieval`, the loganalyzer/logsense retrievers) — pure Python string ops, not GPU-suitable.
+
+### Device detection
+
+All neural pipelines route device selection through `src/util/device.py`.
+The probe verifies:
+1. torch is installed with a CUDA build (not the `+cpu` wheel),
+2. `torch.cuda.is_available()` returns True,
+3. a tiny matmul actually launches on the GPU (catches Blackwell sm_120 / older-CUDA-wheel mismatches that pass the first two checks but fail at first real op),
+4. free VRAM is sufficient for the batch size the caller asked for.
+
+Pipelines call `resolve_device(prefer=None)` → `"cuda"` when usable,
+`"cpu"` with a one-line diagnostic otherwise. Batch sizes come from
+`safe_batch_size(bytes_per_item=...)` so a pipeline doesn't OOM the
+~1 GB of VRAM LM Studio leaves available.
+
+Run the status check anytime:
+```powershell
+& .venv\Scripts\python -m util.device_check
+```
+
+Output on this box right now (CPU-only torch wheel installed):
+```
+CPU (CPU-only torch wheel installed (2.12.0+cpu); reinstall with CUDA support)
+  torch:           2.12.0+cpu
+  cuda available:  False
+  diagnosis:       CPU-only torch wheel installed (2.12.0+cpu); reinstall with CUDA support
+```
+
+### Install steps to flip the switch (one-time, do this when you want the speed-up)
+
+```powershell
+# 1. Replace CPU-only torch with a CUDA 12.8+ build (required for Blackwell sm_120).
+#    Python 3.14 may not yet have stable CUDA wheels — nightly index works.
+& .venv\Scripts\pip uninstall -y torch
+& .venv\Scripts\pip install --pre torch `
+    --index-url https://download.pytorch.org/whl/nightly/cu128
+
+# 2. xgboost for tabular GPU (optional — only matters at v5-large scale).
+& .venv\Scripts\pip install xgboost
+
+# 3. Verify.
+& .venv\Scripts\python -m util.device_check
+```
+
+If `python -m util.device_check` exits 0, every neural pipeline picks up
+GPU automatically next run — no per-pipeline flags needed.
+
+### VRAM-sharing constraint
+
+LM Studio holds ~7 GB of the 8 GB on this card while a model is loaded.
+That leaves ~1 GB for in-Python work, which is enough for:
+- MiniLM-L6-v2 encoder at batch=256 (~150 MB)
+- a small xgboost-GPU run
+
+For larger encoders (e5-base, BGE-M3, cross-encoders) or anything sweeping
+large batches, **unload the LM Studio model first** (LM Studio → Server
+tab → Stop / unload). The pipelines query free VRAM at runtime, so they
+won't OOM — they just shrink the batch and run slower.
+
+---
+
 ## 1.1 Pipeline data-flow diagram
 
 End-to-end view of what each pipeline reads, what it emits, and where the
@@ -103,9 +192,15 @@ flowchart LR
     %% =========== PIPELINES ===========
     subgraph NUMERIC["Numeric-only triage models<br/>(no retrieval)"]
         direction TB
-        P_HGB[hgb<br/>HistGradientBoosting]
-        P_RF[rf<br/>RandomForest + isotonic calibration]
-        P_LOG[logistic_sklearn<br/>Logistic + StandardScaler]
+        P_HGB[hgb<br/>HistGradientBoosting<br/>CPU]
+        P_RF[rf<br/>RandomForest + isotonic calibration<br/>CPU]
+        P_LOG[logistic_sklearn<br/>Logistic + StandardScaler<br/>CPU]
+        P_XGB[xgb_gpu<br/>xgboost device=cuda<br/>auto CPU fallback]
+    end
+
+    subgraph NEURAL["Neural pipelines<br/>(GPU when available)"]
+        direction TB
+        P_BIENC[bi_encoder_hybrid<br/>sentence-transformers MiniLM<br/>+ numeric + logistic head]
     end
 
     subgraph HYBRID["Hybrid: numeric + Jira retrieval"]
@@ -158,12 +253,20 @@ flowchart LR
     D_GLOB --> P_HGB
     D_GLOB --> P_RF
     D_GLOB --> P_LOG
+    D_GLOB --> P_XGB
     D_COLS -. feature subset .-> P_HGB
     D_COLS -. feature subset .-> P_RF
     D_COLS -. feature subset .-> P_LOG
+    D_COLS -. feature subset .-> P_XGB
     D_SPLIT -. train/val/test .-> P_HGB
     D_SPLIT -. train/val/test .-> P_RF
     D_SPLIT -. train/val/test .-> P_LOG
+    D_SPLIT -. train/val/test .-> P_XGB
+
+    %% derived -> neural pipeline
+    D_GLOB -->|evidence_text +<br/>numeric features| P_BIENC
+    D_COLS -. feature subset .-> P_BIENC
+    D_SPLIT -. train/val/test .-> P_BIENC
 
     %% derived -> hybrid pipelines
     D_GLOB --> P_LA
@@ -194,6 +297,7 @@ flowchart LR
     P_HGB --> E_PRED
     P_RF --> E_PRED
     P_LOG --> E_PRED
+    P_XGB --> E_PRED
     P_LA --> E_PRED
     P_LAJ --> E_PRED
     P_JO --> E_PRED
@@ -201,6 +305,7 @@ flowchart LR
     P_BM --> E_PRED
     P_NR --> E_PRED
     P_NLM --> E_PRED
+    P_BIENC --> E_PRED
     P_HGB -. score .-> P_ENS
     P_RF -. score .-> P_ENS
     P_LA -. score .-> P_ENS
@@ -230,7 +335,7 @@ flowchart LR
     class R_PROM,R_LOGS,R_EP,R_JIRA rawCls
     class B_TRI,B_GLOB,B_HUM,B_MEM,B_MATCH buildCls
     class D_GLOB,D_MEM,D_MATCH,D_COLS,D_SPLIT derivedCls
-    class P_HGB,P_RF,P_LOG,P_LA,P_LAJ,P_JO,P_LS,P_BM,P_NR,P_NLM,P_ENS pipeCls
+    class P_HGB,P_RF,P_LOG,P_XGB,P_LA,P_LAJ,P_JO,P_LS,P_BM,P_NR,P_NLM,P_BIENC,P_ENS pipeCls
     class E_PRED,E_TRIAGE,E_RET,E_STRAT,E_PAIR,E_LOFO,E_REP evalCls
 ```
 
