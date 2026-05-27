@@ -63,6 +63,200 @@ strong everywhere except the two endpoints above.
 
 ---
 
+## 1.1 Pipeline data-flow diagram
+
+End-to-end view of what each pipeline reads, what it emits, and where the
+final metrics come from. Solid arrows = data dependency. Dotted arrows =
+configuration / ground-truth lookup only (not used as a model input).
+
+```mermaid
+flowchart LR
+    %% =========== RAW (per-run) ===========
+    subgraph RAW["Raw per-run data<br/>(data/runs/&lt;run&gt;/)"]
+        direction TB
+        R_PROM[raw/prometheus/*.json]
+        R_LOGS[logs/M0-M5 JSONL]
+        R_EP[episodes.jsonl]
+        R_JIRA[jira_shadow_issues.jsonl<br/>summary + description + labels<br/>+ comments + telemetry_links]
+    end
+
+    %% =========== BUILDERS ===========
+    subgraph BUILD["Build scripts<br/>(scripts/research-lab/)"]
+        direction TB
+        B_TRI[build_triage_dataset.py<br/>PromQL + log aggregations]
+        B_GLOB[build_global_triage_dataset.py<br/>scans triage_feature_* dynamically]
+        B_HUM[jira_humanizer/llm_rewrite.py<br/>Qwen rewrites synthetic tickets]
+        B_MEM[build_jira_memory_corpus.py<br/>memory_text = summary + components<br/>+ labels + description + comments]
+        B_MATCH[build_window_memory_matchings.py]
+    end
+
+    %% =========== DERIVED GLOBAL ===========
+    subgraph DERIVED["Derived global artifacts<br/>(data/derived/global/&lt;id&gt;/)"]
+        direction TB
+        D_GLOB[global-triage-examples.jsonl<br/>per-window: 28 numeric features<br/>+ evidence_text + label]
+        D_MEM[jira-memory-corpus.jsonl<br/>per-issue: memory_text + metadata<br/>linked_* fields = provenance only]
+        D_MATCH[window-memory-matchings.jsonl<br/>retrieval ground truth]
+        D_COLS[triage-feature-columns.json<br/>input feature catalog + eval_only ban list]
+        D_SPLIT[triage-split-manifest.json<br/>train/val/test split by scenario_family]
+    end
+
+    %% =========== PIPELINES ===========
+    subgraph NUMERIC["Numeric-only triage models<br/>(no retrieval)"]
+        direction TB
+        P_HGB[hgb<br/>HistGradientBoosting]
+        P_RF[rf<br/>RandomForest + isotonic calibration]
+        P_LOG[logistic_sklearn<br/>Logistic + StandardScaler]
+    end
+
+    subgraph HYBRID["Hybrid: numeric + Jira retrieval"]
+        direction TB
+        P_LA[loganalyzer<br/>numeric features +<br/>BM25/embedding hybrid over memory]
+        P_LAJ[loganalyzer_with_jira<br/>+ JiraMemoryFeaturizer<br/>11 scalar jira_* features]
+        P_JO[jira_only<br/>jira_* features only]
+        P_LS[logsense<br/>Drain-lite log templates +<br/>BM25 over memory]
+    end
+
+    subgraph RETRIEVAL["Pure retrieval pipelines<br/>(triage score = max similarity proxy)"]
+        direction TB
+        P_BM[bm25_retrieval<br/>Okapi BM25 over memory_text]
+        P_NR[nomic_retrieval<br/>Nomic embed + cosine<br/>via LM Studio :1234]
+        P_NLM[nomic_lm_rerank<br/>Nomic top-pool +<br/>Qwen LM rerank]
+    end
+
+    P_ENS[ensemble_mean<br/>auto-blend of above scores]
+
+    %% =========== EVAL ===========
+    subgraph EVAL["Eval (src/comparison/runner.py)"]
+        direction TB
+        E_PRED[PipelinePrediction<br/>triage_score + decision +<br/>top-5 matched_issue_ids]
+        E_TRIAGE[Triage metrics<br/>F1, PR-AUC, ROC-AUC,<br/>Prec@FPR=1%/5%, ECE]
+        E_RET[Retrieval metrics<br/>Recall@k, MRR]
+        E_STRAT[Stratified metrics<br/>by family / hard_case /<br/>triage_reason_class / is_novel / service]
+        E_PAIR['Does Jira help?'<br/>pairwise bootstrap CI<br/>with_jira vs without]
+        E_LOFO[LOFO macros<br/>leave-one-family-out]
+        E_REP[report.md + report.json<br/>+ per-window-predictions.jsonl]
+    end
+
+    %% wiring: raw -> builders
+    R_PROM --> B_TRI
+    R_LOGS --> B_TRI
+    R_JIRA --> B_HUM
+    B_HUM --> R_JIRA
+    R_JIRA --> B_MEM
+    R_EP --> B_MEM
+    R_EP --> B_MATCH
+
+    %% builders -> derived
+    B_TRI -->|writes per-run<br/>triage_examples.jsonl| B_GLOB
+    B_GLOB --> D_GLOB
+    B_GLOB --> D_COLS
+    B_GLOB --> D_SPLIT
+    B_MEM --> D_MEM
+    B_MATCH --> D_MATCH
+
+    %% derived -> numeric pipelines
+    D_GLOB --> P_HGB
+    D_GLOB --> P_RF
+    D_GLOB --> P_LOG
+    D_COLS -. feature subset .-> P_HGB
+    D_COLS -. feature subset .-> P_RF
+    D_COLS -. feature subset .-> P_LOG
+    D_SPLIT -. train/val/test .-> P_HGB
+    D_SPLIT -. train/val/test .-> P_RF
+    D_SPLIT -. train/val/test .-> P_LOG
+
+    %% derived -> hybrid pipelines
+    D_GLOB --> P_LA
+    D_GLOB --> P_LAJ
+    D_GLOB --> P_JO
+    D_GLOB --> P_LS
+    D_MEM --> P_LA
+    D_MEM --> P_LAJ
+    D_MEM --> P_JO
+    D_MEM --> P_LS
+    D_COLS -. feature subset .-> P_LA
+    D_COLS -. feature subset .-> P_LAJ
+    D_COLS -. feature subset .-> P_LS
+    D_SPLIT -. train/val/test .-> P_LA
+    D_SPLIT -. train/val/test .-> P_LAJ
+    D_SPLIT -. train/val/test .-> P_JO
+    D_SPLIT -. train/val/test .-> P_LS
+
+    %% derived -> retrieval pipelines
+    D_GLOB -->|evidence_text only| P_BM
+    D_GLOB -->|evidence_text only| P_NR
+    D_GLOB -->|evidence_text only| P_NLM
+    D_MEM --> P_BM
+    D_MEM --> P_NR
+    D_MEM --> P_NLM
+
+    %% pipelines -> ensemble + predictions
+    P_HGB --> E_PRED
+    P_RF --> E_PRED
+    P_LOG --> E_PRED
+    P_LA --> E_PRED
+    P_LAJ --> E_PRED
+    P_JO --> E_PRED
+    P_LS --> E_PRED
+    P_BM --> E_PRED
+    P_NR --> E_PRED
+    P_NLM --> E_PRED
+    P_HGB -. score .-> P_ENS
+    P_RF -. score .-> P_ENS
+    P_LA -. score .-> P_ENS
+    P_LAJ -. score .-> P_ENS
+    P_LS -. score .-> P_ENS
+    P_ENS --> E_PRED
+
+    %% ground truth lookup
+    D_MATCH -. matched_memory_issue_ids .-> E_RET
+
+    %% predictions -> metrics
+    E_PRED --> E_TRIAGE
+    E_PRED --> E_RET
+    E_TRIAGE --> E_STRAT
+    E_RET --> E_STRAT
+    E_TRIAGE --> E_PAIR
+    E_TRIAGE --> E_LOFO
+    E_STRAT --> E_REP
+    E_PAIR --> E_REP
+    E_LOFO --> E_REP
+
+    classDef rawCls fill:#fff4e6,stroke:#b87333,color:#000
+    classDef buildCls fill:#e6f3ff,stroke:#1f6feb,color:#000
+    classDef derivedCls fill:#e6ffe6,stroke:#2da44e,color:#000
+    classDef pipeCls fill:#f0e6ff,stroke:#8250df,color:#000
+    classDef evalCls fill:#ffe6f0,stroke:#cf222e,color:#000
+    class R_PROM,R_LOGS,R_EP,R_JIRA rawCls
+    class B_TRI,B_GLOB,B_HUM,B_MEM,B_MATCH buildCls
+    class D_GLOB,D_MEM,D_MATCH,D_COLS,D_SPLIT derivedCls
+    class P_HGB,P_RF,P_LOG,P_LA,P_LAJ,P_JO,P_LS,P_BM,P_NR,P_NLM,P_ENS pipeCls
+    class E_PRED,E_TRIAGE,E_RET,E_STRAT,E_PAIR,E_LOFO,E_REP evalCls
+```
+
+### Reading the diagram
+
+**Five colored bands, left → right:**
+1. **Raw per-run data** (orange) — what the collection scripts dump per dataset run.
+2. **Build scripts** (blue) — the `scripts/research-lab/` tools that derive global artifacts.
+3. **Derived global artifacts** (green) — the inputs every pipeline reads. `triage-feature-columns.json` is the authoritative input contract; `eval_only_fields` in the same file is the ban list.
+4. **Pipelines** (purple) — grouped by what they consume:
+   - **Numeric-only** (`hgb`, `rf`, `logistic_sklearn`) — read `global-triage-examples.jsonl` only. No retrieval, no memory access. Fastest to iterate.
+   - **Hybrid** (`loganalyzer`, `loganalyzer_with_jira`, `jira_only`, `logsense`) — read numeric features AND the Jira memory corpus, blending lexical retrieval with classical features.
+   - **Pure retrieval** (`bm25_retrieval`, `nomic_retrieval`, `nomic_lm_rerank`) — read only `evidence_text` from the window + the memory corpus. Triage score is `max(top-k similarity)` as a proxy; their primary product is the retrieval-quality metrics (Recall@k, MRR).
+   - **`ensemble_mean`** — auto-added by the runner; blends scores from the other pipelines.
+5. **Eval** (pink) — `PipelinePrediction` is the per-window output of every pipeline. It fans out into triage metrics, retrieval metrics, stratified breakdowns, the pairwise "Does Jira help?" CI, and LOFO macros, all written into `report.md`.
+
+### Key invariants the diagram encodes
+
+- **`triage_evidence_text` and `triage_feature_*` are the only model inputs.** Everything else flowing into a pipeline is either configuration (`triage-feature-columns.json`, `triage-split-manifest.json`) or memory it can retrieve over (`jira-memory-corpus.jsonl`).
+- **`window-memory-matchings.jsonl` only enters at eval time** as ground truth for `Recall@k` / `MRR` — no pipeline reads it during fit or predict.
+- **The `linked_window_ids` / `linked_trace_ids` / `linked_alert_fingerprints` fields on memory entries are carried but never indexed** — they're for provenance and offline analysis (`build_ranking_dataset.py`), not for retrieval.
+- **`telemetry_links` on raw Jira issues is preserved through humanization but stripped during memory-corpus build** — no trace IDs reach BM25 / Nomic tokenization.
+- **Feature-list flows through `triage-feature-columns.json`**, not through hardcoded column lists in model code. Any pipeline that imports `FEATURE_COLUMNS` from `triage_labels.py` is broken (see §1, "Code that BLOCKS v5 richness").
+
+---
+
 ## 2. What v5 will deliver that v4 cannot
 
 When v5-large (or v5-quick) lands, the dataset will gain the following
