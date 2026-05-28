@@ -1,0 +1,77 @@
+{
+  "schema_version": 1,
+  "plan_id": "dataset-v5-orphans",
+  "title": "Dataset v5 orphans plan — 8 D12 orphan-fault scenarios with no Jira",
+  "description": "Tests whether the triage model catches genuine anomalies on signal alone, with no Jira memory match available. Per dataset-todo.md Phase D12: 6 near-twin orphans (identical fault to a reported scenario but `produces_jira_ticket: false`) + 2 far orphans (services with zero Jira-ticketed scenarios anywhere in the corpus — emailservice + adservice). Each run produces 8 orphan `ticket_worthy` windows, 8 orphan `borderline` recovery windows, and 16 noise baseline windows. At 25 runs in the v5-large corpus this contributes 200 orphan `ticket_worthy` windows, hitting the D12 acceptance target.",
+  "environment": "research-local",
+  "traffic_profile_id": "baseline-checkout-mix",
+  "default_post_window_seconds": 75,
+  "quick_duration_seconds": 60,
+  "quick_post_window_seconds": 30,
+  "realistic_jira_noise": true,
+  "target_use": "Phase D12 — orphan-fault detection track. Adds out-of-distribution + near-twin orphan windows to v5-large.",
+  "scenarios": [
+    {
+      "scenario_file": "deploy\\research-lab\\scenarios\\baselines\\baseline-normal-traffic.yaml",
+      "role": "negative_baseline",
+      "duration_seconds": 90,
+      "post_window_seconds": 0,
+      "notes": "Healthy pre-orphan baseline."
+    },
+    {
+      "scenario_file": "deploy\\research-lab\\scenarios\\faults\\orphan-cart-redis-degradation-critical.yaml",
+      "role": "positive_incident",
+      "duration_seconds": 60,
+      "notes": "D12 near-twin orphan: identical to cart-redis-degradation-critical, no Jira."
+    },
+    {
+      "scenario_file": "deploy\\research-lab\\scenarios\\faults\\orphan-paymentservice-pod-restart-major.yaml",
+      "role": "positive_incident",
+      "duration_seconds": 60,
+      "notes": "D12 near-twin orphan: payment restart with no Jira."
+    },
+    {
+      "scenario_file": "deploy\\research-lab\\scenarios\\faults\\orphan-frontend-pod-restart-major.yaml",
+      "role": "positive_incident",
+      "duration_seconds": 60,
+      "notes": "D12 near-twin orphan: frontend restart with no Jira."
+    },
+    {
+      "scenario_file": "deploy\\research-lab\\scenarios\\faults\\orphan-productcatalog-latency-major.yaml",
+      "role": "positive_incident",
+      "duration_seconds": 60,
+      "notes": "D12 near-twin orphan: productcatalog latency with no Jira."
+    },
+    {
+      "scenario_file": "deploy\\research-lab\\scenarios\\faults\\orphan-shippingservice-unavailable-major.yaml",
+      "role": "positive_incident",
+      "duration_seconds": 60,
+      "notes": "D12 near-twin orphan: shipping outage with no Jira."
+    },
+    {
+      "scenario_file": "deploy\\research-lab\\scenarios\\faults\\orphan-currencyservice-unavailable-major.yaml",
+      "role": "positive_incident",
+      "duration_seconds": 60,
+      "notes": "D12 near-twin orphan: currency outage with no Jira."
+    },
+    {
+      "scenario_file": "deploy\\research-lab\\scenarios\\faults\\orphan-emailservice-flake-major.yaml",
+      "role": "positive_incident",
+      "duration_seconds": 60,
+      "notes": "D12 FAR orphan: emailservice has zero Jira scenarios anywhere in the corpus."
+    },
+    {
+      "scenario_file": "deploy\\research-lab\\scenarios\\faults\\orphan-adservice-outage-major.yaml",
+      "role": "positive_incident",
+      "duration_seconds": 60,
+      "notes": "D12 FAR orphan: adservice has zero Jira-ticketed scenarios in the corpus."
+    },
+    {
+      "scenario_file": "deploy\\research-lab\\scenarios\\baselines\\baseline-normal-traffic.yaml",
+      "role": "negative_baseline",
+      "duration_seconds": 90,
+      "post_window_seconds": 0,
+      "notes": "Healthy post-orphan baseline."
+    }
+  ]
+}

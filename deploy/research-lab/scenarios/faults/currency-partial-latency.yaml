@@ -1,0 +1,79 @@
+schema_version: 1
+scenario_id: currency-partial-latency
+title: Currencyservice brief partial latency (borderline)
+description: >
+  Second scenario for the latency-near-miss-partial-recovery family.
+  Brief currencyservice outage (25s) approximating a latency spike
+  that recovers partially before fully resolving. Same harness
+  caveat as productcatalog-half-degraded.
+  Family: latency-near-miss-partial-recovery (D1.6).
+dataset_run_id: local-dev-run-001
+traffic_profile_id: baseline-checkout-mix
+environment: research-local
+jira_candidate: true
+expected_jira:
+  issue_type: Incident
+  priority: Minor
+  components:
+    - currencyservice
+    - frontend
+  labels:
+    - synthetic-borderline
+    - latency-near-miss
+    - telemetry-linked
+  summary_template: "[{{severity}}] Currency partial latency — recovered"
+  description_template: |
+    Synthetic borderline event from {{scenario_id}}.
+
+    currencyservice partial latency for ~25s; partial recovery
+    before fully resolving.
+fault:
+  fault_id: currency-partial-latency-001
+  fault_type: partial_service_degradation
+  affected_service: currencyservice
+  suggested_mechanism: brief currencyservice scale-to-0
+  expected_start_offset_seconds: 300
+  expected_duration_seconds: 25
+  blast_radius:
+    user_visible: true
+    expected_error_rate: low
+    expected_latency_impact: medium
+labels:
+  severity: minor
+  incident_type: degradation
+  root_cause_category: service_latency
+  should_alert: maybe
+  should_create_jira_shadow_issue: true
+execution:
+  action: ScaleDeployment
+  namespace: online-boutique-research
+  target_kind: deployment
+  target_name: currencyservice
+  replicas: 0
+  restore_replicas: 1
+triage:
+  schema_version: 1
+  scenario_family: latency-near-miss-partial-recovery
+  per_window:
+    pre_fault_baseline:
+      triage_label: noise
+      triage_severity: null
+      triage_components: null
+      triage_reason_class: null
+      is_hard_case: false
+      rationale: "Pre-fault baseline."
+    active_fault:
+      triage_label: borderline
+      triage_severity: minor
+      triage_components:
+        - currencyservice
+      triage_reason_class: latency_regression
+      is_hard_case: true
+      rationale: "25s partial latency; recovers in stages."
+    recovery_window:
+      triage_label: noise
+      triage_severity: null
+      triage_components: null
+      triage_reason_class: null
+      is_hard_case: false
+      rationale: "currencyservice recovered."

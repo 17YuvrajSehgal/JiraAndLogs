@@ -30,8 +30,16 @@ loki:
 
 singleBinary:
   replicas: 1
+  # M0.5a / D13.15 (2026-05-24): persistence ON with a 50Gi PVC.
+  # M0.5's binding draft proposed 120Gi for a 1TB cloud disk, but this
+  # GCP VM has only 242GB total disk (~171GB free). 50Gi gives ~3 days
+  # retention at the projected post-M2 log volume (~10-15 GB/day) while
+  # leaving plenty of headroom for raw run exports under data/runs/.
+  # Bump to 120Gi when the VM is upgraded to a 1TB disk.
   persistence:
-    enabled: false
+    enabled: true
+    size: 50Gi
+    storageClass: standard
 
 read:
   replicas: 0

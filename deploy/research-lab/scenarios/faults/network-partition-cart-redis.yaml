@@ -1,0 +1,89 @@
+schema_version: 1
+scenario_id: network-partition-cart-redis
+title: Network partition between cartservice and redis-cart (system fault)
+description: >
+  chaos-mesh NetworkChaos partition (iptables-based) drops every packet
+  flowing from cartservice pods to redis-cart pods for ~120 seconds.
+  Cartservice's Redis connection pool retries silently, then surfaces
+  the error to checkoutservice through gRPC failures. Identical
+  customer-visible blast radius to `cart-redis-degradation-critical`
+  but the root cause is network-level, not service-level — Redis is
+  up and serving, the packets just don't arrive.
+
+  D11.4 system fault: tests whether the triage model distinguishes
+  a service-level outage from a network-partition cause of the same
+  symptoms.
+
+  Requires chaos-mesh installed in the cluster
+  (`chaos-testing` namespace + NetworkChaos CRD).
+dataset_run_id: local-dev-run-001
+traffic_profile_id: baseline-checkout-mix
+environment: research-local
+jira_candidate: true
+expected_jira:
+  issue_type: Incident
+  priority: Critical
+  components:
+    - cartservice
+    - redis-cart
+    - checkoutservice
+  labels:
+    - synthetic-system-fault
+    - network-partition
+    - chaos-mesh
+    - telemetry-linked
+  summary_template: "Network partition cartservice -> redis-cart"
+  description_template: |
+    Synthetic system-fault event from {{scenario_id}}.
+    chaos-mesh NetworkChaos partitioned cartservice from redis-cart
+    for ~2 minutes. Customer-visible checkout impact.
+fault:
+  fault_id: network-partition-cart-redis-001
+  fault_type: dependency_outage
+  affected_service: redis-cart
+  suggested_mechanism: chaos-mesh NetworkChaos partition cartservice -> redis-cart
+  expected_start_offset_seconds: 300
+  expected_duration_seconds: 120
+  blast_radius:
+    user_visible: true
+    expected_error_rate: high
+    expected_latency_impact: medium
+labels:
+  severity: critical
+  incident_type: outage
+  root_cause_category: network_partition
+  should_alert: true
+  should_create_jira_shadow_issue: true
+execution:
+  action: ChaosMeshChaos
+  namespace: online-boutique-research
+  chaos_manifest: deploy\research-lab\scenarios\chaos\network-partition-cart-redis.yaml
+triage:
+  schema_version: 1
+  scenario_family: network-partition
+  per_window:
+    pre_fault_baseline:
+      triage_label: noise
+      triage_severity: null
+      triage_components: null
+      triage_reason_class: null
+      is_hard_case: false
+      rationale: "Pre-fault baseline; network healthy."
+    active_fault:
+      triage_label: ticket_worthy
+      triage_severity: critical
+      triage_components:
+        - cartservice
+        - redis-cart
+        - checkoutservice
+      triage_reason_class: network_partition
+      is_hard_case: true
+      rationale: "Network partition causes customer-visible checkout failures; identical symptoms to dependency outage but root cause differs."
+    recovery_window:
+      triage_label: borderline
+      triage_severity: minor
+      triage_components:
+        - cartservice
+      triage_reason_class: network_partition
+      is_hard_case: true
+      rationale: "Recovery; iptables rules cleared."

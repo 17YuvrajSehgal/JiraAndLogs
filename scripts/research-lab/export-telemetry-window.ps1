@@ -66,7 +66,13 @@ function Stop-LocalPortForward {
 function Invoke-JsonEndpoint {
     param(
         [Parameter(Mandatory = $true)][string]$Uri,
-        [int]$TimeoutSeconds = 45,
+        # Bumped from 45 -> 180 on 2026-05-25 after D13.15b verification
+        # found cart-redis active_fault cartservice windows still failed:
+        # Loki returned the data fine (chart `query_timeout: 300s` /
+        # `http_server_*_timeout: 600s`), but the PowerShell client gave
+        # up first at 45s. 180s comfortably covers the largest observed
+        # query while still leaving headroom under Loki's 300s cap.
+        [int]$TimeoutSeconds = 180,
         [int]$MaxAttempts = 3,
         [int]$BackoffSeconds = 2
     )

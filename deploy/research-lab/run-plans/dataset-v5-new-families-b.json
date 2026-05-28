@@ -1,0 +1,65 @@
+{
+  "schema_version": 1,
+  "plan_id": "dataset-v5-new-families-b",
+  "title": "Dataset v5 new-families plan B — scheduled-job-spike + latency-partial-recovery + flapping-pod",
+  "description": "Covers three of the eight Phase D1 v5 families: scheduled-job-spike (noise), latency-near-miss-partial-recovery (borderline), flapping-pod (ticket_worthy). Designed to give the model exposure to the trickier hard-case shapes (cron noise + partial-recovery latency + flap patterns) that v4-large lacks. Slow-leak-saturation is in dataset-v5-long-running.json because each scenario there needs ~10 minutes.",
+  "environment": "research-local",
+  "traffic_profile_id": "baseline-checkout-mix",
+  "default_post_window_seconds": 75,
+  "quick_duration_seconds": 60,
+  "quick_post_window_seconds": 30,
+  "realistic_jira_noise": true,
+  "target_use": "Adds D1.5, D1.6, D1.7 family coverage to v5-large.",
+  "scenarios": [
+    {
+      "scenario_file": "deploy\\research-lab\\scenarios\\baselines\\baseline-normal-traffic.yaml",
+      "role": "negative_baseline",
+      "duration_seconds": 90,
+      "post_window_seconds": 0,
+      "notes": "Healthy pre-fault traffic."
+    },
+    {
+      "scenario_file": "deploy\\research-lab\\scenarios\\faults\\analytics-job-burst.yaml",
+      "role": "negative_near_miss",
+      "duration_seconds": 60,
+      "notes": "D1.5 scheduled analytics job burst — noise."
+    },
+    {
+      "scenario_file": "deploy\\research-lab\\scenarios\\faults\\productcatalog-half-degraded.yaml",
+      "role": "positive_incident",
+      "duration_seconds": 20,
+      "notes": "D1.6 productcatalog partial latency — borderline."
+    },
+    {
+      "scenario_file": "deploy\\research-lab\\scenarios\\faults\\cartservice-flap-ticket-worthy.yaml",
+      "role": "positive_incident",
+      "duration_seconds": 120,
+      "notes": "D1.7 cartservice flapping — ticket-worthy. (Currently single-restart; needs flap-pods wrapper for true flapping pattern.)"
+    },
+    {
+      "scenario_file": "deploy\\research-lab\\scenarios\\faults\\cleanup-job-burst.yaml",
+      "role": "negative_near_miss",
+      "duration_seconds": 45,
+      "notes": "D1.5 scheduled cleanup job burst — noise."
+    },
+    {
+      "scenario_file": "deploy\\research-lab\\scenarios\\faults\\currency-partial-latency.yaml",
+      "role": "positive_incident",
+      "duration_seconds": 25,
+      "notes": "D1.6 currency partial latency — borderline."
+    },
+    {
+      "scenario_file": "deploy\\research-lab\\scenarios\\faults\\paymentservice-flap-ticket-worthy.yaml",
+      "role": "positive_incident",
+      "duration_seconds": 120,
+      "notes": "D1.7 paymentservice flapping — ticket-worthy."
+    },
+    {
+      "scenario_file": "deploy\\research-lab\\scenarios\\baselines\\baseline-normal-traffic.yaml",
+      "role": "negative_baseline",
+      "duration_seconds": 90,
+      "post_window_seconds": 0,
+      "notes": "Healthy post-fault traffic."
+    }
+  ]
+}

@@ -1,0 +1,17 @@
+apiVersion: chaos-mesh.org/v1alpha1
+kind: StressChaos
+metadata:
+  name: mem-pressure-cartservice
+  namespace: chaos-testing
+spec:
+  mode: all
+  selector:
+    namespaces:
+      - online-boutique-research
+    labelSelectors:
+      app: cartservice
+  stressors:
+    memory:
+      workers: 1
+      size: "100MB"
+  duration: "120s"

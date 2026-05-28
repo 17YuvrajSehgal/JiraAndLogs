@@ -8,6 +8,16 @@ dataset_run_id: local-dev-run-001
 traffic_profile_id: baseline-checkout-mix
 environment: research-local
 jira_candidate: true
+# D12.1 (2026-05-24): produces_jira_ticket is the orphan-fault gate.
+#   true  (default): if labels.should_create_jira_shadow_issue is also
+#                    true, the shadow Jira row is written normally.
+#   false:           the scenario is an *orphan fault* — episode + windows
+#                    are still recorded, but no row is added to
+#                    jira_shadow_issues.jsonl. The window's gold label
+#                    (e.g. ticket_worthy) is preserved, so the dataset
+#                    measures whether the system can detect the anomaly
+#                    *without* a memory hint. See dataset-todo.md Phase D12.
+produces_jira_ticket: true
 expected_jira:
   issue_type: Incident
   priority: Major

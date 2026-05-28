@@ -6,7 +6,7 @@ param(
     [Parameter(Mandatory = $true)]
     [string]$ScenarioFile,
 
-    [ValidateSet("Auto", "RecordOnly", "SetEnv", "RestartPods", "ScaleDeployment")]
+    [ValidateSet("Auto", "RecordOnly", "SetEnv", "RestartPods", "ScaleDeployment", "ChaosMeshChaos")]
     [string]$Action = "Auto",
 
     [int]$DurationSeconds = 0,
@@ -201,6 +201,104 @@ function Invoke-ScenarioAction {
             }
             Invoke-ResearchLabKubectlText -ArgumentList @("scale", "deployment/$target", "-n", $TargetNamespace, "--replicas=$restoreReplicas") | Out-Host
             Wait-ResearchLabDeployment -Name $target -TargetNamespace $TargetNamespace
+        }
+
+        return $restore
+    }
+
+    if ($SelectedAction -eq "ChaosMeshChaos") {
+        # D11 (2026-05-25): apply a chaos-mesh resource (NetworkChaos,
+        # StressChaos, DNSChaos, IOChaos, etc.) for ActiveDurationSeconds
+        # then delete it. The chaos resource lives in its own manifest
+        # file under deploy/research-lab/scenarios/chaos/ so the scenario
+        # YAML stays orchestration-only.
+        #
+        # Prerequisite: chaos-mesh must be installed in the cluster
+        # (chaos-testing namespace + CRDs). See install steps in
+        # docs/gcp-production-dataset-vm-runbook.md "Install chaos-mesh".
+        #
+        # Hardening (2026-05-25): chaos-mesh resources have finalizers
+        # that block deletion until `AllRecovered: True`. If the inject
+        # failed (e.g. safe-mode blocks targeting kube-system pods),
+        # AllRecovered stays False forever and `kubectl delete` hangs.
+        # We use a bounded delete (--timeout=45s) and fall back to
+        # patching the finalizer off if the bounded delete fails.
+        $manifest = $Scenario.execution_chaos_manifest
+        if (-not $manifest) {
+            throw "ChaosMeshChaos action requires execution.chaos_manifest (path to a chaos-mesh resource yaml)."
+        }
+        $repoRoot = Get-ResearchLabRepoRoot
+        $manifestPath = if ([System.IO.Path]::IsPathRooted($manifest)) {
+            $manifest
+        } else {
+            Join-ResearchLabPath @($repoRoot, $manifest)
+        }
+        if (-not (Test-Path -LiteralPath $manifestPath)) {
+            throw "ChaosMeshChaos manifest not found: $manifestPath"
+        }
+
+        # Parse name/kind/namespace from the manifest for finalizer-fallback.
+        $chaosKind = (Get-Content -LiteralPath $manifestPath | Select-String -Pattern "^kind:" | Select-Object -First 1).Line -replace "^kind:\s*", ""
+        $chaosName = (Get-Content -LiteralPath $manifestPath | Select-String -Pattern "^\s+name:" | Select-Object -First 1).Line -replace "^\s+name:\s*", ""
+        $chaosNs = (Get-Content -LiteralPath $manifestPath | Select-String -Pattern "^\s+namespace:" | Select-Object -First 1).Line -replace "^\s+namespace:\s*", ""
+        $chaosResource = "$($chaosKind.ToLower())/$chaosName"
+
+        Write-Host "ChaosMeshChaos applying: $manifestPath ($chaosResource in $chaosNs)"
+        Invoke-ResearchLabKubectlText -ArgumentList @("apply", "-f", $manifestPath) | Out-Host
+        $restore.chaos_manifest = $manifestPath
+        $restore.chaos_resource = $chaosResource
+        $restore.chaos_namespace = $chaosNs
+
+        # Brief settle so the chaos-controller has time to schedule the
+        # action onto the affected pods before we start the active-fault
+        # window timer.
+        Start-Sleep -Seconds 5
+
+        Start-Sleep -Seconds $ActiveDurationSeconds
+
+        if (-not $DoNotRestore) {
+            Write-Host "ChaosMeshChaos deleting (bounded 45s): $chaosResource"
+            $deleteOk = $false
+            try {
+                Invoke-ResearchLabKubectlText -ArgumentList @(
+                    "delete", "-f", $manifestPath,
+                    "--ignore-not-found=true",
+                    "--timeout=45s"
+                ) | Out-Host
+                $deleteOk = ($LASTEXITCODE -eq 0)
+            } catch {
+                Write-Warning "Bounded delete threw: $($_.Exception.Message)"
+                $deleteOk = $false
+            }
+
+            if (-not $deleteOk) {
+                # Finalizer fallback: patch finalizers to [] then force-delete.
+                # Happens when chaos-mesh's AllInjected stayed False (e.g. the
+                # chaos couldn't be applied to the targeted pods at all),
+                # so AllRecovered also stays False and the finalizer blocks
+                # the normal delete forever.
+                Write-Warning "Bounded delete failed; patching finalizer + force-delete: $chaosResource"
+                try {
+                    Invoke-ResearchLabKubectlText -ArgumentList @(
+                        "patch", $chaosResource, "-n", $chaosNs,
+                        "--type=merge", "-p", '{"metadata":{"finalizers":[]}}'
+                    ) | Out-Host
+                } catch {
+                    Write-Warning "Finalizer patch failed: $($_.Exception.Message)"
+                }
+                try {
+                    Invoke-ResearchLabKubectlText -ArgumentList @(
+                        "delete", $chaosResource, "-n", $chaosNs,
+                        "--grace-period=0", "--force",
+                        "--ignore-not-found=true"
+                    ) | Out-Host
+                } catch {
+                    Write-Warning "Force-delete failed: $($_.Exception.Message)"
+                }
+            }
+            # Brief settle so cleanup actions (iptables rules, sidecar
+            # removals) finish before the recovery window starts.
+            Start-Sleep -Seconds 5
         }
 
         return $restore
@@ -418,6 +516,9 @@ $episode = [ordered]@{
     incident_type = $scenario.incident_type
     root_cause_category = $scenario.root_cause_category
     jira_candidate = [bool]$scenario.should_create_jira_shadow_issue
+    # D12.1: orphan-fault gate. True = scenario produces a Jira ticket
+    # (normal behavior); False = orphan fault, no ticket filed.
+    produces_jira_ticket = [bool]$scenario.produces_jira_ticket
     jira_shadow_issue_id = $null
     jira_issue_key = $null
     alert_fingerprints = @()
@@ -461,7 +562,14 @@ if (-not $NoTelemetryExport) {
     }
 }
 
-if ((-not $SkipJiraGeneration) -and [bool]$scenario.should_create_jira_shadow_issue) {
+# D12.1 (2026-05-24): produces_jira_ticket=false makes a scenario an
+# orphan fault — the system records the episode + windows but skips
+# shadow-jira generation entirely. The episode's jira_candidate /
+# should_create_jira_shadow_issue fields still describe whether a human
+# *would have* filed; produces_jira_ticket describes whether one
+# actually did.
+if ((-not $SkipJiraGeneration) -and [bool]$scenario.should_create_jira_shadow_issue `
+        -and [bool]$scenario.produces_jira_ticket) {
     $jiraArgs = @(
         "-NoProfile",
         "-ExecutionPolicy", "Bypass",

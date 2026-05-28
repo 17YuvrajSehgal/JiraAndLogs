@@ -43,17 +43,24 @@ def _triage_metrics(scores: list[float], labels: list[int]) -> dict[str, float]:
             "ece": 0.0,
             "precision_at_fpr_5pct": 0.0,
             "recall_at_fpr_5pct": 0.0,
+            "f1_at_fpr_5pct": 0.0,
             "f_beta_2_at_fpr_5pct": 0.0,
             "n_pos": int(sum(labels)),
             "n_neg": int(len(labels) - sum(labels)),
         }
     p5, r5, _t5 = precision_at_fpr(scores, labels, 0.05)
+    # F1 = harmonic mean of precision and recall (beta=1 special case of f_beta).
+    # Added 2026-05-26 as a corporate-report headline metric — the standard
+    # binary-classification single-number summary that non-ML stakeholders
+    # expect alongside PR-AUC.
+    f1 = (2 * p5 * r5 / (p5 + r5)) if (p5 + r5) > 0 else 0.0
     return {
         "pr_auc": pr_auc(scores, labels),
         "roc_auc": roc_auc(scores, labels),
         "ece": expected_calibration_error(scores, labels),
         "precision_at_fpr_5pct": p5,
         "recall_at_fpr_5pct": r5,
+        "f1_at_fpr_5pct": f1,
         "f_beta_2_at_fpr_5pct": f_beta(p5, r5, beta=2.0),
         "n_pos": int(sum(labels)),
         "n_neg": int(len(labels) - sum(labels)),
@@ -111,13 +118,24 @@ def _key_extractors() -> dict[str, Callable[[Any], str]]:
         "family": lambda p: f"family={p.scenario_family}",
         "service": lambda p: f"service={p.service_name}",
         "window_type": lambda p: f"window_type={p.window_type}",
+        # Added 2026-05-26: corporate-report product axes.
+        "is_hard_case": lambda p: f"is_hard_case={'true' if p.is_hard_case else 'false'}",
+        "triage_reason_class": lambda p: f"triage_reason_class={p.triage_reason_class or 'unknown'}",
+        # is_novel — only meaningful on ticket_worthy windows (the rest
+        # have no retrieval gold). Bucketed into novel / known / unscored.
+        "is_novel": lambda p: (
+            f"is_novel={'novel' if p.gold_is_novel else ('known' if p.gold_is_novel is False else 'unscored')}"
+        ),
     }
 
 
 def stratified_metrics(
     results: list[PipelineResult],
     *,
-    include: tuple[str, ...] = ("overall", "family", "service", "window_type"),
+    include: tuple[str, ...] = (
+        "overall", "family", "service", "window_type",
+        "is_hard_case", "triage_reason_class", "is_novel",
+    ),
     borderline_inclusive: bool = False,
 ) -> list[StrataRow]:
     """Compute metrics per (pipeline, strata key) cell.
@@ -150,6 +168,120 @@ def stratified_metrics(
 # ---------------------------------------------------------------------------
 # Rendering
 # ---------------------------------------------------------------------------
+
+
+# ---------------------------------------------------------------------------
+# D12.6 — Orphan-detection recall gap (the headline orphan-fault metric)
+# ---------------------------------------------------------------------------
+
+
+@dataclass
+class OrphanRecallGap:
+    pipeline_name: str
+    n_reported: int  # ticket_worthy AND expected_in_memory=True
+    n_orphan: int    # ticket_worthy AND expected_in_memory=False
+    recall_reported: float
+    recall_orphan: float
+    gap_pts: float   # 100 * (recall_reported - recall_orphan)
+    verdict: str     # interpretive bucket per dataset-todo.md D12.6
+
+    def as_dict(self) -> dict[str, Any]:
+        return {
+            "pipeline_name": self.pipeline_name,
+            "n_reported": self.n_reported,
+            "n_orphan": self.n_orphan,
+            "recall_reported": self.recall_reported,
+            "recall_orphan": self.recall_orphan,
+            "gap_pts": self.gap_pts,
+            "verdict": self.verdict,
+        }
+
+
+def _gap_verdict(gap_pts: float, n_orphan: int) -> str:
+    """Per dataset-todo.md D12.6:
+    > A gap > 20pts means the pipeline relies on Jira pattern matching;
+    > a gap < 10pts means the pipeline learned the underlying anomaly signal.
+    """
+    if n_orphan == 0:
+        return "no_orphan_data"
+    if gap_pts > 20.0:
+        return "pattern_matching"  # over-reliant on Jira memory
+    if gap_pts < 10.0:
+        return "signal_learning"  # generalizes from telemetry
+    return "borderline"  # 10-20pt gap: ambiguous
+
+
+def compute_orphan_recall_gap(
+    results: list[PipelineResult],
+    *,
+    decision: str | None = None,
+) -> list[OrphanRecallGap]:
+    """For each pipeline, compute recall on (reported ticket_worthy) vs
+    (orphan ticket_worthy), where orphan = expected_in_memory is False.
+
+    The "decision" used for recall is the predicted `triage_decision`
+    string ("ticket_worthy" counts as a positive prediction). If
+    `decision` is set, only predictions where triage_decision == decision
+    are counted as flagged; default is "ticket_worthy".
+
+    Returns one OrphanRecallGap per pipeline. Pipelines with no
+    expected_in_memory annotations on their gold (e.g. pre-D12.3 datasets)
+    return n_reported = n_orphan = 0 and gap_pts = 0.0.
+    """
+    flagged_label = decision or "ticket_worthy"
+    rows: list[OrphanRecallGap] = []
+    for result in results:
+        n_reported_pos = n_reported_hit = 0
+        n_orphan_pos = n_orphan_hit = 0
+        for p in result.predictions:
+            if p.gold_label != "ticket_worthy":
+                continue
+            em = p.gold_expected_in_memory
+            if em is None:
+                continue  # window has no orphan annotation — skip
+            flagged = p.triage_decision == flagged_label
+            if em is True:
+                n_reported_pos += 1
+                if flagged:
+                    n_reported_hit += 1
+            else:  # em is False → orphan
+                n_orphan_pos += 1
+                if flagged:
+                    n_orphan_hit += 1
+        rr = (n_reported_hit / n_reported_pos) if n_reported_pos else 0.0
+        ro = (n_orphan_hit / n_orphan_pos) if n_orphan_pos else 0.0
+        gap = 100.0 * (rr - ro)
+        rows.append(
+            OrphanRecallGap(
+                pipeline_name=result.pipeline_name,
+                n_reported=n_reported_pos,
+                n_orphan=n_orphan_pos,
+                recall_reported=rr,
+                recall_orphan=ro,
+                gap_pts=gap,
+                verdict=_gap_verdict(gap, n_orphan_pos),
+            )
+        )
+    return rows
+
+
+def render_orphan_recall_gap_table(rows: list[OrphanRecallGap]) -> str:
+    """Markdown table for the headline report."""
+    out: list[str] = []
+    out.append(
+        "| pipeline | n_reported | recall_reported | n_orphan | "
+        "recall_orphan | gap_pts | verdict |"
+    )
+    out.append(
+        "| --- | ---: | ---: | ---: | ---: | ---: | --- |"
+    )
+    for r in sorted(rows, key=lambda x: x.pipeline_name):
+        out.append(
+            f"| {r.pipeline_name} | {r.n_reported} | "
+            f"{r.recall_reported:.3f} | {r.n_orphan} | "
+            f"{r.recall_orphan:.3f} | {r.gap_pts:+.1f} | {r.verdict} |"
+        )
+    return "\n".join(out)
 
 
 def render_strata_table(

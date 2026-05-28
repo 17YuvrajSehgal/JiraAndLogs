@@ -303,6 +303,22 @@ These are targets, subject to revision after Phase B.
 | Jira memory corpus entries | 400+ |
 | `human_adjudicated` windows | 100% of borderline and hard cases |
 
+## Current Limitations / Production Fidelity
+
+These are known divergences from production telemetry, recorded so dataset
+consumers can calibrate generalization expectations. The full draft list
+lives in `docs/telemetry-implementation-decisions.md` M0.6 (added by Phase
+M3.4 of `microservice-changes-todo.md`).
+
+- **Trace sampling is 100% (`AlwaysSample`).** Real production deployments
+  typically head-sample at 1-10% or tail-sample on errors/latency. Models
+  trained here may over-rely on span fan-out features that would be partly
+  missing under production sampling. We chose dataset density over sampling
+  realism.
+- Single-cluster, single-region; synthetic traffic patterns; synthetic Jira
+  issues; one fault per run. See the linked decision doc for the full
+  enumeration.
+
 ## Open Questions
 
 These need answers before Phase A finalizes.

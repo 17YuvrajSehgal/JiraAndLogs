@@ -1,0 +1,112 @@
+{
+  "schema_version": 1,
+  "corpus_id": "dataset-v5-quick",
+  "title": "Dataset v5 quick — diversity-preserving small corpus for local ML model bring-up",
+  "description": "Reduced-scale companion to dataset-v5-large for local-laptop collection while the full v5-large runs unattended on the GCP VM. Mirrors v5-large's 8-plan composition but with repeat counts dialled down (100 runs -> 16 runs) so the full sweep fits in ~6-8h on a laptop-class machine with 15 GiB total RAM. Covers all v4 + D1 families (22 families) so per-family / leave-one-family-out splits are still meaningful for ML model bring-up. D11 chaos-mesh system-faults are INTENTIONALLY EXCLUDED from this manifest — they need chaos-mesh installed and add ~30 min of preflight + ~500 MiB resident memory pressure. The D12 orphans plan is kept at repeat=3 so we still get ~24 orphan ticket_worthy windows (enough to compute the orphan-detection recall gap with usable variance, vs 192 in full v5). The intent is NOT to be publication-quality — it is to give the ML iteration loop something with the same column shape, same scenario family taxonomy, same label space, and the same M0-M5 telemetry layer as v5-large, so models built against this transfer cleanly when v5-large lands. Use -Quick (shortens active fault windows) and -BuildTriage (per-run derived after each run completes) so partial datasets exist throughout the sweep.",
+  "locked_baseline": null,
+  "development_stage": "v5 quick corpus (laptop-class)",
+  "default_dataset_run_prefix": "2026-05-25-dataset-v5-quick",
+  "aggregate_id_suffix": "aggregate",
+  "holdout_id_suffix": "holdout",
+  "collection_strategy": {
+    "first_batch_runs": 2,
+    "recommended_batch_runs": 4,
+    "full_corpus_runs": 16,
+    "why_batch_collection": "Tiny first batch of 2 (control + compact-a) catches any telemetry / image-pin issues fast — those are the cheapest runs. After that the launcher proceeds in order through the rest of the plans. Long-running goes last so any leak-scenario harness bug surfaces after the bulk of the corpus already has data on disk.",
+    "expected_full_scale": {
+      "dataset_runs": 16,
+      "scenario_families": 22,
+      "episodes_per_control_run": 6,
+      "episodes_per_compact_a_run": 10,
+      "episodes_per_compact_b_run": 13,
+      "episodes_per_new_families_a_run": 12,
+      "episodes_per_new_families_b_run": 8,
+      "episodes_per_long_running_run": 4,
+      "episodes_per_orphan_run": 10,
+      "total_episodes": "approx 148",
+      "total_telemetry_windows": "approx 470",
+      "long_window_episodes": "approx 4 (long-running's 2 fault episodes per run x 1 run x 2 windows incl. extended observation)",
+      "orphan_ticket_worthy_windows": "32 (4 orphan runs x 8 orphan ticket_worthy windows per run; well under D12's 200-window target but sufficient for the recall-gap metric to be computable with usable variance)",
+      "system_fault_active_windows": "0 (D11 system-faults plan intentionally excluded — see top-level description and harness_caveats)"
+    }
+  },
+  "plans": [
+    {
+      "plan_alias": "control",
+      "plan_file": "deploy\\research-lab\\run-plans\\control-baseline-only.json",
+      "repeat": 2,
+      "purpose": "Pure baseline runs (no faults). Anchor false-positive distribution and provide noise-class training rows."
+    },
+    {
+      "plan_alias": "compact-a",
+      "plan_file": "deploy\\research-lab\\run-plans\\dataset-v3-diverse-compact-a.json",
+      "repeat": 2,
+      "purpose": "Latency, dependency outage, restart, Redis degradation, bad configuration, near-miss coverage from the v4 family set."
+    },
+    {
+      "plan_alias": "compact-b",
+      "plan_file": "deploy\\research-lab\\run-plans\\dataset-v3-diverse-compact-b.json",
+      "repeat": 2,
+      "purpose": "Service-diverse outages, frontend and Redis restarts, intermittent Redis failure, noisy traffic coverage from the v4 family set."
+    },
+    {
+      "plan_alias": "new-families-a",
+      "plan_file": "deploy\\research-lab\\run-plans\\dataset-v5-new-families-a.json",
+      "repeat": 2,
+      "purpose": "v5 D1.1-D1.4 families: post-deploy-churn, recovered-in-window, single-pod-restart-healthy-replication, third-party-blip."
+    },
+    {
+      "plan_alias": "new-families-b",
+      "plan_file": "deploy\\research-lab\\run-plans\\dataset-v5-new-families-b.json",
+      "repeat": 2,
+      "purpose": "v5 D1.5-D1.7 families: scheduled-job-spike, latency-near-miss-partial-recovery, flapping-pod."
+    },
+    {
+      "plan_alias": "orphans",
+      "plan_file": "deploy\\research-lab\\run-plans\\dataset-v5-orphans.json",
+      "repeat": 4,
+      "purpose": "Phase D12: 6 near-twin + 2 far orphan scenarios with produces_jira_ticket:false. 4 runs x 8 orphan ticket_worthy windows = 32 orphan windows; enough to compute the orphan-detection recall gap metric with usable variance."
+    },
+    {
+      "plan_alias": "long-running",
+      "plan_file": "deploy\\research-lab\\run-plans\\dataset-v5-long-running.json",
+      "repeat": 1,
+      "purpose": "v5 D1.8 slow-leak-saturation. Single run for shape coverage of the >=10-min episode regime so the ML pipeline gets at least one long-window training example."
+    },
+    {
+      "plan_alias": "long-running-also",
+      "plan_file": "deploy\\research-lab\\run-plans\\dataset-v5-long-running.json",
+      "repeat": 1,
+      "purpose": "Second pass over long-running — runs at the very end so the corpus has 2 long-running runs total (8 long-window episodes), giving the per-family split at least one example each in train AND val partitions."
+    }
+  ],
+  "benchmark_tracks": [
+    {
+      "track_id": "triage_classification",
+      "description": "Primary task: classify each telemetry window as ticket_worthy / borderline / noise."
+    },
+    {
+      "track_id": "triage_with_memory_retrieval",
+      "description": "Combined task: classification grounded in Jira memory corpus retrieval. Requires triage_evidence_text."
+    },
+    {
+      "track_id": "ranking_retrospective",
+      "description": "Secondary task: given a Jira issue, rank candidate telemetry episodes."
+    },
+    {
+      "track_id": "orphan_fault_detection",
+      "description": "Phase D12 task: detect ticket-worthy windows that have NO paired Jira shadow row (produces_jira_ticket=false scenarios). Will produce a noisier verdict than v5-large because only 24 orphan windows are present."
+    }
+  ],
+  "promotion_gates": {
+    "raw_runs": "Every collected run must pass validate-dataset-run.ps1 with 0 errors and validate-run-feature-distribution.py with 0 anomalies flagged.",
+    "derived_outputs": "Per-run triage_examples.jsonl must populate all FEATURE_COLUMNS with >=1 non-zero value across the run, and label distribution must include ticket_worthy + borderline + noise (control + long-running runs are exempt for their respective unused labels).",
+    "aggregate_outputs": "Global triage dataset must include >=22 of the v5 family taxonomy (D11 system-faults intentionally absent). M0-M5 feature columns (rpc_server_duration_seconds_*, host_metrics_*, payments_total, etc.) must populate on >=80% of windows. No feature column may be perfectly correlated with scenario_id, scenario_family, or triage_label (leakage canary)."
+  },
+  "harness_caveats": [
+    "Phase D11 system-faults are INTENTIONALLY OMITTED from this corpus. The orphan_fault_detection track is the only D-track that still has data; rerun a full v5-large or v5-quick-with-chaos manifest if you need system-fault coverage.",
+    "Orphan ticket_worthy window count (24) is well below v5-large's 192 — the orphan-detection recall gap metric will be measurable but noisier; treat it as a smoke for the metric, not as a publication-quality number.",
+    "Long-running's slow-leak-saturation episodes are ~10 minutes each; the 2 long-running runs add ~30 minutes to the corpus wall-clock and run last so the leak harness can fail without sinking the rest of the data.",
+    "Same harness simulation gaps as v5-large apply: D1.3 single-pod-restart uses RestartPods (recycles all matching pods), D1.6 latency-partial-recovery uses brief ScaleDeployment 0, D1.7 flapping-pod fires a single restart, D1.8 slow-leak uses long ScaleDeployment. Each scenario YAML documents its specific simulation."
+  ]
+}

@@ -1,0 +1,63 @@
+# M4.1f / M4.5b — expose metrics ports + ServiceMonitor for Prometheus scrape
+# Added 2026-05-25 after the M5.2d validator confirmed application-level
+# metrics were not landing in Prometheus despite each pod serving /metrics
+# on port 9100 (or 9464 for adservice). The kube-prometheus-stack Prometheus
+# CR has no namespace selector restrictions (empty serviceMonitorSelector +
+# serviceMonitorNamespaceSelector), so a ServiceMonitor in this namespace
+# is picked up cluster-wide.
+#
+# Apply with:
+#   kubectl apply -f deploy/research-lab/observability/online-boutique-servicemonitor.yaml
+---
+# Headless service that selects every online-boutique pod with the dataset
+# label and routes scrapes to whichever metrics port the language emits on.
+# Two named ports — `metrics-9100` covers Go/.NET/Node/Python, `metrics-9464`
+# covers the OTel Java agent default for adservice. ServiceMonitor below
+# scrapes both, and a port mismatch on a pod is harmless (Prometheus just
+# skips it).
+apiVersion: v1
+kind: Service
+metadata:
+  name: online-boutique-metrics
+  namespace: online-boutique-research
+  labels:
+    research.jira-telemetry/dataset: online-boutique-jira
+    research.jira-telemetry/role: metrics-scrape
+spec:
+  clusterIP: None
+  selector:
+    research.jira-telemetry/dataset: online-boutique-jira
+  ports:
+    - name: metrics-9100
+      port: 9100
+      targetPort: 9100
+      protocol: TCP
+    - name: metrics-9464
+      port: 9464
+      targetPort: 9464
+      protocol: TCP
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: online-boutique-metrics
+  namespace: observability
+  labels:
+    release: kube-prometheus-stack
+    research.jira-telemetry/dataset: online-boutique-jira
+spec:
+  namespaceSelector:
+    matchNames:
+      - online-boutique-research
+  selector:
+    matchLabels:
+      research.jira-telemetry/role: metrics-scrape
+  endpoints:
+    - port: metrics-9100
+      path: /metrics
+      interval: 15s
+      scrapeTimeout: 10s
+    - port: metrics-9464
+      path: /metrics
+      interval: 15s
+      scrapeTimeout: 10s

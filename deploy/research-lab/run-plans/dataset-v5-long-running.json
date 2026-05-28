@@ -1,0 +1,43 @@
+{
+  "schema_version": 1,
+  "plan_id": "dataset-v5-long-running",
+  "title": "Dataset v5 long-running plan — slow-leak-saturation (10+ minute episodes)",
+  "description": "Long-window plan for the slow-leak-saturation family (D1.8) and any other multi-minute episodes. Per dataset-todo.md sizing, v5 targets ≥100 long-window (≥10 min) episodes — each run of this plan contributes ~2 long episodes plus baseline padding. Total runtime per run: ~30 minutes.",
+  "environment": "research-local",
+  "traffic_profile_id": "baseline-checkout-mix",
+  "default_post_window_seconds": 180,
+  "quick_duration_seconds": 600,
+  "quick_post_window_seconds": 120,
+  "realistic_jira_noise": true,
+  "target_use": "Adds D1.8 family + long-window episode coverage to v5-large.",
+  "scenarios": [
+    {
+      "scenario_file": "deploy\\research-lab\\scenarios\\baselines\\baseline-normal-traffic.yaml",
+      "role": "negative_baseline",
+      "duration_seconds": 120,
+      "post_window_seconds": 0,
+      "notes": "Healthy pre-leak baseline."
+    },
+    {
+      "scenario_file": "deploy\\research-lab\\scenarios\\faults\\cartservice-memory-leak-ticket-worthy.yaml",
+      "role": "positive_incident",
+      "duration_seconds": 600,
+      "post_window_seconds": 180,
+      "notes": "D1.8 cartservice memory leak — sustained outage, ticket-worthy."
+    },
+    {
+      "scenario_file": "deploy\\research-lab\\scenarios\\faults\\paymentservice-connection-leak-ticket-worthy.yaml",
+      "role": "positive_incident",
+      "duration_seconds": 600,
+      "post_window_seconds": 180,
+      "notes": "D1.8 paymentservice connection leak — sustained outage, ticket-worthy."
+    },
+    {
+      "scenario_file": "deploy\\research-lab\\scenarios\\baselines\\baseline-normal-traffic.yaml",
+      "role": "negative_baseline",
+      "duration_seconds": 120,
+      "post_window_seconds": 0,
+      "notes": "Healthy post-leak baseline."
+    }
+  ]
+}

@@ -1,0 +1,83 @@
+schema_version: 1
+scenario_id: orphan-emailservice-flake-major
+title: Emailservice flake — far orphan (no prior emailservice Jira in corpus)
+description: >
+  Emailservice unavailable for ~3 minutes during active checkout traffic.
+  Order confirmation emails fail to send during the gap; downstream
+  checkout flow continues (email is fire-and-forget). The active_fault
+  window is gold-labelled `ticket_worthy` because sustained email failure
+  warrants a ticket in any real on-call queue.
+
+  D12 **far orphan**: emailservice has ZERO Jira-generating scenarios
+  anywhere in the v4-large or v5-large corpus. This is a truly
+  out-of-distribution test of the triage model — it has never seen a
+  prior emailservice incident in memory at all. Pure telemetry-only
+  detection.
+dataset_run_id: local-dev-run-001
+traffic_profile_id: baseline-checkout-mix
+environment: research-local
+jira_candidate: true
+produces_jira_ticket: false
+expected_jira:
+  issue_type: None
+  priority: None
+  components:
+    - emailservice
+    - checkoutservice
+  labels:
+    - synthetic-orphan
+    - far-orphan
+    - service-outage
+    - no-jira-by-design
+fault:
+  fault_id: orphan-emailservice-flake-001
+  fault_type: service_outage
+  affected_service: emailservice
+  suggested_mechanism: scale emailservice to 0 for 3 minutes
+  expected_start_offset_seconds: 300
+  expected_duration_seconds: 180
+  blast_radius:
+    user_visible: false
+    expected_error_rate: high
+    expected_latency_impact: low
+labels:
+  severity: major
+  incident_type: outage
+  root_cause_category: service_failure
+  should_alert: true
+  should_create_jira_shadow_issue: true
+execution:
+  action: ScaleDeployment
+  namespace: online-boutique-research
+  target_kind: deployment
+  target_name: emailservice
+  replicas: 0
+  restore_replicas: 1
+triage:
+  schema_version: 1
+  scenario_family: email-outage
+  per_window:
+    pre_fault_baseline:
+      triage_label: noise
+      triage_severity: null
+      triage_components: null
+      triage_reason_class: null
+      is_hard_case: false
+      rationale: "Pre-fault baseline; emailservice healthy."
+    active_fault:
+      triage_label: ticket_worthy
+      triage_severity: major
+      triage_components:
+        - emailservice
+        - checkoutservice
+      triage_reason_class: outage
+      is_hard_case: true
+      rationale: "Sustained emailservice failure; no prior Jira for this service exists in the corpus. Pure telemetry detection test."
+    recovery_window:
+      triage_label: borderline
+      triage_severity: minor
+      triage_components:
+        - emailservice
+      triage_reason_class: outage
+      is_hard_case: true
+      rationale: "Recovery — checkout flow already moved on without email confirmation."

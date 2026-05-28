@@ -1,0 +1,80 @@
+schema_version: 1
+scenario_id: packet-loss-frontend-30pct-90s
+title: 30% packet loss on frontend for 90 seconds (system fault)
+description: >
+  chaos-mesh NetworkChaos drops 30% of packets on the frontend pod's
+  network interface for ~90 seconds. Some user requests time out and
+  are retried; others succeed slowly. Telemetry shows elevated p95
+  latency, sporadic 5xx, retry storms — but no service is actually
+  down. Borderline: a savvy SRE would page if this persists, but a
+  90-second loss spike could plausibly be transient infra.
+
+  D11.5 system fault: tests latency / partial-failure shape on the
+  user tier from a transport-layer cause.
+
+  Requires chaos-mesh installed in the cluster.
+dataset_run_id: local-dev-run-001
+traffic_profile_id: baseline-checkout-mix
+environment: research-local
+jira_candidate: true
+expected_jira:
+  issue_type: Incident
+  priority: Major
+  components:
+    - frontend
+  labels:
+    - synthetic-system-fault
+    - packet-loss
+    - chaos-mesh
+    - telemetry-linked
+  summary_template: "30% packet loss on frontend"
+  description_template: |
+    Synthetic system-fault event from {{scenario_id}}.
+    chaos-mesh NetworkChaos drop 30% of frontend packets for 90s.
+fault:
+  fault_id: packet-loss-frontend-001
+  fault_type: network_packet_loss
+  affected_service: frontend
+  suggested_mechanism: chaos-mesh NetworkChaos loss=30% on frontend
+  expected_start_offset_seconds: 300
+  expected_duration_seconds: 90
+  blast_radius:
+    user_visible: true
+    expected_error_rate: medium
+    expected_latency_impact: high
+labels:
+  severity: major
+  incident_type: degradation
+  root_cause_category: network_packet_loss
+  should_alert: maybe
+  should_create_jira_shadow_issue: true
+execution:
+  action: ChaosMeshChaos
+  namespace: online-boutique-research
+  chaos_manifest: deploy\research-lab\scenarios\chaos\packet-loss-frontend-30pct.yaml
+triage:
+  schema_version: 1
+  scenario_family: network-packet-loss
+  per_window:
+    pre_fault_baseline:
+      triage_label: noise
+      triage_severity: null
+      triage_components: null
+      triage_reason_class: null
+      is_hard_case: false
+      rationale: "Pre-fault baseline."
+    active_fault:
+      triage_label: borderline
+      triage_severity: minor
+      triage_components:
+        - frontend
+      triage_reason_class: network_packet_loss
+      is_hard_case: true
+      rationale: "30% packet loss for 90s — could be transient infra blip or persistent issue; borderline."
+    recovery_window:
+      triage_label: noise
+      triage_severity: null
+      triage_components: null
+      triage_reason_class: null
+      is_hard_case: false
+      rationale: "Packet loss cleared; traffic normal."

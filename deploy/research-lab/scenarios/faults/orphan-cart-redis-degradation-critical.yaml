@@ -1,0 +1,83 @@
+schema_version: 1
+scenario_id: orphan-cart-redis-degradation-critical
+title: Cart-Redis degradation — orphan (real fault, no Jira filed)
+description: >
+  Identical fault to `cart-redis-degradation-critical` (Redis-cart
+  scaled to 0 during active checkout traffic) but `produces_jira_ticket:
+  false` so no shadow Jira issue is generated. The active_fault window
+  is still gold-labelled `ticket_worthy` because a senior engineer
+  would file a ticket if they noticed — this scenario tests whether
+  the triage model catches the anomaly *without* a memory match.
+
+  D12 near-twin orphan: fault type AND service both appear in
+  reported scenarios elsewhere in the corpus (`cart-redis-degradation-critical`,
+  `redis-cart-restart-major`, etc). This is the cleanest possible
+  test of generalisation: same telemetry shape, just no Jira label.
+dataset_run_id: local-dev-run-001
+traffic_profile_id: baseline-checkout-mix
+environment: research-local
+jira_candidate: true
+produces_jira_ticket: false
+expected_jira:
+  issue_type: None
+  priority: None
+  components:
+    - cartservice
+    - redis-cart
+  labels:
+    - synthetic-orphan
+    - dependency-failure
+    - no-jira-by-design
+fault:
+  fault_id: orphan-cart-redis-001
+  fault_type: dependency_degradation
+  affected_service: redis-cart
+  suggested_mechanism: scale redis-cart to 0 — same as the reported twin
+  expected_start_offset_seconds: 300
+  expected_duration_seconds: 600
+  blast_radius:
+    user_visible: true
+    expected_error_rate: high
+    expected_latency_impact: medium
+labels:
+  severity: critical
+  incident_type: outage
+  root_cause_category: dependency_failure
+  should_alert: true
+  should_create_jira_shadow_issue: true
+execution:
+  action: ScaleDeployment
+  namespace: online-boutique-research
+  target_kind: deployment
+  target_name: redis-cart
+  replicas: 0
+  restore_replicas: 1
+triage:
+  schema_version: 1
+  scenario_family: cart-redis
+  per_window:
+    pre_fault_baseline:
+      triage_label: noise
+      triage_severity: null
+      triage_components: null
+      triage_reason_class: null
+      is_hard_case: false
+      rationale: "Pre-fault baseline; redis-cart healthy."
+    active_fault:
+      triage_label: ticket_worthy
+      triage_severity: critical
+      triage_components:
+        - cartservice
+        - redis-cart
+      triage_reason_class: dependency_failure
+      is_hard_case: true
+      rationale: "Identical to cart-redis-degradation-critical but no Jira filed. Tests detection without memory."
+    recovery_window:
+      triage_label: borderline
+      triage_severity: minor
+      triage_components:
+        - cartservice
+        - redis-cart
+      triage_reason_class: dependency_failure
+      is_hard_case: true
+      rationale: "Recovery may carry residual errors; borderline regardless of memory presence."

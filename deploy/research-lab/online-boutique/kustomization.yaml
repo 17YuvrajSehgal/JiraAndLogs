@@ -28,6 +28,59 @@ images:
     newName: registry.k8s.io/e2e-test-images/busybox
     newTag: 1.29-4
 
+  # ---------------------------------------------------------------------------
+  # Telemetry-upgraded service images (added 2026-05-25 — pre-v5 safety net).
+  #
+  # Pinning the M0-M5 instrumentation here so a `kubectl apply -k ...` or
+  # apply-online-boutique.ps1 won't silently revert to the upstream
+  # `:v0.10.5` tags, which lack ALL of the L1/L2/L3 logs, M3.1 span
+  # error enrichment, M4 metrics, and the M2.1 shared interceptors.
+  #
+  # Tag conventions:
+  #   v5.0.0-otel-pilot   — initial M0-M5 fleet rollout (D13.14a).
+  #   v5.0.0-otel-pilot2  — host-metrics added (paymentservice,
+  #                         currencyservice, recommendationservice,
+  #                         emailservice).
+  #   v5.0.0-otel-pilot3  — cartservice dual-Kestrel split + JsonConsole
+  #                         (D13.14d-followup-A).
+  #
+  # When images are next refreshed, bump the newTag here (and only here)
+  # so the cluster state remains reproducible from the manifest.
+  # ---------------------------------------------------------------------------
+  - name: us-central1-docker.pkg.dev/google-samples/microservices-demo/cartservice
+    newName: cartservice
+    newTag: v5.0.0-otel-pilot3
+  - name: us-central1-docker.pkg.dev/google-samples/microservices-demo/paymentservice
+    newName: paymentservice
+    newTag: v5.0.0-otel-pilot2
+  - name: us-central1-docker.pkg.dev/google-samples/microservices-demo/currencyservice
+    newName: currencyservice
+    newTag: v5.0.0-otel-pilot2
+  - name: us-central1-docker.pkg.dev/google-samples/microservices-demo/recommendationservice
+    newName: recommendationservice
+    newTag: v5.0.0-otel-pilot2
+  - name: us-central1-docker.pkg.dev/google-samples/microservices-demo/emailservice
+    newName: emailservice
+    newTag: v5.0.0-otel-pilot4
+  - name: us-central1-docker.pkg.dev/google-samples/microservices-demo/frontend
+    newName: frontend
+    newTag: v5.0.0-otel-pilot
+  - name: us-central1-docker.pkg.dev/google-samples/microservices-demo/checkoutservice
+    newName: checkoutservice
+    newTag: v5.0.0-otel-pilot
+  - name: us-central1-docker.pkg.dev/google-samples/microservices-demo/productcatalogservice
+    newName: productcatalogservice
+    newTag: v5.0.0-otel-pilot
+  - name: us-central1-docker.pkg.dev/google-samples/microservices-demo/shippingservice
+    newName: shippingservice
+    newTag: v5.0.0-otel-pilot
+  - name: us-central1-docker.pkg.dev/google-samples/microservices-demo/adservice
+    newName: adservice
+    newTag: v5.0.0-otel-pilot
+  # loadgenerator and redis-cart keep their upstream images intentionally —
+  # loadgenerator is the traffic driver and has no instrumentation surface;
+  # redis-cart is the backing store, not application code we own.
+
 patches:
   - path: patches/enable-otel-and-research-env.yaml
   - path: patches/loadgenerator-profile.yaml

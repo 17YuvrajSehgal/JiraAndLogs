@@ -1,0 +1,77 @@
+schema_version: 1
+scenario_id: recommendation-model-blip-minor
+title: Recommendation model blip (borderline)
+description: >
+  Simulates a brief recommendation-model service blip via a pod
+  restart. The frontend gracefully degrades (no recommendations
+  shown briefly) without an upstream business impact. Borderline:
+  some teams page on this, others don't. Family: third-party-blip
+  (D1.4).
+dataset_run_id: local-dev-run-001
+traffic_profile_id: baseline-checkout-mix
+environment: research-local
+jira_candidate: true
+expected_jira:
+  issue_type: Incident
+  priority: Minor
+  components:
+    - recommendationservice
+  labels:
+    - synthetic-borderline
+    - third-party-blip
+    - telemetry-linked
+  summary_template: "[{{severity}}] Recommendation model blip — degraded gracefully"
+  description_template: |
+    Synthetic borderline event from {{scenario_id}}.
+
+    recommendationservice was briefly unavailable. Frontend
+    degraded gracefully (no recommendations shown for ~30s).
+fault:
+  fault_id: recommendation-model-blip-001
+  fault_type: pod_restart_nearmiss
+  affected_service: recommendationservice
+  suggested_mechanism: restart recommendationservice pod briefly
+  expected_start_offset_seconds: 300
+  expected_duration_seconds: 30
+  blast_radius:
+    user_visible: false
+    expected_error_rate: low
+    expected_latency_impact: low
+labels:
+  severity: minor
+  incident_type: near_miss
+  root_cause_category: pod_restart
+  should_alert: maybe
+  should_create_jira_shadow_issue: true
+execution:
+  action: RestartPods
+  namespace: online-boutique-research
+  target_kind: deployment
+  target_name: recommendationservice
+  selector: app=recommendationservice
+triage:
+  schema_version: 1
+  scenario_family: third-party-blip
+  per_window:
+    pre_fault_baseline:
+      triage_label: noise
+      triage_severity: null
+      triage_components: null
+      triage_reason_class: null
+      is_hard_case: false
+      rationale: "Pre-blip baseline."
+    active_fault:
+      triage_label: borderline
+      triage_severity: minor
+      triage_components:
+        - recommendationservice
+      triage_reason_class: dependency_failure
+      is_hard_case: true
+      rationale: "Recommendation blip; UX degrades gracefully. Some teams page, others don't."
+    recovery_window:
+      triage_label: noise
+      triage_severity: null
+      triage_components: null
+      triage_reason_class: null
+      is_hard_case: false
+      rationale: "recommendationservice fully recovered."

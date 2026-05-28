@@ -55,7 +55,7 @@ class LoadedDataset:
     matchings: dict[str, MemoryMatch] = field(default_factory=dict)
 
     def attach_matchings(self) -> None:
-        """Copy is_novel + matched_memory_issue_ids from matchings onto windows."""
+        """Copy is_novel + matched_memory_issue_ids + expected_in_memory from matchings onto windows."""
         for w in self.windows:
             match = self.matchings.get(w.window_id)
             if match is None:
@@ -63,6 +63,8 @@ class LoadedDataset:
             w.matched_memory_issue_ids = list(match.matched_memory_issue_ids)
             w.is_novel = match.is_novel
             w.fault_compatibility_class = match.fault_compatibility_class
+            # D12.3: orphan-fault ground truth flag.
+            w.expected_in_memory = match.expected_in_memory
 
 
 def load_dataset(global_dir: str | Path) -> LoadedDataset:

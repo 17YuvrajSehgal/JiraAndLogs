@@ -274,7 +274,11 @@ foreach ($run in $selectedRuns) {
         "-ExecutionPolicy", "Bypass",
         "-File", (Join-Path $PSScriptRoot "collect-dataset-plan.ps1"),
         "-DatasetRunId", $runId,
-        "-PlanFile", ([string]$run.plan_file)
+        "-PlanFile", ([string]$run.plan_file),
+        # 2026-05-25: forward PythonExe so the per-plan derived build
+        # (build-ranking-dataset.ps1) finds the right interpreter on
+        # systems where `python` is not on PATH.
+        "-PythonExe", $PythonExe
     )
     if ($Quick) {
         $collectArgs += "-Quick"

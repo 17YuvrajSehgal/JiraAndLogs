@@ -1,0 +1,86 @@
+schema_version: 1
+scenario_id: dns-block-cartservice-60s
+title: Cartservice DNS resolution blocked for 60 seconds (system fault)
+description: >
+  chaos-mesh NetworkChaos blocks every packet from cartservice pods
+  destined for the kube-dns pods (kube-system namespace) for 60
+  seconds. Cartservice can't resolve hostnames — every fresh
+  connection attempt to redis-cart fails at DNS lookup. Existing
+  pooled connections may keep working briefly, then exhaust.
+
+  Telemetry signature: cartservice spans show "lookup redis-cart:
+  no such host" errors, even though redis-cart itself is healthy
+  and the network path to it (when bypassing DNS) is fine. This is
+  one of the trickiest production scenarios to diagnose.
+
+  D11.3 system fault: tests whether the model spots a DNS-as-root-cause
+  signature distinct from the dependency-outage signature.
+
+  Requires chaos-mesh installed in the cluster.
+dataset_run_id: local-dev-run-001
+traffic_profile_id: baseline-checkout-mix
+environment: research-local
+jira_candidate: true
+expected_jira:
+  issue_type: Incident
+  priority: Critical
+  components:
+    - cartservice
+  labels:
+    - synthetic-system-fault
+    - dns
+    - chaos-mesh
+    - telemetry-linked
+  summary_template: "Cartservice DNS resolution blocked"
+  description_template: |
+    Synthetic system-fault event from {{scenario_id}}.
+    chaos-mesh NetworkChaos blocked cartservice from reaching kube-dns
+    for 60s. Customer-visible cart failures.
+fault:
+  fault_id: dns-block-cartservice-001
+  fault_type: dns_outage
+  affected_service: cartservice
+  suggested_mechanism: chaos-mesh NetworkChaos partition cartservice -> kube-dns
+  expected_start_offset_seconds: 300
+  expected_duration_seconds: 60
+  blast_radius:
+    user_visible: true
+    expected_error_rate: high
+    expected_latency_impact: low
+labels:
+  severity: critical
+  incident_type: outage
+  root_cause_category: dns_outage
+  should_alert: true
+  should_create_jira_shadow_issue: true
+execution:
+  action: ChaosMeshChaos
+  namespace: online-boutique-research
+  chaos_manifest: deploy\research-lab\scenarios\chaos\dns-block-cartservice-60s.yaml
+triage:
+  schema_version: 1
+  scenario_family: dns-outage
+  per_window:
+    pre_fault_baseline:
+      triage_label: noise
+      triage_severity: null
+      triage_components: null
+      triage_reason_class: null
+      is_hard_case: false
+      rationale: "Pre-fault baseline; DNS healthy."
+    active_fault:
+      triage_label: ticket_worthy
+      triage_severity: critical
+      triage_components:
+        - cartservice
+      triage_reason_class: dns_outage
+      is_hard_case: true
+      rationale: "DNS outage blocks cartservice -> redis-cart resolution; surfaces as cart errors with a distinct 'lookup ... no such host' signature."
+    recovery_window:
+      triage_label: borderline
+      triage_severity: minor
+      triage_components:
+        - cartservice
+      triage_reason_class: dns_outage
+      is_hard_case: true
+      rationale: "DNS restored; connection pool refills."

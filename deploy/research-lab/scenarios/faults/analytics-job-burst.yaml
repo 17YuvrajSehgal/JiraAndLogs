@@ -1,0 +1,76 @@
+schema_version: 1
+scenario_id: analytics-job-burst
+title: Scheduled analytics job burst on shared infra (noise)
+description: >
+  Simulates a scheduled cron job that consumes shared cluster
+  resources for ~60s, causing collateral CPU/memory pressure on
+  business services. In a real cluster this would be a CronJob
+  resource; in the current harness we approximate by briefly
+  restarting the loadgenerator (which transiently changes traffic
+  shape and produces logs visually similar to a job burst).
+  Family: scheduled-job-spike (D1.5).
+
+  Note: a proper implementation requires a CronJob mechanism plus
+  resource-pressure (CPU/memory ballast). Tracked separately for
+  the chaos-mesh extension (D11).
+dataset_run_id: local-dev-run-001
+traffic_profile_id: baseline-checkout-mix
+environment: research-local
+jira_candidate: false
+expected_jira:
+  issue_type: None
+  priority: None
+  components:
+    - loadgenerator
+  labels:
+    - synthetic-job-burst
+    - scheduled-job-spike
+    - negative-window
+fault:
+  fault_id: analytics-job-burst-001
+  fault_type: noisy_high_traffic_nearmiss
+  affected_service: loadgenerator
+  suggested_mechanism: brief loadgenerator restart to simulate cron job traffic shape change
+  expected_start_offset_seconds: 300
+  expected_duration_seconds: 60
+  blast_radius:
+    user_visible: false
+    expected_error_rate: low
+    expected_latency_impact: low
+labels:
+  severity: minor
+  incident_type: near_miss
+  root_cause_category: traffic_pressure
+  should_alert: false
+  should_create_jira_shadow_issue: false
+execution:
+  action: RestartPods
+  namespace: online-boutique-research
+  target_kind: deployment
+  target_name: loadgenerator
+  selector: app=loadgenerator
+triage:
+  schema_version: 1
+  scenario_family: scheduled-job-spike
+  per_window:
+    pre_fault_baseline:
+      triage_label: noise
+      triage_severity: null
+      triage_components: null
+      triage_reason_class: null
+      is_hard_case: false
+      rationale: "Pre-job baseline."
+    active_fault:
+      triage_label: noise
+      triage_severity: null
+      triage_components: null
+      triage_reason_class: null
+      is_hard_case: true
+      rationale: "Scheduled job runs — brief traffic-shape change. Not Jira-worthy. Hard case: can look like a traffic anomaly."
+    recovery_window:
+      triage_label: noise
+      triage_severity: null
+      triage_components: null
+      triage_reason_class: null
+      is_hard_case: false
+      rationale: "Job finished; traffic normalised."

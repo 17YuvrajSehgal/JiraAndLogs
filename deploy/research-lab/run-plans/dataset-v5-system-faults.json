@@ -1,0 +1,59 @@
+{
+  "schema_version": 1,
+  "plan_id": "dataset-v5-system-faults",
+  "title": "Dataset v5 system-faults plan — 5 chaos-mesh injected infrastructure-level scenarios",
+  "description": "Phase D11 system-level fault coverage for v5-large. Uses chaos-mesh NetworkChaos (3 scenarios), DNS partition (1 scenario via NetworkChaos partition to kube-dns), and StressChaos (1 memory-pressure scenario). Does NOT cover IOChaos (disk latency) or TimeChaos (clock skew) — those need sidecar injection / privileged init that isn't set up in v5-large; deferred to v5.1. Each run produces 5 system-fault active_fault windows (2 ticket_worthy critical: cart-redis partition + dns-block-cartservice; 2 ticket_worthy major: network-latency-currency + memory-pressure-cartservice; 1 borderline: packet-loss-frontend).\n\nPrerequisite: chaos-mesh installed in the cluster (chaos-testing namespace + CRDs). See docs/gcp-production-dataset-vm-runbook.md 'Install chaos-mesh'.",
+  "environment": "research-local",
+  "traffic_profile_id": "baseline-checkout-mix",
+  "default_post_window_seconds": 75,
+  "quick_duration_seconds": 60,
+  "quick_post_window_seconds": 30,
+  "realistic_jira_noise": true,
+  "target_use": "Phase D11 — system-level fault injection. Adds DNS / network-partition / packet-loss / network-latency / memory-pressure shapes to v5-large.",
+  "scenarios": [
+    {
+      "scenario_file": "deploy\\research-lab\\scenarios\\baselines\\baseline-normal-traffic.yaml",
+      "role": "negative_baseline",
+      "duration_seconds": 90,
+      "post_window_seconds": 0,
+      "notes": "Healthy pre-fault baseline."
+    },
+    {
+      "scenario_file": "deploy\\research-lab\\scenarios\\faults\\dns-block-cartservice-60s.yaml",
+      "role": "positive_incident",
+      "duration_seconds": 60,
+      "notes": "D11.3 DNS outage — chaos-mesh NetworkChaos partition cartservice -> kube-dns."
+    },
+    {
+      "scenario_file": "deploy\\research-lab\\scenarios\\faults\\network-partition-cart-redis.yaml",
+      "role": "positive_incident",
+      "duration_seconds": 120,
+      "notes": "D11.4 network partition between cartservice and redis-cart."
+    },
+    {
+      "scenario_file": "deploy\\research-lab\\scenarios\\faults\\packet-loss-frontend-30pct-90s.yaml",
+      "role": "positive_incident",
+      "duration_seconds": 90,
+      "notes": "D11.5 30% packet loss on frontend — borderline shape."
+    },
+    {
+      "scenario_file": "deploy\\research-lab\\scenarios\\faults\\network-latency-currency-500ms.yaml",
+      "role": "positive_incident",
+      "duration_seconds": 120,
+      "notes": "D11.6 500ms network latency added to currencyservice."
+    },
+    {
+      "scenario_file": "deploy\\research-lab\\scenarios\\faults\\memory-pressure-cartservice-120s.yaml",
+      "role": "positive_incident",
+      "duration_seconds": 120,
+      "notes": "D11.9 memory pressure on cartservice via chaos-mesh StressChaos."
+    },
+    {
+      "scenario_file": "deploy\\research-lab\\scenarios\\baselines\\baseline-normal-traffic.yaml",
+      "role": "negative_baseline",
+      "duration_seconds": 90,
+      "post_window_seconds": 0,
+      "notes": "Healthy post-fault baseline."
+    }
+  ]
+}

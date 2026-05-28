@@ -17,6 +17,7 @@ plan lives in docs/dataset-v4-plan.md.
 from __future__ import annotations
 
 import json
+import re
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Iterable
@@ -63,6 +64,63 @@ SCENARIO_FAMILIES: dict[str, str] = {
     "frontend-cpu-nearmiss": "frontend-traffic-pressure",
     "loadgenerator-traffic-spike-nearmiss": "frontend-traffic-pressure",
     "loadgenerator-noisy-high-traffic-nearmiss": "frontend-traffic-pressure",
+
+    # ---- Phase D1: 8 new v5 families (2026-05-25) ---------------------------
+    # D1.1 post-deploy-churn (noise) — rolling deploys / canary churn
+    "deploy-rolling-cart-graceful": "post-deploy-churn",
+    "deploy-rolling-frontend-graceful": "post-deploy-churn",
+    "deploy-canary-rollback-quick": "post-deploy-churn",
+    # D1.2 recovered-in-window (borderline) — short fault, self-recovers
+    "redis-blip-30s-recovery": "recovered-in-window",
+    "paymentservice-flake-recovers": "recovered-in-window",
+    "currency-timeout-recovers": "recovered-in-window",
+    # D1.3 single-pod-restart-healthy-replication (noise) — silent at user tier
+    "frontend-1-of-3-restart": "single-pod-restart-healthy-replication",
+    "cartservice-1-of-3-restart": "single-pod-restart-healthy-replication",
+    # D1.4 third-party-blip (borderline) — external dep brief failure
+    "currency-api-blip-major": "third-party-blip",
+    "recommendation-model-blip-minor": "third-party-blip",
+    # D1.5 scheduled-job-spike (noise) — cron job collateral traffic shape
+    "analytics-job-burst": "scheduled-job-spike",
+    "cleanup-job-burst": "scheduled-job-spike",
+    # D1.6 latency-near-miss-partial-recovery (borderline)
+    "productcatalog-half-degraded": "latency-near-miss-partial-recovery",
+    "currency-partial-latency": "latency-near-miss-partial-recovery",
+    # D1.7 flapping-pod (ticket_worthy after N flaps) — single-flap until
+    #      the flap-pods.ps1 wrapper is authored
+    "cartservice-flap-ticket-worthy": "flapping-pod",
+    "paymentservice-flap-ticket-worthy": "flapping-pod",
+    # D1.8 slow-leak-saturation (ticket_worthy, long-running)
+    "cartservice-memory-leak-ticket-worthy": "slow-leak-saturation",
+    "paymentservice-connection-leak-ticket-worthy": "slow-leak-saturation",
+
+    # ---- Phase D12: 8 orphan-fault scenarios (2026-05-25) -----------------
+    # All use produces_jira_ticket: false so no Jira shadow row is created.
+    # The active_fault windows still gold-label as ticket_worthy and the
+    # build pipeline forces expected_in_memory=false + is_novel=true.
+    # Families match the reported twin so train/test stratification is
+    # consistent (the orphan distinction is encoded in expected_in_memory,
+    # not in the family label).
+    #
+    # 6 near-twin orphans (fault + service exist in the reported corpus):
+    "orphan-cart-redis-degradation-critical": "cart-redis",
+    "orphan-paymentservice-pod-restart-major": "payment-outage",
+    "orphan-frontend-pod-restart-major": "frontend-restart",
+    "orphan-productcatalog-latency-major": "productcatalog-latency",
+    "orphan-shippingservice-unavailable-major": "shipping-outage",
+    "orphan-currencyservice-unavailable-major": "currency-outage",
+    # 2 far orphans (service has zero Jira-ticketed scenarios anywhere):
+    "orphan-emailservice-flake-major": "email-outage",
+    "orphan-adservice-outage-major": "ad-outage",
+
+    # ---- Phase D11: system-level fault scenarios (2026-05-25) -------------
+    # All injected via chaos-mesh CRDs (NetworkChaos / StressChaos).
+    # Require chaos-mesh installed in the cluster (chaos-testing namespace).
+    "dns-block-cartservice-60s": "dns-outage",
+    "network-partition-cart-redis": "network-partition",
+    "packet-loss-frontend-30pct-90s": "network-packet-loss",
+    "network-latency-currency-500ms": "network-latency",
+    "memory-pressure-cartservice-120s": "resource-saturation",
 }
 
 # Fault-type compatibility classes used for memory-match ground truth.
@@ -394,7 +452,7 @@ def build_triage_label_record(
     return record
 
 
-_BASE_FEATURE_COLUMNS: tuple[str, ...] = (
+_BASE_FEATURE_COLUMNS_V4: tuple[str, ...] = (
     "triage_feature_log_total_count",
     "triage_feature_log_error_count",
     "triage_feature_log_warning_count",
@@ -409,6 +467,59 @@ _BASE_FEATURE_COLUMNS: tuple[str, ...] = (
     "triage_feature_k8s_restart_count",
     "triage_feature_k8s_pod_unavailable_count",
     "triage_feature_k8s_warning_event_count",
+)
+
+# Phase 3 (2026-05-26): supplementary features from the M0-M5 telemetry
+# layer (RED metrics, business counters, runtime gauges). These keys MUST
+# match the output of scripts/research-lab/export_m05_supplement.py. The
+# build pipeline emits a `triage_feature_m05_<key>` column per entry,
+# zero-filled when the supplement file is missing — preserving backward
+# compat with v4 runs that have no supplement.
+_M05_SUPPLEMENT_FEATURE_KEYS: tuple[str, ...] = (
+    # Cluster-wide business counters
+    "m05_payments_success_per_sec",
+    "m05_payments_error_per_sec",
+    "m05_cart_operations_success_per_sec",
+    "m05_cart_operations_error_per_sec",
+    "m05_orders_placed_per_sec",
+    "m05_recommendations_served_per_sec",
+    "m05_catalog_lookups_hit_per_sec",
+    "m05_catalog_lookups_miss_per_sec",
+    # Cluster-wide RED metrics
+    "m05_rpc_server_requests_per_sec",
+    "m05_rpc_server_errors_per_sec",
+    "m05_rpc_server_duration_p95_seconds",
+    # Per-service RED + runtime (filtered by window's service)
+    "m05_svc_rpc_server_requests_per_sec",
+    "m05_svc_rpc_server_errors_per_sec",
+    "m05_svc_rpc_client_requests_per_sec",
+    "m05_svc_rpc_client_errors_per_sec",
+    "m05_svc_process_memory_rss_max",
+    "m05_svc_go_goroutines_max",
+    "m05_svc_dotnet_gc_per_sec",
+    "m05_svc_python_gc_per_sec",
+    # --- Categorical breakdowns (Phase 4 follow-on, 2026-05-26) ---
+    # cart_operations_total split by op × result
+    "m05_cart_add_success_per_sec",
+    "m05_cart_add_error_per_sec",
+    "m05_cart_get_success_per_sec",
+    "m05_cart_get_error_per_sec",
+    "m05_cart_empty_success_per_sec",
+    "m05_cart_empty_error_per_sec",
+    # payments_total result breakdown
+    "m05_payments_invalid_per_sec",
+    "m05_payments_expired_per_sec",
+    "m05_payments_unsupported_per_sec",
+    # rpc_server_requests_total status breakdown
+    "m05_rpc_status_ok_per_sec",
+    "m05_rpc_status_internal_per_sec",
+    "m05_rpc_status_unavailable_per_sec",
+    "m05_rpc_status_failed_precondition_per_sec",
+    "m05_rpc_status_deadline_exceeded_per_sec",
+)
+
+_BASE_FEATURE_COLUMNS: tuple[str, ...] = _BASE_FEATURE_COLUMNS_V4 + tuple(
+    f"triage_feature_{key}" for key in _M05_SUPPLEMENT_FEATURE_KEYS
 )
 
 # Delta features are computed by build_triage_dataset.py against the
@@ -797,7 +908,7 @@ def numeric_features_from_raw(
     p50 = _percentile(durations_ms, 50.0)
     p95 = _percentile(durations_ms, 95.0)
 
-    return {
+    base = {
         "triage_feature_log_total_count": float(log_total),
         "triage_feature_log_error_count": float(log_error),
         "triage_feature_log_warning_count": float(log_warning),
@@ -814,6 +925,87 @@ def numeric_features_from_raw(
         "triage_feature_k8s_warning_event_count": float(warning_events),
     }
 
+    # Phase 3 (2026-05-26): M0-M5 supplementary metrics produced by
+    # scripts/research-lab/export_m05_supplement.py. Each window may have a
+    # raw/prometheus_supplement/<window_id>.json file with extra business
+    # counter, RED metric, and runtime gauge readings. Emit one
+    # triage_feature_m05_* column per supplement key; zero-fill when missing
+    # (the file might be absent on older runs or runs collected before the
+    # M0-M5 layer was instrumented).
+    supplement = _safe_read_json(raw / "prometheus_supplement" / f"{window_id}.json") or {}
+    sup_values = supplement.get("values") or {}
+    for key in _M05_SUPPLEMENT_FEATURE_KEYS:
+        col = f"triage_feature_{key}"
+        try:
+            base[col] = float(sup_values.get(key) or 0.0)
+        except (TypeError, ValueError):
+            base[col] = 0.0
+    return base
+
+
+_PER_REQUEST_IDS_RE = re.compile(
+    r"\b(trace_id|span_id|TraceId|SpanId|parent_span_id|request_id|session_id|"
+    r"correlation_id|EventId)\s*[=:]\s*[^,\s}\"]+",
+    re.IGNORECASE,
+)
+_STRUCTURED_KV_RE = re.compile(r"\b(\w+)\s*=\s*([^,\s}\"]+)")
+_KEEP_KEYS = frozenset(
+    {"dep", "op", "method", "status_code", "err_class", "err",
+     "peer_service", "retry_attempt", "latency_ms", "kind"}
+)
+
+
+def _summarize_log_body(body: dict) -> str:
+    """Build a compact production-realistic representation of one log line.
+
+    Pulls only the structured fields a real triage system would key on —
+    err_class, peer_service, op, dep, status_code, retry_attempt — from
+    either top-level keys (Go logrus, Python stdlib logging), .NET's
+    nested `State` dict, or the .NET Dict.ToString()-formatted Message text.
+
+    The lab-only fields (trace_id, span_id, EventId, Category, Exception
+    stacktrace, instance hash) are STRIPPED — they leak run identity and
+    add no production signal. See docs/results-v5-quick.md §7."""
+    # .NET cartservice logs have a nested State dict with the structured
+    # fields. Go services emit the same fields at top-level (logrus JSON).
+    # Merge both into one flat dict so the extraction logic is uniform.
+    state = body.get("State") if isinstance(body.get("State"), dict) else {}
+    merged = {**body, **state}
+
+    fields_in_order = (
+        "dep", "op", "method", "status_code", "err_class", "err",
+        "peer_service", "retry_attempt", "latency_ms", "kind",
+    )
+    parts: list[str] = []
+    seen_keys: set[str] = set()
+    for key in fields_in_order:
+        if key in merged and merged[key] not in (None, ""):
+            value = str(merged[key])[:60]
+            parts.append(f"{key}={value}")
+            seen_keys.add(key)
+
+    # Human message text. .NET capitalises Message; Python/Go use
+    # message/msg. Also parse embedded key=value pairs from the message
+    # text (the .NET JsonConsole formatter renders State as
+    # "{ key = value, key = value }" inside Message text).
+    message = merged.get("message") or merged.get("Message") or merged.get("msg") or ""
+    if message:
+        msg = str(message)
+        msg = _PER_REQUEST_IDS_RE.sub("", msg)
+        for k, v in _STRUCTURED_KV_RE.findall(msg):
+            kl = k.lower()
+            if kl in _KEEP_KEYS and kl not in seen_keys:
+                parts.append(f"{kl}={v[:60]}")
+                seen_keys.add(kl)
+        # If we already extracted >=3 structured fields, drop the redundant
+        # message-text echo to save budget for more log lines. Otherwise
+        # keep a short message snippet so unstructured logs aren't lost.
+        if len(seen_keys) < 3:
+            msg_clean = " ".join(msg.split())[:120]
+            if msg_clean:
+                parts.append(f'msg="{msg_clean}"')
+    return " ".join(parts) if parts else ""
+
 
 def evidence_text_from_raw(
     run_dir: Path,
@@ -828,13 +1020,18 @@ def evidence_text_from_raw(
     limits.
 
     Sections (in order):
-      LOG-ERRORS   -- up to 12 error/warning log messages, body parsed
+      LOG-EVENTS   -- up to 20 structured log lines (severity-prioritized,
+                      with key=value extraction for err_class/dep/op/method/
+                      peer_service/etc.)
       TRACES       -- top root span names by frequency, span/error counts
-      K8S-EVENTS   -- warning events for this service, with reason+message
-      WINDOW       -- window_id, service_name (header line)
+      (No WINDOW header — that line embedded the lab-only window_id /
+       scenario_id / window_type as substring tokens, which lexical and
+       embedding pipelines were silently using as label proxies. See
+       docs/results-v5-quick.md §7.)
 
     Production-safe: does NOT include scenario_id, severity, jira_candidate,
-    triage_label, or any ground-truth field. Only raw observation content.
+    triage_label, window_id, window_type, or any ground-truth/lab field.
+    Only structured fields a real production observability stack emits.
     """
     raw = run_dir / "raw"
     loki = _safe_read_json(raw / "loki" / f"{window_id}.json") or {}
@@ -842,14 +1039,15 @@ def evidence_text_from_raw(
     tempo = _safe_read_json(raw / "tempo" / f"{window_id}.json") or {}
 
     service_name = (k8s.get("service_name") or "").strip()
-    window_meta = k8s.get("window") or {}
-    start = window_meta.get("start_time") or ""
-    end = window_meta.get("end_time") or ""
 
     sections: list[str] = []
-    sections.append(f"WINDOW window_id={window_id} service={service_name} start={start} end={end}")
+    # Service is fine — it's a stable production field. NO window_id,
+    # window_type, or timestamps (those leak run identity).
+    sections.append(f"SERVICE {service_name}")
 
-    # --- Logs: pick error/warning level messages from body ---
+    # --- Logs: emit ALL error/warning + L2 dep_error lines with structured
+    # fields preserved. Up to 20 lines (was 12) since the new compact format
+    # is shorter than the truncated-message format.
     log_lines: list[str] = []
     loki_streams = (
         (loki.get("service_window") or {}).get("response", {}).get("data", {}).get("result")
@@ -860,24 +1058,36 @@ def evidence_text_from_raw(
     for stream in loki_streams:
         for entry in stream.get("values") or []:
             try:
-                ts, line = entry[0], entry[1]
+                _ts, line = entry[0], entry[1]
             except (IndexError, TypeError):
                 continue
             level = _log_severity_from_body(line)
-            if level is None or level not in error_levels | warning_levels:
-                continue
             try:
                 body = json.loads(line)
-                message = str(body.get("message") or body.get("msg") or line)[:200]
             except json.JSONDecodeError:
-                message = str(line)[:200]
-            log_lines.append(f"[{level}] {message}")
-            if len(log_lines) >= 12:
+                body = {}
+            # Also catch L2 dep_error lines emitted at Information level
+            # (the .NET interceptor emits these as Info per .NET logging
+            # conventions, but the body content carries the error info).
+            msg_text = (
+                str(body.get("message") or body.get("Message") or body.get("msg") or "")
+                .lower()
+            )
+            is_dep_error = "dep_error" in msg_text or body.get("dep")
+            is_severity_match = level is not None and level in error_levels | warning_levels
+            if not (is_severity_match or is_dep_error):
+                continue
+            summary = _summarize_log_body(body) if body else str(line)[:200]
+            if not summary:
+                continue
+            level_tag = (level or "info")[:5]
+            log_lines.append(f"[{level_tag}] {summary}")
+            if len(log_lines) >= 20:
                 break
-        if len(log_lines) >= 12:
+        if len(log_lines) >= 20:
             break
     if log_lines:
-        sections.append("LOG-ERRORS")
+        sections.append("LOG-EVENTS")
         sections.extend(log_lines)
 
     # --- Traces: top root names + counts + error span summary ---

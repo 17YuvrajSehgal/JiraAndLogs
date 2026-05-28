@@ -1,0 +1,88 @@
+schema_version: 1
+scenario_id: cartservice-memory-leak-ticket-worthy
+title: Cartservice memory leak saturating over 10 minutes — ticket worthy
+description: >
+  Simulates a slow memory leak in cartservice that eventually causes
+  pod eviction or OOMKill after sustained traffic. The episode is
+  long-running (~10 minutes) so the saturation curve becomes
+  visible in metrics before the eviction.
+  Family: slow-leak-saturation (D1.8).
+
+  Note: a true memory-leak injection requires either a build-time
+  flag in cartservice (e.g. SIMULATE_LEAK_KB_PER_SEC env var) or
+  a chaos-mesh StressChaos that consumes memory in a sidecar.
+  Current harness uses a long ScaleDeployment 0 to approximate
+  the eventual outage state — observed signal is similar (sustained
+  errors, eventual full outage) but the saturation *curve* won't
+  be realistic. Tracked for D11 chaos-mesh extension.
+dataset_run_id: local-dev-run-001
+traffic_profile_id: baseline-checkout-mix
+environment: research-local
+jira_candidate: true
+expected_jira:
+  issue_type: Incident
+  priority: Critical
+  components:
+    - cartservice
+  labels:
+    - synthetic-leak
+    - slow-leak-saturation
+    - long-running
+    - telemetry-linked
+  summary_template: "[{{severity}}] Cartservice memory leak — sustained outage"
+  description_template: |
+    Synthetic ticket-worthy event from {{scenario_id}}.
+
+    cartservice memory leak; pods saturating + evicted after ~10m
+    of sustained traffic. Customer checkout failures.
+fault:
+  fault_id: cartservice-leak-001
+  fault_type: resource_saturation
+  affected_service: cartservice
+  suggested_mechanism: long ScaleDeployment 0 to approximate eventual leak-induced outage
+  expected_start_offset_seconds: 300
+  expected_duration_seconds: 600
+  blast_radius:
+    user_visible: true
+    expected_error_rate: high
+    expected_latency_impact: medium
+labels:
+  severity: critical
+  incident_type: outage
+  root_cause_category: resource_saturation
+  should_alert: true
+  should_create_jira_shadow_issue: true
+execution:
+  action: ScaleDeployment
+  namespace: online-boutique-research
+  target_kind: deployment
+  target_name: cartservice
+  replicas: 0
+  restore_replicas: 1
+triage:
+  schema_version: 1
+  scenario_family: slow-leak-saturation
+  per_window:
+    pre_fault_baseline:
+      triage_label: noise
+      triage_severity: null
+      triage_components: null
+      triage_reason_class: null
+      is_hard_case: false
+      rationale: "Pre-leak baseline."
+    active_fault:
+      triage_label: ticket_worthy
+      triage_severity: critical
+      triage_components:
+        - cartservice
+      triage_reason_class: outage
+      is_hard_case: false
+      rationale: "Sustained cartservice outage from memory leak; customer impact obvious."
+    recovery_window:
+      triage_label: borderline
+      triage_severity: minor
+      triage_components:
+        - cartservice
+      triage_reason_class: outage
+      is_hard_case: true
+      rationale: "Pod restart clears the leak temporarily but root cause unresolved."

@@ -1,0 +1,75 @@
+schema_version: 1
+scenario_id: frontend-1-of-3-restart
+title: Single frontend pod restart with healthy replication (noise)
+description: >
+  One frontend pod restarts while the deployment is at 3 replicas.
+  Other 2 replicas continue serving; users see no impact. This is the
+  prototypical false-positive shape that on-call must learn to ignore.
+  Family: single-pod-restart-healthy-replication (D1.3).
+
+  Note: current harness `RestartPods` deletes all pods matching the
+  selector. To genuinely simulate 1-of-3, the cluster needs replicas=3
+  pre-scenario and a chaos-mesh PodChaos with one=true selector.
+  Until then, this scenario uses RestartPods and the noise label
+  rests on the fact that pods come back quickly (no business loss).
+dataset_run_id: local-dev-run-001
+traffic_profile_id: baseline-checkout-mix
+environment: research-local
+jira_candidate: false
+expected_jira:
+  issue_type: None
+  priority: None
+  components:
+    - frontend
+  labels:
+    - synthetic-pod-restart
+    - healthy-replication
+    - negative-window
+fault:
+  fault_id: frontend-1-of-3-restart-001
+  fault_type: pod_restart_nearmiss
+  affected_service: frontend
+  suggested_mechanism: restart one frontend pod out of N healthy replicas
+  expected_start_offset_seconds: 300
+  expected_duration_seconds: 45
+  blast_radius:
+    user_visible: false
+    expected_error_rate: very_low
+    expected_latency_impact: low
+labels:
+  severity: minor
+  incident_type: near_miss
+  root_cause_category: pod_restart
+  should_alert: false
+  should_create_jira_shadow_issue: false
+execution:
+  action: RestartPods
+  namespace: online-boutique-research
+  target_kind: deployment
+  target_name: frontend
+  selector: app=frontend
+triage:
+  schema_version: 1
+  scenario_family: single-pod-restart-healthy-replication
+  per_window:
+    pre_fault_baseline:
+      triage_label: noise
+      triage_severity: null
+      triage_components: null
+      triage_reason_class: null
+      is_hard_case: false
+      rationale: "Pre-restart baseline."
+    active_fault:
+      triage_label: noise
+      triage_severity: null
+      triage_components: null
+      triage_reason_class: null
+      is_hard_case: true
+      rationale: "Pod restart with healthy replication should be silent at the user tier. Hard case: must NOT be confused with frontend-pod-restart-major."
+    recovery_window:
+      triage_label: noise
+      triage_severity: null
+      triage_components: null
+      triage_reason_class: null
+      is_hard_case: false
+      rationale: "Pod restored; no residual impact."

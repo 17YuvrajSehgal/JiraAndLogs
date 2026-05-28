@@ -767,6 +767,15 @@ function Get-ResearchLabScenarioConfig {
         traffic_profile_id = Get-ResearchLabYamlScalar -Path $ScenarioFile -KeyPath @("traffic_profile_id") -AsString
         environment = Get-ResearchLabYamlScalar -Path $ScenarioFile -KeyPath @("environment") -AsString
         jira_candidate = [bool](Get-ResearchLabYamlScalar -Path $ScenarioFile -KeyPath @("jira_candidate"))
+        # D12.1 (2026-05-24): produces_jira_ticket gates whether the
+        # incident yields a Jira shadow row. Absent or true → behaviour
+        # unchanged; explicit false marks the scenario as an *orphan
+        # fault* (a fault the system would catch but no human filed a
+        # ticket for). See dataset-todo.md Phase D12.
+        produces_jira_ticket = $(
+            $__p = Get-ResearchLabYamlScalar -Path $ScenarioFile -KeyPath @("produces_jira_ticket")
+            if ($null -eq $__p) { $true } else { [bool]$__p }
+        )
         expected_jira_issue_type = Get-ResearchLabYamlScalar -Path $ScenarioFile -KeyPath @("expected_jira", "issue_type") -AsString
         expected_jira_priority = Get-ResearchLabYamlScalar -Path $ScenarioFile -KeyPath @("expected_jira", "priority") -AsString
         expected_jira_components = @(Get-ResearchLabYamlList -Path $ScenarioFile -KeyPath @("expected_jira", "components"))
@@ -795,6 +804,12 @@ function Get-ResearchLabScenarioConfig {
         execution_restore_replicas = Get-ResearchLabYamlScalar -Path $ScenarioFile -KeyPath @("execution", "restore_replicas")
         execution_env = Get-ResearchLabYamlMap -Path $ScenarioFile -KeyPath @("execution", "env") -ValuesAsString
         execution_restore_env = Get-ResearchLabYamlMap -Path $ScenarioFile -KeyPath @("execution", "restore_env")
+        # D11 (2026-05-25): chaos-mesh manifest path for ChaosMeshChaos
+        # action. The scenario YAML stays orchestration-only; the actual
+        # NetworkChaos/StressChaos/DNSChaos resource lives in a separate
+        # file under deploy/research-lab/scenarios/chaos/. Keeps the
+        # scenario YAML schema unchanged for non-chaos scenarios.
+        execution_chaos_manifest = Get-ResearchLabYamlScalar -Path $ScenarioFile -KeyPath @("execution", "chaos_manifest") -AsString
     }
 }
 

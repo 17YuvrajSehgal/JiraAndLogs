@@ -1,0 +1,84 @@
+schema_version: 1
+scenario_id: cartservice-flap-ticket-worthy
+title: Cartservice flapping (repeated restarts) — ticket worthy
+description: >
+  Cartservice pods restart repeatedly, indicating instability that
+  on-call must investigate. Each individual restart is a near-miss,
+  but the *pattern* of flapping crosses the ticket threshold.
+  Family: flapping-pod (D1.7).
+
+  Note: a true flap pattern requires running RestartPods 3-5 times
+  with short gaps. The current harness invokes the action once.
+  A wrapper script `scripts/research-lab/flap-pods.ps1` should be
+  authored to call RestartPods in a loop with configurable
+  frequency; until then this scenario records a single restart and
+  the ticket-worthy label is based on the expected pattern in production.
+dataset_run_id: local-dev-run-001
+traffic_profile_id: baseline-checkout-mix
+environment: research-local
+jira_candidate: true
+expected_jira:
+  issue_type: Incident
+  priority: Major
+  components:
+    - cartservice
+  labels:
+    - synthetic-flap
+    - flapping-pod
+    - telemetry-linked
+  summary_template: "[{{severity}}] Cartservice flapping — repeated restarts"
+  description_template: |
+    Synthetic ticket-worthy event from {{scenario_id}}.
+
+    cartservice pods restarting repeatedly. Pattern suggests
+    instability; on-call should investigate.
+fault:
+  fault_id: cartservice-flap-001
+  fault_type: pod_restart
+  affected_service: cartservice
+  suggested_mechanism: repeated cartservice pod restarts (3-5x with 15s gap) — currently single restart
+  expected_start_offset_seconds: 300
+  expected_duration_seconds: 120
+  blast_radius:
+    user_visible: true
+    expected_error_rate: medium
+    expected_latency_impact: medium
+labels:
+  severity: major
+  incident_type: service_restart
+  root_cause_category: pod_restart
+  should_alert: true
+  should_create_jira_shadow_issue: true
+execution:
+  action: RestartPods
+  namespace: online-boutique-research
+  target_kind: deployment
+  target_name: cartservice
+  selector: app=cartservice
+triage:
+  schema_version: 1
+  scenario_family: flapping-pod
+  per_window:
+    pre_fault_baseline:
+      triage_label: noise
+      triage_severity: null
+      triage_components: null
+      triage_reason_class: null
+      is_hard_case: false
+      rationale: "Pre-flap baseline."
+    active_fault:
+      triage_label: ticket_worthy
+      triage_severity: major
+      triage_components:
+        - cartservice
+      triage_reason_class: restart_with_impact
+      is_hard_case: false
+      rationale: "Cartservice flapping with customer impact; on-call must investigate root cause."
+    recovery_window:
+      triage_label: borderline
+      triage_severity: minor
+      triage_components:
+        - cartservice
+      triage_reason_class: restart_with_impact
+      is_hard_case: true
+      rationale: "Flap may have stopped but underlying cause unresolved; borderline whether ticket stays open."
