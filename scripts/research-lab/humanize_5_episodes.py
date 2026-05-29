@@ -38,16 +38,13 @@ if str(_SRC_ROOT) not in sys.path:
 
 from jira_humanizer.sanitizer import find_lab_tokens  # noqa: E402
 from jira_humanizer.timeline_generator import (  # noqa: E402
+    FullTimelineInputs,
     LLMConfig,
-    ReportContext,
-    build_report_evidence,
-    generate_report_step,
+    WindowEvidenceInputs,
+    generate_full_timeline,
     stamp_versions,
 )
-from jira_humanizer.timeline_schema import (  # noqa: E402
-    TicketTimeline,
-)
-from jira_humanizer.timeline_generator import WindowEvidenceInputs  # noqa: E402
+from jira_humanizer.timeline_schema import TicketTimeline  # noqa: E402
 
 
 # Strata: pick one active_fault window per family. The list is ordered
@@ -145,6 +142,30 @@ def _lexical_overlap(a: str, b: str) -> float:
     return len(sa & sb) / len(sa | sb)
 
 
+def _affected_services_for_episode(run_dir: Path, episode_id: str) -> list[str]:
+    """Pull the symptom-side services list from episodes.jsonl.
+
+    Used as the misattribution candidate pool — see Rule 3 in
+    LLM-Jira-enhancement.md. Falls back to an empty list when the
+    episode is not found; plan_misattribution then disables Rule 3
+    cleanly for that ticket.
+    """
+    ep_path = run_dir / "episodes.jsonl"
+    if not ep_path.exists():
+        return []
+    with ep_path.open(encoding="utf-8") as fh:
+        for line in fh:
+            if not line.strip():
+                continue
+            try:
+                ep = json.loads(line)
+            except json.JSONDecodeError:
+                continue
+            if ep.get("incident_episode_id") == episode_id:
+                return [str(s) for s in (ep.get("affected_services") or [])]
+    return []
+
+
 def _humanize_one(window_row: dict, runs_root: Path, llm: LLMConfig) -> TicketTimeline:
     run_id = window_row["dataset_run_id"]
     run_dir = runs_root / run_id
@@ -155,31 +176,14 @@ def _humanize_one(window_row: dict, runs_root: Path, llm: LLMConfig) -> TicketTi
         window_start_iso=window_row["start_time"],
         window_end_iso=window_row["end_time"],
     )
-    evidence = build_report_evidence(inputs)
-    ctx = ReportContext(
-        episode_id=window_row["incident_episode_id"],
-        affected_service=window_row["service_name"],
-        scenario_family=window_row["scenario_family"],
-        # The reporter does not know the eval-only severity — they assign
-        # a public-facing one. For Phase 2 we map family to a coarse
-        # public severity (Phase 3 will derive it from observed metrics).
+    candidates = _affected_services_for_episode(run_dir, window_row["incident_episode_id"])
+    bundle = FullTimelineInputs(
+        window_row=window_row,
+        inputs=inputs,
         severity_seen=_coarse_public_severity(window_row["scenario_family"]),
-        evidence=evidence,
+        candidate_downstream_services=candidates,
     )
-    step = generate_report_step(ctx, llm=llm)
-    versions = stamp_versions()
-    return TicketTimeline(
-        ticket_id=f"HMN-{window_row['incident_episode_id']}",
-        source_episode_id=window_row["incident_episode_id"],
-        source_dataset_run_id=run_id,
-        affected_services_seen=[window_row["service_name"]],
-        severity_seen=ctx.severity_seen,
-        components_seen=[window_row["service_name"]],
-        is_misattributed=False,    # Phase 3+ introduces Rule 3
-        closed_as_noise=False,     # Phase 4+ introduces Rule 5
-        steps=[step],
-        **versions,
-    )
+    return generate_full_timeline(bundle, llm=llm)
 
 
 def _coarse_public_severity(family: str) -> str:
@@ -240,12 +244,19 @@ def main() -> int:
             fh.write(json.dumps(t.as_jsonl_row()) + "\n")
     print(f"[humanize] wrote {timeline_path} ({len(timelines)} rows)", file=sys.stderr)
 
-    # Acceptance checks
+    # Acceptance checks — Phase 3 expands gates to cover all steps in
+    # the timeline, not just the report.
     print(f"[humanize] checking acceptance gates ...", file=sys.stderr)
-    leaks_per_ticket: list[list[str]] = [
-        find_lab_tokens(t.steps[0].text) for t in timelines
-    ]
+    leaks_per_ticket: list[list[str]] = []
+    for t in timelines:
+        ticket_leaks: list[str] = []
+        for step in t.steps:
+            ticket_leaks.extend(find_lab_tokens(step.text))
+        leaks_per_ticket.append(ticket_leaks)
     leak_total = sum(len(lst) for lst in leaks_per_ticket)
+    # Variance gate still uses the report step — that's where two
+    # tickets should differ most. Later steps converge as the persona
+    # shifts to investigation language.
     overlaps: list[tuple[str, str, float]] = []
     for i in range(len(timelines)):
         for j in range(i + 1, len(timelines)):
@@ -258,6 +269,7 @@ def main() -> int:
     max_overlap = max((o for *_, o in overlaps), default=0.0)
     pass_leak = leak_total == 0
     pass_variance = max_overlap < 0.7
+    n_misattributed = sum(1 for t in timelines if t.is_misattributed)
 
     # generation-manifest.json
     manifest = {
@@ -274,9 +286,20 @@ def main() -> int:
                 "ticket_id": t.ticket_id,
                 "source_episode_id": t.source_episode_id,
                 "source_dataset_run_id": t.source_dataset_run_id,
-                "report_prompt_hash": t.steps[0].prompt_hash,
-                "reporter_avatar": t.steps[0].persona_avatar,
-                "reporter_role": t.steps[0].persona_role,
+                "is_misattributed": t.is_misattributed,
+                "components_seen": t.components_seen,
+                "n_steps": len(t.steps),
+                "steps": [
+                    {
+                        "kind": s.step_kind,
+                        "persona_role": s.persona_role,
+                        "persona_avatar": s.persona_avatar,
+                        "t_offset_s": s.t_offset_s,
+                        "prompt_hash": s.prompt_hash,
+                        "lab_leak_tokens": find_lab_tokens(s.text),
+                    }
+                    for s in t.steps
+                ],
                 "log_quotes_used": t.steps[0].evidence.log_quotes,
                 "lab_leak_tokens": leaks_per_ticket[i],
             }
@@ -287,6 +310,10 @@ def main() -> int:
             "pass_variance": pass_variance,
             "total_leak_tokens": leak_total,
             "max_pairwise_overlap": max_overlap,
+            "n_misattributed": n_misattributed,
+            "misattribution_rate": (
+                n_misattributed / len(timelines) if timelines else 0.0
+            ),
         },
         "versions": stamp_versions(),
     }
@@ -325,15 +352,29 @@ def main() -> int:
         lines.append("")
         lines.append(f"**Reporter:** {t.steps[0].persona_avatar} ({t.steps[0].persona_role})  ")
         lines.append(f"**Severity seen:** {t.severity_seen}  ")
+        lines.append(f"**Components seen:** {', '.join(t.components_seen)}  ")
+        if t.is_misattributed:
+            lines.append(
+                f"**Misattribution active:** reporter blames "
+                f"`{t.components_seen[0]}`; redirect step corrects to the "
+                "actual root-cause service."
+            )
         lines.append(f"**Log lines used as evidence:** {len(t.steps[0].evidence.log_quotes)}")
+        lines.append(f"**Timeline length:** {len(t.steps)} steps")
         lines.append("")
-        lines.append("### Humanized (Phase 2)")
+        lines.append("### Humanized timeline (Phase 3)")
         lines.append("")
-        lines.append("```")
-        lines.append(t.steps[0].text)
-        lines.append("```")
-        lines.append("")
-        lines.append("### Legacy shadow")
+        for step in t.steps:
+            lines.append(
+                f"**[t+{step.t_offset_s}s] {step.persona_avatar} "
+                f"({step.persona_role}) — {step.step_kind}**"
+            )
+            lines.append("")
+            lines.append("```")
+            lines.append(step.text)
+            lines.append("```")
+            lines.append("")
+        lines.append("### Legacy shadow (for comparison)")
         lines.append("")
         lines.append("```")
         legacy_text = (legacy.get("memory_text") or "")[:1200]
