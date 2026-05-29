@@ -22,19 +22,30 @@ benchmark tracks defined by the active corpus.
 
 ---
 
-## 1. Current state (2026-05-25)
+## 1. Current state (2026-05-28)
 
 | Item | Value |
 | --- | --- |
-| Active corpus | **`dataset-v5-large.json`** — 100 runs, 27 families, ~7,400 windows, staged but not yet collected |
+| Active corpus | **`dataset-v5-large` — collected**: 100 runs, 27 families, **6,720 windows**, 932 incident episodes, 347 shadow Jira tickets, **79.4 GB raw on disk** |
+| Collection window | 2026-05-25 08:45 → 2026-05-28 15:08 UTC (~3.3 days unattended on the GCP VM) |
+| Global derived | `data/derived/global/2026-05-25-dataset-v5-large-global/` — global triage examples, Jira memory corpus, window-memory matchings, split manifest, **94-column feature catalog**: 33 `m05_*` (M0–M5 supplement) + 47 `delta_*` (pre-fault vs active) + 6 `trace_*` + 3 `log_*` + 3 `k8s_*` + 2 `metric_*` |
+| Class balance | noise 54.2% / borderline 24.8% / ticket_worthy 21.0% — meets the contract gates (≥20% noise, ≥5% borderline) |
+| Hard-case coverage | 2,998 / 6,720 windows (44.6%) — well above the ≥15% target |
+| Orphan ticket-worthy windows (D12) | 617 — well above the 192 target (planned 8 per orphan run × 24 orphan runs) |
+| Splits | train 2,796 / validation 984 / test 2,940 (held out by scenario family) |
 | Telemetry layer | **M0–M5 complete** (L1 RPC logs, L2 dep-error logs, L3 business events, RecordError fleet-wide, RED + business + runtime metrics) |
 | Application | Online Boutique (12 services, hard-forked under `microservices-demo-google/`) |
 | Chaos framework | chaos-mesh 2.7.2 in `chaos-testing` namespace (required by the system-faults plan) |
 | Primary ML task | Triage classification (`ticket_worthy` / `borderline` / `noise`) |
 | Secondary tasks | Memory retrieval, retrospective ranking, orphan-fault detection, borderline calibration |
-| Recommended VM | `e2-standard-8`, 1 TB `pd-balanced`, Ubuntu 24.04, `us-central1-a` |
-| Collection wall time | ~4–5 days unattended |
+| Collected on | GCP VM `e2-standard-8`, 1 TB `pd-balanced`, Ubuntu 24.04, `us-central1-a` |
 | Git branch | `master-bigger-dataset` |
+
+A machine-readable snapshot of all metadata in this section lives at
+`data/derived/global/2026-05-25-dataset-v5-large-global/dataset-metadata.json`
+(regeneratable via `python scripts/research-lab/dataset_metadata.py
+--runs-prefix 2026-05-25-dataset-v5-large
+--global-id 2026-05-25-dataset-v5-large-global`).
 
 Earlier corpora (v2 / v3 / v4-large) are deliberately not discussed in this
 file. Per-version detail lives in the historical sections of `README.md` if
@@ -231,9 +242,50 @@ inflate model scores without representing real on-call conditions.
 
 ## 6. Scenario families & the v5-large corpus
 
-The v5-large corpus runs 100 dataset runs against **27 scenario families**,
-covering ~7,400 telemetry windows. The full corpus manifest is
+The v5-large corpus collected **100 dataset runs** against **27 scenario
+families** and **51 distinct scenario IDs**, producing **6,720 telemetry
+windows** across **932 incident episodes**. The full corpus manifest is
 `deploy/research-lab/corpora/dataset-v5-large.json`.
+
+### Actual per-family window counts (collected)
+
+Top families by window count, from `dataset-metadata.json`:
+
+| Family | Windows | Family | Windows |
+| --- | ---: | --- | ---: |
+| cart-redis | 918 | post-deploy-churn | 165 |
+| baseline-normal | 696 | third-party-blip | 165 |
+| productcatalog-latency | 426 | flapping-pod | 165 |
+| payment-outage | 342 | slow-leak-saturation | 144 |
+| currency-outage | 342 | scheduled-job-spike | 132 |
+| shipping-outage | 342 | network-partition (D11) | 120 |
+| recovered-in-window | 330 | single-pod-restart-healthy-replication | 99 |
+| ad-outage | 300 | dns-outage (D11) | 90 |
+| recommendation-outage | 252 | network-latency (D11) | 90 |
+| productcatalog-outage | 252 | _2 more families_ | — |
+| frontend-traffic-pressure | 252 | | |
+| email-outage | 216 | | |
+| frontend-restart | 198 | | |
+| latency-near-miss-partial-recovery | 198 | | |
+| checkout-restart | 168 | | |
+| checkout-outage | 168 | | |
+
+### Per-service window distribution
+
+Window counts per affected service (collected):
+
+| Service | Windows | Service | Windows |
+| --- | ---: | --- | ---: |
+| frontend | 2,332 | recommendationservice | 117 |
+| checkoutservice | 1,837 | shippingservice | 114 |
+| productcatalogservice | 673 | adservice | 114 |
+| cartservice | 603 | emailservice | 72 |
+| paymentservice | 288 | loadgenerator | 66 |
+| redis-cart | 261 | | |
+| currencyservice | 243 | | |
+
+Window-type split: `pre_fault_baseline` 2,008 / `active_fault` 2,008 /
+`recovery_window` 2,008 / `observation_window` 696.
 
 ### Plan composition
 
@@ -272,6 +324,39 @@ covering ~7,400 telemetry windows. The full corpus manifest is
 `email-outage` plus 8 scenarios with `produces_jira_ticket: false` (cart-redis,
 adservice, currency, email, frontend, payment, productcatalog, shipping
 twins).
+
+### Raw telemetry inventory (collected)
+
+| Stream | Files | Volume | Notes |
+| --- | ---: | ---: | --- |
+| Loki logs (`raw/loki/`) | 7,752 | 31.74 GB | **38.75 M log lines** (avg ~5,000 per per-window per-service dump). frontend (2,332 files) and checkoutservice (1,837) dominate by call fan-out. |
+| Tempo traces (`raw/tempo/`) | 6,720 | 46.53 GB | **18,153,486 spans** across 9 services (`emailservice`, `loadgenerator`, and one other don't emit traces under the current config). ~2,701 spans per window average. |
+| Prometheus base export (`raw/prometheus/`) | 6,720 | 136 MB | 740,865 sample points across **5 cluster-state queries per window** — `ALERTS`, `container_cpu_usage_seconds_total`, `container_memory_working_set_bytes`, `kube_pod_container_status_restarts_total`, `kube_pod_info`. These feed the legacy `triage_feature_*` k8s + container columns. |
+| **Prometheus M0–M5 supplement (`raw/prometheus_supplement/`)** | 6,720 | **43.31 MB** | **33 RED + business + runtime queries per (window × service)** → **221,760 scalar values**. Written by `export_m05_supplement.py` after collection; these are what feed the **33 `triage_feature_m05_*` columns** in the global feature catalog (e.g. `m05_cart_get_error_per_sec`, `m05_orders_placed_per_sec`, `m05_payments_success_per_sec`, `m05_rpc_server_p95_ms`, `m05_catalog_lookups_miss_per_sec`). Without this stream the dataset would be a thin telemetry corpus; with it, this is the "production-grade RED + business signal" that makes v5-large worth collecting. |
+| Total raw bytes | 21,192 raw files | **79.42 GB** | Plus alerts.jsonl, episodes.jsonl, telemetry_windows.jsonl, triage_window_labels.jsonl, and Kubernetes JSON dumps. |
+
+### Jira memory corpus (collected)
+
+| Stat | Value |
+| --- | ---: |
+| Issues | 347 |
+| Summary words (mean / median) | 5.3 / 5 |
+| Description words (mean / median) | 2,021 / 2,005 |
+| Comments per ticket (mean) | 1.0 |
+| Comments words (mean) | 50 |
+| Earliest created | 2026-05-25T13:38 UTC |
+| Latest created | 2026-05-28T15:18 UTC |
+| Severity distribution | major 164 / critical 106 / minor 77 |
+
+Top components carried on Jira tickets: `frontend` (326), `checkoutservice`
+(325), `cartservice` (130), `productcatalogservice` (81), `paymentservice`
+(61), `currencyservice` (57), `redis-cart` (35), `recommendationservice`
+(25).
+
+The 347 Jira issue count is **lower than the planned ~430** because the
+D12 orphan plan (24 runs) deliberately sets `produces_jira_ticket: false`
+— those runs contribute orphan ticket-worthy windows (617 in total) but
+no Jira memory entries. This is the intended design, not under-collection.
 
 ### Benchmark tracks defined by the corpus
 
@@ -582,20 +667,31 @@ pwsh -NoProfile -ExecutionPolicy Bypass \
 
 Output: `data/derived/global/$GLOBAL_DATASET_ID/benchmarks/$BENCHMARK_ID/benchmark-report.md`.
 
-### What "complete v5-large" means
+### What "complete v5-large" actually delivered
 
-| Asset | Expected |
-| --- | ---: |
-| Corpus runs with `status: completed` | 100 |
-| Rows in `global-triage-examples.jsonl` | ~7,400 |
-| Entries in `jira-memory-corpus.jsonl` | ~430 (orphans do NOT contribute) |
-| Scenario families in the split manifest | 27 |
-| Long-window (≥10 min) episodes | ~96 |
-| **Orphan ticket_worthy windows (D12)** | **192** |
-| **Chaos-mesh ticket_worthy windows (D11)** | **40** (10 runs × 4 ticket_worthy chaos scenarios; the 5th chaos is borderline) |
-| `"passed": false` data-quality reports | 0 |
-| Leakage canary fails | 0 |
-| Lingering chaos resources (`kubectl -n chaos-testing get networkchaos,dnschaos,stresschaos`) | empty |
+Live numbers from `dataset-metadata.json`. Where the actual differs from
+the original target, the delta is explained in the right column.
+
+| Asset | Target | Actual | Notes |
+| --- | ---: | ---: | --- |
+| Corpus runs with `status: completed` | 100 | **100** | ✓ |
+| Total incident episodes | — | **932** | ≈9.32 episodes per run, varies by plan |
+| Rows in `global-triage-examples.jsonl` | ~7,400 | **6,720** | Below target because per-episode window count averaged 7.2 not 7.5; plan-level baseline runs contribute 1 window each (observation_window). Class balance still meets the contract. |
+| Entries in `jira-memory-corpus.jsonl` | ~430 | **347** | Deficit (≈83) matches the D12 orphan plan: 24 runs × ~3.5 ticket-worthy episodes/run produce no shadow Jira by design. Not an under-collection. |
+| Scenario families in the split manifest | 27 | **27** | ✓ |
+| Distinct scenario IDs (leaves) | — | **51** | |
+| Services covered | 12 | **12** | ✓ |
+| **Orphan ticket_worthy windows (D12)** | 192 | **617** | Far above target — the orphan plan generated more ticket-worthy windows per run than the manifest projected. |
+| **Chaos-mesh windows (D11)** | ≥40 ticket-worthy | network-partition 120 / dns-outage 90 / network-latency 90 → 300 chaos windows total, label mix per family | Need to break out the per-window labels from the global examples to confirm the ticket-worthy split. |
+| Hard-case windows | ≥15% target | **44.6% (2,998)** | Far above target — likely from the D11 + D1 family additions which were specifically engineered to be confusing. |
+| Class balance (noise / borderline / ticket_worthy) | each ≥5%, noise ≥20% | **54.2% / 24.8% / 21.0%** | ✓ |
+| Wall time | ~4–5 days unattended | **~3.3 days** | Faster than planned (no major resume cycles, no chaos-mesh cleanup hangs). |
+| Total raw bytes | not predicted | **79.4 GB** | Loki 31.7 GB + Tempo 46.5 GB + Prom-base 136 MB + Prom-supplement 43 MB + manifests/episodes/etc ≈1 GB. |
+| **M0–M5 Prometheus supplement** | needed for ML | **6,720 files, 33 m05 queries, 221,760 scalar values, 43.3 MB** | `raw/prometheus_supplement/` populated by `export_m05_supplement.py` post-collection. Feeds the **33 `triage_feature_m05_*`** columns in the 94-column feature catalog. Without this, the dataset would have only the 28 base features. |
+| `"passed": false` data-quality reports | 0 | **0** (100/100 PASS) | Verified 2026-05-28 via per-run `validate-dataset-run.ps1` loop. Summary at `data/derived/global/2026-05-25-dataset-v5-large-global/validate-dataset-run-summary.json`. |
+| Leakage canary fails | 0 | **0** (100/100 PASS) | Verified 2026-05-28 via per-run `validate_run_feature_distribution.py` loop. Summary at `data/derived/global/2026-05-25-dataset-v5-large-global/leakage-canary-summary.json`. |
+| Per-family minimum windows | ≥30 per (split, family) cell | **PASS** (smallest cell 60) | Verified 2026-05-28 via `validate_global_family_coverage.py`. Matrix at `data/derived/global/2026-05-25-dataset-v5-large-global/family-coverage.json`. Family split: 14 train families (smallest `network-packet-loss` 60) / 6 validation families (smallest `resource-saturation` 90) / 7 test families (smallest `network-latency` 90). |
+| Lingering chaos resources | empty | _check on VM_ | `kubectl -n chaos-testing get networkchaos,dnschaos,stresschaos`. Not VM-accessible from this machine. |
 
 ### Local-machine rebuild (developer kind cluster)
 
@@ -732,7 +828,7 @@ pwsh -NoProfile -ExecutionPolicy Bypass -File scripts/research-lab/collect-datas
 
 ## 14. Current limitations (what would still need to land before external research claims)
 
-- **v5-large is staged but not yet collected.** Most live metrics still reflect v4-large.
+- **v5-large is collected AND validated (verified 2026-05-28).** All three post-collection validation passes return PASS on every run: `validate-dataset-run.ps1` 100/100, `validate_run_feature_distribution.py` (leakage canary) 100/100, `validate_global_family_coverage.py` PASS. The only remaining check is `kubectl -n chaos-testing get networkchaos,dnschaos,stresschaos` on the GCP VM to confirm no lingering chaos resources — not runnable from the analysis workstation.
 - All runs are same-cluster, single-region. No cross-region failures.
 - Shadow Jira issues are generated, not engineer-written.
 - Trace sampling is 100%; models trained on this may over-rely on span fan-out features.
