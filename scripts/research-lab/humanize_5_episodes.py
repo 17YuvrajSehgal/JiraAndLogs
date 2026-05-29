@@ -182,6 +182,7 @@ def _humanize_one(window_row: dict, runs_root: Path, llm: LLMConfig) -> TicketTi
         inputs=inputs,
         severity_seen=_coarse_public_severity(window_row["scenario_family"]),
         candidate_downstream_services=candidates,
+        triage_label=window_row.get("triage_label", ""),
     )
     return generate_full_timeline(bundle, llm=llm)
 
@@ -270,6 +271,16 @@ def main() -> int:
     pass_leak = leak_total == 0
     pass_variance = max_overlap < 0.7
     n_misattributed = sum(1 for t in timelines if t.is_misattributed)
+    n_closed_as_noise = sum(1 for t in timelines if t.closed_as_noise)
+    # We don't store WrongHypothesisPlan on the TicketTimeline (it only
+    # shapes prompts), but we can re-derive whether it fired by
+    # consulting the planner with the episode id. Cheaper than threading
+    # the plan onto the dataclass and keeps the schema stable.
+    from jira_humanizer.timeline_generator import plan_wrong_hypothesis
+    n_wrong_hypothesis = sum(
+        1 for t in timelines
+        if plan_wrong_hypothesis(t.source_episode_id).enabled
+    )
 
     # generation-manifest.json
     manifest = {
@@ -313,6 +324,14 @@ def main() -> int:
             "n_misattributed": n_misattributed,
             "misattribution_rate": (
                 n_misattributed / len(timelines) if timelines else 0.0
+            ),
+            "n_wrong_hypothesis": n_wrong_hypothesis,
+            "wrong_hypothesis_rate": (
+                n_wrong_hypothesis / len(timelines) if timelines else 0.0
+            ),
+            "n_closed_as_noise": n_closed_as_noise,
+            "closed_as_noise_rate": (
+                n_closed_as_noise / len(timelines) if timelines else 0.0
             ),
         },
         "versions": stamp_versions(),
@@ -358,6 +377,18 @@ def main() -> int:
                 f"**Misattribution active:** reporter blames "
                 f"`{t.components_seen[0]}`; redirect step corrects to the "
                 "actual root-cause service."
+            )
+        from jira_humanizer.timeline_generator import plan_wrong_hypothesis as _phyp
+        wh = _phyp(t.source_episode_id)
+        if wh.enabled:
+            lines.append(
+                f"**Wrong-hypothesis active:** hypothesis step pushes "
+                f"`{wh.wrong_theory}`; redirect step counters it."
+            )
+        if t.closed_as_noise:
+            lines.append(
+                "**Close-as-noise (Rule 5):** resolve step is a short "
+                "close note, NOT a fix description."
             )
         lines.append(f"**Log lines used as evidence:** {len(t.steps[0].evidence.log_quotes)}")
         lines.append(f"**Timeline length:** {len(t.steps)} steps")

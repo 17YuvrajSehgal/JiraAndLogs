@@ -42,7 +42,7 @@ from .symptom_map import SYMPTOM_MAP_VERSION, symptom_for
 from .timeline_schema import EvidenceSlice, StepKind, TimelineStep
 
 
-GENERATOR_VERSION = "v0.3.0-phase3-full-timeline"
+GENERATOR_VERSION = "v0.4.0-phase4-wronghyp-and-closeasnoise"
 
 
 # ---------------------------------------------------------------------------
@@ -389,6 +389,166 @@ def plan_misattribution(
     )
 
 
+# ---------------------------------------------------------------------------
+# Phase 4 — wrong-hypothesis injection (independent of misattribution)
+# ---------------------------------------------------------------------------
+
+
+WRONG_HYPOTHESIS_RATE = 0.15
+
+# Family-agnostic pool of plausible-sounding but wrong technical theories.
+# Each is a complete sentence the hypothesis persona can claim. The list
+# is intentionally diverse so different episodes get different wrong
+# theories — a model that learns "any wrong theory = redirect" would
+# otherwise collapse to memorizing one phrase.
+#
+# Sanitizer-audited via the smoke test below; if you add an entry, the
+# audit will catch a banned token immediately.
+_WRONG_HYPOTHESIS_POOL: tuple[str, ...] = (
+    "the load balancer in front of the service",
+    "the recent config rollout from yesterday",
+    "DNS resolution slowdowns inside the cluster",
+    "the rate limiter firing on bursty traffic",
+    "a memory-pressure spike on the host node",
+    "the service-mesh sidecar dropping connections",
+    "the auth token cache being stale",
+    "a slow upstream from the metrics exporter",
+)
+
+
+@dataclass
+class WrongHypothesisPlan:
+    """Decision + content for Rule "wrong-hypothesis" on one ticket.
+
+    Independent of MisattributionPlan: misattribution is about which
+    *service* gets blamed (components_seen). WrongHypothesisPlan is
+    about a wrong *technical theory* that the thread proposes — even
+    on the right service. They can co-occur.
+
+    `enabled=False` → hypothesis step runs normally (data-driven from
+    log evidence). When True, the hypothesis step is steered toward
+    `wrong_theory`, and the redirect step is emitted to correct it
+    (independently of whether misattribution also triggered it).
+    """
+
+    enabled: bool
+    wrong_theory: str = ""
+
+
+def _samples_wrong_hypothesis(episode_id: str) -> bool:
+    h = int(
+        hashlib.sha256(f"wronghyp::{episode_id}".encode("utf-8")).hexdigest()[:8],
+        16,
+    )
+    return (h / 0xFFFFFFFF) < WRONG_HYPOTHESIS_RATE
+
+
+def plan_wrong_hypothesis(episode_id: str) -> WrongHypothesisPlan:
+    """Sample whether this ticket gets a wrong-hypothesis arc and, if so,
+    which theory the hypothesizer takes a wrong turn on.
+
+    Deterministic per episode_id; separate seed namespace from
+    misattribution so a ticket can have both, neither, or one.
+    """
+    if not _samples_wrong_hypothesis(episode_id):
+        return WrongHypothesisPlan(enabled=False)
+    h = int(
+        hashlib.sha256(f"wronghyp-pick::{episode_id}".encode("utf-8")).hexdigest()[:8],
+        16,
+    )
+    return WrongHypothesisPlan(
+        enabled=True,
+        wrong_theory=_WRONG_HYPOTHESIS_POOL[h % len(_WRONG_HYPOTHESIS_POOL)],
+    )
+
+
+# ---------------------------------------------------------------------------
+# Phase 4 — close-as-noise tickets (Rule 5)
+# ---------------------------------------------------------------------------
+
+
+# Per-label sampling rates per LLM-Jira-enhancement.md §3 Rule 5.
+# `ticket_worthy` windows always resolve with a fix, never close-as-noise.
+_CLOSE_AS_NOISE_RATE_BY_LABEL: dict[str, float] = {
+    "noise": 0.35,
+    "borderline": 0.15,
+    "ticket_worthy": 0.0,
+}
+
+
+# Closure kinds the LLM is steered toward. Each is a real Jira closure
+# category that a real on-call queue produces in volume.
+_CLOSURE_KINDS: tuple[str, ...] = (
+    "cannot_reproduce",
+    "self_resolved",
+    "by_design",
+    "duplicate",
+)
+
+
+@dataclass
+class ClosurePlan:
+    """Decision + content for Rule 5 close-as-noise on one ticket.
+
+    `closure_kind`:
+      - "cannot_reproduce": closer can't reproduce the issue
+      - "self_resolved":    closer notes the issue resolved on its own
+      - "by_design":        closer says the behavior is expected
+      - "duplicate":        closer links to an earlier ticket id
+
+    `reference_ticket` is populated only for "duplicate" closures and
+    is a deterministic fake id (e.g. "TICKET-49213") so the same
+    episode always quotes the same prior ticket across re-runs.
+    """
+
+    closed_as_noise: bool
+    closure_kind: str = ""
+    reference_ticket: str = ""
+
+
+def _samples_close_as_noise(episode_id: str, triage_label: str) -> bool:
+    rate = _CLOSE_AS_NOISE_RATE_BY_LABEL.get((triage_label or "").lower(), 0.0)
+    if rate <= 0.0:
+        return False
+    h = int(
+        hashlib.sha256(f"closenoise::{episode_id}".encode("utf-8")).hexdigest()[:8],
+        16,
+    )
+    return (h / 0xFFFFFFFF) < rate
+
+
+def plan_closure(episode_id: str, triage_label: str) -> ClosurePlan:
+    """Decide whether this ticket closes as noise; if so pick a kind.
+
+    `triage_label` IS used here even though it's an eval-only field —
+    this decision happens at corpus-build time (not at LLM input time)
+    and the resulting ClosurePlan only influences which CLOSURE STYLE
+    the LLM is asked to write. The label itself never reaches the LLM
+    prompt (see _build_close_as_noise_prompt below).
+    """
+    if not _samples_close_as_noise(episode_id, triage_label):
+        return ClosurePlan(closed_as_noise=False)
+    h_kind = int(
+        hashlib.sha256(f"closenoise-kind::{episode_id}".encode("utf-8")).hexdigest()[:8],
+        16,
+    )
+    kind = _CLOSURE_KINDS[h_kind % len(_CLOSURE_KINDS)]
+    reference = ""
+    if kind == "duplicate":
+        # Fake but stable ticket id — range chosen so it looks like a
+        # real Jira key from a long-running project.
+        h_ref = int(
+            hashlib.sha256(f"closenoise-ref::{episode_id}".encode("utf-8")).hexdigest()[:8],
+            16,
+        )
+        reference = f"TICKET-{40000 + (h_ref % 19999)}"
+    return ClosurePlan(
+        closed_as_noise=True,
+        closure_kind=kind,
+        reference_ticket=reference,
+    )
+
+
 def _format_prior_thread(prior: list[TimelineStep], max_chars_per_step: int = 600) -> str:
     """Render the prior steps as a thread the LLM can see. We keep this
     short (~600 chars per step) so longer timelines don't blow past the
@@ -411,6 +571,8 @@ def _build_followup_prompt(
     ctx: ReportContext,
     prior: list[TimelineStep],
     misattr: MisattributionPlan,
+    wrong_hyp: "WrongHypothesisPlan | None" = None,
+    closure: "ClosurePlan | None" = None,
 ) -> tuple[str, str]:
     """Shared prompt scaffold for ack / hypothesis / redirect / resolve.
 
@@ -418,11 +580,24 @@ def _build_followup_prompt(
     (persona + step-specific guidance) and in the user message
     (step-specific framing of "what you're contributing"). Same
     sanitizer guardrails apply.
+
+    Phase 4 additions:
+      - `wrong_hyp` steers the hypothesis step toward a deliberately
+        wrong technical theory, and primes the redirect step to
+        correct it (independently of misattribution).
+      - `closure` swaps the resolve-step framing from "describe the
+        fix" to "close as noise/duplicate/by-design/cannot-reproduce".
     """
     persona = persona_for(persona_role)
     symptom = symptom_for(ctx.scenario_family, affected_service=ctx.affected_service)
 
     step_guidance = _STEP_GUIDANCE[step_kind]
+
+    # Phase 4 — closure swap on the resolve step. The "noise" closure
+    # personas write SHORT, dismissive close notes — not fix descriptions.
+    if step_kind == StepKind.RESOLVE and closure is not None and closure.closed_as_noise:
+        step_guidance = _CLOSURE_GUIDANCE[closure.closure_kind]
+
     system = (
         f"You are continuing a Jira ticket at a large e-commerce company. "
         f"Write as a {persona.role}: {persona.style_descriptor}\n\n"
@@ -459,21 +634,102 @@ def _build_followup_prompt(
         else:
             misattr_block = ""
 
+    # Phase 4 — wrong-hypothesis framing. Only steers the HYPOTHESIS
+    # step (proposing the wrong theory) and the REDIRECT step (so the
+    # senior can name the wrong theory and counter it).
+    wrong_hyp_block = ""
+    if wrong_hyp is not None and wrong_hyp.enabled:
+        if step_kind == StepKind.HYPOTHESIS:
+            wrong_hyp_block = (
+                f"\nFraming hint: from your angle on this, you suspect "
+                f"the issue is {wrong_hyp.wrong_theory}. State that as a "
+                f"working theory and suggest the next step you'd take to "
+                f"check it — don't be 100% confident, but commit to the "
+                f"direction.\n"
+            )
+        elif step_kind == StepKind.REDIRECT:
+            wrong_hyp_block += (
+                f"\nFraming hint: earlier comments propose that the issue "
+                f"is {wrong_hyp.wrong_theory}. After checking, that "
+                f"direction doesn't hold up — the logs in this ticket "
+                f"point elsewhere. Gently steer the thread away from "
+                f"that theory with a one-sentence reason.\n"
+            )
+
     prior_thread = _format_prior_thread(prior)
     safe_quotes = [q for q in ctx.evidence.log_quotes if not find_lab_tokens(q)]
     quotes_block = _format_log_quotes(safe_quotes)
+
+    # Phase 4 — close-as-noise framing for the resolve step. We tell the
+    # resolver what kind of close to write; the LLM produces the actual
+    # short close note.
+    closure_block = ""
+    if step_kind == StepKind.RESOLVE and closure is not None and closure.closed_as_noise:
+        if closure.closure_kind == "duplicate" and closure.reference_ticket:
+            closure_block = (
+                f"\nClosure style: this ticket is being closed as a "
+                f"duplicate of {closure.reference_ticket}. Reference that "
+                f"ticket and ask the reporter to follow there if it "
+                f"recurs. Two sentences max, no fix description.\n"
+            )
+        elif closure.closure_kind == "cannot_reproduce":
+            closure_block = (
+                "\nClosure style: this is being closed because no one "
+                "could reproduce the issue. Ask the reporter to reopen "
+                "with steps to reproduce if it happens again. Two "
+                "sentences max, no fix description.\n"
+            )
+        elif closure.closure_kind == "self_resolved":
+            closure_block = (
+                "\nClosure style: the issue appears to have resolved "
+                "itself before anyone could action it. Note this and "
+                "say monitoring will continue. Two sentences max, no "
+                "fix description.\n"
+            )
+        elif closure.closure_kind == "by_design":
+            closure_block = (
+                "\nClosure style: after investigation, this is expected "
+                "behavior — the user was on a deprecated flow or the "
+                "alert thresholds were too sensitive. Explain briefly "
+                "without naming a fix. Two sentences max.\n"
+            )
 
     user = (
         f"Symptom the reporter logged: {symptom.headline}\n"
         f"Urgency framing: {symptom.severity_phrasing}\n\n"
         f"Log lines available to anyone investigating:\n{quotes_block}\n"
-        f"{misattr_block}\n"
+        f"{misattr_block}"
+        f"{wrong_hyp_block}"
+        f"{closure_block}\n"
         f"Prior thread:\n{prior_thread}\n\n"
         f"Now write your contribution as {persona_role}. Just the comment "
         f"body, in your voice."
     )
     assert_clean(user, context=f"{step_kind}.user")
     return system, user
+
+
+# Per-closure-kind override of resolve's _STEP_GUIDANCE. These are
+# framed as positive instructions (not "don't describe a fix") so the
+# sanitizer accepts them.
+_CLOSURE_GUIDANCE: dict[str, str] = {
+    "cannot_reproduce": (
+        "Close the ticket as not-reproducible. State that you tried to "
+        "reproduce, couldn't, and ask the reporter to reopen with steps."
+    ),
+    "self_resolved": (
+        "Close the ticket noting that the issue resolved itself before "
+        "intervention. State you'll keep monitoring."
+    ),
+    "by_design": (
+        "Close the ticket explaining that the observed behavior is "
+        "expected. Briefly say why without proposing a code change."
+    ),
+    "duplicate": (
+        "Close the ticket as a duplicate of an earlier ticket. Reference "
+        "the prior id and ask the reporter to follow there."
+    ),
+}
 
 
 # Per-step instructions that ride along in the system prompt. Phrased
@@ -514,6 +770,8 @@ def _generate_followup_step(
     prior: list[TimelineStep],
     misattr: MisattributionPlan,
     llm: LLMConfig,
+    wrong_hyp: "WrongHypothesisPlan | None" = None,
+    closure: "ClosurePlan | None" = None,
 ) -> TimelineStep:
     """Single-step LLM call for any of the follow-up step kinds."""
     system, user = _build_followup_prompt(
@@ -522,6 +780,8 @@ def _generate_followup_step(
         ctx=ctx,
         prior=prior,
         misattr=misattr,
+        wrong_hyp=wrong_hyp,
+        closure=closure,
     )
     prompt_hash = _hash_prompt(system, user)
     messages = [
@@ -582,12 +842,18 @@ class FullTimelineInputs:
     Kept separate from ReportContext so a caller assembling a ticket
     doesn't need to know about misattribution mechanics — the
     generator decides per episode.
+
+    `triage_label` is consumed by Phase 4 for closure sampling (Rule 5):
+    `noise` and `borderline` windows can sample close-as-noise; reading
+    it never leaks because the label only drives a sampling decision
+    and is never injected into LLM prompts.
     """
 
     window_row: dict[str, Any]
     inputs: WindowEvidenceInputs
     severity_seen: str
     candidate_downstream_services: list[str]
+    triage_label: str = ""   # "ticket_worthy" / "borderline" / "noise"
 
 
 def generate_full_timeline(
@@ -597,10 +863,16 @@ def generate_full_timeline(
 ) -> "TicketTimeline":
     """Generate report -> ack -> hypothesis -> [redirect] -> resolve.
 
-    `redirect` is emitted only when misattribution was sampled — that's
-    the whole point of the step: correct the wrong attribution. When
-    misattribution is disabled the ticket goes report -> ack ->
-    hypothesis -> resolve.
+    Step list semantics:
+      - `redirect` is emitted when EITHER misattribution OR wrong-
+        hypothesis fires. Both samplers feed in their framing through
+        the prompt scaffold; the redirect persona's job is to correct
+        whatever wrong direction the thread took.
+      - When `closure.closed_as_noise` is True, the resolve step's
+        prompt is swapped from "describe the fix" to a Rule 5 close
+        note (cannot_reproduce / self_resolved / by_design / duplicate).
+        The timeline still ends in `resolve` — short close notes are
+        their own valid form.
 
     Returns a complete TicketTimeline ready to write to timeline.jsonl.
     """
@@ -616,6 +888,8 @@ def generate_full_timeline(
         correct_service=correct_service,
         candidate_downstream_services=bundle.candidate_downstream_services,
     )
+    wrong_hyp = plan_wrong_hypothesis(episode_id)
+    closure = plan_closure(episode_id, bundle.triage_label)
 
     # The reporter "sees" the misattributed service if misattribution
     # was sampled — that's the whole point of Rule 3. Otherwise they
@@ -635,8 +909,8 @@ def generate_full_timeline(
     )
 
     # 1. REPORT — reuses the existing Phase 2 generator. The Phase 2
-    #    prompt is symptom-driven so the misattribution flows through
-    #    via reporter_service in ctx.
+    #    prompt is symptom-driven so misattribution flows through via
+    #    reporter_service in ctx.
     report_step = generate_report_step(ctx, llm=llm)
     steps: list[TimelineStep] = [report_step]
 
@@ -650,11 +924,13 @@ def generate_full_timeline(
         ctx=ctx,
         prior=steps,
         misattr=misattr,
+        wrong_hyp=wrong_hyp,
         llm=llm,
     )
     steps.append(ack_step)
 
-    # 3. HYPOTHESIS — pick a persona that varies per episode.
+    # 3. HYPOTHESIS — pick a persona that varies per episode. The
+    #    wrong-hypothesis steering only fires here (and in redirect).
     hypothesis_role = _pick_hypothesis_persona(episode_id)
     hypothesis_step = _generate_followup_step(
         step_kind=StepKind.HYPOTHESIS,
@@ -665,14 +941,16 @@ def generate_full_timeline(
         ctx=ctx,
         prior=steps,
         misattr=misattr,
+        wrong_hyp=wrong_hyp,
         llm=llm,
     )
     steps.append(hypothesis_step)
 
-    # 4. REDIRECT — only when misattribution was sampled. When
-    #    misattribution=False, an explicit redirect step would feel
-    #    forced (nothing to redirect from). Skip it cleanly.
-    if misattr.enabled:
+    # 4. REDIRECT — emit when EITHER mechanism gave the thread a wrong
+    #    direction. The single redirect step is the senior-sre
+    #    correcting whichever wrong turn happened (or both — they can
+    #    co-occur on the same ticket).
+    if misattr.enabled or wrong_hyp.enabled:
         redirect_step = _generate_followup_step(
             step_kind=StepKind.REDIRECT,
             persona_role="senior-sre",
@@ -682,11 +960,14 @@ def generate_full_timeline(
             ctx=ctx,
             prior=steps,
             misattr=misattr,
+            wrong_hyp=wrong_hyp,
             llm=llm,
         )
         steps.append(redirect_step)
 
-    # 5. RESOLVE
+    # 5. RESOLVE — when close-as-noise was sampled, the prompt scaffold
+    #    swaps the resolve persona's instructions to a short close
+    #    note (no fix description).
     resolve_step = _generate_followup_step(
         step_kind=StepKind.RESOLVE,
         persona_role="fix-author",
@@ -696,6 +977,8 @@ def generate_full_timeline(
         ctx=ctx,
         prior=steps,
         misattr=misattr,
+        wrong_hyp=wrong_hyp,
+        closure=closure,
         llm=llm,
     )
     steps.append(resolve_step)
@@ -709,7 +992,7 @@ def generate_full_timeline(
         severity_seen=bundle.severity_seen,
         components_seen=components_seen,
         is_misattributed=misattr.enabled,
-        closed_as_noise=False,   # Phase 4 introduces Rule 5
+        closed_as_noise=closure.closed_as_noise,
         steps=steps,
         **versions,
     )
