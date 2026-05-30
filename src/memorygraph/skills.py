@@ -418,6 +418,7 @@ class EmbeddingSimilaritySkill(Skill):
         base_url: str = "http://localhost:1234",
         model: str = "text-embedding-nomic-embed-text-v1.5",
         blend_weight: float = 0.5,
+        progress_every: int = 100,
     ) -> None:
         self.base_url = base_url
         self.model = model
@@ -426,8 +427,19 @@ class EmbeddingSimilaritySkill(Skill):
         # similarity_scores. 0.5 is the cheap baseline; future work
         # could tune per-family.
         self.blend_weight = blend_weight
+        # Print a progress line every N run() calls so a piped run
+        # shows it's making forward progress instead of looking hung.
+        # Cost: one fputs per N windows; negligible.
+        self.progress_every = progress_every
         self._cache: dict[str, list[float]] = {}
         self._enabled: bool = False
+        # Lightweight counters surfaced in the progress logs so a
+        # reviewer can tell whether the skill is mostly embedding new
+        # corpus docs (cold cache) or just doing query embeds (warm).
+        self._n_run_calls = 0
+        self._n_query_embeds = 0
+        self._n_corpus_embeds = 0
+        self._start_ts: float | None = None
 
     def fit(self, train_windows: list[TriageWindow], feature_columns: list[str]) -> None:
         """Pre-embed every Jira memory entry we'll later see.
@@ -460,6 +472,16 @@ class EmbeddingSimilaritySkill(Skill):
         missing = [jid for jid in jira_ids if jid not in self._cache]
         if not missing:
             return
+        # Log a one-liner before the call — useful when the corpus is
+        # large and the first window triggers a big bulk embed that can
+        # take 30-60s on its own.
+        import sys, time
+        t0 = time.time()
+        print(
+            f"[{self.name}] bulk-embedding {len(missing)} memory docs ...",
+            file=sys.stderr,
+            flush=True,
+        )
         try:
             from comparison.retrievers import embed_via_lm_studio
             texts = [
@@ -467,12 +489,25 @@ class EmbeddingSimilaritySkill(Skill):
                 for jid in missing
             ]
             vecs = embed_via_lm_studio(self.base_url, self.model, texts)
-        except Exception:
+        except Exception as exc:
+            print(
+                f"[{self.name}] memory-embed failed: {type(exc).__name__}: {exc}; "
+                f"disabling skill for the rest of the run",
+                file=sys.stderr,
+                flush=True,
+            )
             self._enabled = False
             return
         for jid, vec in zip(missing, vecs):
             if vec:
                 self._cache[jid] = vec
+                self._n_corpus_embeds += 1
+        print(
+            f"[{self.name}] bulk-embedded {len(missing)} docs in "
+            f"{time.time() - t0:.1f}s (cache size now {len(self._cache)})",
+            file=sys.stderr,
+            flush=True,
+        )
 
     @staticmethod
     def _cosine(a: list[float], b: list[float]) -> float:
@@ -486,6 +521,10 @@ class EmbeddingSimilaritySkill(Skill):
         return dot / (na * nb)
 
     def run(self, ctx: AgentContext) -> SkillResult:
+        import sys, time
+        if self._start_ts is None:
+            self._start_ts = time.time()
+        self._n_run_calls += 1
         if not self._enabled or not ctx.candidate_jira_ids:
             return SkillResult(
                 self.name, True,
@@ -499,6 +538,7 @@ class EmbeddingSimilaritySkill(Skill):
             q_vec_list = embed_via_lm_studio(
                 self.base_url, self.model, [query_text]
             )
+            self._n_query_embeds += 1
         except Exception:
             return SkillResult(self.name, False, "query embed failed", {})
         if not q_vec_list or not q_vec_list[0]:
@@ -515,6 +555,22 @@ class EmbeddingSimilaritySkill(Skill):
                 (1.0 - self.blend_weight) * existing + self.blend_weight * sim
             )
             n_blended += 1
+
+        # Print a one-liner every progress_every windows so a piped run
+        # shows it's actually moving. Includes elapsed + avg/window so a
+        # reviewer can spot Nomic slowdowns.
+        if self.progress_every and (self._n_run_calls % self.progress_every == 0):
+            elapsed = time.time() - self._start_ts
+            avg = elapsed / max(self._n_run_calls, 1)
+            print(
+                f"[{self.name}] scored {self._n_run_calls} windows "
+                f"(query_embeds={self._n_query_embeds} "
+                f"corpus_embeds={self._n_corpus_embeds} "
+                f"cache={len(self._cache)}) "
+                f"elapsed={elapsed:.0f}s avg={avg:.2f}s/window",
+                file=sys.stderr,
+                flush=True,
+            )
         return SkillResult(
             self.name, True,
             f"blended dense similarity into {n_blended} candidates",

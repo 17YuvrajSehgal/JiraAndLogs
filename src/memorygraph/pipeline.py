@@ -175,21 +175,63 @@ class MemoryGraphPipeline(PipelineRunner):
                 builder.remove_window(window.window_id)
             return decision
 
+        import sys
+        # Progress cadence: print one line every PROGRESS_EVERY windows
+        # so a piped run shows it's moving instead of looking hung. The
+        # default of 100 means a 1755-window v5-large test split prints
+        # ~18 lines per pipeline — informative but not chatty.
+        PROGRESS_EVERY = 100
+
         if val:
-            val_decisions = [_score_one(w) for w in val]
+            print(
+                f"[{self.name}] scoring {len(val)} validation windows ...",
+                file=sys.stderr, flush=True,
+            )
+            t_val_start = time.time()
+            val_decisions: list[AgentDecision] = []
+            for i, w in enumerate(val):
+                val_decisions.append(_score_one(w))
+                if (i + 1) % PROGRESS_EVERY == 0 or (i + 1) == len(val):
+                    elapsed = time.time() - t_val_start
+                    avg = elapsed / (i + 1)
+                    remaining = (len(val) - i - 1) * avg
+                    print(
+                        f"[{self.name}] val {i+1}/{len(val)} "
+                        f"elapsed={elapsed:.0f}s avg={avg:.2f}s/w "
+                        f"eta={remaining:.0f}s",
+                        file=sys.stderr, flush=True,
+                    )
             val_scores = [d.triage_score for d in val_decisions]
             val_labels = [1 if w.triage_label == "ticket_worthy" else 0 for w in val]
             _p, _r, threshold = precision_at_fpr(val_scores, val_labels, target_fpr)
+            print(
+                f"[{self.name}] val done; threshold={threshold:.4f}",
+                file=sys.stderr, flush=True,
+            )
         else:
             threshold = 0.5
 
         # 3) Score the test set and emit predictions.
         t0 = time.time()
+        print(
+            f"[{self.name}] scoring {len(test)} test windows ...",
+            file=sys.stderr, flush=True,
+        )
         predictions: list[PipelinePrediction] = []
         decisions: list[AgentDecision] = []
-        for w in test:
+        for i, w in enumerate(test):
             decision = _score_one(w)
             decisions.append(decision)
+            if (i + 1) % PROGRESS_EVERY == 0 or (i + 1) == len(test):
+                elapsed = time.time() - t0
+                avg = elapsed / (i + 1)
+                remaining = (len(test) - i - 1) * avg
+                print(
+                    f"[{self.name}] test {i+1}/{len(test)} "
+                    f"elapsed={elapsed:.0f}s avg={avg:.2f}s/w "
+                    f"eta={remaining:.0f}s",
+                    file=sys.stderr, flush=True,
+                )
             decision_label = (
                 "ticket_worthy" if decision.triage_score >= threshold else "noise"
             )
