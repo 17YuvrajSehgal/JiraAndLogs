@@ -26,7 +26,11 @@ dist/
 
 temp-dir/
 
-data.tar.gz
+datav4.tar.gz
 .claude/*
 
-logs
+logs/
+pre_data_logs.tar.gz
+post_data_logs.tar.gz
+data_logs.tar.gz
+presentation.md
