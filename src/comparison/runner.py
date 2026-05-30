@@ -115,6 +115,35 @@ if _HAS_MEMORYGRAPH:
 
     KNOWN_PIPELINES["memorygraph_full"] = _MemoryGraphFull
 
+    # Phase 5.3 cross-train pair: identical to memorygraph_hybrid and
+    # memorygraph_full but with the Jira memory corpus swapped from the
+    # known-leaky legacy jira-memory-corpus.jsonl (100% contamination
+    # per the text-leakage canary, commit b704cb8) to the sanitizer-
+    # verified humanized corpus at jira-shadow-humanized-v1/bulk-20260529/.
+    # Running a comparison harness with both legacy and humanized
+    # variants side-by-side quantifies the leakage premium the legacy
+    # corpus was paying.
+    class _MemoryGraphHybridHumanized(MemoryGraphPipeline):
+        name = "memorygraph_hybrid_humanized"
+
+        def __init__(self) -> None:
+            super().__init__(
+                with_numeric=True, humanized_subdir="bulk-20260529",
+            )
+
+    KNOWN_PIPELINES["memorygraph_hybrid_humanized"] = _MemoryGraphHybridHumanized
+
+    class _MemoryGraphFullHumanized(MemoryGraphPipeline):
+        name = "memorygraph_full_humanized"
+
+        def __init__(self) -> None:
+            super().__init__(
+                with_numeric=True, with_embeddings=True,
+                humanized_subdir="bulk-20260529",
+            )
+
+    KNOWN_PIPELINES["memorygraph_full_humanized"] = _MemoryGraphFullHumanized
+
 
 @dataclass
 class ComparisonReport:

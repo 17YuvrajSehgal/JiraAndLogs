@@ -69,6 +69,7 @@ class MemoryGraphPipeline(PipelineRunner):
         top_k_matches: int = 5,
         with_numeric: bool = False,
         with_embeddings: bool = False,
+        humanized_subdir: str | None = None,
     ) -> None:
         self.planner_kind = planner
         self.llm_base_url = llm_base_url
@@ -79,6 +80,13 @@ class MemoryGraphPipeline(PipelineRunner):
         # Studio is unreachable — the chain still runs, just without
         # dense similarity. See skills.EmbeddingSimilaritySkill.
         self.with_embeddings = with_embeddings
+        # When set, swap the loaded ds.memory_corpus for the humanized
+        # corpus at jira-shadow-humanized-v1/<humanized_subdir>/timeline.jsonl
+        # before any skill sees it. Used for Phase 5.3 cross-train
+        # validation: legacy memory_corpus is known-leaky (see
+        # text-leakage canary, commit b704cb8); humanized is the
+        # production-safe replacement.
+        self.humanized_subdir = humanized_subdir
         # Set by train_and_predict so the CLI can pull them out for the
         # explanations.jsonl artifact + the graph-stats summary.
         self.last_decisions: list[AgentDecision] = []
@@ -106,6 +114,17 @@ class MemoryGraphPipeline(PipelineRunner):
         train = list(iter_split(ds.windows, ds.split_manifest, "train"))
         val = list(iter_split(ds.windows, ds.split_manifest, "validation"))
         test = list(iter_split(ds.windows, ds.split_manifest, "test"))
+
+        # Phase 5.3 — when humanized_subdir is set, replace ds.memory_corpus
+        # with the leak-free humanized corpus before any skill reads it.
+        # The legacy corpus is known to be 100% contaminated by the text-
+        # leakage canary; cross-train validation needs both available to
+        # quantify the leakage premium.
+        if self.humanized_subdir:
+            from .humanized_loader import load_humanized_corpus
+            ds.memory_corpus = load_humanized_corpus(
+                global_dir, humanized_subdir=self.humanized_subdir,
+            )
 
         # 1) Build the Jira side of the graph once. This is the
         #    expensive-ish step (still sub-second on v5-quick).
