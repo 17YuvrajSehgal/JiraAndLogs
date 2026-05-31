@@ -444,6 +444,80 @@ hours to ~30 seconds.
 **Verdict**: ship as the closing piece of Phase 5.3. Embeddings are
 not the move; we need a richer source-side query. Move A is next.
 
+### E7: Move A — characteristic log line query, BM25 v5-large (2026-05-31)
+
+**Hypothesis** (per ML-NEW-IDEAS.MD §8): replace the trace-aggregate
+`triage_evidence_text` source-side query with a characteristic log
+line signature extracted from `raw/loki/<window>.json` per
+`extract_log_signature` (commit `4c23ef7`). Target: humanized
+Recall@5 0.07 → ~0.15–0.20, matching what legacy BM25 got with lab
+vocabulary but achieved honestly.
+
+**Setup**: same as E5 but with `memorygraph_hybrid_humanized_logs`
+which adds the `LogSignatureSimilaritySkill` to the chain. Skill
+OVERWRITES `similarity_scores` with BM25 over `(signature, jira
+memory_text)` rather than blending — the experiment is "swap the
+query vocabulary."
+
+**Result**: **Statistically significant, directionally correct, but
+tiny in magnitude.**
+
+| Metric | E5 humanized (baseline) | E7 logs | Δ | p |
+| --- | ---: | ---: | ---: | ---: |
+| PR-AUC | 0.6062 | 0.6148 | **+0.0086** | **<0.001** |
+| ROC-AUC | 0.7865 | 0.7928 | +0.006 | — |
+| Precision@FPR=5% | 0.7171 | 0.7226 | +0.005 | 0.298 (n.s.) |
+| Recall@5 | 0.0659 | 0.0726 | **+0.0067** | **<0.001** |
+| MRR | 0.0998 | 0.1143 | +0.014 | — |
+| Orphan-recall gap | +12.7 (borderline) | +12.5 (borderline) | −0.2 | — |
+
+Operational: ~3 minutes total for both pipelines (no LLM in the loop;
+log-signature extraction averages ~0.045s/window after the per-window
+cache warms).
+
+**Coverage**: the signature was extractable for **36% of windows
+scored** (1,431 of 3,939); 39% returned empty (1,504); the rest had
+no candidates from the upstream component filter. The 39% empty rate
+is consistent with the dataset shape — `pre_fault_baseline` and
+`observation_window` windows correctly produce no signature because
+they have no error logs. **So Move A only changes the query for ~36%
+of windows; for the rest, the chain falls back to the lexical_
+similarity write.** That's the right behavior, but it caps the
+maximum lift Move A alone can produce.
+
+**Honest read — where the bottleneck actually lives**:
+
+The PR-AUC delta is significant but small (+0.009). The Recall@5
+delta is significant but very small (+0.007). The hypothesis that
+the source-side query was the bottleneck was *partially* correct —
+the lift is in the right direction — but the magnitude says
+something else is dominant: **the destination side is also speaking
+the wrong vocabulary.**
+
+The humanized memory_text is written by the `cs-agent` persona first
+(*"users seeing add-to-cart not persisting"*), not the `backend-eng`
+persona (*"dep_error op=GetCart err=RedisConnectionException"*).
+BM25 indexes the leading text heaviest; the leading text is
+customer-support language. Querying with engineer-vocabulary against
+customer-support language doesn't match well no matter how good the
+query is.
+
+**The natural follow-up** (step 6 from ML-NEW-IDEAS.MD §7 Suggested
+First PR — explicitly punted to "after Move A"): replace the
+placeholder `_pick_characteristic_lines` in
+`src/jira_humanizer/timeline_generator.py` with the same
+`extract_log_signature` extractor. Then every humanized ticket quotes
+**real engineer-vocabulary log lines** in its thread — both sides
+finally share vocabulary. That's the experiment that would actually
+test the full ML-NEW-IDEAS.MD Move-A thesis.
+
+**Verdict**: keep `memorygraph_hybrid_humanized_logs` as the modest
+honest improvement it is. Don't claim it as a retrieval breakthrough.
+The next experiment (E8?) regenerates the humanized corpus with real
+log line quoting and re-runs E7's comparison — that's where the
+hypothesized 0.07 → 0.15+ Recall@5 lift should actually materialize
+if Move A's design holds.
+
 ---
 
 ## What worked
