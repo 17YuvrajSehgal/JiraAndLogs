@@ -144,6 +144,26 @@ if _HAS_MEMORYGRAPH:
 
     KNOWN_PIPELINES["memorygraph_full_humanized"] = _MemoryGraphFullHumanized
 
+    # Move A from ML-NEW-IDEAS.MD: swap the trace-aggregate
+    # evidence_text query for a characteristic-log-lines query
+    # extracted from raw/loki/<window>.json. E5+E6 showed both BM25
+    # and Nomic dense embeddings cap at Recall@5 ≈ 0.07 on the clean
+    # humanized corpus when the source-side is evidence_text. This
+    # variant tests whether engineer-vocabulary on the source side
+    # unlocks meaningful retrieval. BM25-only (no Nomic) so the
+    # comparison stays fast and isolates the log-signature effect.
+    class _MemoryGraphHybridHumanizedLogs(MemoryGraphPipeline):
+        name = "memorygraph_hybrid_humanized_logs"
+
+        def __init__(self) -> None:
+            super().__init__(
+                with_numeric=True,
+                with_log_signatures=True,
+                humanized_subdir="bulk-20260529",
+            )
+
+    KNOWN_PIPELINES["memorygraph_hybrid_humanized_logs"] = _MemoryGraphHybridHumanizedLogs
+
 
 @dataclass
 class ComparisonReport:

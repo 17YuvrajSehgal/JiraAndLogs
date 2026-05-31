@@ -69,6 +69,7 @@ class MemoryGraphPipeline(PipelineRunner):
         top_k_matches: int = 5,
         with_numeric: bool = False,
         with_embeddings: bool = False,
+        with_log_signatures: bool = False,
         humanized_subdir: str | None = None,
     ) -> None:
         self.planner_kind = planner
@@ -80,6 +81,13 @@ class MemoryGraphPipeline(PipelineRunner):
         # Studio is unreachable — the chain still runs, just without
         # dense similarity. See skills.EmbeddingSimilaritySkill.
         self.with_embeddings = with_embeddings
+        # When True, LogSignatureSimilaritySkill replaces the trace-
+        # aggregate evidence_text query with characteristic log lines
+        # extracted from raw/loki/<window>.json. Move A from
+        # ML-NEW-IDEAS.MD. Requires runs_root to be passed to
+        # train_and_predict so the skill can find the per-window
+        # Loki dumps.
+        self.with_log_signatures = with_log_signatures
         # When set, swap the loaded ds.memory_corpus for the humanized
         # corpus at jira-shadow-humanized-v1/<humanized_subdir>/timeline.jsonl
         # before any skill sees it. Used for Phase 5.3 cross-train
@@ -99,6 +107,7 @@ class MemoryGraphPipeline(PipelineRunner):
         return RulePlanner(
             with_numeric=self.with_numeric,
             with_embeddings=self.with_embeddings,
+            with_log_signatures=self.with_log_signatures,
         )
 
     def train_and_predict(
@@ -108,7 +117,9 @@ class MemoryGraphPipeline(PipelineRunner):
         *,
         target_fpr: float = 0.05,
     ) -> PipelineResult:
-        del runs_root  # this pipeline does not need raw runs
+        # NB: runs_root was previously unused; the log-signature variant
+        # (with_log_signatures=True) needs it to read raw/loki/<window>.json
+        # per the Move A design (ML-NEW-IDEAS.MD).
 
         ds = load_dataset(global_dir)
         train = list(iter_split(ds.windows, ds.split_manifest, "train"))
@@ -153,6 +164,15 @@ class MemoryGraphPipeline(PipelineRunner):
         gs_skill = registry.get("graph_score")
         if gs_skill is not None and hasattr(gs_skill, "fit_on_pairs"):
             gs_skill.fit_on_pairs(train, memory_by_id_pre, builder)
+
+        # LogSignatureSimilaritySkill needs runs_root to find raw/loki/
+        # files per window. The skill silently disables itself when
+        # runs_root is None, so this is safe even when the variant
+        # isn't enabled — but the pipeline only requests it when
+        # with_log_signatures=True, so the skill is unused otherwise.
+        log_sig_skill = registry.get("log_signature_similarity")
+        if log_sig_skill is not None and self.with_log_signatures:
+            log_sig_skill.runs_root = runs_root
 
         agent = Agent(
             builder.graph,

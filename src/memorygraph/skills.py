@@ -379,6 +379,163 @@ class LexicalSimilaritySkill(Skill):
         )
 
 
+class LogSignatureSimilaritySkill(Skill):
+    """BM25 over the candidate Jira memory_text using the window's
+    characteristic log lines as the query, replacing the trace-
+    aggregate evidence_text query.
+
+    Move A from ML-NEW-IDEAS.MD. E5 + E6 showed that on the clean
+    humanized corpus, both BM25 and Nomic dense embeddings cap at
+    Recall@5 ≈ 0.07 when the source-side query is `evidence_text`.
+    The hypothesis: an engineer-vocabulary query against natural-
+    language Jira memory text should score meaningfully higher
+    because the two sides finally share the same words.
+
+    Output policy: OVERWRITE similarity_scores rather than blend.
+    The whole point is "swap the query vocabulary"; running both
+    queries and blending would dilute the test.
+    """
+
+    name = "log_signature_similarity"
+    description = (
+        "BM25 over candidate Jira memory_text using the window's "
+        "characteristic log lines (top-K rare error templates) as the "
+        "query, replacing the trace-aggregate evidence_text query."
+    )
+    input_schema = {
+        "reads": ["window", "candidate_jira_ids", "visible_jira"],
+        "writes": ["similarity_scores"],
+    }
+
+    def __init__(
+        self,
+        *,
+        runs_root: Any = None,
+        top_k_lines: int = 10,
+        k1: float = 1.5,
+        b: float = 0.75,
+        progress_every: int = 100,
+    ) -> None:
+        # runs_root is set by the pipeline (or left None to silently
+        # disable the skill — same fail-soft pattern as EmbeddingSimilarity).
+        self.runs_root = runs_root
+        self.top_k_lines = top_k_lines
+        self.k1 = k1
+        self.b = b
+        self.progress_every = progress_every
+        # Per-window cache so re-querying the same window (val + test)
+        # doesn't re-parse the raw Loki dump.
+        self._sig_cache: dict[str, list[str]] = {}
+        self._n_run_calls = 0
+        self._n_signatures_extracted = 0
+        self._n_empty_signatures = 0
+        self._start_ts: float | None = None
+
+    def _signature_for(self, window: TriageWindow) -> list[str]:
+        cache_key = window.window_id
+        if cache_key in self._sig_cache:
+            return self._sig_cache[cache_key]
+        if self.runs_root is None:
+            self._sig_cache[cache_key] = []
+            return []
+        from pathlib import Path as _Path
+        runs_root = _Path(self.runs_root)
+        loki_path = (
+            runs_root / window.dataset_run_id / "raw" / "loki"
+            / f"{window.window_id}.json"
+        )
+        from .log_signatures import extract_log_signature
+        sig = extract_log_signature(loki_path, top_k=self.top_k_lines)
+        self._sig_cache[cache_key] = sig
+        if sig:
+            self._n_signatures_extracted += 1
+        else:
+            self._n_empty_signatures += 1
+        return sig
+
+    def _bm25_scores(self, query: list[str], docs: list[list[str]]) -> list[float]:
+        n = len(docs)
+        if n == 0:
+            return []
+        doc_lens = [len(d) for d in docs]
+        avg = sum(doc_lens) / n
+        tfs = [Counter(d) for d in docs]
+        df: Counter[str] = Counter()
+        for d in docs:
+            for t in set(d):
+                df[t] += 1
+        idf = {t: math.log((n - c + 0.5) / (c + 0.5) + 1) for t, c in df.items()}
+        scores = [0.0] * n
+        for q in query:
+            i = idf.get(q, 0.0)
+            if i == 0:
+                continue
+            for di, tf in enumerate(tfs):
+                f = tf.get(q, 0)
+                if f == 0:
+                    continue
+                norm = self.k1 * (1 - self.b + self.b * doc_lens[di] / avg)
+                scores[di] += i * (f * (self.k1 + 1)) / (f + norm)
+        return scores
+
+    def run(self, ctx: AgentContext) -> SkillResult:
+        import sys, time
+        if self._start_ts is None:
+            self._start_ts = time.time()
+        self._n_run_calls += 1
+
+        if self.runs_root is None:
+            return SkillResult(
+                self.name, True, "disabled (no runs_root configured)",
+                {"enabled": False},
+            )
+        if not ctx.candidate_jira_ids:
+            return SkillResult(self.name, True, "no candidates", {})
+
+        sig_lines = self._signature_for(ctx.window)
+        if not sig_lines:
+            # No error-level lines in this window — leave existing
+            # similarity_scores untouched so the chain still has signal
+            # from lexical_similarity / embedding_similarity.
+            return SkillResult(
+                self.name, True, "no error-level lines in window",
+                {"n_sig_lines": 0},
+            )
+
+        query = _tokenize(" ".join(sig_lines))
+        docs = [
+            _tokenize(
+                f"{ctx.visible_jira[cid].memory_text} "
+                f"{ctx.visible_jira[cid].resolution_notes}"
+            )
+            for cid in ctx.candidate_jira_ids
+        ]
+        raw_scores = self._bm25_scores(query, docs)
+        peak = max(raw_scores) if raw_scores else 0.0
+        # OVERWRITE similarity_scores with the log-signature BM25 scores.
+        # Replacing the query vocabulary is the whole point of this
+        # experiment.
+        for cid, s in zip(ctx.candidate_jira_ids, raw_scores):
+            ctx.similarity_scores[cid] = (s / peak) if peak > 0 else 0.0
+
+        if self.progress_every and (self._n_run_calls % self.progress_every == 0):
+            elapsed = time.time() - self._start_ts
+            avg = elapsed / max(self._n_run_calls, 1)
+            print(
+                f"[{self.name}] scored {self._n_run_calls} windows "
+                f"(sig_extracted={self._n_signatures_extracted} "
+                f"empty={self._n_empty_signatures}) "
+                f"elapsed={elapsed:.0f}s avg={avg:.3f}s/window",
+                file=sys.stderr, flush=True,
+            )
+        return SkillResult(
+            self.name, True,
+            f"replaced similarity_scores with log-signature query "
+            f"({len(sig_lines)} lines, peak={peak:.2f})",
+            {"n_sig_lines": len(sig_lines), "peak_score": peak},
+        )
+
+
 class EmbeddingSimilaritySkill(Skill):
     """Dense semantic similarity over the filtered candidate pool.
 
@@ -1015,6 +1172,7 @@ def default_skill_registry() -> dict[str, Skill]:
         SeverityAlignSkill.name: SeverityAlignSkill(),
         ErrorClassAlignSkill.name: ErrorClassAlignSkill(),
         LexicalSimilaritySkill.name: LexicalSimilaritySkill(),
+        LogSignatureSimilaritySkill.name: LogSignatureSimilaritySkill(),
         EmbeddingSimilaritySkill.name: EmbeddingSimilaritySkill(),
         GraphScoreSkill.name: GraphScoreSkill(),
         NumericBlendSkill.name: NumericBlendSkill(),
