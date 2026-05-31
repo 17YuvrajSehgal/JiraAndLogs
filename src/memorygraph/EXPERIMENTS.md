@@ -24,30 +24,37 @@ or referenced in writeups. Keep entries dated, brief, and number-backed.
 | memorygraph_hybrid + learned kind weights (no embed) | 0.4724 | 0.6519 | 0.6923 | **No headline lift** — see E4 discussion |
 | `memorygraph_full` (+ Nomic dense embeddings + learned weights) | 0.4814 | 0.6766 | 0.6923 | **+0.01 PR-AUC** over hybrid |
 
-**v5-large (1,755 test windows, n=2 experiments — E5 only so far)**:
+**v5-large (1,755 test windows, n=2 experiments — E5 BM25 + E6 +Nomic)**:
 
 | Variant | PR-AUC | ROC-AUC | Recall@5 | MRR | Notes |
 | --- | ---: | ---: | ---: | ---: | --- |
-| `memorygraph_hybrid` (legacy Jira memory) | 0.6599 | 0.8036 | 0.2018 | 0.2499 | Leak-contaminated baseline |
-| `memorygraph_hybrid_humanized` (humanized Jira memory) | 0.6062 | 0.7865 | 0.0659 | 0.0998 | **Cross-train validation: humanizer worked** |
-| Δ (humanized − legacy) | **−0.054** | −0.017 | **−0.136** | **−0.150** | Triage modestly inflated, retrieval heavily inflated |
-| baseline: `hist_gradient_boosting_numeric` | TBD | TBD | 0.0000 | — | Pure numeric ceiling — no retrieval |
+| `memorygraph_hybrid` (legacy, BM25) | 0.6599 | 0.8036 | 0.2018 | 0.2499 | Leak-contaminated baseline |
+| `memorygraph_hybrid_humanized` (BM25) | 0.6062 | 0.7865 | 0.0659 | 0.0998 | E5 cross-train: humanizer worked |
+| Δ E5 (humanized − legacy) | **−0.054** | −0.017 | **−0.136** | **−0.150** | Triage modestly inflated, retrieval heavily inflated |
+| `memorygraph_full` (legacy, BM25+Nomic) | 0.6548 | 0.7956 | 0.2029 | 0.2552 | E6 +Nomic on legacy |
+| `memorygraph_full_humanized` (BM25+Nomic) | 0.6045 | 0.7784 | **0.0668** | 0.1023 | **E6: no rescue** — embeddings ≈ no-op |
+| Δ E6 (humanized − legacy) | −0.050 | −0.017 | −0.136 | −0.153 | Identical to E5 deltas — leakage premium robust across methods |
 
-(v5-quick headlines from the global dataset, test split = 450 windows.
-v5-large headlines from the v5-large global dataset, test split = 1,755
-windows. Bootstrap 95% CIs in the per-experiment sections below.)
+**Net read after E5 + E6 (cross-train validation on v5-large)**:
 
-**Net read after E5 (cross-train validation on v5-large)**: the
-NumericBlend still does the heavy lifting for triage. The legacy
-Jira corpus was inflating retrieval Recall@5 and MRR by **2-3×** via
-lab-vocabulary leakage that BM25 trivially exploited; on the
-sanitizer-verified humanized corpus, BM25 retrieval drops to chance
-levels. The triage premium was small (~5 PR-AUC pts). The orphan-
-recall-gap verdict shifted from `pattern_matching` (24.7 pts) on
-legacy to `borderline` (12.7 pts) on humanized — the humanized
-model is meaningfully more robust to novel windows. **This is the
-strongest piece of evidence yet that the jira_humanizer pipeline
-delivered what it promised.**
+1. **NumericBlend still does the triage heavy lifting.** The triage-side
+   leakage premium is small (~5 PR-AUC pts on either E5 or E6).
+2. **The legacy Jira corpus was inflating retrieval Recall@5 and MRR
+   by 2-3×** via lab-vocabulary leakage. Sanitizer-verified humanized
+   corpus drops to chance levels (~0.07) on both BM25 and BM25+Nomic.
+3. **Dense embeddings did not rescue what BM25 lost.** Both methods
+   score ~0.07 Recall@5 on the humanized corpus. The bottleneck is the
+   source-side query (trace-aggregate `evidence_text`), not the
+   similarity engine. **Move A** (characteristic log line extractor,
+   per `ML-NEW-IDEAS.MD`) is the natural next experiment.
+4. **Orphan-recall verdict shifts from `pattern_matching` to
+   `borderline` on both humanized variants** — the model is
+   meaningfully more robust to novel windows when it can't lean on
+   lab vocabulary as a memory-match oracle.
+
+**These two experiments together are the strongest evidence yet that
+the jira_humanizer pipeline delivered what it promised** AND that the
+next move is logs, not more similarity engineering.
 
 ---
 
@@ -366,7 +373,7 @@ humanized-corpus numbers as the headline going forward; the legacy
 numbers remain in the doc as a **baseline that quantifies the
 leakage premium**.
 
-### E6: cross-train with embeddings — `memorygraph_full` legacy vs humanized (2026-05-30, in flight)
+### E6: cross-train with embeddings — `memorygraph_full` legacy vs humanized (2026-05-30, complete)
 
 **Hypothesis**: dense Nomic embeddings should rescue some of the
 retrieval lift BM25 lost to leakage stripping because they read
@@ -374,23 +381,68 @@ natural-language semantic similarity, not just token overlap.
 
 **Setup**: same as E5 but using `memorygraph_full` vs
 `memorygraph_full_humanized`. Adds Nomic dense embedding via LM
-Studio over the filtered candidate pool, blended 50/50 with BM25
-into `similarity_scores`.
+Studio (`text-embedding-nomic-embed-text-v1.5`) over the filtered
+candidate pool, blended 50/50 with BM25 into `similarity_scores`.
+Predicted outcomes documented before the run completed:
+- *Rescue*: humanized Recall@5 climbs back to ~0.20+.
+- *Partial rescue*: humanized Recall@5 between 0.10–0.18.
+- *No rescue*: humanized Recall@5 stays at ~0.07.
 
-**Expected scenarios** (will be filled in when the run completes):
-- *Rescue*: humanized Recall@5 climbs back to ~0.20+. Dense
-  similarity preserved the real signal; BM25's drop was purely about
-  losing lab-vocabulary cheats. Best outcome.
-- *Partial rescue*: humanized Recall@5 between 0.10–0.18. Embeddings
-  recover some but not all of the lost retrieval.
-- *No rescue*: humanized Recall@5 stays at ~0.07. The triage-memory
-  retrieval task is genuinely hard on natural-language text and
-  needs a learned reranker or a different memory representation
-  (e.g. Move A's characteristic-log-line signature from
-  ML-NEW-IDEAS.MD).
+**Result**: **No rescue.** Dense embeddings added essentially
+nothing on either corpus.
 
-**Result**: TBD — run is in progress as of 2026-05-30. Numbers will
-land here when the comparison harness completes.
+| Metric | E5 BM25 legacy | E5 BM25 humanized | E6 +Nomic legacy | E6 +Nomic humanized |
+| --- | ---: | ---: | ---: | ---: |
+| PR-AUC | 0.6599 | 0.6062 | 0.6548 | 0.6045 |
+| ROC-AUC | 0.8036 | 0.7865 | 0.7956 | 0.7784 |
+| Precision@FPR=5% | 0.7516 | 0.7171 | 0.7580 | 0.7286 |
+| Recall@5 | 0.2018 | 0.0659 | 0.2029 | **0.0668** |
+| MRR | 0.2499 | 0.0998 | 0.2552 | 0.1023 |
+| Orphan-recall gap | +24.7 (pattern_matching) | +12.7 (borderline) | +24.8 (pattern_matching) | +12.4 (borderline) |
+
+Bootstrap-CI pairwise deltas (E6 only, p<0.001 for all three):
+- PR-AUC delta: −0.0503 [−0.0685, −0.0223]
+- Precision@FPR=5%: −0.0294 [−0.0417, −0.0195]
+- Recall@5: −0.1361 [−0.1734, −0.1006]
+
+**Three sharp reads**:
+
+1. **Dense embeddings added essentially nothing on either corpus.**
+   Recall@5 went 0.2018 → 0.2029 on legacy (+0.001) and 0.0659 → 0.0668
+   on humanized (+0.001). PR-AUC deltas were < 0.01 in either
+   direction. The Nomic 50/50 blend is statistically indistinguishable
+   from BM25 alone at this corpus size and configuration.
+
+2. **The leakage premium is robust across similarity methods.** The
+   legacy-vs-humanized Recall@5 delta is −0.136 in both E5 and E6.
+   Embeddings didn't reduce the legacy lift and didn't recover any
+   humanized signal. The lab vocabulary that BM25 was riding on
+   dominates the embedding space too — Nomic happily encodes
+   `scenario-cart-redis-degradation-critical` and trace_id strings
+   as discriminative tokens, exactly like BM25 does.
+
+3. **Move A is now the obvious next experiment.** Both retrieval
+   methods score Recall@5 ≈ 0.07 on the clean humanized corpus.
+   That's the floor of what a window-side query of
+   `triage_evidence_text` (trace-heavy aggregate) can deliver
+   against natural-language Jira memory text — regardless of
+   whether the similarity is lexical or semantic. The bottleneck
+   isn't the retrieval engine, it's the **source-side query
+   vocabulary**. Move A (characteristic log line extractor, per
+   ML-NEW-IDEAS.MD) replaces the trace-aggregate query with words a
+   human would have used in a ticket. That's the single thing left
+   to try that hasn't been tested.
+
+**Operational cost**: ~75 min per pipeline = ~2.5 hours total
+unattended on local Nomic. Of those 2.5 hours, ~95% was redundant
+embedding work with E5 (same window queries against the same memory
+docs, just hashed differently because the corpus content differs).
+**The O6 persistent embedding cache becomes urgent if we keep doing
+embedding-based experiments** — would cut subsequent runs from 2.5
+hours to ~30 seconds.
+
+**Verdict**: ship as the closing piece of Phase 5.3. Embeddings are
+not the move; we need a richer source-side query. Move A is next.
 
 ---
 
@@ -578,4 +630,5 @@ Smoke tests (no external services required):
 | 2026-05-27 | M4 fix: fit_on_pairs takes builder (not graph) so transient window nodes are added during fit, and BRIDGEABLE_KINDS is used as the kind-iteration whitelist (was leaking module docstrings into graph-stats). |
 | 2026-05-30 | **M5 humanized-corpus swap**: `humanized_loader.py` + `humanized_subdir` flag on `MemoryGraphPipeline` + two new KNOWN_PIPELINES entries (`memorygraph_hybrid_humanized`, `memorygraph_full_humanized`). Lets the comparison harness A/B legacy-vs-humanized memory corpus with bootstrap CIs. Commit `e40a400`. |
 | 2026-05-30 | **E5 — cross-train BM25 v5-large**: legacy `memorygraph_hybrid` PR-AUC 0.66 vs humanized 0.61 (Δ −0.054 p<0.001); Recall@5 0.20 vs 0.07 (Δ −0.136 p<0.001); orphan gap +24.7 → +12.7 (pattern_matching → borderline). Triage was mostly real, retrieval was heavily inflated by lab vocabulary, humanized variant is meaningfully more robust on orphan windows. |
-| 2026-05-30 | **E6 — cross-train Nomic v5-large** (in flight): same as E5 but `memorygraph_full` vs `memorygraph_full_humanized`. Tests whether dense embeddings rescue the retrieval lift BM25 lost to leakage stripping. Results will be appended when the run finishes. |
+| 2026-05-30 | **E6 — cross-train Nomic v5-large** (complete): same as E5 but `memorygraph_full` vs `memorygraph_full_humanized`. Result: **no rescue** — Nomic embeddings added essentially nothing on either corpus (Recall@5 +0.001 on both); legacy advantage is robust to similarity method (delta −0.136 identical to E5). The bottleneck is the source-side query, not the retrieval engine. Move A is the next move. |
+| 2026-05-30 | **Progress logging shipped** (commit `b18982f`): flush-on-write progress prints in EmbeddingSimilaritySkill + MemoryGraphPipeline so piped runs surface forward progress instead of looking hung. Added in response to E6's pre-fix 2h+ silent-pipe run. |
