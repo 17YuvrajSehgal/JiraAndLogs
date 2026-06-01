@@ -736,8 +736,19 @@ verifiable. Already-built infrastructure noted with **[BUILT]**.
    distractor ticket per injection" — drops once §13.9 #3 followup
    minting lands. Verified on `bulk-20260531`: **347/347 covered
    (100%), 0 missing, 0 extras**.
-5. **Distractor generation** — TAWOS-sampled + cross-arch + in-arch
-   distractor pipelines, mixed into the final V2 corpus.
+5. **[BUILT 2026-06-01] Distractor generation** —
+   `src/jira_humanizer/distractors.py` library +
+   `scripts/research-lab/mint_v2_distractors.py` driver. Three
+   sourcing strategies per §13.5: TAWOS-sampled (real engineer prose
+   from `tawos.issue`, project nouns scrubbed, no LLM), in-arch-
+   never-happened (LLM-generated fake incidents in our services,
+   hand-curated symptom phrases), cross-arch (LLM-generated incidents
+   in components we don't have). Output goes to a SEPARATE subdir
+   `jira-shadow-humanized-v2-distractors/mint-<UTC date>/` so the
+   real-ticket corpus stays clean. Verified on `mint-20260601`:
+   **110 distractors minted (60 TAWOS + 25 in-arch + 25 cross-arch)**,
+   24.1% of the combined 457-ticket corpus (target 20-30% ✓), 0 LLM
+   errors, 0 leak rejections. See §14.11 for run-level stats.
 6. **Retrieval benchmark E8** — train memorygraph on V2, log to
    `src/memorygraph/EXPERIMENTS.md`, compare against E7 ceiling.
 
@@ -1587,21 +1598,14 @@ rewrite was supposed to produce.
 
 ### 14.9 What's still pending in §13.8
 
-V2 corpus is shippable as-is for **internal benchmarking** and for the
-forthcoming retrieval evaluation. The remaining work for the full V2
-research story:
-
-- **Step 4 — Coverage assertion.** Formal manifest-level check that
-  every injection_id in `episodes.jsonl` has at least one ticket in
-  the timeline. In practice we hit 347/347 on this run; we just
-  need the build-time assert wired in.
-- **Step 5 — Distractor generation.** ~25% of the final corpus
-  should be distractor tickets (TAWOS-sampled, cross-arch, in-arch-
-  never-happened) per §13.5. Not built yet.
-- **Step 6 — Retrieval benchmark E8.** Train memorygraph on V2,
-  compare top-1 / top-3 retrieval against the V1 corpus and the E7
-  ceiling. The hypothesis is that the `description_code` engineer-
-  vocabulary channel lifts BM25 past where V1's cs-voice plateau'd.
+- **Step 4 — Coverage assertion** — BUILT 2026-06-01. See above.
+- **Step 5 — Distractor generation** — BUILT 2026-06-01. See §14.11.
+- **Step 6 — Retrieval benchmark E8.** Train memorygraph on V2 +
+  distractors, compare top-1 / top-3 retrieval against the V1 corpus
+  and the E7 ceiling. The hypothesis is that the `description_code`
+  engineer-vocabulary channel lifts BM25 past where V1's cs-voice
+  plateau'd. With the distractor set in place, the headline metric is
+  now **top-1 precision against the distractor set** per §13.6.
 
 ### 14.10 Provenance
 
@@ -1620,3 +1624,124 @@ To re-derive any single ticket: read the corresponding
 `generate_full_timeline` with the same generator version. Modulo
 LLM nondeterminism (~10% lexical variance at temperature=0.7), the
 ticket will reproduce.
+
+### 14.11 Distractor mint — `mint-20260601` (§13.5 / §13.8 step 5)
+
+Distractors are well-formed Jira issues describing incidents that
+**never happened** in our v5-large run. They evaluate retrieval
+PRECISION (does the agent retrieve the right ticket per window, or
+does a plausible-looking distractor confuse it?) — coverage alone
+can't measure this. Spec rationale and sourcing strategy live in
+§13.5; resolved persona / time-resample policy in §13.9 #1 and #2.
+
+**Code:** `src/jira_humanizer/distractors.py` (library) +
+`scripts/research-lab/mint_v2_distractors.py` (driver). Output:
+`data/derived/global/<id>/jira-shadow-humanized-v2-distractors/mint-20260601/`.
+Distractors go in a SEPARATE subdir so the real-ticket corpus stays
+clean — mix them at retrieval-evaluation time, the agent never sees
+the `is_distractor` flag.
+
+**Run summary:**
+
+| | |
+| --- | --- |
+| Distractor generator version | `v2.1.0-distractors-step5` |
+| Total distractors minted | **110 / 110** (target met) |
+| TAWOS-sampled | 60 (real prose, no LLM) |
+| In-arch-never-happened | 25 (LLM-generated, our services) |
+| Cross-arch | 25 (LLM-generated, components we don't have) |
+| Combined real + distractor corpus | 347 + 110 = **457 tickets** |
+| Distractor share of combined corpus | **24.1%** (§13.5 target: 20-30% ✓) |
+| LLM calls (in-arch + cross-arch only) | 150 (75 + 75) |
+| LLM tokens total | 37,316 (31,693 prompt + 5,623 completion) |
+| LLM wall time | 14.7 min (448s + 432s) |
+| Hard errors | 0 |
+| Leak rejections | 0 |
+
+**TAWOS sourcing details:** pulled from
+`tawos.issue WHERE Project_Key IN ('SERVER','MESOS','MULE','FAB')`
+with `Type IN ('Bug','Defect')` and description length 200-1500
+chars. Project-specific nouns scrubbed via word-boundary regex
+(see `_TAWOS_SCRUB_RULES` in `distractors.py`):
+
+| Source noun | Scrubbed to |
+| --- | --- |
+| `MongoDB`, `mongod` | `datastore`, `datastore daemon` |
+| `Mesos` | `scheduler` |
+| `Mule` | `integration platform` |
+| `Hyperledger Fabric` | `blockchain platform` |
+| `SERVER-NNN` / `MESOS-NNN` / etc. | `TICKET-XXXXX` |
+| `<USER>` / `<EMAIL>` | left as-is (TAWOS already anonymized) |
+
+Each row gets a final leak check on its user-visible text (NOT JSON
+keys, after we hit a false-positive on the field name
+`source_dataset_run_id`). 60/60 TAWOS rows passed the leak gate.
+
+**LLM-distractor structure:** 3-step shape (`report` → `ack` →
+`resolve`) — no `hypothesis` step because there's no real telemetry
+to ground one. Reporter persona is severity-weighted same as real
+V2 tickets (high → 70% oncall-sre). Both LLM-distractor categories
+hit 25/25 with zero leak rejections — the `_redact_lab_tokens`
+patch from §14.4 covers these prompts too.
+
+**Source-noun scrubbing rationale.** The §13.5 spec calls TAWOS
+distractors the "gold standard" because the voice is real engineer
+prose. Replacing `MongoDB` with `datastore` keeps the voice
+realistic (any datastore-shaped product would have the same kinds
+of issues) while preventing the model from learning "real ticket
+mentions 'MongoDB' → distractor." Cross-arch distractors keep their
+component names (`kafka-analytics`, `spark-cluster`, etc.) because
+the whole point is that they describe components we don't have —
+the model needs to learn that "no Kafka in our system" + "fake
+Kafka ticket" = distractor.
+
+**Resolved decisions visible in the mint:**
+
+- Per §13.9 #1 — distractors share the V1 persona catalog but use a
+  separate avatar-seed namespace (`distractor::` salt prefix) so the
+  same name doesn't appear on real cart-redis tickets AND fake Kafka
+  distractors. Visible in the corpus: 0 avatar collisions across the
+  457-ticket combined set.
+- Per §13.9 #2 — distractor `resolution_time_s` is resampled from
+  the same §13.1 empirical distribution real V2 tickets use (full
+  range, minutes to a year). A model can't shortcut on
+  `resolution_time > threshold = distractor` because the distribution
+  is shared.
+
+**Resolution outcome distribution on distractors:**
+
+| Outcome | TAWOS distractors | LLM distractors | Total |
+| --- | ---: | ---: | ---: |
+| Fixed | 56 | 31 | 87 (79.1%) |
+| Won't Fix | 2 | 9 | 11 (10.0%) |
+| Duplicate | 1 | 4 | 5 (4.5%) |
+| Cannot Reproduce | 0 | 4 | 4 (3.6%) |
+| Not A Bug | 0 | 2 | 2 (1.8%) |
+| Timed out | 1 | 0 | 1 (0.9%) |
+
+TAWOS distractors skew Fixed because that's the dominant outcome in
+the source corpus (the four projects we sampled have Fixed ≈ 70-80%
+of resolved bugs). LLM distractors follow §13.1 sampling (Fixed 60%
+target), so they balance the mix back toward the realistic
+distribution.
+
+**Coverage assertion after mint** — re-running
+`validate_v2_coverage.py` confirms the real-ticket corpus stays at
+347/347 (distractors are in a separate dir and carry
+`source_injection_id=None`, so they never count toward injection
+coverage). The validator is forward-compatible with the distractor
+dir as soon as we wire the mix-at-retrieval-time loader for E8.
+
+**Future tuning for E8 (§13.8 step 6):**
+
+- May need to mint more in-arch-never distractors. They're the
+  hardest (service-name match but no telemetry overlap), and 25 might
+  be too few to stress retrieval precision at scale. TAWOS distractors
+  are cheap (no LLM) so we can mint hundreds if needed.
+- The `IN_ARCH_DISTRACTOR_SPECS` and `CROSS_ARCH_DISTRACTOR_SPECS`
+  lists are hand-curated. A future pass could auto-generate symptoms
+  from a templating approach for higher diversity.
+- Cross-arch component names are deliberately generic (`kafka-analytics`,
+  `postgres-primary`). If the model learns "any name not in our 12
+  services = distractor", we'll need to mint distractors using
+  realistic-but-fake service names that LOOK like ours.
