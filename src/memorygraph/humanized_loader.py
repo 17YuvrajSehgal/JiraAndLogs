@@ -60,7 +60,68 @@ def _read_jsonl(path: Path) -> list[dict]:
     return rows
 
 
-def _build_memory_text(timeline_ticket: dict) -> str:
+def _looks_like_trace(line: str) -> bool:
+    """Heuristic: a line is "trace-like" if it mentions a span id,
+    trace id, latency_ms, percentile (p50/p95/p99), or 'span'."""
+    s = line.lower()
+    return any(
+        k in s
+        for k in (
+            "traceid", "trace_id", "spanid", "span_id", "span ",
+            "p50", "p95", "p99", "latency_ms", "duration_ms",
+        )
+    )
+
+
+def _looks_like_k8s(line: str) -> bool:
+    """Heuristic: a line is "k8s-like" if it mentions pod / deployment /
+    OOM / CrashLoop / restart / kubelet / unschedulable."""
+    s = line.lower()
+    return any(
+        k in s
+        for k in (
+            "pod ", "pod_", "kubelet", "deployment", "oom",
+            "crashloopbackoff", "imagepullbackoff", "containerstatuses",
+            "restartcount", "restart count", "unschedulable",
+            "nodename", "back-off restarting",
+        )
+    )
+
+
+def _mask_lines_in_block(text: str, *, mask_logs: bool, mask_traces: bool, mask_k8s: bool) -> str:
+    """Phase C channel-masking. Walk lines, drop those that match the
+    masked channel(s). Logs = the residual after traces+k8s are filtered.
+
+    Concretely:
+      - mask_traces=True drops lines that look trace-like
+      - mask_k8s=True drops lines that look k8s-like
+      - mask_logs=True drops *the rest* (i.e. plain log lines that
+        don't match either of the above)
+
+    If a block becomes empty after masking, the whole block is dropped.
+    """
+    out_lines = []
+    for line in text.splitlines():
+        is_trace = _looks_like_trace(line)
+        is_k8s = _looks_like_k8s(line)
+        is_other_log = not (is_trace or is_k8s) and line.strip() != ""
+        if mask_traces and is_trace:
+            continue
+        if mask_k8s and is_k8s:
+            continue
+        if mask_logs and is_other_log:
+            continue
+        out_lines.append(line)
+    return "\n".join(out_lines).strip()
+
+
+def _build_memory_text(
+    timeline_ticket: dict,
+    *,
+    mask_logs: bool = False,
+    mask_traces: bool = False,
+    mask_k8s: bool = False,
+) -> str:
     """Flatten the humanized timeline into one memory_text blob.
 
     Format: `[persona_role @ +Ns]: <step text>`, separated by blank
@@ -75,14 +136,25 @@ def _build_memory_text(timeline_ticket: dict) -> str:
     weight matters for both BM25 and short-doc embeddings); per-step
     `body_code` follows the prose body of its step. V1 tickets simply
     don't have these fields, so this branch no-ops for V1.
+
+    Phase C channel-masking: mask_{logs,traces,k8s} drop the
+    corresponding lines from `description_code` and `body_code` blocks
+    so we can ablate which channel carries retrieval signal.
     """
     parts: list[str] = []
+    any_mask = mask_logs or mask_traces or mask_k8s
 
     # V2 — ticket-level description_code is the highest-signal engineer-
     # vocabulary content. Leads the memory_text so BM25 weights it.
     description_code = (timeline_ticket.get("description_code") or "").strip()
     if description_code:
-        parts.append(f"[description_code]\n{description_code}")
+        if any_mask:
+            description_code = _mask_lines_in_block(
+                description_code,
+                mask_logs=mask_logs, mask_traces=mask_traces, mask_k8s=mask_k8s,
+            )
+        if description_code:
+            parts.append(f"[description_code]\n{description_code}")
 
     for step in timeline_ticket.get("timeline") or []:
         role = step.get("persona_role") or "unknown"
@@ -96,6 +168,11 @@ def _build_memory_text(timeline_ticket: dict) -> str:
         body_code = (step.get("body_code") or "")
         if body_code:
             body_code = body_code.strip()
+            if any_mask and body_code:
+                body_code = _mask_lines_in_block(
+                    body_code,
+                    mask_logs=mask_logs, mask_traces=mask_traces, mask_k8s=mask_k8s,
+                )
             if body_code:
                 parts.append(
                     f">> log lines pasted by {role}:\n{body_code}"
@@ -121,6 +198,9 @@ def load_humanized_corpus(
     *,
     humanized_root: str = "jira-shadow-humanized-v1",
     extra_distractor_path: Path | None = None,
+    mask_logs: bool = False,
+    mask_traces: bool = False,
+    mask_k8s: bool = False,
 ) -> list[JiraMemoryIssue]:
     """Return the humanized v5-large corpus as a JiraMemoryIssue list.
 
@@ -176,7 +256,10 @@ def load_humanized_corpus(
         if legacy is None:
             skipped_no_legacy += 1
             continue
-        memory_text = _build_memory_text(ticket)
+        memory_text = _build_memory_text(
+            ticket,
+            mask_logs=mask_logs, mask_traces=mask_traces, mask_k8s=mask_k8s,
+        )
         resolution_notes = _build_resolution_notes(ticket)
         out.append(JiraMemoryIssue(
             jira_shadow_issue_id=legacy.get("jira_shadow_issue_id", ""),
@@ -230,7 +313,10 @@ def load_humanized_corpus(
         for ticket in distractor_rows:
             if not ticket.get("is_distractor"):
                 continue
-            memory_text = _build_memory_text(ticket)
+            memory_text = _build_memory_text(
+            ticket,
+            mask_logs=mask_logs, mask_traces=mask_traces, mask_k8s=mask_k8s,
+        )
             resolution_notes = _build_resolution_notes(ticket)
             out.append(JiraMemoryIssue(
                 jira_shadow_issue_id=ticket.get("ticket_id", ""),

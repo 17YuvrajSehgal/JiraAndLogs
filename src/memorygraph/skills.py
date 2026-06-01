@@ -920,12 +920,19 @@ class CrossEncoderRerankSkill(Skill):
             return False
         try:
             import sys
+            from pathlib import Path as _Path
+            # Local fine-tuned model: accept either a directory or HF hub ID.
+            # If the path exists on disk, sentence_transformers loads it
+            # directly; otherwise it falls through to the hub.
+            mname = self.model_name
+            is_local = _Path(mname).exists()
             print(
-                f"[cross_encoder_rerank] loading {self.model_name} ... "
-                "(first run downloads ~80MB to HF cache)",
+                f"[cross_encoder_rerank] loading "
+                f"{'local: ' if is_local else 'hub: '}{mname} ... "
+                "(first hub run downloads ~80MB)",
                 file=sys.stderr, flush=True,
             )
-            self._model = CrossEncoder(self.model_name, max_length=512)
+            self._model = CrossEncoder(mname, max_length=512)
             print(
                 f"[cross_encoder_rerank] model ready; device={self._model._target_device}",
                 file=sys.stderr, flush=True,

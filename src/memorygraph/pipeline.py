@@ -75,6 +75,10 @@ class MemoryGraphPipeline(PipelineRunner):
         humanized_subdir: str | None = None,
         humanized_root: str = "jira-shadow-humanized-v1",
         distractor_path: Path | None = None,
+        cross_encoder_model: str | None = None,
+        mask_logs: bool = False,
+        mask_traces: bool = False,
+        mask_k8s: bool = False,
     ) -> None:
         self.planner_kind = planner
         self.llm_base_url = llm_base_url
@@ -123,6 +127,18 @@ class MemoryGraphPipeline(PipelineRunner):
         # Used to measure top-1 precision against the distractor set
         # per §13.6.
         self.distractor_path = distractor_path
+        # Optional override for the cross-encoder model. None = use the
+        # CrossEncoderRerankSkill default (off-the-shelf MS-MARCO MiniLM).
+        # When set to a local path, the skill loads our fine-tuned model
+        # from disk. Used by the `_ft` pipeline variants for Phase B.
+        self.cross_encoder_model = cross_encoder_model
+        # Phase C — per-channel masking. When True, the corresponding
+        # channel (logs / traces / k8s) is stripped from memory_text
+        # AND from any in-pipeline window text builders so the ablation
+        # is symmetric on both sides.
+        self.mask_logs = mask_logs
+        self.mask_traces = mask_traces
+        self.mask_k8s = mask_k8s
         # Set by train_and_predict so the CLI can pull them out for the
         # explanations.jsonl artifact + the graph-stats summary.
         self.last_decisions: list[AgentDecision] = []
@@ -167,6 +183,9 @@ class MemoryGraphPipeline(PipelineRunner):
                 humanized_subdir=self.humanized_subdir,
                 humanized_root=self.humanized_root,
                 extra_distractor_path=self.distractor_path,
+                mask_logs=self.mask_logs,
+                mask_traces=self.mask_traces,
+                mask_k8s=self.mask_k8s,
             )
 
         # 1) Build the Jira side of the graph once. This is the
@@ -200,6 +219,14 @@ class MemoryGraphPipeline(PipelineRunner):
             from .skills import EmbeddingSimilaritySkill
             registry["embedding_similarity"] = EmbeddingSimilaritySkill(
                 cache_root=global_dir / "embeddings",
+            )
+        # Phase B: optionally swap the cross-encoder model to a fine-tuned
+        # local checkpoint. When `cross_encoder_model` is set we re-build
+        # the skill so the lazy-load picks up the local path.
+        if self.with_cross_encoder and self.cross_encoder_model:
+            from .skills import CrossEncoderRerankSkill
+            registry["cross_encoder_rerank"] = CrossEncoderRerankSkill(
+                model_name=self.cross_encoder_model,
             )
         for skill in registry.values():
             skill.fit(train, ds.feature_columns)

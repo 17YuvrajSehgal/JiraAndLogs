@@ -342,6 +342,96 @@ if _HAS_MEMORYGRAPH:
         _cls = _make_numeric_weight_variant(_w)
         KNOWN_PIPELINES[_cls.name] = _cls
 
+    # Phase B (2026-06-01) — fine-tuned cross-encoder reranker on top
+    # of the SOTA. Same skill chain as memorygraph_v2_sota_nw080 but the
+    # CrossEncoderRerankSkill loads our local fine-tuned model instead
+    # of off-the-shelf MS-MARCO MiniLM. The fine-tuning data comes from
+    # `scripts/build_crossenc_pairs.py` (8855 positives + 3786 hard
+    # negatives from the train + val splits).
+    class _MemoryGraphSOTAft(MemoryGraphPipeline):
+        name = "memorygraph_v2_sota_nw080_ft"
+
+        def __init__(self) -> None:
+            super().__init__(
+                with_numeric=True,
+                with_log_signatures=True,
+                with_cross_encoder=True,
+                numeric_weight=0.80,
+                humanized_subdir="bulk-20260531",
+                humanized_root="jira-shadow-humanized-v2",
+                cross_encoder_model=str(
+                    _Path("results/phase-b-finetune/crossenc_ft_v1").resolve()
+                ),
+            )
+
+    KNOWN_PIPELINES["memorygraph_v2_sota_nw080_ft"] = _MemoryGraphSOTAft
+
+    # Phase C (2026-06-01) — per-channel ablation variants of the SOTA.
+    # Each drops one telemetry channel (logs / traces / k8s) from the
+    # memory_text so we can measure each channel's marginal R@5
+    # contribution. The mask is applied symmetrically on the memory
+    # side; window-side query text is built from raw evidence so the
+    # mask there is implicit (the window's logs/traces/k8s evidence
+    # remains untouched).
+    def _make_channel_ablation(mask_logs: bool, mask_traces: bool, mask_k8s: bool, label: str):
+        class _ChannelAblation(MemoryGraphPipeline):
+            name = f"memorygraph_v2_sota_nw080_{label}"
+            def __init__(self) -> None:
+                super().__init__(
+                    with_numeric=True,
+                    with_log_signatures=True,
+                    with_cross_encoder=True,
+                    numeric_weight=0.80,
+                    humanized_subdir="bulk-20260531",
+                    humanized_root="jira-shadow-humanized-v2",
+                    mask_logs=mask_logs,
+                    mask_traces=mask_traces,
+                    mask_k8s=mask_k8s,
+                )
+        _ChannelAblation.__qualname__ = f"_ChannelAblation_{label}"
+        return _ChannelAblation
+
+    for _spec in (
+        (True, False, False, "no_logs"),
+        (False, True, False, "no_traces"),
+        (False, False, True, "no_k8s"),
+    ):
+        _cls = _make_channel_ablation(*_spec)
+        KNOWN_PIPELINES[_cls.name] = _cls
+
+    # Phase D (2026-06-01) — distractor ratio sweep. For each ratio
+    # in {0, 10, 25, 50}%, the variant loads the corresponding
+    # subset file produced by scripts/distractor_ratio_sweep.py.
+    # The 0% variant intentionally has an empty distractor path (no
+    # distractors) so it serves as the SOTA baseline within this
+    # sweep.
+    def _make_distractor_variant(ratio_pct: int):
+        if ratio_pct == 0:
+            distractor_path = None
+        else:
+            distractor_path = _Path(
+                f"results/phase-d-distractors/distractor_pool_{ratio_pct:03d}pct.jsonl"
+            )
+
+        class _DistractorVariant(MemoryGraphPipeline):
+            name = f"memorygraph_v2_sota_d{ratio_pct:03d}pct"
+            def __init__(self) -> None:
+                super().__init__(
+                    with_numeric=True,
+                    with_log_signatures=True,
+                    with_cross_encoder=True,
+                    numeric_weight=0.80,
+                    humanized_subdir="bulk-20260531",
+                    humanized_root="jira-shadow-humanized-v2",
+                    distractor_path=distractor_path,
+                )
+        _DistractorVariant.__qualname__ = f"_DistractorVariant_{ratio_pct:03d}"
+        return _DistractorVariant
+
+    for _pct in (0, 10, 25, 50):
+        _cls = _make_distractor_variant(_pct)
+        KNOWN_PIPELINES[_cls.name] = _cls
+
 
 @dataclass
 class ComparisonReport:

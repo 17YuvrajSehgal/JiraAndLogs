@@ -34,3 +34,9 @@ pre_data_logs.tar.gz
 post_data_logs.tar.gz
 data_logs.tar.gz
 docs2/presentation.md
+
+# Large binary research artifacts (kept in workspace only)
+results/phase-b-finetune/crossenc_ft_v1/model.safetensors
+results/phase-b-finetune/crossenc_ft_v1/training_checkpoints/
+results/phase-b-finetune/triplets.jsonl
+microservices-demo-google/
