@@ -12,6 +12,8 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
+from util.training_registry import open_training_run
+
 from .ensemble import EnsemblePipeline, blend_mean
 from .pipelines import (
     CalibratedRandomForestPipeline,
@@ -481,7 +483,42 @@ def run_comparison(
         runner = KNOWN_PIPELINES[name]()
         instantiated.append((name, runner))
         print(f"[comparison] running pipeline: {name}")
-        results.append(runner.train_and_predict(global_dir, runs_root, target_fpr=target_fpr))
+        # Wrap each pipeline fit+predict in a training_run for
+        # reproducibility — writes config, predictions, metrics, and a
+        # human-readable log under data/derived/global/<id>/
+        # training_runs/<run_id>/. The aggregate stratified metrics and
+        # bootstrap CIs are written separately to the comparison run
+        # directory by the CLI.
+        with open_training_run(
+            global_dir=global_dir,
+            pipeline_name=name,
+            notes=f"comparison: pipelines={pipelines}",
+        ) as tr:
+            tr.write_config({
+                "pipeline_class": runner.__class__.__name__,
+                "global_dir": str(global_dir),
+                "runs_root": str(runs_root),
+                "target_fpr": target_fpr,
+            })
+            tr.log(f"fit + predict starting for {name}")
+            result = runner.train_and_predict(
+                global_dir, runs_root, target_fpr=target_fpr,
+            )
+            tr.log(
+                f"fit + predict done: fit={result.fit_seconds:.1f}s "
+                f"predict={result.predict_seconds:.1f}s "
+                f"n_predictions={len(result.predictions)}"
+            )
+            for pred in result.predictions:
+                tr.append_prediction(pred.as_dict())
+            tr.write_metrics({
+                "triage_threshold": result.triage_threshold,
+                "fit_seconds": result.fit_seconds,
+                "predict_seconds": result.predict_seconds,
+                "n_predictions": len(result.predictions),
+                "metadata": result.metadata,
+            })
+        results.append(result)
 
     if include_ensemble and len(results) >= 2:
         print("[comparison] building mean ensemble")
