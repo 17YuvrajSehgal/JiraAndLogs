@@ -27,10 +27,16 @@ from .pipelines import (
     _NumericClassifierPipeline,
 )
 from .schema import PipelineResult
-from .significance import paired_bootstrap_ci, render_ci_table, render_pairwise_table
+from .significance import (
+    paired_bootstrap_ci,
+    render_ci_table,
+    render_pairwise_table,
+    stratified_bootstrap_ci,
+)
 from .stratified import (
     OrphanRecallGap,
     StrataRow,
+    _bucket_n_prior,
     compute_orphan_recall_gap,
     render_orphan_recall_gap_table,
     render_strata_table,
@@ -355,6 +361,9 @@ class ComparisonReport:
     #                                      "micro_pooled": {pr_auc, roc_auc}}}
     inclusive_strata: list[StrataRow] = field(default_factory=list)
     lofo_macros: dict[str, dict[str, Any]] = field(default_factory=dict)
+    # Charter §10 / Phase A3: per-stratum bootstrap CIs along the
+    # deployment-history depth axis. Shape: {metric -> {stratum -> {pipeline -> {point, lo, hi}}}}
+    depth_ci_per_metric: dict[str, dict[str, dict]] = field(default_factory=dict)
 
     def as_dict(self) -> dict[str, Any]:
         return {
@@ -402,6 +411,7 @@ class ComparisonReport:
                 for s in self.strata
             ],
             "orphan_recall_gap": [g.as_dict() for g in self.orphan_recall_gap],
+            "depth_ci_per_metric": self.depth_ci_per_metric,
             "inclusive_strata": [
                 {
                     "pipeline": s.pipeline_name,
@@ -509,6 +519,17 @@ def run_comparison(
                 f"predict={result.predict_seconds:.1f}s "
                 f"n_predictions={len(result.predictions)}"
             )
+            # Charter §10 / Phase A2: populate the deployment-history
+            # depth field. We define it as the number of memory tickets
+            # the gold-truth matcher considers compatible with this
+            # window — i.e., len(gold_matched_issue_ids). Pipelines do
+            # not need to know about this; it's a property of the
+            # (window, canonical memory) pair, derived from the gold
+            # annotation, so we compute it centrally here.
+            for pred in result.predictions:
+                pred.n_prior_family_tickets = len(
+                    pred.gold_matched_issue_ids or []
+                )
             for pred in result.predictions:
                 tr.append_prediction(pred.as_dict())
             tr.write_metrics({
@@ -545,6 +566,33 @@ def run_comparison(
         ci_per_metric[metric] = ci
         pairwise_per_metric[metric] = pairwise
 
+    # Charter §10 / Phase A3: per-stratum bootstrap CIs along the
+    # deployment-history depth axis. The anchor figure of the paper
+    # needs CI error bars on every bucket — this is where they come
+    # from. We compute for R@5 (primary), MRR (secondary), and R@1
+    # (tertiary) so reviewers can compare any of them.
+    depth_ci_per_metric: dict[str, dict[str, dict]] = {}
+    print(f"[comparison] depth-stratified bootstrap CIs ({n_bootstrap} resamples)")
+    for metric in ("recall_at_5", "mrr", "pr_auc"):
+        depth_ci_per_metric[metric] = {}
+        per_stratum = stratified_bootstrap_ci(
+            results,
+            metric=metric,
+            key_fn=lambda p: _bucket_n_prior(
+                getattr(p, "n_prior_family_tickets", None)
+            ),
+            n_resamples=n_bootstrap,
+        )
+        for stratum, (ci, _pairwise) in per_stratum.items():
+            depth_ci_per_metric[metric][stratum] = {
+                name: {
+                    "point": c.point_estimate,
+                    "lo": c.lo,
+                    "hi": c.hi,
+                }
+                for name, c in ci.items()
+            }
+
     lofo_macros: dict[str, dict[str, Any]] = {}
     if include_lofo:
         lofo_macros = _compute_lofo_macros(instantiated, global_dir)
@@ -558,6 +606,7 @@ def run_comparison(
         orphan_recall_gap=orphan_gap,
         inclusive_strata=inclusive_strata,
         lofo_macros=lofo_macros,
+        depth_ci_per_metric=depth_ci_per_metric,
     )
 
 

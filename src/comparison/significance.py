@@ -201,6 +201,67 @@ def paired_bootstrap_ci(
     return ci_per_pipeline, pairwise
 
 
+def stratified_bootstrap_ci(
+    results: list[PipelineResult],
+    *,
+    metric: str,
+    key_fn: Callable[[PipelinePrediction], str],
+    n_resamples: int = 1000,
+    confidence: float = 0.95,
+    seed: int = 42,
+    min_stratum_n: int = 10,
+) -> dict[str, tuple[dict[str, BootstrapCI], list[PairwiseDelta]]]:
+    """Per-stratum paired bootstrap CIs.
+
+    Charter §10 / Phase A3. For each stratum bucket (produced by
+    `key_fn(prediction) -> str`), filter the predictions, then run the
+    same paired bootstrap that `paired_bootstrap_ci()` does. Returns a
+    dict keyed by stratum, with the same value shape as the unstratified
+    function — `(per-pipeline CIs, pairwise deltas)`.
+
+    Strata with fewer than `min_stratum_n` shared windows are skipped
+    (the CIs would be too wide to interpret). seed=42 per charter §10.
+    """
+    # Group window_ids by stratum (using any pipeline's predictions —
+    # the stratum is a property of the window/gold, not the pipeline).
+    if not results:
+        return {}
+    by_window_first: dict[str, PipelinePrediction] = {}
+    for p in results[0].predictions:
+        by_window_first[p.window_id] = p
+    strata_wids: dict[str, set[str]] = {}
+    for wid, p in by_window_first.items():
+        strata_wids.setdefault(key_fn(p), set()).add(wid)
+
+    out: dict[str, tuple[dict[str, BootstrapCI], list[PairwiseDelta]]] = {}
+    for stratum, wid_set in strata_wids.items():
+        if len(wid_set) < min_stratum_n:
+            continue
+        filtered = [
+            PipelineResult(
+                pipeline_name=r.pipeline_name,
+                predictions=[p for p in r.predictions if p.window_id in wid_set],
+                triage_threshold=r.triage_threshold,
+                fit_seconds=r.fit_seconds,
+                predict_seconds=r.predict_seconds,
+                metadata=r.metadata,
+            )
+            for r in results
+        ]
+        try:
+            ci, pairwise = paired_bootstrap_ci(
+                filtered,
+                metric=metric,
+                n_resamples=n_resamples,
+                confidence=confidence,
+                seed=seed,
+            )
+            out[stratum] = (ci, pairwise)
+        except Exception:  # defensive — keep the pipeline running
+            continue
+    return out
+
+
 def render_ci_table(ci_per_pipeline: dict[str, BootstrapCI], metric: str) -> str:
     if not ci_per_pipeline:
         return f"_no data for {metric}_"

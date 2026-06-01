@@ -40,6 +40,12 @@ class PipelinePrediction:
     window_type: str = ""
     is_hard_case: bool = False
     triage_reason_class: str | None = None
+    # Charter §10 / Phase A2: deployment-history depth axis.
+    # Number of Jira tickets in the pipeline's memory at predict time
+    # whose scenario_family matches this window's gold ticket family.
+    # Zero when no gold match exists OR no prior tickets share the
+    # family. Drives the headline depth-stratified retrieval curve.
+    n_prior_family_tickets: int | None = None
 
     def as_dict(self) -> dict[str, Any]:
         return {
@@ -58,6 +64,7 @@ class PipelinePrediction:
             "window_type": self.window_type,
             "is_hard_case": self.is_hard_case,
             "triage_reason_class": self.triage_reason_class,
+            "n_prior_family_tickets": self.n_prior_family_tickets,
         }
 
 
