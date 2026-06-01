@@ -576,6 +576,7 @@ class EmbeddingSimilaritySkill(Skill):
         model: str = "text-embedding-nomic-embed-text-v1.5",
         blend_weight: float = 0.5,
         progress_every: int = 100,
+        cache_root: Any = None,
     ) -> None:
         self.base_url = base_url
         self.model = model
@@ -590,6 +591,17 @@ class EmbeddingSimilaritySkill(Skill):
         self.progress_every = progress_every
         self._cache: dict[str, list[float]] = {}
         self._enabled: bool = False
+        # O6 persistent embedding cache (util.embedding_cache). When
+        # cache_root is set, every memory-doc and query embedding is
+        # also persisted to disk (content-addressed by sha256(text)),
+        # so re-running the pipeline against the same corpus + same
+        # windows hits the cache in ~1ms each instead of ~50-200ms via
+        # the network. On v5-large this cuts a re-run from ~75 min to
+        # ~30 seconds. Default None = no persistence (legacy behavior).
+        self.cache_root = cache_root
+        self._cached_embedder: Any = None
+        self._n_cache_hits = 0
+        self._n_cache_misses = 0
         # Lightweight counters surfaced in the progress logs so a
         # reviewer can tell whether the skill is mostly embedding new
         # corpus docs (cold cache) or just doing query embeds (warm).
@@ -622,49 +634,137 @@ class EmbeddingSimilaritySkill(Skill):
             return
         self._enabled = bool(probe and probe[0])
 
+        # Wire the persistent embedding cache if cache_root was set.
+        # Lazy because we don't need it when the skill is disabled.
+        if self._enabled and self.cache_root is not None and self._cached_embedder is None:
+            try:
+                from pathlib import Path as _Path
+                _SRC_ROOT = _Path(__file__).resolve().parent.parent
+                import sys as _sys
+                if str(_SRC_ROOT) not in _sys.path:
+                    _sys.path.insert(0, str(_SRC_ROOT))
+                from util.embedding_cache import make_nomic_cached_embedder
+                self._cached_embedder = make_nomic_cached_embedder(
+                    _Path(self.cache_root),
+                    base_url=self.base_url,
+                    model_id=self.model,
+                )
+                _sys.stderr.write(
+                    f"[{self.name}] persistent cache wired at "
+                    f"{self.cache_root} (model={self.model})\n"
+                )
+                _sys.stderr.flush()
+            except Exception as exc:
+                import sys as _sys
+                _sys.stderr.write(
+                    f"[{self.name}] could not wire embedding cache "
+                    f"({exc!r}); falling back to direct calls\n"
+                )
+                _sys.stderr.flush()
+                self._cached_embedder = None
+
+    def _embed_one(self, text: str) -> list[float]:
+        """Embed one text. Cache-aware: tries persistent disk cache
+        first when wired; falls back to direct LM Studio call.
+
+        Returns [] on failure rather than raising — callers handle the
+        empty case by skipping the candidate / query.
+        """
+        if self._cached_embedder is not None:
+            try:
+                arr = self._cached_embedder.embed(text)
+                if hasattr(arr, "tolist"):
+                    return arr.tolist()
+                return list(arr)
+            except Exception:
+                # Fall through to direct call below.
+                pass
+        try:
+            from comparison.retrievers import embed_via_lm_studio
+            vecs = embed_via_lm_studio(self.base_url, self.model, [text])
+            return list(vecs[0]) if vecs and vecs[0] else []
+        except Exception:
+            return []
+
     def _ensure_cached(self, jira_ids: list[str], visible: dict[str, JiraMemoryIssue]) -> None:
-        """Embed any Jira memory entries we haven't seen yet."""
+        """Embed any Jira memory entries we haven't seen yet.
+
+        When persistent cache is wired, this is mostly disk reads on
+        re-runs (~1ms/doc). Cold-cache path falls back to the network
+        but persists each result for next time.
+        """
         if not self._enabled:
             return
         missing = [jid for jid in jira_ids if jid not in self._cache]
         if not missing:
             return
-        # Log a one-liner before the call — useful when the corpus is
-        # large and the first window triggers a big bulk embed that can
-        # take 30-60s on its own.
         import sys, time
         t0 = time.time()
-        print(
-            f"[{self.name}] bulk-embedding {len(missing)} memory docs ...",
-            file=sys.stderr,
-            flush=True,
-        )
-        try:
-            from comparison.retrievers import embed_via_lm_studio
-            texts = [
-                f"{visible[jid].memory_text} {visible[jid].resolution_notes}"
-                for jid in missing
-            ]
-            vecs = embed_via_lm_studio(self.base_url, self.model, texts)
-        except Exception as exc:
+        use_cache = self._cached_embedder is not None
+        n_disk_hits = 0
+        if use_cache:
+            # One-at-a-time via the persistent cache — hits read from
+            # disk, misses fall through to the LM Studio backend and
+            # persist for next time.
+            pre_hits = int(self._cached_embedder.stats.hits)
+            pre_misses = int(self._cached_embedder.stats.misses)
+            for jid in missing:
+                text = (
+                    f"{visible[jid].memory_text} "
+                    f"{visible[jid].resolution_notes}"
+                )
+                vec = self._embed_one(text)
+                if vec:
+                    self._cache[jid] = vec
+                    self._n_corpus_embeds += 1
+            post_hits = int(self._cached_embedder.stats.hits)
+            n_disk_hits = post_hits - pre_hits
+            self._n_cache_hits += n_disk_hits
+            self._n_cache_misses += (
+                int(self._cached_embedder.stats.misses) - pre_misses
+            )
             print(
-                f"[{self.name}] memory-embed failed: {type(exc).__name__}: {exc}; "
-                f"disabling skill for the rest of the run",
+                f"[{self.name}] embedded {len(missing)} memory docs "
+                f"({n_disk_hits} disk-cache hits, "
+                f"{len(missing) - n_disk_hits} network calls) "
+                f"in {time.time() - t0:.1f}s "
+                f"(in-memory cache now {len(self._cache)})",
                 file=sys.stderr,
                 flush=True,
             )
-            self._enabled = False
-            return
-        for jid, vec in zip(missing, vecs):
-            if vec:
-                self._cache[jid] = vec
-                self._n_corpus_embeds += 1
-        print(
-            f"[{self.name}] bulk-embedded {len(missing)} docs in "
-            f"{time.time() - t0:.1f}s (cache size now {len(self._cache)})",
-            file=sys.stderr,
-            flush=True,
-        )
+        else:
+            # Legacy bulk-network path (no persistent cache wired).
+            print(
+                f"[{self.name}] bulk-embedding {len(missing)} memory docs ...",
+                file=sys.stderr,
+                flush=True,
+            )
+            try:
+                from comparison.retrievers import embed_via_lm_studio
+                texts = [
+                    f"{visible[jid].memory_text} {visible[jid].resolution_notes}"
+                    for jid in missing
+                ]
+                vecs = embed_via_lm_studio(self.base_url, self.model, texts)
+            except Exception as exc:
+                print(
+                    f"[{self.name}] memory-embed failed: {type(exc).__name__}: {exc}; "
+                    f"disabling skill for the rest of the run",
+                    file=sys.stderr,
+                    flush=True,
+                )
+                self._enabled = False
+                return
+            for jid, vec in zip(missing, vecs):
+                if vec:
+                    self._cache[jid] = vec
+                    self._n_corpus_embeds += 1
+            print(
+                f"[{self.name}] bulk-embedded {len(missing)} docs in "
+                f"{time.time() - t0:.1f}s (cache size now {len(self._cache)})",
+                file=sys.stderr,
+                flush=True,
+            )
 
     @staticmethod
     def _cosine(a: list[float], b: list[float]) -> float:
@@ -689,18 +789,13 @@ class EmbeddingSimilaritySkill(Skill):
                 {"enabled": self._enabled},
             )
         self._ensure_cached(ctx.candidate_jira_ids, ctx.visible_jira)
-        try:
-            from comparison.retrievers import embed_via_lm_studio
-            query_text = _strip_window_header(ctx.window.evidence_text or "")
-            q_vec_list = embed_via_lm_studio(
-                self.base_url, self.model, [query_text]
-            )
-            self._n_query_embeds += 1
-        except Exception:
-            return SkillResult(self.name, False, "query embed failed", {})
-        if not q_vec_list or not q_vec_list[0]:
+        query_text = _strip_window_header(ctx.window.evidence_text or "")
+        # Query embed: when persistent cache is wired, repeated runs
+        # of the same query hit the disk (~1ms) instead of the network.
+        q_vec = self._embed_one(query_text)
+        self._n_query_embeds += 1
+        if not q_vec:
             return SkillResult(self.name, False, "empty query embedding", {})
-        q_vec = q_vec_list[0]
         n_blended = 0
         for cid in ctx.candidate_jira_ids:
             doc_vec = self._cache.get(cid)

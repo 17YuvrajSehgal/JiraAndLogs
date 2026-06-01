@@ -71,6 +71,7 @@ class MemoryGraphPipeline(PipelineRunner):
         with_embeddings: bool = False,
         with_log_signatures: bool = False,
         with_cross_encoder: bool = False,
+        numeric_weight: float | None = None,
         humanized_subdir: str | None = None,
         humanized_root: str = "jira-shadow-humanized-v1",
         distractor_path: Path | None = None,
@@ -98,6 +99,10 @@ class MemoryGraphPipeline(PipelineRunner):
         # every token pair — typically +5-10 nDCG vs bi-encoder alone
         # on retrieval benchmarks. Cost: ~10-30 ms/window on CPU.
         self.with_cross_encoder = with_cross_encoder
+        # Override TriageDecideSkill's default numeric_weight=0.7. The
+        # cross-encoder shifted the per-candidate score distribution
+        # so the default isn't optimal; allow per-variant retune.
+        self.numeric_weight = numeric_weight
         # When set, swap the loaded ds.memory_corpus for the humanized
         # corpus at jira-shadow-humanized-v1/<humanized_subdir>/timeline.jsonl
         # before any skill sees it. Used for Phase 5.3 cross-train
@@ -178,6 +183,24 @@ class MemoryGraphPipeline(PipelineRunner):
         # still finds it ready.
         planner = self._make_planner()
         registry = default_skill_registry()
+        # Variant-level overrides on the default skills. Currently only
+        # numeric_weight on TriageDecideSkill is overridable — the cross-
+        # encoder rerank shifted the per-candidate score distribution
+        # and the default 0.7 numeric_weight isn't optimal.
+        if self.numeric_weight is not None:
+            from .skills import TriageDecideSkill
+            registry["triage_decide"] = TriageDecideSkill(
+                numeric_weight=self.numeric_weight,
+            )
+        # Wire the persistent embedding cache into the Nomic skill so
+        # re-runs hit disk (~1ms/embed) instead of LM Studio (~50-200ms).
+        # The cache root lives next to the global dataset so it's
+        # naturally namespaced by corpus version.
+        if self.with_embeddings:
+            from .skills import EmbeddingSimilaritySkill
+            registry["embedding_similarity"] = EmbeddingSimilaritySkill(
+                cache_root=global_dir / "embeddings",
+            )
         for skill in registry.values():
             skill.fit(train, ds.feature_columns)
 

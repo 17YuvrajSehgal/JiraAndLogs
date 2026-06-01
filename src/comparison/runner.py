@@ -284,6 +284,56 @@ if _HAS_MEMORYGRAPH:
         _MemoryGraphHybridHumanizedV2LogsCrossEnc
     )
 
+    # SOTA + distractors — measures distractor confusion rate on the
+    # best-retrieval variant (§13.6 evaluation contract). 110 fake
+    # tickets mixed into the 347-real corpus; top-1 precision against
+    # distractors is the headline number.
+    class _MemoryGraphSOTADistractors(MemoryGraphPipeline):
+        name = "memorygraph_hybrid_humanized_v2_logs_crossenc_distractors"
+
+        def __init__(self) -> None:
+            super().__init__(
+                with_numeric=True,
+                with_log_signatures=True,
+                with_cross_encoder=True,
+                humanized_subdir="bulk-20260531",
+                humanized_root="jira-shadow-humanized-v2",
+                distractor_path=_Path(
+                    "data/derived/global/2026-05-25-dataset-v5-large-global/"
+                    "jira-shadow-humanized-v2-distractors/mint-20260601/timeline.jsonl"
+                ),
+            )
+
+    KNOWN_PIPELINES["memorygraph_hybrid_humanized_v2_logs_crossenc_distractors"] = (
+        _MemoryGraphSOTADistractors
+    )
+
+    # Numeric-blend retune variants (#1 from the followups). Same SOTA
+    # config but with different numeric_weight in TriageDecideSkill. The
+    # default 0.7 isn't tuned for the cross-encoder score distribution;
+    # try 0.5 / 0.55 / 0.65 / 0.8 to find the val-best.
+    def _make_numeric_weight_variant(weight: float):
+        class _NumericWeightVariant(MemoryGraphPipeline):
+            name = f"memorygraph_v2_sota_nw{int(weight*100):03d}"
+
+            def __init__(self) -> None:
+                super().__init__(
+                    with_numeric=True,
+                    with_log_signatures=True,
+                    with_cross_encoder=True,
+                    numeric_weight=weight,
+                    humanized_subdir="bulk-20260531",
+                    humanized_root="jira-shadow-humanized-v2",
+                )
+        _NumericWeightVariant.__qualname__ = (
+            f"_NumericWeightVariant{int(weight*100):03d}"
+        )
+        return _NumericWeightVariant
+
+    for _w in (0.50, 0.55, 0.65, 0.80):
+        _cls = _make_numeric_weight_variant(_w)
+        KNOWN_PIPELINES[_cls.name] = _cls
+
 
 @dataclass
 class ComparisonReport:
