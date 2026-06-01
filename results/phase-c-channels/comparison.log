@@ -1,0 +1,354 @@
+[2026-06-01T22:15:51.218696+00:00] notes: comparison: pipelines=['memorygraph_v2_sota_nw080', 'memorygraph_v2_sota_nw080_no_logs', 'memorygraph_v2_sota_nw080_no_traces', 'memorygraph_v2_sota_nw080_no_k8s']
+[2026-06-01T22:15:51.218762+00:00] training_run open: memorygraph_v2_sota_nw080__20260601T221551Z__742e9e5f
+[2026-06-01T22:15:51.232319+00:00] fit + predict starting for memorygraph_v2_sota_nw080
+[memorygraph_v2_sota_nw080] scoring 984 validation windows ...
+[cross_encoder_rerank] loading hub: cross-encoder/ms-marco-MiniLM-L-6-v2 ... (first hub run downloads ~80MB)
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+[comparison] running pipeline: memorygraph_v2_sota_nw080
+Loading weights:   0%|          | 0/105 [00:00<?, ?it/s]Loading weights: 100%|##########| 105/105 [00:00<00:00, 5533.24it/s]
+`CrossEncoder._target_device` has been deprecated. Please use `CrossEncoder.device` instead.
+[cross_encoder_rerank] model ready; device=cuda:0
+[log_signature_similarity] scored 100 windows (sig_extracted=9 empty=40) elapsed=14s avg=0.142s/window
+[memorygraph_v2_sota_nw080] val 100/984 elapsed=14s avg=0.14s/w eta=126s
+[memorygraph_v2_sota_nw080] val 200/984 elapsed=19s avg=0.09s/w eta=74s
+[memorygraph_v2_sota_nw080] val 300/984 elapsed=24s avg=0.08s/w eta=55s
+[cross_encoder_rerank] reranked 200 windows (2289 total pair scorings)
+[memorygraph_v2_sota_nw080] val 400/984 elapsed=29s avg=0.07s/w eta=43s
+[log_signature_similarity] scored 500 windows (sig_extracted=133 empty=191) elapsed=43s avg=0.085s/window
+[memorygraph_v2_sota_nw080] val 500/984 elapsed=43s avg=0.09s/w eta=41s
+[cross_encoder_rerank] reranked 400 windows (5538 total pair scorings)
+[memorygraph_v2_sota_nw080] val 600/984 elapsed=56s avg=0.09s/w eta=36s
+[log_signature_similarity] scored 700 windows (sig_extracted=231 empty=287) elapsed=67s avg=0.095s/window
+[memorygraph_v2_sota_nw080] val 700/984 elapsed=67s avg=0.10s/w eta=27s
+[cross_encoder_rerank] reranked 600 windows (8201 total pair scorings)
+[log_signature_similarity] scored 800 windows (sig_extracted=288 empty=330) elapsed=78s avg=0.097s/window
+[memorygraph_v2_sota_nw080] val 800/984 elapsed=78s avg=0.10s/w eta=18s
+[log_signature_similarity] scored 900 windows (sig_extracted=341 empty=377) elapsed=89s avg=0.099s/window
+[memorygraph_v2_sota_nw080] val 900/984 elapsed=89s avg=0.10s/w eta=8s
+[cross_encoder_rerank] reranked 800 windows (11544 total pair scorings)
+[memorygraph_v2_sota_nw080] val 984/984 elapsed=101s avg=0.10s/w eta=0s
+[memorygraph_v2_sota_nw080] val done; threshold=0.7174
+[memorygraph_v2_sota_nw080] scoring 2940 test windows ...
+[memorygraph_v2_sota_nw080] test 100/2940 elapsed=2s avg=0.02s/w eta=68s
+[log_signature_similarity] scored 1100 windows (sig_extracted=434 empty=411) elapsed=104s avg=0.095s/window
+[memorygraph_v2_sota_nw080] test 200/2940 elapsed=6s avg=0.03s/w eta=82s
+[log_signature_similarity] scored 1200 windows (sig_extracted=461 empty=434) elapsed=108s avg=0.090s/window
+[memorygraph_v2_sota_nw080] test 300/2940 elapsed=11s avg=0.04s/w eta=97s
+[memorygraph_v2_sota_nw080] test 400/2940 elapsed=16s avg=0.04s/w eta=103s
+[cross_encoder_rerank] reranked 1000 windows (13505 total pair scorings)
+[memorygraph_v2_sota_nw080] test 500/2940 elapsed=21s avg=0.04s/w eta=104s
+[memorygraph_v2_sota_nw080] test 600/2940 elapsed=27s avg=0.05s/w eta=105s
+[memorygraph_v2_sota_nw080] test 700/2940 elapsed=33s avg=0.05s/w eta=106s
+[log_signature_similarity] scored 1700 windows (sig_extracted=582 empty=594) elapsed=135s avg=0.079s/window
+[cross_encoder_rerank] reranked 1200 windows (16913 total pair scorings)
+[memorygraph_v2_sota_nw080] test 800/2940 elapsed=39s avg=0.05s/w eta=104s
+[memorygraph_v2_sota_nw080] test 900/2940 elapsed=44s avg=0.05s/w eta=101s
+[log_signature_similarity] scored 1900 windows (sig_extracted=633 empty=654) elapsed=147s avg=0.077s/window
+[memorygraph_v2_sota_nw080] test 1000/2940 elapsed=51s avg=0.05s/w eta=98s
+[memorygraph_v2_sota_nw080] test 1100/2940 elapsed=56s avg=0.05s/w eta=94s
+[log_signature_similarity] scored 2100 windows (sig_extracted=672 empty=724) elapsed=158s avg=0.075s/window
+[cross_encoder_rerank] reranked 1400 windows (20582 total pair scorings)
+[memorygraph_v2_sota_nw080] test 1200/2940 elapsed=62s avg=0.05s/w eta=90s
+[memorygraph_v2_sota_nw080] test 1300/2940 elapsed=68s avg=0.05s/w eta=86s
+[memorygraph_v2_sota_nw080] test 1400/2940 elapsed=74s avg=0.05s/w eta=81s
+[memorygraph_v2_sota_nw080] test 1500/2940 elapsed=74s avg=0.05s/w eta=71s
+[cross_encoder_rerank] reranked 1600 windows (23963 total pair scorings)
+[memorygraph_v2_sota_nw080] test 1600/2940 elapsed=81s avg=0.05s/w eta=68s
+[memorygraph_v2_sota_nw080] test 1700/2940 elapsed=90s avg=0.05s/w eta=65s
+[log_signature_similarity] scored 2700 windows (sig_extracted=791 empty=931) elapsed=192s avg=0.071s/window
+[cross_encoder_rerank] reranked 1800 windows (26838 total pair scorings)
+[memorygraph_v2_sota_nw080] test 1800/2940 elapsed=101s avg=0.06s/w eta=64s
+[log_signature_similarity] scored 2800 windows (sig_extracted=847 empty=975) elapsed=204s avg=0.073s/window
+[memorygraph_v2_sota_nw080] test 1900/2940 elapsed=114s avg=0.06s/w eta=62s
+[log_signature_similarity] scored 2900 windows (sig_extracted=900 empty=1022) elapsed=216s avg=0.075s/window
+[cross_encoder_rerank] reranked 2000 windows (30037 total pair scorings)
+[memorygraph_v2_sota_nw080] test 2000/2940 elapsed=125s avg=0.06s/w eta=59s
+[memorygraph_v2_sota_nw080] test 2100/2940 elapsed=136s avg=0.06s/w eta=54s
+[cross_encoder_rerank] reranked 2200 windows (33263 total pair scorings)
+[memorygraph_v2_sota_nw080] test 2200/2940 elapsed=147s avg=0.07s/w eta=50s
+[log_signature_similarity] scored 3200 windows (sig_extracted=1064 empty=1158) elapsed=250s avg=0.078s/window
+[memorygraph_v2_sota_nw080] test 2300/2940 elapsed=159s avg=0.07s/w eta=44s
+[log_signature_similarity] scored 3300 windows (sig_extracted=1122 empty=1200) elapsed=261s avg=0.079s/window
+[cross_encoder_rerank] reranked 2400 windows (36516 total pair scorings)
+[memorygraph_v2_sota_nw080] test 2400/2940 elapsed=170s avg=0.07s/w eta=38s
+[memorygraph_v2_sota_nw080] test 2500/2940 elapsed=181s avg=0.07s/w eta=32s
+[log_signature_similarity] scored 3500 windows (sig_extracted=1227 empty=1295) elapsed=284s avg=0.081s/window
+[cross_encoder_rerank] reranked 2600 windows (39778 total pair scorings)
+[memorygraph_v2_sota_nw080] test 2600/2940 elapsed=192s avg=0.07s/w eta=25s
+[log_signature_similarity] scored 3600 windows (sig_extracted=1281 empty=1341) elapsed=295s avg=0.082s/window
+[memorygraph_v2_sota_nw080] test 2700/2940 elapsed=203s avg=0.08s/w eta=18s
+[log_signature_similarity] scored 3700 windows (sig_extracted=1336 empty=1386) elapsed=306s avg=0.083s/window
+[cross_encoder_rerank] reranked 2800 windows (42950 total pair scorings)
+[memorygraph_v2_sota_nw080] test 2800/2940 elapsed=214s avg=0.08s/w eta=11s
+[log_signature_similarity] scored 3800 windows (sig_extracted=1387 empty=1435) elapsed=317s avg=0.083s/window
+[memorygraph_v2_sota_nw080] test 2900/2940 elapsed=226s avg=0.08s/w eta=3s
+[log_signature_similarity] scored 3900 windows (sig_extracted=1432 empty=1490) elapsed=328s avg=0.084s/window
+[memorygraph_v2_sota_nw080] test 2940/2940 elapsed=230s avg=0.08s/w eta=0s
+[2026-06-01T22:21:30.829076+00:00] fit + predict done: fit=8.2s predict=229.9s n_predictions=2940
+[2026-06-01T22:21:31.344836+00:00] training_run close: memorygraph_v2_sota_nw080__20260601T221551Z__742e9e5f
+[2026-06-01T22:21:31.369543+00:00] notes: comparison: pipelines=['memorygraph_v2_sota_nw080', 'memorygraph_v2_sota_nw080_no_logs', 'memorygraph_v2_sota_nw080_no_traces', 'memorygraph_v2_sota_nw080_no_k8s']
+[2026-06-01T22:21:31.369629+00:00] training_run open: memorygraph_v2_sota_nw080_no_logs__20260601T222131Z__742e9e5f
+[2026-06-01T22:21:31.384097+00:00] fit + predict starting for memorygraph_v2_sota_nw080_no_logs
+[memorygraph_v2_sota_nw080_no_logs] scoring 984 validation windows ...
+[cross_encoder_rerank] loading hub: cross-encoder/ms-marco-MiniLM-L-6-v2 ... (first hub run downloads ~80MB)
+[comparison] running pipeline: memorygraph_v2_sota_nw080_no_logs
+Loading weights:   0%|          | 0/105 [00:00<?, ?it/s]Loading weights: 100%|##########| 105/105 [00:00<00:00, 5546.55it/s]
+`CrossEncoder._target_device` has been deprecated. Please use `CrossEncoder.device` instead.
+[cross_encoder_rerank] model ready; device=cuda:0
+[log_signature_similarity] scored 100 windows (sig_extracted=9 empty=40) elapsed=6s avg=0.056s/window
+[memorygraph_v2_sota_nw080_no_logs] val 100/984 elapsed=6s avg=0.06s/w eta=50s
+[memorygraph_v2_sota_nw080_no_logs] val 200/984 elapsed=10s avg=0.05s/w eta=39s
+[memorygraph_v2_sota_nw080_no_logs] val 300/984 elapsed=15s avg=0.05s/w eta=34s
+[cross_encoder_rerank] reranked 200 windows (2271 total pair scorings)
+[memorygraph_v2_sota_nw080_no_logs] val 400/984 elapsed=20s avg=0.05s/w eta=29s
+[log_signature_similarity] scored 500 windows (sig_extracted=133 empty=191) elapsed=32s avg=0.063s/window
+[memorygraph_v2_sota_nw080_no_logs] val 500/984 elapsed=32s avg=0.06s/w eta=31s
+[cross_encoder_rerank] reranked 400 windows (5520 total pair scorings)
+[memorygraph_v2_sota_nw080_no_logs] val 600/984 elapsed=43s avg=0.07s/w eta=28s
+[log_signature_similarity] scored 700 windows (sig_extracted=231 empty=287) elapsed=52s avg=0.075s/window
+[memorygraph_v2_sota_nw080_no_logs] val 700/984 elapsed=52s avg=0.07s/w eta=21s
+[cross_encoder_rerank] reranked 600 windows (8183 total pair scorings)
+[log_signature_similarity] scored 800 windows (sig_extracted=288 empty=330) elapsed=62s avg=0.078s/window
+[memorygraph_v2_sota_nw080_no_logs] val 800/984 elapsed=62s avg=0.08s/w eta=14s
+[log_signature_similarity] scored 900 windows (sig_extracted=341 empty=377) elapsed=72s avg=0.080s/window
+[memorygraph_v2_sota_nw080_no_logs] val 900/984 elapsed=72s avg=0.08s/w eta=7s
+[cross_encoder_rerank] reranked 800 windows (11526 total pair scorings)
+[memorygraph_v2_sota_nw080_no_logs] val 984/984 elapsed=82s avg=0.08s/w eta=0s
+[memorygraph_v2_sota_nw080_no_logs] val done; threshold=0.7336
+[memorygraph_v2_sota_nw080_no_logs] scoring 2940 test windows ...
+[memorygraph_v2_sota_nw080_no_logs] test 100/2940 elapsed=2s avg=0.02s/w eta=53s
+[log_signature_similarity] scored 1100 windows (sig_extracted=434 empty=411) elapsed=84s avg=0.077s/window
+[memorygraph_v2_sota_nw080_no_logs] test 200/2940 elapsed=5s avg=0.03s/w eta=69s
+[log_signature_similarity] scored 1200 windows (sig_extracted=461 empty=434) elapsed=88s avg=0.073s/window
+[memorygraph_v2_sota_nw080_no_logs] test 300/2940 elapsed=9s avg=0.03s/w eta=83s
+[memorygraph_v2_sota_nw080_no_logs] test 400/2940 elapsed=14s avg=0.04s/w eta=89s
+[cross_encoder_rerank] reranked 1000 windows (13487 total pair scorings)
+[memorygraph_v2_sota_nw080_no_logs] test 500/2940 elapsed=19s avg=0.04s/w eta=92s
+[memorygraph_v2_sota_nw080_no_logs] test 600/2940 elapsed=24s avg=0.04s/w eta=94s
+[memorygraph_v2_sota_nw080_no_logs] test 700/2940 elapsed=30s avg=0.04s/w eta=95s
+[log_signature_similarity] scored 1700 windows (sig_extracted=582 empty=594) elapsed=112s avg=0.066s/window
+[cross_encoder_rerank] reranked 1200 windows (16882 total pair scorings)
+[memorygraph_v2_sota_nw080_no_logs] test 800/2940 elapsed=35s avg=0.04s/w eta=93s
+[memorygraph_v2_sota_nw080_no_logs] test 900/2940 elapsed=40s avg=0.04s/w eta=91s
+[log_signature_similarity] scored 1900 windows (sig_extracted=633 empty=654) elapsed=123s avg=0.065s/window
+[memorygraph_v2_sota_nw080_no_logs] test 1000/2940 elapsed=46s avg=0.05s/w eta=89s
+[memorygraph_v2_sota_nw080_no_logs] test 1100/2940 elapsed=51s avg=0.05s/w eta=85s
+[log_signature_similarity] scored 2100 windows (sig_extracted=672 empty=724) elapsed=134s avg=0.064s/window
+[cross_encoder_rerank] reranked 1400 windows (20551 total pair scorings)
+[memorygraph_v2_sota_nw080_no_logs] test 1200/2940 elapsed=57s avg=0.05s/w eta=82s
+[memorygraph_v2_sota_nw080_no_logs] test 1300/2940 elapsed=63s avg=0.05s/w eta=79s
+[memorygraph_v2_sota_nw080_no_logs] test 1400/2940 elapsed=67s avg=0.05s/w eta=74s
+[memorygraph_v2_sota_nw080_no_logs] test 1500/2940 elapsed=68s avg=0.05s/w eta=65s
+[cross_encoder_rerank] reranked 1600 windows (23932 total pair scorings)
+[memorygraph_v2_sota_nw080_no_logs] test 1600/2940 elapsed=74s avg=0.05s/w eta=62s
+[memorygraph_v2_sota_nw080_no_logs] test 1700/2940 elapsed=82s avg=0.05s/w eta=60s
+[log_signature_similarity] scored 2700 windows (sig_extracted=791 empty=931) elapsed=165s avg=0.061s/window
+[cross_encoder_rerank] reranked 1800 windows (26807 total pair scorings)
+[memorygraph_v2_sota_nw080_no_logs] test 1800/2940 elapsed=92s avg=0.05s/w eta=58s
+[log_signature_similarity] scored 2800 windows (sig_extracted=847 empty=975) elapsed=175s avg=0.063s/window
+[memorygraph_v2_sota_nw080_no_logs] test 1900/2940 elapsed=102s avg=0.05s/w eta=56s
+[log_signature_similarity] scored 2900 windows (sig_extracted=900 empty=1022) elapsed=186s avg=0.064s/window
+[cross_encoder_rerank] reranked 2000 windows (30006 total pair scorings)
+[memorygraph_v2_sota_nw080_no_logs] test 2000/2940 elapsed=112s avg=0.06s/w eta=53s
+[memorygraph_v2_sota_nw080_no_logs] test 2100/2940 elapsed=123s avg=0.06s/w eta=49s
+[cross_encoder_rerank] reranked 2200 windows (33232 total pair scorings)
+[memorygraph_v2_sota_nw080_no_logs] test 2200/2940 elapsed=133s avg=0.06s/w eta=45s
+[log_signature_similarity] scored 3200 windows (sig_extracted=1064 empty=1158) elapsed=217s avg=0.068s/window
+[memorygraph_v2_sota_nw080_no_logs] test 2300/2940 elapsed=144s avg=0.06s/w eta=40s
+[log_signature_similarity] scored 3300 windows (sig_extracted=1122 empty=1200) elapsed=227s avg=0.069s/window
+[cross_encoder_rerank] reranked 2400 windows (36485 total pair scorings)
+[memorygraph_v2_sota_nw080_no_logs] test 2400/2940 elapsed=154s avg=0.06s/w eta=35s
+[memorygraph_v2_sota_nw080_no_logs] test 2500/2940 elapsed=165s avg=0.07s/w eta=29s
+[log_signature_similarity] scored 3500 windows (sig_extracted=1227 empty=1295) elapsed=249s avg=0.071s/window
+[cross_encoder_rerank] reranked 2600 windows (39747 total pair scorings)
+[memorygraph_v2_sota_nw080_no_logs] test 2600/2940 elapsed=176s avg=0.07s/w eta=23s
+[log_signature_similarity] scored 3600 windows (sig_extracted=1281 empty=1341) elapsed=259s avg=0.072s/window
+[memorygraph_v2_sota_nw080_no_logs] test 2700/2940 elapsed=186s avg=0.07s/w eta=17s
+[log_signature_similarity] scored 3700 windows (sig_extracted=1336 empty=1386) elapsed=269s avg=0.073s/window
+[cross_encoder_rerank] reranked 2800 windows (42919 total pair scorings)
+[memorygraph_v2_sota_nw080_no_logs] test 2800/2940 elapsed=196s avg=0.07s/w eta=10s
+[log_signature_similarity] scored 3800 windows (sig_extracted=1387 empty=1435) elapsed=280s avg=0.074s/window
+[memorygraph_v2_sota_nw080_no_logs] test 2900/2940 elapsed=207s avg=0.07s/w eta=3s
+[log_signature_similarity] scored 3900 windows (sig_extracted=1432 empty=1490) elapsed=290s avg=0.074s/window
+[memorygraph_v2_sota_nw080_no_logs] test 2940/2940 elapsed=211s avg=0.07s/w eta=0s
+[2026-06-01T22:26:29.236098+00:00] fit + predict done: fit=4.3s predict=211.0s n_predictions=2940
+[2026-06-01T22:26:29.732415+00:00] training_run close: memorygraph_v2_sota_nw080_no_logs__20260601T222131Z__742e9e5f
+[2026-06-01T22:26:29.750706+00:00] notes: comparison: pipelines=['memorygraph_v2_sota_nw080', 'memorygraph_v2_sota_nw080_no_logs', 'memorygraph_v2_sota_nw080_no_traces', 'memorygraph_v2_sota_nw080_no_k8s']
+[2026-06-01T22:26:29.750771+00:00] training_run open: memorygraph_v2_sota_nw080_no_traces__20260601T222629Z__742e9e5f
+[2026-06-01T22:26:29.764112+00:00] fit + predict starting for memorygraph_v2_sota_nw080_no_traces
+[memorygraph_v2_sota_nw080_no_traces] scoring 984 validation windows ...
+[cross_encoder_rerank] loading hub: cross-encoder/ms-marco-MiniLM-L-6-v2 ... (first hub run downloads ~80MB)
+[comparison] running pipeline: memorygraph_v2_sota_nw080_no_traces
+Loading weights:   0%|          | 0/105 [00:00<?, ?it/s]Loading weights: 100%|##########| 105/105 [00:00<00:00, 5400.66it/s]
+`CrossEncoder._target_device` has been deprecated. Please use `CrossEncoder.device` instead.
+[cross_encoder_rerank] model ready; device=cuda:0
+[log_signature_similarity] scored 100 windows (sig_extracted=9 empty=40) elapsed=6s avg=0.055s/window
+[memorygraph_v2_sota_nw080_no_traces] val 100/984 elapsed=6s avg=0.06s/w eta=49s
+[memorygraph_v2_sota_nw080_no_traces] val 200/984 elapsed=10s avg=0.05s/w eta=40s
+[memorygraph_v2_sota_nw080_no_traces] val 300/984 elapsed=16s avg=0.05s/w eta=36s
+[cross_encoder_rerank] reranked 200 windows (2289 total pair scorings)
+[memorygraph_v2_sota_nw080_no_traces] val 400/984 elapsed=21s avg=0.05s/w eta=31s
+[log_signature_similarity] scored 500 windows (sig_extracted=133 empty=191) elapsed=35s avg=0.070s/window
+[memorygraph_v2_sota_nw080_no_traces] val 500/984 elapsed=35s avg=0.07s/w eta=34s
+[cross_encoder_rerank] reranked 400 windows (5538 total pair scorings)
+[memorygraph_v2_sota_nw080_no_traces] val 600/984 elapsed=48s avg=0.08s/w eta=30s
+[log_signature_similarity] scored 700 windows (sig_extracted=231 empty=287) elapsed=59s avg=0.084s/window
+[memorygraph_v2_sota_nw080_no_traces] val 700/984 elapsed=59s avg=0.08s/w eta=24s
+[cross_encoder_rerank] reranked 600 windows (8201 total pair scorings)
+[log_signature_similarity] scored 800 windows (sig_extracted=288 empty=330) elapsed=70s avg=0.088s/window
+[memorygraph_v2_sota_nw080_no_traces] val 800/984 elapsed=70s avg=0.09s/w eta=16s
+[log_signature_similarity] scored 900 windows (sig_extracted=341 empty=377) elapsed=81s avg=0.090s/window
+[memorygraph_v2_sota_nw080_no_traces] val 900/984 elapsed=81s avg=0.09s/w eta=8s
+[cross_encoder_rerank] reranked 800 windows (11544 total pair scorings)
+[memorygraph_v2_sota_nw080_no_traces] val 984/984 elapsed=93s avg=0.09s/w eta=0s
+[memorygraph_v2_sota_nw080_no_traces] val done; threshold=0.7174
+[memorygraph_v2_sota_nw080_no_traces] scoring 2940 test windows ...
+[memorygraph_v2_sota_nw080_no_traces] test 100/2940 elapsed=2s avg=0.02s/w eta=69s
+[log_signature_similarity] scored 1100 windows (sig_extracted=434 empty=411) elapsed=96s avg=0.087s/window
+[memorygraph_v2_sota_nw080_no_traces] test 200/2940 elapsed=7s avg=0.04s/w eta=97s
+[log_signature_similarity] scored 1200 windows (sig_extracted=461 empty=434) elapsed=101s avg=0.084s/window
+[memorygraph_v2_sota_nw080_no_traces] test 300/2940 elapsed=12s avg=0.04s/w eta=109s
+[memorygraph_v2_sota_nw080_no_traces] test 400/2940 elapsed=18s avg=0.04s/w eta=114s
+[cross_encoder_rerank] reranked 1000 windows (13505 total pair scorings)
+[memorygraph_v2_sota_nw080_no_traces] test 500/2940 elapsed=24s avg=0.05s/w eta=115s
+[memorygraph_v2_sota_nw080_no_traces] test 600/2940 elapsed=29s avg=0.05s/w eta=114s
+[memorygraph_v2_sota_nw080_no_traces] test 700/2940 elapsed=35s avg=0.05s/w eta=113s
+[log_signature_similarity] scored 1700 windows (sig_extracted=582 empty=594) elapsed=129s avg=0.076s/window
+[cross_encoder_rerank] reranked 1200 windows (16913 total pair scorings)
+[memorygraph_v2_sota_nw080_no_traces] test 800/2940 elapsed=41s avg=0.05s/w eta=110s
+[memorygraph_v2_sota_nw080_no_traces] test 900/2940 elapsed=47s avg=0.05s/w eta=106s
+[log_signature_similarity] scored 1900 windows (sig_extracted=633 empty=654) elapsed=141s avg=0.074s/window
+[memorygraph_v2_sota_nw080_no_traces] test 1000/2940 elapsed=53s avg=0.05s/w eta=104s
+[memorygraph_v2_sota_nw080_no_traces] test 1100/2940 elapsed=60s avg=0.05s/w eta=100s
+[log_signature_similarity] scored 2100 windows (sig_extracted=672 empty=724) elapsed=154s avg=0.073s/window
+[cross_encoder_rerank] reranked 1400 windows (20582 total pair scorings)
+[memorygraph_v2_sota_nw080_no_traces] test 1200/2940 elapsed=65s avg=0.05s/w eta=95s
+[memorygraph_v2_sota_nw080_no_traces] test 1300/2940 elapsed=72s avg=0.06s/w eta=90s
+[memorygraph_v2_sota_nw080_no_traces] test 1400/2940 elapsed=77s avg=0.06s/w eta=85s
+[memorygraph_v2_sota_nw080_no_traces] test 1500/2940 elapsed=78s avg=0.05s/w eta=75s
+[cross_encoder_rerank] reranked 1600 windows (23963 total pair scorings)
+[memorygraph_v2_sota_nw080_no_traces] test 1600/2940 elapsed=86s avg=0.05s/w eta=72s
+[memorygraph_v2_sota_nw080_no_traces] test 1700/2940 elapsed=95s avg=0.06s/w eta=69s
+[log_signature_similarity] scored 2700 windows (sig_extracted=791 empty=931) elapsed=190s avg=0.070s/window
+[cross_encoder_rerank] reranked 1800 windows (26838 total pair scorings)
+[memorygraph_v2_sota_nw080_no_traces] test 1800/2940 elapsed=108s avg=0.06s/w eta=68s
+[log_signature_similarity] scored 2800 windows (sig_extracted=847 empty=975) elapsed=202s avg=0.072s/window
+[memorygraph_v2_sota_nw080_no_traces] test 1900/2940 elapsed=121s avg=0.06s/w eta=66s
+[log_signature_similarity] scored 2900 windows (sig_extracted=900 empty=1022) elapsed=216s avg=0.074s/window
+[cross_encoder_rerank] reranked 2000 windows (30037 total pair scorings)
+[memorygraph_v2_sota_nw080_no_traces] test 2000/2940 elapsed=134s avg=0.07s/w eta=63s
+[memorygraph_v2_sota_nw080_no_traces] test 2100/2940 elapsed=147s avg=0.07s/w eta=59s
+[cross_encoder_rerank] reranked 2200 windows (33263 total pair scorings)
+[memorygraph_v2_sota_nw080_no_traces] test 2200/2940 elapsed=159s avg=0.07s/w eta=53s
+[log_signature_similarity] scored 3200 windows (sig_extracted=1064 empty=1158) elapsed=254s avg=0.079s/window
+[memorygraph_v2_sota_nw080_no_traces] test 2300/2940 elapsed=172s avg=0.07s/w eta=48s
+[log_signature_similarity] scored 3300 windows (sig_extracted=1122 empty=1200) elapsed=266s avg=0.081s/window
+[cross_encoder_rerank] reranked 2400 windows (36516 total pair scorings)
+[memorygraph_v2_sota_nw080_no_traces] test 2400/2940 elapsed=184s avg=0.08s/w eta=41s
+[memorygraph_v2_sota_nw080_no_traces] test 2500/2940 elapsed=197s avg=0.08s/w eta=35s
+[log_signature_similarity] scored 3500 windows (sig_extracted=1227 empty=1295) elapsed=292s avg=0.083s/window
+[cross_encoder_rerank] reranked 2600 windows (39778 total pair scorings)
+[memorygraph_v2_sota_nw080_no_traces] test 2600/2940 elapsed=210s avg=0.08s/w eta=27s
+[log_signature_similarity] scored 3600 windows (sig_extracted=1281 empty=1341) elapsed=305s avg=0.085s/window
+[memorygraph_v2_sota_nw080_no_traces] test 2700/2940 elapsed=223s avg=0.08s/w eta=20s
+[log_signature_similarity] scored 3700 windows (sig_extracted=1336 empty=1386) elapsed=318s avg=0.086s/window
+[cross_encoder_rerank] reranked 2800 windows (42950 total pair scorings)
+[memorygraph_v2_sota_nw080_no_traces] test 2800/2940 elapsed=236s avg=0.08s/w eta=12s
+[log_signature_similarity] scored 3800 windows (sig_extracted=1387 empty=1435) elapsed=331s avg=0.087s/window
+[memorygraph_v2_sota_nw080_no_traces] test 2900/2940 elapsed=248s avg=0.09s/w eta=3s
+[log_signature_similarity] scored 3900 windows (sig_extracted=1432 empty=1490) elapsed=343s avg=0.088s/window
+[memorygraph_v2_sota_nw080_no_traces] test 2940/2940 elapsed=253s avg=0.09s/w eta=0s
+[2026-06-01T22:32:20.960888+00:00] fit + predict done: fit=4.3s predict=253.3s n_predictions=2940
+[2026-06-01T22:32:21.500298+00:00] training_run close: memorygraph_v2_sota_nw080_no_traces__20260601T222629Z__742e9e5f
+[2026-06-01T22:32:21.548690+00:00] notes: comparison: pipelines=['memorygraph_v2_sota_nw080', 'memorygraph_v2_sota_nw080_no_logs', 'memorygraph_v2_sota_nw080_no_traces', 'memorygraph_v2_sota_nw080_no_k8s']
+[2026-06-01T22:32:21.548762+00:00] training_run open: memorygraph_v2_sota_nw080_no_k8s__20260601T223221Z__742e9e5f
+[2026-06-01T22:32:21.562759+00:00] fit + predict starting for memorygraph_v2_sota_nw080_no_k8s
+[memorygraph_v2_sota_nw080_no_k8s] scoring 984 validation windows ...
+[cross_encoder_rerank] loading hub: cross-encoder/ms-marco-MiniLM-L-6-v2 ... (first hub run downloads ~80MB)
+[comparison] running pipeline: memorygraph_v2_sota_nw080_no_k8s
+Loading weights:   0%|          | 0/105 [00:00<?, ?it/s]Loading weights: 100%|##########| 105/105 [00:00<00:00, 5180.04it/s]
+`CrossEncoder._target_device` has been deprecated. Please use `CrossEncoder.device` instead.
+[cross_encoder_rerank] model ready; device=cuda:0
+[log_signature_similarity] scored 100 windows (sig_extracted=9 empty=40) elapsed=6s avg=0.059s/window
+[memorygraph_v2_sota_nw080_no_k8s] val 100/984 elapsed=6s avg=0.06s/w eta=53s
+[memorygraph_v2_sota_nw080_no_k8s] val 200/984 elapsed=11s avg=0.06s/w eta=45s
+[memorygraph_v2_sota_nw080_no_k8s] val 300/984 elapsed=18s avg=0.06s/w eta=40s
+[cross_encoder_rerank] reranked 200 windows (2289 total pair scorings)
+[memorygraph_v2_sota_nw080_no_k8s] val 400/984 elapsed=24s avg=0.06s/w eta=35s
+[log_signature_similarity] scored 500 windows (sig_extracted=133 empty=191) elapsed=39s avg=0.077s/window
+[memorygraph_v2_sota_nw080_no_k8s] val 500/984 elapsed=39s avg=0.08s/w eta=37s
+[cross_encoder_rerank] reranked 400 windows (5538 total pair scorings)
+[memorygraph_v2_sota_nw080_no_k8s] val 600/984 elapsed=52s avg=0.09s/w eta=33s
+[log_signature_similarity] scored 700 windows (sig_extracted=231 empty=287) elapsed=64s avg=0.091s/window
+[memorygraph_v2_sota_nw080_no_k8s] val 700/984 elapsed=64s avg=0.09s/w eta=26s
+[cross_encoder_rerank] reranked 600 windows (8201 total pair scorings)
+[log_signature_similarity] scored 800 windows (sig_extracted=288 empty=330) elapsed=77s avg=0.096s/window
+[memorygraph_v2_sota_nw080_no_k8s] val 800/984 elapsed=77s avg=0.10s/w eta=18s
+[log_signature_similarity] scored 900 windows (sig_extracted=341 empty=377) elapsed=89s avg=0.099s/window
+[memorygraph_v2_sota_nw080_no_k8s] val 900/984 elapsed=89s avg=0.10s/w eta=8s
+[cross_encoder_rerank] reranked 800 windows (11544 total pair scorings)
+[memorygraph_v2_sota_nw080_no_k8s] val 984/984 elapsed=102s avg=0.10s/w eta=0s
+[memorygraph_v2_sota_nw080_no_k8s] val done; threshold=0.7174
+[memorygraph_v2_sota_nw080_no_k8s] scoring 2940 test windows ...
+[memorygraph_v2_sota_nw080_no_k8s] test 100/2940 elapsed=2s avg=0.02s/w eta=70s
+[log_signature_similarity] scored 1100 windows (sig_extracted=434 empty=411) elapsed=105s avg=0.096s/window
+[memorygraph_v2_sota_nw080_no_k8s] test 200/2940 elapsed=6s avg=0.03s/w eta=86s
+[log_signature_similarity] scored 1200 windows (sig_extracted=461 empty=434) elapsed=110s avg=0.091s/window
+[memorygraph_v2_sota_nw080_no_k8s] test 300/2940 elapsed=11s avg=0.04s/w eta=100s
+[memorygraph_v2_sota_nw080_no_k8s] test 400/2940 elapsed=16s avg=0.04s/w eta=104s
+[cross_encoder_rerank] reranked 1000 windows (13505 total pair scorings)
+[memorygraph_v2_sota_nw080_no_k8s] test 500/2940 elapsed=22s avg=0.04s/w eta=107s
+[memorygraph_v2_sota_nw080_no_k8s] test 600/2940 elapsed=28s avg=0.05s/w eta=108s
+[memorygraph_v2_sota_nw080_no_k8s] test 700/2940 elapsed=34s avg=0.05s/w eta=108s
+[log_signature_similarity] scored 1700 windows (sig_extracted=582 empty=594) elapsed=137s avg=0.080s/window
+[cross_encoder_rerank] reranked 1200 windows (16913 total pair scorings)
+[memorygraph_v2_sota_nw080_no_k8s] test 800/2940 elapsed=40s avg=0.05s/w eta=106s
+[memorygraph_v2_sota_nw080_no_k8s] test 900/2940 elapsed=45s avg=0.05s/w eta=103s
+[log_signature_similarity] scored 1900 windows (sig_extracted=633 empty=654) elapsed=148s avg=0.078s/window
+[memorygraph_v2_sota_nw080_no_k8s] test 1000/2940 elapsed=52s avg=0.05s/w eta=100s
+[memorygraph_v2_sota_nw080_no_k8s] test 1100/2940 elapsed=58s avg=0.05s/w eta=96s
+[log_signature_similarity] scored 2100 windows (sig_extracted=672 empty=724) elapsed=161s avg=0.077s/window
+[cross_encoder_rerank] reranked 1400 windows (20582 total pair scorings)
+[memorygraph_v2_sota_nw080_no_k8s] test 1200/2940 elapsed=64s avg=0.05s/w eta=92s
+[memorygraph_v2_sota_nw080_no_k8s] test 1300/2940 elapsed=70s avg=0.05s/w eta=88s
+[memorygraph_v2_sota_nw080_no_k8s] test 1400/2940 elapsed=75s avg=0.05s/w eta=83s
+[memorygraph_v2_sota_nw080_no_k8s] test 1500/2940 elapsed=76s avg=0.05s/w eta=73s
+[cross_encoder_rerank] reranked 1600 windows (23963 total pair scorings)
+[memorygraph_v2_sota_nw080_no_k8s] test 1600/2940 elapsed=82s avg=0.05s/w eta=69s
+[memorygraph_v2_sota_nw080_no_k8s] test 1700/2940 elapsed=92s avg=0.05s/w eta=67s
+[log_signature_similarity] scored 2700 windows (sig_extracted=791 empty=931) elapsed=195s avg=0.072s/window
+[cross_encoder_rerank] reranked 1800 windows (26838 total pair scorings)
+[memorygraph_v2_sota_nw080_no_k8s] test 1800/2940 elapsed=103s avg=0.06s/w eta=65s
+[log_signature_similarity] scored 2800 windows (sig_extracted=847 empty=975) elapsed=207s avg=0.074s/window
+[memorygraph_v2_sota_nw080_no_k8s] test 1900/2940 elapsed=115s avg=0.06s/w eta=63s
+[log_signature_similarity] scored 2900 windows (sig_extracted=900 empty=1022) elapsed=219s avg=0.075s/window
+[cross_encoder_rerank] reranked 2000 windows (30037 total pair scorings)
+[memorygraph_v2_sota_nw080_no_k8s] test 2000/2940 elapsed=127s avg=0.06s/w eta=60s
+[memorygraph_v2_sota_nw080_no_k8s] test 2100/2940 elapsed=139s avg=0.07s/w eta=55s
+[cross_encoder_rerank] reranked 2200 windows (33263 total pair scorings)
+[memorygraph_v2_sota_nw080_no_k8s] test 2200/2940 elapsed=151s avg=0.07s/w eta=51s
+[log_signature_similarity] scored 3200 windows (sig_extracted=1064 empty=1158) elapsed=254s avg=0.080s/window
+[memorygraph_v2_sota_nw080_no_k8s] test 2300/2940 elapsed=162s avg=0.07s/w eta=45s
+[log_signature_similarity] scored 3300 windows (sig_extracted=1122 empty=1200) elapsed=266s avg=0.081s/window
+[cross_encoder_rerank] reranked 2400 windows (36516 total pair scorings)
+[memorygraph_v2_sota_nw080_no_k8s] test 2400/2940 elapsed=174s avg=0.07s/w eta=39s
+[memorygraph_v2_sota_nw080_no_k8s] test 2500/2940 elapsed=186s avg=0.07s/w eta=33s
+[log_signature_similarity] scored 3500 windows (sig_extracted=1227 empty=1295) elapsed=291s avg=0.083s/window
+[cross_encoder_rerank] reranked 2600 windows (39778 total pair scorings)
+[memorygraph_v2_sota_nw080_no_k8s] test 2600/2940 elapsed=199s avg=0.08s/w eta=26s
+[log_signature_similarity] scored 3600 windows (sig_extracted=1281 empty=1341) elapsed=303s avg=0.084s/window
+[memorygraph_v2_sota_nw080_no_k8s] test 2700/2940 elapsed=210s avg=0.08s/w eta=19s
+[log_signature_similarity] scored 3700 windows (sig_extracted=1336 empty=1386) elapsed=314s avg=0.085s/window
+[cross_encoder_rerank] reranked 2800 windows (42950 total pair scorings)
+[memorygraph_v2_sota_nw080_no_k8s] test 2800/2940 elapsed=222s avg=0.08s/w eta=11s
+[log_signature_similarity] scored 3800 windows (sig_extracted=1387 empty=1435) elapsed=326s avg=0.086s/window
+[memorygraph_v2_sota_nw080_no_k8s] test 2900/2940 elapsed=234s avg=0.08s/w eta=3s
+[log_signature_similarity] scored 3900 windows (sig_extracted=1432 empty=1490) elapsed=338s avg=0.087s/window
+[memorygraph_v2_sota_nw080_no_k8s] test 2940/2940 elapsed=238s avg=0.08s/w eta=0s
+[2026-06-01T22:38:07.321250+00:00] fit + predict done: fit=4.8s predict=238.3s n_predictions=2940
+[2026-06-01T22:38:07.906810+00:00] training_run close: memorygraph_v2_sota_nw080_no_k8s__20260601T223221Z__742e9e5f
+[comparison] computing stratified metrics (strict)
+[comparison] computing stratified metrics (inclusive)
+[comparison] paired bootstrap (500 resamples) per metric
+[comparison] depth-stratified bootstrap CIs (500 resamples)
+Wrote comparison report to data\derived\global\2026-05-25-dataset-v5-large-global\comparison\phase-c-channels

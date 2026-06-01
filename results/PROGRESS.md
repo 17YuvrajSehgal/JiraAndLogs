@@ -68,6 +68,77 @@ This is the right kind of negative result for the paper: it shows the retrieval 
 
 4. **Cold-start novelty detection is unsolved.** Existing skill chain detects "no good match" using a hard-coded 0.15 threshold on `max(combined_scores)`. Among 333 true-novel test cases with empty compatible memory, zero get flagged correctly. Recommendation for future work: train a calibrated novelty classifier on `(max_similarity, n_compatible_in_memory, top_K_score_spread)` features.
 
+## Phase B — Cross-encoder fine-tune [COMPLETE]
+
+### Setup
+- Built 12,641 training pairs (8,855 positives + 3,786 hard negatives via BM25 top-20-not-gold)
+- Fine-tuned `cross-encoder/ms-marco-MiniLM-L-6-v2` for 3 epochs, batch 16, lr 2e-5
+- Best checkpoint at **epoch 1**: val AP=0.737, F1=0.802, loss=1.063. Epoch 2/3 overfit.
+
+### Headline (with corrected Hit@K metric, n=317 retrievable windows)
+
+| Pipeline | PR-AUC | Hit@1 | Hit@5 | MRR |
+|---|---:|---:|---:|---:|
+| HGB (telemetry only) | **0.7718** | 0.000 | 0.000 | 0.000 |
+| SOTA (off-the-shelf reranker) | 0.6186 | 0.158 [.120, .199] | 0.202 [.155, .246] | 0.172 [.133, .212] |
+| SOTA + FT reranker | 0.6211 | 0.132 [.095, .170] | **0.221** [.180, .265] | 0.162 [.125, .200] |
+
+Fine-tune trade-off: **+10% Hit@5, -16% Hit@1**. The fine-tuned reranker shifts probability mass into top-5 at the cost of top-1 precision. This is consistent with the cross-encoder literature: joint scoring helps recall but is harder to calibrate at the top rank.
+
+### ICSE-worthy points captured from Phase B
+
+5. **Fine-tuning works AT the depth ranges where retrieval already works.** Hit@5 lift is biggest at depth=3-5 (+20% rel) and depth=6-20 (+10% rel). At depth=1-2 (very thin memory) and depth=21+ (very thick memory), FT is approximately neutral. This says the fine-tune's leverage is on the "moderate memory" regime, not the extremes.
+
+6. **Time-to-diagnose lift is small but measurable.** Mean diagnosis time: 30 min (HGB) → 24.1 min (SOTA) → 23.6 min (SOTA+FT). The 0.5-min improvement from fine-tuning is the marginal value of domain-adapted reranking on top of the off-the-shelf reranker.
+
+### Phase B artifacts
+- Fine-tuned model: `results/phase-b-finetune/crossenc_ft_v1/` (model.safetensors gitignored)
+- Training log: `results/phase-b-finetune/finetune.log`
+- Comparison: `data/derived/global/.../comparison/phase-b-finetune/`
+- Headline table: `results/paper-draft/headline_table.md`
+- Per-family depth: `results/phase-b-finetune/per_family_depth.md`
+
+---
+
+## Phase C — Multi-channel ablation [COMPLETE]
+
+### Setup
+- Three masking heuristics: trace-like (mentions traceid/spanid/p95/p99/latency_ms), k8s-like (pod/kubelet/OOM/CrashLoop/restart), and "other = logs" (the residual)
+- Applied symmetrically to description_code AND per-step body_code in memory text
+- Four pipelines: SOTA + three masked variants
+
+### Channel breakdown of V2 memory corpus (key finding!)
+
+| Channel | Lines in 347 tickets | % |
+|---|---:|---:|
+| trace-like (explicit) | 0 | 0% |
+| k8s-like (explicit) | 0 | 0% |
+| log-like (generic engineer text) | 2898 | 100% |
+
+**Tickets affected by each mask:**
+- trace mask: 0 / 347 (0%)
+- k8s mask: 0 / 347 (0%)
+- log mask: 313 / 347 (90.2%)
+
+The V2 humanizer represents incidents through engineer-vocabulary log text, NOT through explicit trace IDs or kubernetes nouns. Our masking heuristics are correct in principle but only the log mask has anything to remove. Reviewers would ding us on this — we honestly disclose it as a limitation: **for our V2 corpus, "channel ablation" effectively measures "what fraction of memory text carries retrieval signal," and the answer is 90%+ of it.**
+
+### Phase C headline metrics
+
+| Pipeline | PR-AUC | Hit@1 | Hit@5 | MRR |
+|---|---:|---:|---:|---:|
+| SOTA (all channels) | 0.6186 | 0.158 | 0.202 | 0.172 |
+| − logs | 0.6162 | **0.114** ↓28% | 0.211 (≈) | **0.144** ↓16% |
+| − traces | 0.6186 | 0.158 (=SOTA) | 0.202 (=SOTA) | 0.172 (=SOTA) |
+| − k8s | 0.6186 | 0.158 (=SOTA) | 0.202 (=SOTA) | 0.172 (=SOTA) |
+
+### ICSE-worthy points captured from Phase C
+
+7. **Log lines carry the retrieval signal in the V2 corpus.** Removing log-like text from memory drops Hit@1 by 28% relative and MRR by 16%. This is consistent with the corpus design (engineer-voice log lines as the dominant content).
+
+8. **Hit@5 is approximately invariant under log masking.** The 28% Hit@1 drop is not mirrored at Hit@5 (in fact Hit@5 went UP slightly, within CI). Interpretation: BM25's lexical signal continues to surface relevant tickets in top-5 even when log lines are removed, but the cross-encoder cannot precisely rank without the log content.
+
+9. **Trace and k8s ablations are uninformative on V2.** We honestly disclose this: V2's humanized memory does not encode explicit trace_id / pod_name / kubelet nouns, so ablating them is a no-op. Future humanizers could emit explicit trace and k8s spans to make this ablation more diagnostic.
+
 ### Phase A artifacts
 
 - `data/derived/global/2026-05-25-dataset-v5-large-global/comparison/phase-a-anchor/{report.json, report.md, per-window-predictions.jsonl}` (full comparison output, 5880 prediction rows)
