@@ -727,9 +727,15 @@ verifiable. Already-built infrastructure noted with **[BUILT]**.
    prompts get tightened.
 3. **Variable comment count + resolution outcome** — sample from
    the §13.1 distributions instead of fixed 4-step.
-4. **Coverage assertion** — build-time check that every injection_id
-   has a ticket (plus §13.9 #3 followup-ticket logic for critical
-   severity).
+4. **[BUILT 2026-06-01] Coverage assertion** —
+   `scripts/research-lab/validate_v2_coverage.py` reads
+   `jira-memory-corpus.jsonl` (expected injections) and the V2
+   `timeline.jsonl` (covered injections), diffs them, writes
+   `coverage-report.json` next to the corpus, exits 0 on PASS / 1 on
+   FAIL. Optional `--strict-1to1` flag enforces "exactly one non-
+   distractor ticket per injection" — drops once §13.9 #3 followup
+   minting lands. Verified on `bulk-20260531`: **347/347 covered
+   (100%), 0 missing, 0 extras**.
 5. **Distractor generation** — TAWOS-sampled + cross-arch + in-arch
    distractor pipelines, mixed into the final V2 corpus.
 6. **Retrieval benchmark E8** — train memorygraph on V2, log to
