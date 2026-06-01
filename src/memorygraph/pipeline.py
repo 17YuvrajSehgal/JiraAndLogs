@@ -71,6 +71,8 @@ class MemoryGraphPipeline(PipelineRunner):
         with_embeddings: bool = False,
         with_log_signatures: bool = False,
         humanized_subdir: str | None = None,
+        humanized_root: str = "jira-shadow-humanized-v1",
+        distractor_path: Path | None = None,
     ) -> None:
         self.planner_kind = planner
         self.llm_base_url = llm_base_url
@@ -95,6 +97,19 @@ class MemoryGraphPipeline(PipelineRunner):
         # text-leakage canary, commit b704cb8); humanized is the
         # production-safe replacement.
         self.humanized_subdir = humanized_subdir
+        # V2 — defaults to the V1 root; set to "jira-shadow-humanized-v2"
+        # to use the V2 corpus (multi-channel evidence + engineer voice
+        # + description_code). The V2 humanized_loader injects
+        # description_code into memory_text first so BM25 / embeddings
+        # weight the engineer-vocabulary log content most heavily.
+        self.humanized_root = humanized_root
+        # V2 — optional path to a distractor timeline.jsonl. When set,
+        # those tickets are appended to the memory corpus with
+        # scenario_family="__DISTRACTOR__" so the ground-truth retrieval
+        # evaluator can't match a window to a distractor as a TP.
+        # Used to measure top-1 precision against the distractor set
+        # per §13.6.
+        self.distractor_path = distractor_path
         # Set by train_and_predict so the CLI can pull them out for the
         # explanations.jsonl artifact + the graph-stats summary.
         self.last_decisions: list[AgentDecision] = []
@@ -134,7 +149,10 @@ class MemoryGraphPipeline(PipelineRunner):
         if self.humanized_subdir:
             from .humanized_loader import load_humanized_corpus
             ds.memory_corpus = load_humanized_corpus(
-                global_dir, humanized_subdir=self.humanized_subdir,
+                global_dir,
+                humanized_subdir=self.humanized_subdir,
+                humanized_root=self.humanized_root,
+                extra_distractor_path=self.distractor_path,
             )
 
         # 1) Build the Jira side of the graph once. This is the

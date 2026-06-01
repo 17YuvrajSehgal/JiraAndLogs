@@ -67,8 +67,23 @@ def _build_memory_text(timeline_ticket: dict) -> str:
     lines. The persona-role marker survives BM25 / embedding indexing
     cleanly because it's a plain ASCII token; downstream retrieval
     sees the full multi-author thread.
+
+    V2 addition: when `description_code` (ticket-level) and `body_code`
+    (per-step) are present, they're surfaced into the memory_text so
+    BM25 / embedding retrieval can match on the engineer-vocabulary
+    log content. `description_code` is placed FIRST (leading-text
+    weight matters for both BM25 and short-doc embeddings); per-step
+    `body_code` follows the prose body of its step. V1 tickets simply
+    don't have these fields, so this branch no-ops for V1.
     """
     parts: list[str] = []
+
+    # V2 — ticket-level description_code is the highest-signal engineer-
+    # vocabulary content. Leads the memory_text so BM25 weights it.
+    description_code = (timeline_ticket.get("description_code") or "").strip()
+    if description_code:
+        parts.append(f"[description_code]\n{description_code}")
+
     for step in timeline_ticket.get("timeline") or []:
         role = step.get("persona_role") or "unknown"
         t = step.get("t_offset_s")
@@ -77,6 +92,14 @@ def _build_memory_text(timeline_ticket: dict) -> str:
             continue
         header = f"[{role} @ +{int(t) if isinstance(t, (int, float)) else '?'}s]:"
         parts.append(f"{header}\n{body}")
+        # V2 — per-step body_code (raw log lines this persona pasted).
+        body_code = (step.get("body_code") or "")
+        if body_code:
+            body_code = body_code.strip()
+            if body_code:
+                parts.append(
+                    f">> log lines pasted by {role}:\n{body_code}"
+                )
     return "\n\n".join(parts)
 
 
@@ -95,6 +118,9 @@ def _build_resolution_notes(timeline_ticket: dict) -> str:
 def load_humanized_corpus(
     global_dir: Path,
     humanized_subdir: str = "bulk-20260529",
+    *,
+    humanized_root: str = "jira-shadow-humanized-v1",
+    extra_distractor_path: Path | None = None,
 ) -> list[JiraMemoryIssue]:
     """Return the humanized v5-large corpus as a JiraMemoryIssue list.
 
@@ -103,11 +129,24 @@ def load_humanized_corpus(
     episode has no legacy counterpart are skipped — that should never
     happen for v5-large since the humanizer was driven off the legacy
     corpus itself.
+
+    V2 args (added 2026-06-01):
+      humanized_root:
+        Subdir under `global_dir` to read the humanized corpus from.
+        Default `"jira-shadow-humanized-v1"` (V1 baseline). Set to
+        `"jira-shadow-humanized-v2"` for the V2 corpus (multi-channel
+        evidence + engineer voice + description_code).
+      extra_distractor_path:
+        Optional path to a `timeline.jsonl` of `is_distractor=true`
+        rows (e.g. `.../jira-shadow-humanized-v2-distractors/mint-20260601/timeline.jsonl`).
+        When set, the distractor rows are appended to the returned
+        corpus so retrieval evaluation can measure top-1 precision
+        against the distractor set per §13.6.
     """
     global_dir = Path(global_dir)
     legacy_path = global_dir / "jira-memory-corpus.jsonl"
     humanized_path = (
-        global_dir / "jira-shadow-humanized-v1" / humanized_subdir / "timeline.jsonl"
+        global_dir / humanized_root / humanized_subdir / "timeline.jsonl"
     )
 
     if not legacy_path.exists():
@@ -172,4 +211,55 @@ def load_humanized_corpus(
             f"tickets with no matching legacy entry",
             file=sys.stderr,
         )
+
+    # V2 — append distractor tickets if requested. Distractors have
+    # `is_distractor=true` and `source_injection_id=None`; they have
+    # NO matching legacy entry by design, so they can't carry legacy
+    # metadata. We mint a stable available_as_memory_from from the
+    # earliest legacy timestamp so the time-ordering corpus shows
+    # them as visible to every window.
+    if extra_distractor_path is not None and extra_distractor_path.exists():
+        # Use the earliest legacy timestamp as the "always visible"
+        # anchor so distractors are visible to every test window.
+        anchor = min(
+            (r.get("available_as_memory_from", "") for r in legacy_by_episode.values()),
+            default="2000-01-01T00:00:00Z",
+        )
+        distractor_rows = _read_jsonl(extra_distractor_path)
+        n_distractors = 0
+        for ticket in distractor_rows:
+            if not ticket.get("is_distractor"):
+                continue
+            memory_text = _build_memory_text(ticket)
+            resolution_notes = _build_resolution_notes(ticket)
+            out.append(JiraMemoryIssue(
+                jira_shadow_issue_id=ticket.get("ticket_id", ""),
+                jira_issue_key=ticket.get("ticket_id", ""),
+                dataset_run_id="",
+                incident_episode_id=ticket.get("source_episode_id", ""),
+                available_as_memory_from=anchor,
+                # Mark scenario_family with a synthetic value so the
+                # ground-truth retrieval evaluator can never match
+                # a window to a distractor as a true positive.
+                scenario_id="__DISTRACTOR__",
+                scenario_family="__DISTRACTOR__",
+                affected_service="",
+                fault_type="",
+                fault_compatibility_class="",
+                severity=ticket.get("severity_seen", "medium"),
+                memory_text=memory_text,
+                resolution_notes=resolution_notes,
+                linked_window_ids=[],
+                linked_trace_ids=[],
+                linked_alert_fingerprints=[],
+                raw={"is_distractor": True},
+            ))
+            n_distractors += 1
+        import sys
+        print(
+            f"[humanized_loader] appended {n_distractors} distractor tickets "
+            f"from {extra_distractor_path.name}",
+            file=sys.stderr,
+        )
+
     return out

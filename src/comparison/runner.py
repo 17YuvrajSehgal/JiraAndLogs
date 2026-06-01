@@ -164,6 +164,85 @@ if _HAS_MEMORYGRAPH:
 
     KNOWN_PIPELINES["memorygraph_hybrid_humanized_logs"] = _MemoryGraphHybridHumanizedLogs
 
+    # V2 pipeline variants (2026-06-01). Identical structure to the V1
+    # humanized variants but read the multi-channel V2 corpus at
+    # jira-shadow-humanized-v2/bulk-20260531/. memory_text in V2 leads
+    # with description_code (engineer-vocabulary log lines per §13.12)
+    # so BM25 / embedding retrieval has rich engineer-vocab to match
+    # against. The hypothesis tested by these variants: V2 lifts
+    # retrieval past the V1 ceiling (R@5 ~0.07 per E5/E6/E7) because
+    # the destination side now speaks the same vocabulary as the
+    # query side. See LLM-Jira-enhancement.md §14 for V2 details.
+    class _MemoryGraphHybridHumanizedV2(MemoryGraphPipeline):
+        name = "memorygraph_hybrid_humanized_v2"
+
+        def __init__(self) -> None:
+            super().__init__(
+                with_numeric=True,
+                humanized_subdir="bulk-20260531",
+                humanized_root="jira-shadow-humanized-v2",
+            )
+
+    KNOWN_PIPELINES["memorygraph_hybrid_humanized_v2"] = _MemoryGraphHybridHumanizedV2
+
+    class _MemoryGraphFullHumanizedV2(MemoryGraphPipeline):
+        name = "memorygraph_full_humanized_v2"
+
+        def __init__(self) -> None:
+            super().__init__(
+                with_numeric=True,
+                with_embeddings=True,
+                humanized_subdir="bulk-20260531",
+                humanized_root="jira-shadow-humanized-v2",
+            )
+
+    KNOWN_PIPELINES["memorygraph_full_humanized_v2"] = _MemoryGraphFullHumanizedV2
+
+    # V2 + log-signature query (Move A) on the V2 corpus. With V2's
+    # description_code on the destination side AND log-signature on the
+    # query side, BOTH sides share engineer vocabulary — this is the
+    # configuration E7's analysis predicted would unlock retrieval.
+    class _MemoryGraphHybridHumanizedV2Logs(MemoryGraphPipeline):
+        name = "memorygraph_hybrid_humanized_v2_logs"
+
+        def __init__(self) -> None:
+            super().__init__(
+                with_numeric=True,
+                with_log_signatures=True,
+                humanized_subdir="bulk-20260531",
+                humanized_root="jira-shadow-humanized-v2",
+            )
+
+    KNOWN_PIPELINES["memorygraph_hybrid_humanized_v2_logs"] = _MemoryGraphHybridHumanizedV2Logs
+
+    # V2 with distractors mixed in — for measuring top-1 precision
+    # against the distractor set per §13.6. Distractors are loaded from
+    # jira-shadow-humanized-v2-distractors/mint-20260601/timeline.jsonl
+    # alongside the real V2 corpus. Distractor tickets carry
+    # scenario_family="__DISTRACTOR__" so the ground-truth evaluator
+    # can never count a distractor as a TP — but the retriever can
+    # surface one as a top-K match, which is exactly what we want to
+    # measure.
+    from pathlib import Path as _Path
+
+    class _MemoryGraphHybridHumanizedV2Distractors(MemoryGraphPipeline):
+        name = "memorygraph_hybrid_humanized_v2_distractors"
+
+        def __init__(self) -> None:
+            super().__init__(
+                with_numeric=True,
+                humanized_subdir="bulk-20260531",
+                humanized_root="jira-shadow-humanized-v2",
+                distractor_path=_Path(
+                    "data/derived/global/2026-05-25-dataset-v5-large-global/"
+                    "jira-shadow-humanized-v2-distractors/mint-20260601/timeline.jsonl"
+                ),
+            )
+
+    KNOWN_PIPELINES["memorygraph_hybrid_humanized_v2_distractors"] = (
+        _MemoryGraphHybridHumanizedV2Distractors
+    )
+
 
 @dataclass
 class ComparisonReport:
