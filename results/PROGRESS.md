@@ -139,6 +139,35 @@ The V2 humanizer represents incidents through engineer-vocabulary log text, NOT 
 
 9. **Trace and k8s ablations are uninformative on V2.** We honestly disclose this: V2's humanized memory does not encode explicit trace_id / pod_name / kubelet nouns, so ablating them is a no-op. Future humanizers could emit explicit trace and k8s spans to make this ablation more diagnostic.
 
+## Phase D — Distractor robustness ratio sweep [COMPLETE]
+
+### Setup
+- Distractor pool: 110 tickets (60 TAWOS-derived + 25 in-architecture + 25 cross-architecture)
+- Sub-sample ratios: {0%, 10%, 25%, 50%}, fixed seed=42
+- Four pipeline variants registered, all SOTA config with extra distractors
+
+### Headline result
+
+| Distractor ratio | n distractors | PR-AUC | Hit@1 | Hit@5 | MRR |
+|---|---:|---:|---:|---:|---:|
+| 0% | 0 | 0.6186 | 0.158 [.120, .199] | 0.202 [.155, .246] | 0.172 [.133, .212] |
+| 10% | 11 | 0.6185 | 0.158 [.120, .199] | 0.202 [.155, .246] | 0.172 [.133, .212] |
+| 25% | 28 | 0.6187 | 0.158 [.120, .199] | **0.202** [.155, .246] | 0.172 [.132, .212] |
+| 50% | 55 | 0.6180 | 0.151 [.114, .192] | **0.202** [.155, .246] | 0.168 [.129, .206] |
+
+### ICSE-worthy points captured from Phase D
+
+10. **Retrieval is essentially invariant to distractor noise through 50% of memory.** Hit@5 stays at exactly 0.202 across all four ratios; MRR drops only 2% relative at 50%; Hit@1 drops only 4% at 50%. The cross-encoder reranker successfully suppresses distractors — they end up in ranks 6+ where they don't affect Hit@5.
+
+11. **The robustness curve answers a key reviewer question: "what if Jira is full of irrelevant tickets?"** At realistic noise ratios (25%, where 1-in-4 memory tickets is irrelevant), the system performs identically to a clean-memory deployment. Only at extreme noise (50%) does top-1 erode measurably (-4% rel), and Hit@5 remains untouched.
+
+### Phase D artifacts
+- `results/figures/distractor_curve.{png,pdf}` — robustness curve
+- `results/phase-d-distractors/{distractor_pool_*.jsonl, headline_table.md, comparison.log, ratios.json}`
+- `data/derived/global/.../comparison/phase-d-distractors/{report.json, per-window-predictions.jsonl}`
+
+---
+
 ### Phase A artifacts
 
 - `data/derived/global/2026-05-25-dataset-v5-large-global/comparison/phase-a-anchor/{report.json, report.md, per-window-predictions.jsonl}` (full comparison output, 5880 prediction rows)
