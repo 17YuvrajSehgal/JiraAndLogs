@@ -788,11 +788,17 @@ class CrossEncoderRerankSkill(Skill):
         top_k_to_rerank: int = 20,
         max_chars_per_doc: int = 800,
         progress_every: int = 200,
+        # Blend weight: final = blend_weight * crossenc + (1-blend_weight) * bi_encoder.
+        # 1.0 = REPLACE bi-encoder (lost the R@5 game in initial test);
+        # 0.6 = strong cross-encoder authority while preserving bi-
+        # encoder's broader recall — recommended.
+        blend_weight: float = 0.6,
     ) -> None:
         self.model_name = model_name
         self.top_k_to_rerank = top_k_to_rerank
         self.max_chars_per_doc = max_chars_per_doc
         self.progress_every = progress_every
+        self.blend_weight = max(0.0, min(1.0, blend_weight))
         # Loaded on first call. None = "tried and failed" after first
         # attempt, so we don't re-try the import every window.
         self._model: Any = None
@@ -920,12 +926,22 @@ class CrossEncoderRerankSkill(Skill):
         peak = max(scores) if scores else 0.0
         floor = min(scores) if scores else 0.0
         span = peak - floor if (peak > floor) else 1.0
-        # ZERO out everything (cross-encoder is the new authority for
-        # the top-K); set the K scores from the cross-encoder.
-        for cid in ctx.candidate_jira_ids:
-            ctx.similarity_scores[cid] = 0.0
+        # BLEND policy: keep bi-encoder scores for ALL candidates;
+        # for the reranked top-K, blend `blend_weight * cross_encoder
+        # + (1 - blend_weight) * bi_encoder`. The "replace top-20,
+        # zero everything else" policy from the initial implementation
+        # lifted R@1 but hurt R@5 because true matches at bi-encoder
+        # rank 6-20 sometimes got moved out of top-5 by the cross-
+        # encoder. The blend preserves bi-encoder's broader recall
+        # while letting cross-encoder dominate top-1 selection.
+        w = self.blend_weight
         for cid, s in zip(topk, scores):
-            ctx.similarity_scores[cid] = (s - floor) / span if span > 0 else 1.0
+            ce_norm = (s - floor) / span if span > 0 else 1.0
+            bi_norm = ctx.similarity_scores.get(cid, 0.0)
+            ctx.similarity_scores[cid] = w * ce_norm + (1.0 - w) * bi_norm
+        # Candidates outside the rerank top-K keep their bi-encoder
+        # scores unchanged — they remain in the candidate pool for the
+        # downstream graph_score + triage_decide blends.
 
         self._scored_windows += 1
         self._reranked_total += len(topk)
