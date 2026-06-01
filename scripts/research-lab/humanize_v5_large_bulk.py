@@ -55,9 +55,11 @@ from jira_humanizer.timeline_generator import (  # noqa: E402
     LLMConfig,
     WindowEvidenceInputs,
     generate_full_timeline,
+    get_usage_stats,
     plan_closure,
     plan_misattribution,
     plan_wrong_hypothesis,
+    reset_usage_stats,
     stamp_versions,
 )
 from jira_humanizer.timeline_schema import TicketTimeline  # noqa: E402
@@ -277,6 +279,7 @@ def _humanize_one(
     window_row: dict,
     runs_root: Path,
     episode_index: EpisodeIndex,
+    global_triage_path: Path,
     llm: LLMConfig,
 ) -> TicketTimeline:
     run_id = window_row["dataset_run_id"]
@@ -297,6 +300,10 @@ def _humanize_one(
         severity_seen=_coarse_public_severity(window_row["scenario_family"]),
         candidate_downstream_services=candidates,
         triage_label=window_row.get("triage_label", ""),
+        # V2 wiring — routes through multi-channel evidence bundle.
+        global_triage_path=global_triage_path,
+        alerts_path=run_dir / "alerts.jsonl",
+        source_injection_id=window_row["incident_episode_id"],
     )
     return generate_full_timeline(bundle, llm=llm)
 
@@ -319,7 +326,8 @@ def main() -> int:
     if args.output_subdir is None:
         today = datetime.datetime.now(datetime.timezone.utc).strftime("%Y%m%d")
         args.output_subdir = f"bulk-{today}"
-    output_dir = global_dir / "jira-shadow-humanized-v1" / args.output_subdir
+    # V2 corpus goes to jira-shadow-humanized-v2/; V1 stays untouched.
+    output_dir = global_dir / "jira-shadow-humanized-v2" / args.output_subdir
     output_dir.mkdir(parents=True, exist_ok=True)
 
     _declare_paths(
@@ -361,6 +369,10 @@ def main() -> int:
         model=args.llm_model,
         temperature=args.temperature,
     )
+    # Reset usage counters so this run's manifest reports just this run.
+    # (When --resume, prior tickets' tokens are NOT re-counted — fine; the
+    # manifest documents the resumption call's stats specifically.)
+    reset_usage_stats()
 
     n_ok = 0
     n_fail = 0
@@ -403,7 +415,10 @@ def main() -> int:
 
             t0 = time.time()
             try:
-                timeline = _humanize_one(window, runs_root, episode_index, llm)
+                timeline = _humanize_one(
+                    window, runs_root, episode_index,
+                    examples_path, llm,
+                )
                 # Defence in depth: scan every step's text for leaks
                 # before we serialize. This is paid for already inside
                 # the generator but we re-check at the corpus boundary.
@@ -448,6 +463,7 @@ def main() -> int:
                 prog_f.flush()
 
     duration_s = time.time() - started_at
+    usage_stats = get_usage_stats().as_dict()
 
     manifest = {
         "global_id": args.global_id,
@@ -459,6 +475,7 @@ def main() -> int:
             "model": llm.model,
             "temperature": llm.temperature,
         },
+        "llm_usage": usage_stats,
         "totals": {
             "n_legacy_total": len(legacy_entries),
             "n_processed": len(work),

@@ -27,11 +27,20 @@ class StepKind:
 # What was visible to the persona when their contribution was generated.
 # The generator captures this so we can later audit "did the LLM only
 # see what the persona could see?".
+# V2 extension (§13.12): multi-channel evidence — logs + metrics + trace
+# + k8s + alerts. All fields are pre-sanitized strings. The dict-typed
+# trace_summary / k8s_state from EvidenceBundle are flattened to lists
+# of engineer-readable strings here so the jsonl schema stays uniform.
 @dataclass
 class EvidenceSlice:
     log_quotes: list[str] = field(default_factory=list)
     metric_observations: list[str] = field(default_factory=list)
     k8s_observations: list[str] = field(default_factory=list)
+    # V2 additions
+    trace_observations: list[str] = field(default_factory=list)
+    alert_names: list[str] = field(default_factory=list)
+    trace_id_quoted: str | None = None
+    symptom_phrase: str = ""
     time_window_start: str = ""   # ISO ts (offset from episode start)
     time_window_end: str = ""     # ISO ts
 
@@ -52,7 +61,12 @@ class TimelineStep:
     t_offset_s: int           # seconds since episode start
     context_window_s: int     # how much of the fault was visible to this persona
     evidence: EvidenceSlice
-    text: str = ""            # the actual contribution (LLM output)
+    text: str = ""            # the prose contribution (LLM output)
+    # V2 — Comment_Code analog per §13.2. Raw log lines this persona pasted
+    # alongside their prose, drawn from `evidence.log_quotes` for the step.
+    # None when this step's persona doesn't naturally paste logs
+    # (e.g. cs-agent, eng-mgr) or when no log lines were available.
+    body_code: str | None = None
     # The generator records the prompt hash so re-runs can be
     # deterministically diffed against original outputs.
     prompt_hash: str = ""
@@ -83,6 +97,28 @@ class TicketTimeline:
     generator_version: str = ""
     sanitizer_version: str = ""
     symptom_map_version: str = ""
+    # ---- V2 additions per §13.2 ----
+    # Description_Code analog — characteristic log lines from Move A,
+    # joined with newlines. Empty allowed per §13.3 rule 3c.
+    description_code: str = ""
+    # Resolution outcome (Fixed / Won't Fix / Duplicate / Cannot Reproduce /
+    # Not A Bug / Timed out). V1 kept everything as Fixed; V2 samples per
+    # §13.1. Empty string = use the V1 default ("Fixed").
+    resolution: str = ""
+    # Sampled per §13.1 distribution; 0 = unknown (V1 didn't track this).
+    resolution_time_s: int = 0
+    # §13.5 — distractor tickets evaluate retrieval precision.
+    is_distractor: bool = False
+    # §13.9 #3 — parent ticket_id when this is a critical-severity followup.
+    is_followup_of: str | None = None
+    # Provenance back to the injection that produced this ticket. None for
+    # distractors and baseline tickets.
+    source_injection_id: str | None = None
+    # Captures signature_for_episode() source: "diff" | "plain_fallback" | "empty"
+    log_signature_source: str = ""
+    # sha256[:16] of the canonical EvidenceBundle that drove generation —
+    # reproducibility per §12.
+    evidence_bundle_hash: str = ""
 
     def as_legacy_ticket(self) -> dict[str, Any]:
         """Flatten to the legacy jira_shadow_issues.jsonl shape.
@@ -91,6 +127,10 @@ class TicketTimeline:
         natively yet. The first REPORT step's text becomes the
         description; subsequent steps become comments; the final
         RESOLVE (if present) populates resolution_notes.
+
+        V2: comments carry `body_code` alongside `body` so downstream
+        readers that index pasted log content get a stable channel for
+        BM25-on-engineer-vocabulary retrieval.
         """
         if not self.steps:
             return {"summary": "", "description": "", "comments": [], "resolution_notes": ""}
@@ -99,28 +139,28 @@ class TicketTimeline:
         comments = []
         resolution = ""
         for step in self.steps[1:]:
+            comments.append({
+                "author": step.persona_avatar,
+                "role": step.persona_role,
+                "t_offset_s": step.t_offset_s,
+                "body": step.text,
+                "body_code": step.body_code,
+            })
             if step.step_kind == StepKind.RESOLVE:
                 resolution = step.text
-                # Resolve also reads as the last comment in the comment thread.
-                comments.append({
-                    "author": step.persona_avatar,
-                    "role": step.persona_role,
-                    "t_offset_s": step.t_offset_s,
-                    "body": step.text,
-                })
-            else:
-                comments.append({
-                    "author": step.persona_avatar,
-                    "role": step.persona_role,
-                    "t_offset_s": step.t_offset_s,
-                    "body": step.text,
-                })
 
+        # V2 description is prose-only and short (§13.3). The full text
+        # the LLM produced is still available on report.text; the
+        # `description` field here is the capped surface for downstream
+        # readers that expect short descriptions.
         return {
             "summary": _first_line(report.text),
-            "description": report.text,
+            "description": _cap_description(report.text),
+            "description_code": self.description_code,
             "comments": comments,
+            "resolution": self.resolution or ("Fixed" if not self.closed_as_noise else "Won't Fix"),
             "resolution_notes": resolution,
+            "resolution_time_s": self.resolution_time_s,
             "reporter": report.persona_avatar,
             "reporter_role": report.persona_role,
             "affected_services": self.affected_services_seen,
@@ -128,6 +168,8 @@ class TicketTimeline:
             "severity": self.severity_seen,
             "closed_as_noise": self.closed_as_noise,
             "is_misattributed": self.is_misattributed,
+            "is_distractor": self.is_distractor,
+            "is_followup_of": self.is_followup_of,
         }
 
     def as_jsonl_row(self) -> dict[str, Any]:
@@ -137,11 +179,19 @@ class TicketTimeline:
             "ticket_id": self.ticket_id,
             "source_episode_id": self.source_episode_id,
             "source_dataset_run_id": self.source_dataset_run_id,
+            "source_injection_id": self.source_injection_id,
             "affected_services_seen": self.affected_services_seen,
             "severity_seen": self.severity_seen,
             "components_seen": self.components_seen,
             "is_misattributed": self.is_misattributed,
             "closed_as_noise": self.closed_as_noise,
+            "is_distractor": self.is_distractor,
+            "is_followup_of": self.is_followup_of,
+            "description_code": self.description_code,
+            "resolution": self.resolution,
+            "resolution_time_s": self.resolution_time_s,
+            "log_signature_source": self.log_signature_source,
+            "evidence_bundle_hash": self.evidence_bundle_hash,
             "generator_version": self.generator_version,
             "sanitizer_version": self.sanitizer_version,
             "symptom_map_version": self.symptom_map_version,
@@ -156,15 +206,41 @@ class TicketTimeline:
                         "log_quotes": s.evidence.log_quotes,
                         "metric_observations": s.evidence.metric_observations,
                         "k8s_observations": s.evidence.k8s_observations,
+                        "trace_observations": s.evidence.trace_observations,
+                        "alert_names": s.evidence.alert_names,
+                        "trace_id_quoted": s.evidence.trace_id_quoted,
+                        "symptom_phrase": s.evidence.symptom_phrase,
                         "time_window_start": s.evidence.time_window_start,
                         "time_window_end": s.evidence.time_window_end,
                     },
                     "text": s.text,
+                    "body_code": s.body_code,
                     "prompt_hash": s.prompt_hash,
                 }
                 for s in self.steps
             ],
         }
+
+
+# V2 — short prose description per §13.3 / §13.1 (TAWOS median 200-500 chars).
+# Hard cap; LLM is also steered toward short prose via the persona prompt.
+DESCRIPTION_MAX_CHARS = 500
+
+
+def _cap_description(text: str) -> str:
+    """Cap the report-step text at DESCRIPTION_MAX_CHARS. Tries to break
+    on a sentence boundary near the cap so we don't slice mid-word."""
+    s = (text or "").strip()
+    if len(s) <= DESCRIPTION_MAX_CHARS:
+        return s
+    # Look for a sentence end in the last ~80 chars before the cap.
+    window_start = max(0, DESCRIPTION_MAX_CHARS - 80)
+    for end_char in (". ", "! ", "? ", "\n"):
+        idx = s.rfind(end_char, window_start, DESCRIPTION_MAX_CHARS)
+        if idx != -1:
+            return s[: idx + 1].rstrip()
+    # No sentence boundary nearby — hard cut + ellipsis.
+    return s[: DESCRIPTION_MAX_CHARS].rstrip() + "..."
 
 
 def _first_line(text: str) -> str:

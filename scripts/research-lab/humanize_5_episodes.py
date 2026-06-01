@@ -42,6 +42,8 @@ from jira_humanizer.timeline_generator import (  # noqa: E402
     LLMConfig,
     WindowEvidenceInputs,
     generate_full_timeline,
+    get_usage_stats,
+    reset_usage_stats,
     stamp_versions,
 )
 from jira_humanizer.timeline_schema import TicketTimeline  # noqa: E402
@@ -166,7 +168,12 @@ def _affected_services_for_episode(run_dir: Path, episode_id: str) -> list[str]:
     return []
 
 
-def _humanize_one(window_row: dict, runs_root: Path, llm: LLMConfig) -> TicketTimeline:
+def _humanize_one(
+    window_row: dict,
+    runs_root: Path,
+    global_triage_path: Path,
+    llm: LLMConfig,
+) -> TicketTimeline:
     run_id = window_row["dataset_run_id"]
     run_dir = runs_root / run_id
     inputs = WindowEvidenceInputs(
@@ -183,6 +190,12 @@ def _humanize_one(window_row: dict, runs_root: Path, llm: LLMConfig) -> TicketTi
         severity_seen=_coarse_public_severity(window_row["scenario_family"]),
         candidate_downstream_services=candidates,
         triage_label=window_row.get("triage_label", ""),
+        # V2 wiring (LLM-Jira-enhancement.md §13.8 step 1) — when these
+        # paths are set, the generator builds the multi-channel
+        # evidence bundle per ticket and per-step-slices it.
+        global_triage_path=global_triage_path,
+        alerts_path=run_dir / "alerts.jsonl",
+        source_injection_id=window_row["incident_episode_id"],
     )
     return generate_full_timeline(bundle, llm=llm)
 
@@ -210,7 +223,9 @@ def main() -> int:
         return 2
     examples_path = global_dir / "global-triage-examples.jsonl"
 
-    out_dir = global_dir / "jira-shadow-humanized-v1"
+    # V2 corpus goes to jira-shadow-humanized-v2/; V1 stays untouched
+    # as the comparison baseline per LLM-Jira-enhancement.md §13.2.
+    out_dir = global_dir / "jira-shadow-humanized-v2" / "smoke-5-episodes"
     out_dir.mkdir(parents=True, exist_ok=True)
 
     llm = LLMConfig(
@@ -222,17 +237,31 @@ def main() -> int:
     print(f"[humanize] picking one active_fault window per family ...", file=sys.stderr)
     picks = _pick_one_window_per_family(examples_path, _STRATA)
 
+    # Reset token-usage counters so this run's manifest reports just this run.
+    reset_usage_stats()
+
     timelines: list[TicketTimeline] = []
     for row in picks:
         family = row["scenario_family"]
         episode_id = row["incident_episode_id"]
         print(f"[humanize] family={family} episode={episode_id[-60:]}", file=sys.stderr)
         try:
-            timeline = _humanize_one(row, runs_root, llm)
+            timeline = _humanize_one(row, runs_root, examples_path, llm)
             timelines.append(timeline)
         except Exception as exc:
             print(f"  FAILED: {type(exc).__name__}: {exc}", file=sys.stderr)
             continue
+
+    usage_stats = get_usage_stats().as_dict()
+    print(
+        f"[humanize] LM Studio usage: "
+        f"{usage_stats['n_calls']} calls, "
+        f"{usage_stats['prompt_tokens']} prompt tokens, "
+        f"{usage_stats['completion_tokens']} completion tokens, "
+        f"{usage_stats['wall_time_s']}s wall time "
+        f"({usage_stats['n_leak_rejections']} leak rejections)",
+        file=sys.stderr,
+    )
 
     if not timelines:
         print("ERROR: no timelines generated", file=sys.stderr)
@@ -291,6 +320,10 @@ def main() -> int:
             "model": llm.model,
             "temperature": llm.temperature,
         },
+        # Cumulative LM Studio token + wall-time stats for this run.
+        # Useful for the research-findings writeup (cost, throughput,
+        # average context size, leak rejections per N calls).
+        "llm_usage": usage_stats,
         "stratification": list(_STRATA),
         "tickets": [
             {
