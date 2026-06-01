@@ -736,6 +736,215 @@ class EmbeddingSimilaritySkill(Skill):
 
 
 # ---------------------------------------------------------------------------
+# Cross-encoder reranker — sentence-transformers MS-MARCO MiniLM-L-6-v2
+# ---------------------------------------------------------------------------
+
+
+class CrossEncoderRerankSkill(Skill):
+    """Rerank the top-K candidates with a pretrained cross-encoder.
+
+    Runs AFTER lexical_similarity / log_signature_similarity /
+    embedding_similarity have populated `similarity_scores`. Takes the
+    top-K candidates by current score, jointly scores (query, doc)
+    pairs with `cross-encoder/ms-marco-MiniLM-L-6-v2`, and REPLACES
+    the similarity_scores for those K candidates with normalized
+    cross-encoder scores (others stay at 0).
+
+    Why cross-encoder and not another bi-encoder layer:
+        Bi-encoders (BM25, Nomic dense) encode query and doc
+        independently and score by cosine — cheap to index but lossy.
+        Cross-encoders feed [CLS] query [SEP] doc through the model
+        jointly so attention can directly compare every token pair.
+        On MS-MARCO passage ranking, the cross-encoder is +5-10 pts
+        nDCG over the bi-encoder. The cost is O(K) forward passes
+        per query, which is bounded by our component-filter
+        producing ~15 candidates per window.
+
+    Fail-soft: if sentence_transformers isn't importable or the model
+    fails to load on .fit(), the skill self-disables (logs once, then
+    is a no-op for every window). The pipeline still runs.
+
+    Operating point: top_k_to_rerank=20 (the reranker only sees the
+    top-20 by upstream similarity). On v5-large that's ~15 effective
+    per window after the component filter. Total cost ~10-30 ms per
+    window on CPU, ~3-5 ms on GPU.
+    """
+
+    name = "cross_encoder_rerank"
+    description = (
+        "Rerank top-K candidates with a pretrained cross-encoder "
+        "(MS-MARCO MiniLM-L-6-v2). Replaces similarity_scores for the "
+        "reranked candidates with normalized cross-encoder scores."
+    )
+    input_schema = {
+        "reads": ["window", "candidate_jira_ids", "visible_jira", "similarity_scores"],
+        "writes": ["similarity_scores"],
+    }
+
+    def __init__(
+        self,
+        *,
+        model_name: str = "cross-encoder/ms-marco-MiniLM-L-6-v2",
+        top_k_to_rerank: int = 20,
+        max_chars_per_doc: int = 800,
+        progress_every: int = 200,
+    ) -> None:
+        self.model_name = model_name
+        self.top_k_to_rerank = top_k_to_rerank
+        self.max_chars_per_doc = max_chars_per_doc
+        self.progress_every = progress_every
+        # Loaded on first call. None = "tried and failed" after first
+        # attempt, so we don't re-try the import every window.
+        self._model: Any = None
+        self._tried_load = False
+        self._enabled = True
+        self._scored_windows = 0
+        self._reranked_total = 0
+
+    def _ensure_model(self) -> bool:
+        """Lazy-load. Returns False if loading fails (skill becomes no-op)."""
+        if self._tried_load:
+            return self._enabled
+        self._tried_load = True
+        try:
+            from sentence_transformers import CrossEncoder  # type: ignore
+        except ImportError as e:
+            import sys
+            print(
+                f"[cross_encoder_rerank] sentence_transformers not "
+                f"importable: {e}; skill disabled.",
+                file=sys.stderr, flush=True,
+            )
+            self._enabled = False
+            return False
+        try:
+            import sys
+            print(
+                f"[cross_encoder_rerank] loading {self.model_name} ... "
+                "(first run downloads ~80MB to HF cache)",
+                file=sys.stderr, flush=True,
+            )
+            self._model = CrossEncoder(self.model_name, max_length=512)
+            print(
+                f"[cross_encoder_rerank] model ready; device={self._model._target_device}",
+                file=sys.stderr, flush=True,
+            )
+        except Exception as e:  # network errors, OOM, etc.
+            import sys
+            print(
+                f"[cross_encoder_rerank] model load failed: {e!r}; "
+                "skill disabled.",
+                file=sys.stderr, flush=True,
+            )
+            self._enabled = False
+            self._model = None
+            return False
+        return True
+
+    def _build_query(self, ctx: AgentContext) -> str:
+        """Build the query text. Prefer the log signature when present
+        (Move A), otherwise fall back to evidence_text. The cross-
+        encoder works best on shorter, focused queries — large prose
+        wastes attention on boilerplate."""
+        # Log signature is populated by LogSignatureSimilaritySkill into
+        # ctx.skill_trace; we don't have direct access here. Use the
+        # window's evidence_text as the default and let the
+        # log-signature variant of the pipeline produce its own
+        # similarity_scores upstream.
+        text = _strip_window_header(ctx.window.evidence_text or "")
+        # Cap at a sensible length — MiniLM's max_length=512 tokens
+        # ≈ 2000 chars; longer queries get truncated by the tokenizer
+        # anyway, so explicit char cap keeps logs noise-free.
+        return text[: 2000]
+
+    def run(self, ctx: AgentContext) -> SkillResult:
+        if not ctx.candidate_jira_ids:
+            return SkillResult(self.name, True, "no candidates", {})
+        if not self._ensure_model():
+            return SkillResult(
+                self.name, True, "skill disabled (model unavailable)",
+                {"disabled": True},
+            )
+        # Pick top-K by current similarity_scores.
+        ranked = sorted(
+            ctx.candidate_jira_ids,
+            key=lambda cid: ctx.similarity_scores.get(cid, 0.0),
+            reverse=True,
+        )
+        topk = ranked[: self.top_k_to_rerank]
+        if not topk:
+            return SkillResult(
+                self.name, True, "empty top-K",
+                {"reranked": 0},
+            )
+
+        query = self._build_query(ctx)
+        if not query.strip():
+            return SkillResult(
+                self.name, True, "empty query (no evidence_text)",
+                {"reranked": 0},
+            )
+
+        # Build (query, doc) pairs. memory_text already includes V2's
+        # description_code at the front per humanized_loader changes.
+        pairs: list[list[str]] = []
+        for cid in topk:
+            jira = ctx.visible_jira[cid]
+            doc = (jira.memory_text or "")[: self.max_chars_per_doc]
+            pairs.append([query, doc])
+
+        # Score. show_progress_bar=False to keep logs clean — we emit
+        # our own progress every N windows.
+        try:
+            scores = self._model.predict(pairs, show_progress_bar=False)
+        except Exception as e:
+            import sys
+            print(
+                f"[cross_encoder_rerank] predict failed: {e!r}; "
+                "leaving similarity_scores unchanged",
+                file=sys.stderr, flush=True,
+            )
+            return SkillResult(
+                self.name, False, f"predict error: {e!r}",
+                {"reranked": 0},
+            )
+
+        # Convert to float list (predict returns numpy by default).
+        try:
+            scores = [float(s) for s in scores]
+        except (TypeError, ValueError):
+            scores = list(scores)
+
+        # Normalize within the top-K to [0, 1] so downstream blend
+        # behavior matches lexical_similarity / embedding_similarity.
+        peak = max(scores) if scores else 0.0
+        floor = min(scores) if scores else 0.0
+        span = peak - floor if (peak > floor) else 1.0
+        # ZERO out everything (cross-encoder is the new authority for
+        # the top-K); set the K scores from the cross-encoder.
+        for cid in ctx.candidate_jira_ids:
+            ctx.similarity_scores[cid] = 0.0
+        for cid, s in zip(topk, scores):
+            ctx.similarity_scores[cid] = (s - floor) / span if span > 0 else 1.0
+
+        self._scored_windows += 1
+        self._reranked_total += len(topk)
+        if self._scored_windows % self.progress_every == 0:
+            import sys
+            print(
+                f"[cross_encoder_rerank] reranked {self._scored_windows} "
+                f"windows ({self._reranked_total} total pair scorings)",
+                file=sys.stderr, flush=True,
+            )
+
+        return SkillResult(
+            self.name, True,
+            f"reranked top-{len(topk)} (raw_peak={peak:.3f} raw_floor={floor:.3f})",
+            {"reranked": len(topk), "peak": peak, "floor": floor},
+        )
+
+
+# ---------------------------------------------------------------------------
 # Graph-aware scoring + traversal skills
 # ---------------------------------------------------------------------------
 
@@ -1174,6 +1383,7 @@ def default_skill_registry() -> dict[str, Skill]:
         LexicalSimilaritySkill.name: LexicalSimilaritySkill(),
         LogSignatureSimilaritySkill.name: LogSignatureSimilaritySkill(),
         EmbeddingSimilaritySkill.name: EmbeddingSimilaritySkill(),
+        CrossEncoderRerankSkill.name: CrossEncoderRerankSkill(),
         GraphScoreSkill.name: GraphScoreSkill(),
         NumericBlendSkill.name: NumericBlendSkill(),
         TriageDecideSkill.name: TriageDecideSkill(),

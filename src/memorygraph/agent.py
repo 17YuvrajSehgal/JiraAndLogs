@@ -137,6 +137,7 @@ class RulePlanner(Planner):
         with_numeric: bool = False,
         with_embeddings: bool = False,
         with_log_signatures: bool = False,
+        with_cross_encoder: bool = False,
     ) -> None:
         if chain is not None:
             self.chain = chain
@@ -160,6 +161,14 @@ class RulePlanner(Planner):
                 else base_list.index("lexical_similarity") + 1
             )
             base_list.insert(insert_at, "embedding_similarity")
+        if with_cross_encoder:
+            # cross_encoder_rerank OVERWRITES similarity_scores for the
+            # top-K candidates with cross-encoder joint scoring. Place
+            # it LAST among the similarity skills so it has access to
+            # the consensus from BM25 / log_signature / embedding to
+            # pick a sensible top-K to rerank.
+            insert_at = base_list.index("graph_score")
+            base_list.insert(insert_at, "cross_encoder_rerank")
         self.chain = tuple(base_list)
 
     def plan(self, ctx: AgentContext) -> list[str]:

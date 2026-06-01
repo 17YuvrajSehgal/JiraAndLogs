@@ -243,6 +243,47 @@ if _HAS_MEMORYGRAPH:
         _MemoryGraphHybridHumanizedV2Distractors
     )
 
+    # Cross-encoder reranker on V2 (2026-06-01). Layers MS-MARCO
+    # MiniLM-L-6-v2 cross-encoder over the BM25 top-K to rerank.
+    # Cross-encoder joint scoring is +5-10 nDCG over bi-encoder on
+    # retrieval benchmarks — this variant tests whether that lift
+    # closes the V2-comparative-analysis R@5 ceiling (0.0745 ->
+    # hopefully 0.10+).
+    class _MemoryGraphHybridHumanizedV2CrossEnc(MemoryGraphPipeline):
+        name = "memorygraph_hybrid_humanized_v2_crossenc"
+
+        def __init__(self) -> None:
+            super().__init__(
+                with_numeric=True,
+                with_cross_encoder=True,
+                humanized_subdir="bulk-20260531",
+                humanized_root="jira-shadow-humanized-v2",
+            )
+
+    KNOWN_PIPELINES["memorygraph_hybrid_humanized_v2_crossenc"] = (
+        _MemoryGraphHybridHumanizedV2CrossEnc
+    )
+
+    # V2 + Move A logs + Cross-encoder rerank — the maximally-stacked
+    # retrieval pipeline. Tests the ceiling: engineer-vocab on both
+    # source (log signatures) AND destination (V2 description_code)
+    # AND cross-encoder joint scoring on the top-K.
+    class _MemoryGraphHybridHumanizedV2LogsCrossEnc(MemoryGraphPipeline):
+        name = "memorygraph_hybrid_humanized_v2_logs_crossenc"
+
+        def __init__(self) -> None:
+            super().__init__(
+                with_numeric=True,
+                with_log_signatures=True,
+                with_cross_encoder=True,
+                humanized_subdir="bulk-20260531",
+                humanized_root="jira-shadow-humanized-v2",
+            )
+
+    KNOWN_PIPELINES["memorygraph_hybrid_humanized_v2_logs_crossenc"] = (
+        _MemoryGraphHybridHumanizedV2LogsCrossEnc
+    )
+
 
 @dataclass
 class ComparisonReport:

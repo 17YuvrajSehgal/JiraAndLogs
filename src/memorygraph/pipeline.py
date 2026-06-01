@@ -70,6 +70,7 @@ class MemoryGraphPipeline(PipelineRunner):
         with_numeric: bool = False,
         with_embeddings: bool = False,
         with_log_signatures: bool = False,
+        with_cross_encoder: bool = False,
         humanized_subdir: str | None = None,
         humanized_root: str = "jira-shadow-humanized-v1",
         distractor_path: Path | None = None,
@@ -90,6 +91,13 @@ class MemoryGraphPipeline(PipelineRunner):
         # train_and_predict so the skill can find the per-window
         # Loki dumps.
         self.with_log_signatures = with_log_signatures
+        # When True, CrossEncoderRerankSkill (sentence-transformers
+        # ms-marco-MiniLM-L-6-v2) runs after the bi-encoder similarity
+        # skills to rerank the top-K candidates. The cross-encoder
+        # jointly scores (query, doc) pairs so attention can compare
+        # every token pair — typically +5-10 nDCG vs bi-encoder alone
+        # on retrieval benchmarks. Cost: ~10-30 ms/window on CPU.
+        self.with_cross_encoder = with_cross_encoder
         # When set, swap the loaded ds.memory_corpus for the humanized
         # corpus at jira-shadow-humanized-v1/<humanized_subdir>/timeline.jsonl
         # before any skill sees it. Used for Phase 5.3 cross-train
@@ -123,6 +131,7 @@ class MemoryGraphPipeline(PipelineRunner):
             with_numeric=self.with_numeric,
             with_embeddings=self.with_embeddings,
             with_log_signatures=self.with_log_signatures,
+            with_cross_encoder=self.with_cross_encoder,
         )
 
     def train_and_predict(
