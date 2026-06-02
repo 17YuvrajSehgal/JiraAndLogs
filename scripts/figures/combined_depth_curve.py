@@ -87,18 +87,24 @@ def main():
 
     colors = {
         "hist_gradient_boosting_numeric": "#888888",
+        "tab_transformer": "#9467bd",
         "memorygraph_v2_sota_nw080": "#1f77b4",
         "memorygraph_v2_sota_nw080_ft": "#d62728",
+        "bi_encoder_retrieval": "#2ca02c",
     }
     markers = {
         "hist_gradient_boosting_numeric": "s",
+        "tab_transformer": "v",
         "memorygraph_v2_sota_nw080": "o",
         "memorygraph_v2_sota_nw080_ft": "D",
+        "bi_encoder_retrieval": "^",
     }
     labels = {
         "hist_gradient_boosting_numeric": "HGB (telemetry only)",
+        "tab_transformer": "TabTransformer (telemetry only)",
         "memorygraph_v2_sota_nw080": "SOTA + off-the-shelf reranker",
         "memorygraph_v2_sota_nw080_ft": "SOTA + fine-tuned reranker",
+        "bi_encoder_retrieval": "Fine-tuned BiEncoder",
     }
 
     fig, axes = plt.subplots(1, 3, figsize=(15, 4.5), dpi=120, sharex=True)

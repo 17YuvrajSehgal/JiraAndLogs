@@ -54,6 +54,16 @@ from .pipelines_neural import (
     XgboostGPUPipeline,
 )
 
+# Phase G (2026-06-02): deep-learning models. Soft-imported so the
+# comparison harness still runs if torch isn't installed.
+try:
+    from neural_models.tab_transformer import TabTransformerPipeline
+    from neural_models.bi_encoder import BiEncoderRetrievalPipeline
+    _HAS_NEURAL = True
+except ImportError as _e:
+    _HAS_NEURAL = False
+    _NEURAL_IMPORT_ERROR = _e
+
 # memorygraph lives in its own top-level package under src/.
 # Soft-import so the comparison harness still works on installs that
 # haven't pulled the optional package — the pipeline simply won't appear
@@ -89,6 +99,13 @@ KNOWN_PIPELINES: dict[str, type[PipelineRunner]] = {
     "bi_encoder_hybrid": BiEncoderHybridPipeline,
     "xgb_gpu": XgboostGPUPipeline,
 }
+
+# Phase G — register neural models if torch + sentence-transformers are
+# importable. The harness silently omits them otherwise so the existing
+# 18-pipeline panel still works.
+if _HAS_NEURAL:
+    KNOWN_PIPELINES["tab_transformer"] = TabTransformerPipeline
+    KNOWN_PIPELINES["bi_encoder_retrieval"] = BiEncoderRetrievalPipeline
 
 if _HAS_MEMORYGRAPH:
     # memorygraph: agentic cross-context retrieval. Builds a typed graph

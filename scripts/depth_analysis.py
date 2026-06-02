@@ -209,18 +209,24 @@ def plot_figure(data, metric, title, ylabel, out_path):
     fig, ax = plt.subplots(figsize=(8, 4.8), dpi=120)
     colors = {
         "hist_gradient_boosting_numeric": "#888888",
+        "tab_transformer": "#9467bd",
         "memorygraph_v2_sota_nw080": "#1f77b4",
         "memorygraph_v2_sota_nw080_ft": "#d62728",
+        "bi_encoder_retrieval": "#2ca02c",
     }
     markers = {
         "hist_gradient_boosting_numeric": "s",
+        "tab_transformer": "v",
         "memorygraph_v2_sota_nw080": "o",
         "memorygraph_v2_sota_nw080_ft": "D",
+        "bi_encoder_retrieval": "^",
     }
     labels = {
         "hist_gradient_boosting_numeric": "HGB on telemetry (no retrieval head)",
+        "tab_transformer": "TabTransformer on telemetry",
         "memorygraph_v2_sota_nw080": "memorygraph SOTA + Jira memory",
         "memorygraph_v2_sota_nw080_ft": "memorygraph SOTA + fine-tuned reranker",
+        "bi_encoder_retrieval": "Fine-tuned BiEncoder (this paper)",
     }
     for p in pipelines:
         points = np.array([data["metrics"][metric][b][p]["point"] for b in buckets])

@@ -40,3 +40,5 @@ results/phase-b-finetune/crossenc_ft_v1/model.safetensors
 results/phase-b-finetune/crossenc_ft_v1/training_checkpoints/
 results/phase-b-finetune/triplets.jsonl
 microservices-demo-google/
+# Phase G — neural training artifacts (large, regenerable)
+results/phase-g-neural/gpu/
