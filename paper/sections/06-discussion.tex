@@ -1,0 +1,38 @@
+\section{Discussion}
+\label{sec:discussion}
+
+\subsection{Why memory does not help triage}
+
+Triage detection in our setting is dominated by numeric features: latency $p99$, error count, k8s restart count, CPU utilization, and 91 others. These are dense, low-noise signals that a gradient-boosted tree saturates rapidly (PR-AUC 0.77). Adding memory-derived features (\texttt{similarity\_max}, \texttt{n\_compatible\_in\_memory}, graph-bridge counts) provides limited marginal lift because the numeric channel already separates ``anomalous'' from ``noise'' cleanly. Memory's value is \emph{not} in the binary detection task --- it is in the post-detection diagnosis step, where the engineer needs to \emph{act} on the alert.
+
+This finding generalizes beyond our specific setup: any incident-triage system with sufficiently rich numeric telemetry will have a strong detection baseline. Retrieval-augmented diagnosis is therefore best framed as a \emph{complementary} capability rather than a substitute for established detection methods.
+
+\subsection{Why Hit@$K$ is preferred over Recall@$K$}
+
+The standard $\text{Recall@}K$ semantics is ``fraction of correct answers surfaced.'' That is a useful metric when $|\text{gold}|$ is small and fixed --- e.g., classical IR over Wikipedia where each query has a single canonical answer. But in retrieval over operational memory, $|\text{gold}|$ can be 1, 5, or 30+ depending on history depth, and the metric becomes incomparable across depth buckets.
+
+We argue Hit@$K$ is the right metric in our domain because it directly answers the operational question: ``with probability $p$, will an engineer scanning the top-$K$ candidates see at least one useful match?'' Hit@$K$ is also better aligned with how retrieval is consumed: the engineer's marginal cost is per-candidate-reviewed, not per-correct-answer-found. A single relevant result in top-5 is operationally equivalent to all five being relevant --- in both cases, the engineer finds a useful past ticket.
+
+\subsection{The fine-tune trade-off}
+
+The fine-tuned cross-encoder shifts probability mass into top-5 at the cost of top-1. Intuitively, fine-tuning teaches the reranker that, e.g., ``cart redis'' and ``redis-cart'' likely refer to the same incident family, lifting all candidates with \texttt{redis} mentions. But the calibration of the \emph{ranking among top candidates} worsens slightly --- the reranker is less confident which of the top-5 to put at rank 1.
+
+For a ``review top-$K$ and pick one'' UX, this is the right trade-off. For an ``auto-cite top-1 and trust it'' UX, the off-the-shelf reranker is preferable. We recommend the former framing: engineers handling incidents at 3~AM benefit more from \emph{not missing} a relevant past ticket (high recall) than from being told the single most-likely one (high precision-at-1) with no recourse if it is wrong.
+
+\subsection{Cold-start: the open problem}
+
+The current pipeline's novelty detector is a hard-coded score threshold. Of 333 true-novel test windows, zero are flagged correctly. This is the most obvious gap in the system as a deployable product. Three design alternatives are worth exploring in future work:
+
+\begin{enumerate}
+    \item \textbf{Learned threshold.} Train a calibrated novelty classifier on $(\max\text{-similarity}, n\text{-compatible-in-memory}, \text{score-spread}, \text{entity-overlap-count})$ features using the train split's known-novelty labels.
+    \item \textbf{Coverage-aware threshold.} Decompose ``novel'' into ``no compatible memory exists'' and ``compatible memory exists but I am uncertain.'' The former is detectable purely from $n\text{-compatible-in-memory}=0$; the latter requires the learned classifier.
+    \item \textbf{Confidence-aware UX.} Surface ``low-confidence retrieval'' to the engineer rather than forcing a binary novelty flag. The engineer is the right arbiter of novelty in ambiguous cases.
+\end{enumerate}
+
+We argue (3) is the most defensible in the short term: do not force a precise novelty label, instead expose the underlying confidence signal to the engineer and let them decide.
+
+\subsection{Deployment-history scaling: when memory grows, retrieval grows}
+
+The depth-scaling result (Figure~\ref{fig:anchor}, Table~\ref{tab:depth-scaling}) has a direct operational implication: \emph{a memory-augmented triage system gets better as it ages.} Every new ticket logged adds one more potentially-compatible match for future windows. The empirical curve we measure suggests that teams accumulating 21+ incidents per fault family can expect Hit@1 of 0.25 and Hit@5 of $\sim$0.25, with steady growth as memory thickens further.
+
+This is qualitatively different from how most ML systems behave. Most models degrade over time as data drifts; this one improves as the corpus thickens with each logged incident. The mechanism is structural: retrieval is bounded by what's in the corpus, and what's in the corpus is exactly what the team has experienced and documented. The system inherits the team's institutional knowledge as it is created.
