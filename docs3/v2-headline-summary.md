@@ -58,4 +58,7 @@ Aggregated from every `comparison/<run-id>/report.json`. Triage on full test spl
 | `v2a-resplit` | `bi_encoder_retrieval` | 0.2828 | 0.5622 | 0.1543 | 0.4860 | 0.6759 | 121 |
 | `v2a-smoketest` | `hist_gradient_boosting_numeric` | 0.9998 | 0.9999 | 0.0000 | 0.0000 | 0.0000 | 121 |
 | `v2b-logseq2vec` | `logseq2vec_retrieval_pretrained` | 0.3134 | 0.5526 | 0.1028 | 0.3289 | 0.4924 | 121 |
+| `v2c-hybrid` | `hybrid_rrf_no_graph` | 0.2190 | 0.5173 | 0.0488 | 0.2815 | 0.4317 | 121 |
+| `v2c-hybrid` | `hybrid_rrf_retrieval` | 0.2362 | 0.4986 | 0.0725 | 0.3284 | 0.5680 | 121 |
 | `v2d-kg-rulebased` | `kg_retrieval_rulebased` | 0.2890 | 0.6177 | 0.0040 | 0.1107 | 0.1698 | 121 |
+| `v2e-agent` | `diagnosis_agent` | 0.1633 | 0.4588 | 0.0000 | 0.0000 | 0.0000 | 21 |

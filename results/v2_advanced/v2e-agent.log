@@ -1,20 +1,69 @@
-[03:53:08] [INFO ] [v2_advanced.phase_a.run_v2] step=patch_split start  manifest=triage-split-manifest-v2-resplit.json
-[03:53:08] [INFO ] [v2_advanced.phase_a.window_split] loaded v2 manifest  windows=6720 seed=42
-[03:53:08] [INFO ] [v2_advanced.phase_a.run_v2] patched iter_split  rebound_in_modules=1
-[03:53:08] [INFO ] [v2_advanced.phase_a.run_v2] step=patch_split done  elapsed_s=0.0000
-[03:53:09] [INFO ] [v2_advanced.phase_a.run_v2] running v2 comparison  pipelines=['diagnosis_agent'] n_bootstrap=500
-[03:53:09] [INFO ] [v2_advanced.phase_a.run_v2] step=run_comparison start  pipelines=1
-[2026-06-03T07:53:09.559725+00:00] notes: comparison: pipelines=['diagnosis_agent']
-[2026-06-03T07:53:09.559784+00:00] training_run open: diagnosis_agent__20260603T075309Z__71747e04
-[2026-06-03T07:53:09.581412+00:00] fit + predict starting for diagnosis_agent
-[03:53:09] [INFO ] [v2_advanced.phase_e.pipeline] step=run_hybrid_retriever start
-[03:53:10] [INFO ] [v2_advanced.phase_c.hybrid] step=load_dataset_and_memory start
-[03:53:10] [INFO ] [v2_advanced.phase_c.hybrid] loaded  train=4701 val=1011 test=1008 memory=347
-[03:53:10] [INFO ] [v2_advanced.phase_c.hybrid] step=load_dataset_and_memory done  elapsed_s=0.3900
-[03:53:10] [INFO ] [v2_advanced.phase_c.hybrid] step=fit_biencoder start
+[04:06:07] [INFO ] [v2_advanced.phase_a.run_v2] step=patch_split start  manifest=triage-split-manifest-v2-resplit.json
+[04:06:07] [INFO ] [v2_advanced.phase_a.window_split] loaded v2 manifest  windows=6720 seed=42
+[04:06:07] [INFO ] [v2_advanced.phase_a.run_v2] patched iter_split  rebound_in_modules=1
+[04:06:07] [INFO ] [v2_advanced.phase_a.run_v2] step=patch_split done  elapsed_s=0.0000
+[04:06:08] [INFO ] [v2_advanced.phase_a.run_v2] running v2 comparison  pipelines=['diagnosis_agent'] n_bootstrap=500
+[04:06:08] [INFO ] [v2_advanced.phase_a.run_v2] step=run_comparison start  pipelines=1
+[2026-06-03T08:06:08.478121+00:00] notes: comparison: pipelines=['diagnosis_agent']
+[2026-06-03T08:06:08.478269+00:00] training_run open: diagnosis_agent__20260603T080608Z__4f7a3a58
+[2026-06-03T08:06:08.499368+00:00] fit + predict starting for diagnosis_agent
+[04:06:08] [INFO ] [v2_advanced.phase_e.pipeline] step=run_hybrid_retriever start
+[04:06:09] [INFO ] [v2_advanced.phase_c.hybrid] step=load_dataset_and_memory start
+[04:06:09] [INFO ] [v2_advanced.phase_c.hybrid] loaded  train=4701 val=1011 test=1008 memory=347
+[04:06:09] [INFO ] [v2_advanced.phase_c.hybrid] step=load_dataset_and_memory done  elapsed_s=0.3900
+[04:06:09] [INFO ] [v2_advanced.phase_c.hybrid] step=fit_biencoder start
 [bi_encoder_retrieval] training pairs built: 16338 from 1805 windows (use_all_golds=True, n_hard_negs=3)
 Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
 [comparison] running pipeline: diagnosis_agent
-Loading weights:   0%|          | 0/103 [00:00<?, ?it/s]Loading weights: 100%|##########| 103/103 [00:00<00:00, 16410.14it/s]
+Loading weights:   0%|          | 0/103 [00:00<?, ?it/s]Loading weights: 100%|##########| 103/103 [00:00<00:00, 18084.95it/s]
 [bi_encoder_retrieval] fine-tuning sentence-transformers/all-MiniLM-L6-v2 on 16338 pairs for 3 epochs on cuda
-Computing widget examples:   0%|          | 0/1 [00:00<?, ?example/s]                                                                     
+Computing widget examples:   0%|          | 0/1 [00:00<?, ?example/s]                                                                     [04:16:03] [INFO ] [v2_advanced.phase_c.hybrid] biencoder ready  n_windows=1008
+[04:16:03] [INFO ] [v2_advanced.phase_c.hybrid] step=fit_biencoder done  elapsed_s=593.62
+[04:16:03] [INFO ] [v2_advanced.phase_c.hybrid] step=fit_splade start
+[04:16:03] [INFO ] [v2_advanced.phase_c.splade] step=fit_splade start  n_docs=347
+[04:16:03] [INFO ] [v2_advanced.phase_c.splade] loading SPLADE  model=naver/splade-cocondenser-ensembledistil device=cuda
+{'loss': '3.552', 'grad_norm': '10.32', 'learning_rate': '1.497e-05', 'epoch': '0.9785'}
+{'loss': '2.887', 'grad_norm': '12.83', 'learning_rate': '7.712e-06', 'epoch': '1.957'}
+{'loss': '2.693', 'grad_norm': '13.68', 'learning_rate': '4.503e-07', 'epoch': '2.935'}
+{'train_runtime': '576.9', 'train_samples_per_second': '84.97', 'train_steps_per_second': '2.657', 'train_loss': '3.035', 'epoch': '3'}
+Loading weights:   0%|          | 0/204 [00:00<?, ?it/s]Loading weights: 100%|##########| 204/204 [00:00<00:00, 38537.05it/s]
+[04:16:06] [INFO ] [v2_advanced.phase_c.splade] indexed  n_docs=347 avg_nonzero_per_doc=143.10
+[04:16:06] [INFO ] [v2_advanced.phase_c.splade] step=fit_splade done  elapsed_s=3.5100
+[04:16:06] [INFO ] [v2_advanced.phase_c.hybrid] step=fit_splade done  elapsed_s=3.5100
+[04:16:06] [INFO ] [v2_advanced.neo4j] neo4j connected  uri=neo4j://127.0.0.1:7687 database=neo4j
+[04:16:06] [INFO ] [v2_advanced.phase_c.hybrid] graph ready  n_incidents=346
+[04:16:06] [INFO ] [v2_advanced.phase_c.hybrid] step=score_train start  n=4701
+[04:17:19] [INFO ] [v2_advanced.phase_c.hybrid] step=score_train done  elapsed_s=72.9700
+[04:17:19] [INFO ] [v2_advanced.phase_c.hybrid] step=score_val start  n=1011
+[04:17:35] [INFO ] [v2_advanced.phase_c.hybrid] step=score_val done  elapsed_s=15.7300
+[04:17:35] [INFO ] [v2_advanced.phase_c.hybrid] step=score_test start  n=1008
+[04:17:51] [INFO ] [v2_advanced.phase_c.hybrid] step=score_test done  elapsed_s=15.6500
+[04:17:51] [INFO ] [v2_advanced.phase_c.hybrid] step=fit_triage_head start
+[04:17:51] [INFO ] [v2_advanced.phase_c.hybrid] step=fit_triage_head done  elapsed_s=0.0000
+[04:17:51] [INFO ] [v2_advanced.phase_e.pipeline] hybrid pool ready  n_windows=1008
+[04:17:51] [INFO ] [v2_advanced.phase_e.pipeline] step=run_hybrid_retriever done  elapsed_s=702.55
+[04:17:51] [INFO ] [v2_advanced.phase_e.pipeline] step=load_extractions start
+[04:17:51] [INFO ] [v2_advanced.phase_e.pipeline] using extractions  path=data\derived\global\2026-05-25-dataset-v5-large-global\v2_kg_extractions_rules\all_extractions.jsonl
+[04:17:51] [INFO ] [v2_advanced.phase_e.pipeline] extractions  n=347
+[04:17:51] [INFO ] [v2_advanced.phase_e.pipeline] step=load_extractions done  elapsed_s=0.0000
+[04:17:55] [WARNING] [v2_advanced.phase_e.pipeline] LM Studio unreachable; falling back to rule-based agent. Load a model in LM Studio for the LLM version.
+[04:17:55] [INFO ] [v2_advanced.phase_e.pipeline] test windows  n=1008
+[04:17:55] [INFO ] [v2_advanced.phase_e.pipeline] subsampled to fit agent latency budget  n=200
+[04:17:55] [INFO ] [v2_advanced.phase_e.pipeline] step=agent_run start  n=200
+[04:17:55] [INFO ] [v2_advanced.phase_e.pipeline] agent progress  done=25 total=200 novel_so_far=25
+[04:17:55] [INFO ] [v2_advanced.phase_e.pipeline] agent progress  done=50 total=200 novel_so_far=50
+[04:17:55] [INFO ] [v2_advanced.phase_e.pipeline] agent progress  done=75 total=200 novel_so_far=75
+[04:17:55] [INFO ] [v2_advanced.phase_e.pipeline] agent progress  done=100 total=200 novel_so_far=97
+[04:17:55] [INFO ] [v2_advanced.phase_e.pipeline] agent progress  done=125 total=200 novel_so_far=121
+[04:17:55] [INFO ] [v2_advanced.phase_e.pipeline] agent progress  done=150 total=200 novel_so_far=145
+[04:17:55] [INFO ] [v2_advanced.phase_e.pipeline] agent progress  done=175 total=200 novel_so_far=170
+[04:17:55] [INFO ] [v2_advanced.phase_e.pipeline] agent progress  done=200 total=200 novel_so_far=194
+[04:17:55] [INFO ] [v2_advanced.phase_e.pipeline] step=agent_run done  elapsed_s=0.0200
+[2026-06-03T08:17:55.445707+00:00] fit + predict done: fit=706.9s predict=0.0s n_predictions=200
+[2026-06-03T08:17:55.482575+00:00] training_run close: diagnosis_agent__20260603T080608Z__4f7a3a58
+[04:17:55] [INFO ] [v2_advanced.phase_a.run_v2] step=run_comparison done  elapsed_s=707.26
+[04:17:55] [INFO ] [v2_advanced.phase_a.run_v2] v2 comparison done  output_dir=data\derived\global\2026-05-25-dataset-v5-large-global\comparison\v2e-agent pipelines=1 report_kb=91.4000
+[comparison] computing stratified metrics (strict)
+[comparison] computing stratified metrics (inclusive)
+[comparison] paired bootstrap (500 resamples) per metric
+[comparison] depth-stratified bootstrap CIs (500 resamples)

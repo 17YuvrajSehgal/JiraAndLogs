@@ -106,6 +106,6 @@ def log_step(log: _KwargsLogger, step_name: str, **start_kwargs: Any):
             f"step={step_name} FAILED",
             elapsed_s=round(time.time() - t0, 2),
             error=type(e).__name__,
-            msg=str(e)[:200],
+            err_msg=str(e)[:200],   # 'msg' collides with logging's reserved kwarg
         )
         raise

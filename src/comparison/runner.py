@@ -175,6 +175,16 @@ if _HAS_HYBRID:
 if _HAS_AGENT:
     KNOWN_PIPELINES["diagnosis_agent"] = DiagnosisAgentPipeline
 
+    class _DiagnosisAgentPermissive(DiagnosisAgentPipeline):
+        """Lower novelty threshold; the agent commits even on weak
+        consistency matches. Useful for showing the precision/recall
+        trade-off in the rule-based fallback."""
+        name = "diagnosis_agent_permissive"
+        def __init__(self) -> None:
+            super().__init__(novelty_threshold=0.05)
+
+    KNOWN_PIPELINES["diagnosis_agent_permissive"] = _DiagnosisAgentPermissive
+
 # v2_advanced Phase B — LogSeq2Vec.
 if _HAS_LOGSEQ:
     KNOWN_PIPELINES["logseq2vec_retrieval"] = LogSeq2VecRetrievalPipeline

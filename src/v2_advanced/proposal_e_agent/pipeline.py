@@ -82,9 +82,18 @@ class DiagnosisAgentPipeline(PipelineRunner):
 
     def _load_extractions_map(self, global_dir: Path) -> dict[str, IncidentExtraction]:
         import json
-        cache = global_dir / self.extractions_subdir / "all_extractions.jsonl"
-        if not cache.exists():
-            raise FileNotFoundError(f"Extractions not found at {cache}")
+        # Try LLM-extracted first; fall back to rule-based.
+        candidates = [
+            global_dir / self.extractions_subdir / "all_extractions.jsonl",
+            global_dir / "v2_kg_extractions_rules" / "all_extractions.jsonl",
+        ]
+        cache = next((c for c in candidates if c.exists()), None)
+        if cache is None:
+            raise FileNotFoundError(
+                f"No extractions found. Tried: {candidates}. Run "
+                "extract_tickets_cli (LLM) or extract_rulebased_cli (rules)."
+            )
+        log.info("using extractions", path=str(cache))
         out = {}
         with cache.open(encoding="utf-8") as fh:
             for line in fh:
