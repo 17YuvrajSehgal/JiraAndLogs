@@ -16,7 +16,7 @@ Under the new window-stratified split (4701 train / 1011 val / 1008 test) where 
 | **kg_retrieval (LLM, v2 Phase D)** | TBD | TBD | TBD | TBD | Awaits LM Studio model load. |
 | **hybrid_rrf_no_graph (v2 Phase C)** | TBD | TBD | TBD | TBD | SPLADE + BiEncoder via RRF. |
 | **hybrid_rrf_retrieval (v2 Phase C)** | TBD | TBD | TBD | TBD | + Graph via RRF. |
-| **logseq2vec_retrieval (v2 Phase B)** | TBD | TBD | TBD | TBD | Currently training. |
+| **logseq2vec_retrieval (v2 Phase B)** | 0.313 | 0.103 | 0.329 | 0.492 | Trained on raw log sequences (5 epochs, ~14 min on RTX 5060). Mid-pack retrieval; worse than fine-tuned BiEncoder for now. |
 | **diagnosis_agent (v2 Phase E)** | TBD | TBD | TBD | TBD | Awaits LM Studio model load. |
 
 ## Key v1 vs v2 comparisons

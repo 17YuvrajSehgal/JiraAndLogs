@@ -65,6 +65,7 @@ class LogSeq2VecRetrievalPipeline(PipelineRunner):
         top_k: int = 5,
         max_chars_doc: int = 512,
         seed: int = 42,
+        pretrained_path: str | None = None,
     ) -> None:
         self.humanized_subdir = humanized_subdir
         self.humanized_root = humanized_root
@@ -81,6 +82,10 @@ class LogSeq2VecRetrievalPipeline(PipelineRunner):
         self.top_k = top_k
         self.max_chars_doc = max_chars_doc
         self.seed = seed
+        # When set, skip training and load the aggregator weights from
+        # this path. Use this to avoid re-running the 14-minute training
+        # for every comparison run.
+        self.pretrained_path = pretrained_path
 
     def train_and_predict(
         self,
@@ -97,35 +102,50 @@ class LogSeq2VecRetrievalPipeline(PipelineRunner):
 
         t_fit_start = time.time()
 
-        # 1) Build training pairs
-        with log_step(log, "build_pairs"):
-            pairs = build_train_pairs(
-                global_dir=global_dir,
-                humanized_subdir=self.humanized_subdir,
-                humanized_root=self.humanized_root,
-                logseq_subdir=self.logseq_subdir,
-                max_lines=self.max_lines,
-                n_hard_negs=self.n_hard_negs,
-                seed=self.seed,
-            )
-            if not pairs:
-                raise RuntimeError(
-                    "LogSeq2Vec has no training pairs. Did you run "
-                    "`python -m v2_advanced.proposal_b_logseq2vec.data_prep` first?"
+        # 1) Build or load model
+        if self.pretrained_path and Path(self.pretrained_path).exists():
+            from .model import LogSeq2Vec
+            with log_step(log, "load_pretrained", path=self.pretrained_path):
+                checkpoint = torch.load(self.pretrained_path, map_location="cpu", weights_only=False)
+                cfg = checkpoint.get("config", {})
+                model = LogSeq2Vec(
+                    line_encoder_name=cfg.get("line_encoder_name", self.line_encoder_name),
+                    d_model=cfg.get("d_model", self.d_model),
+                    n_layers=cfg.get("n_layers", self.n_layers),
+                    n_heads=cfg.get("n_heads", self.n_heads),
+                    max_seq=cfg.get("max_seq", self.max_lines),
+                    freeze_line_encoder=cfg.get("freeze_line_encoder", True),
                 )
+                model.aggregator.load_state_dict(checkpoint["aggregator_state"])
+                log.info("loaded pretrained model", path=self.pretrained_path)
+        else:
+            with log_step(log, "build_pairs"):
+                pairs = build_train_pairs(
+                    global_dir=global_dir,
+                    humanized_subdir=self.humanized_subdir,
+                    humanized_root=self.humanized_root,
+                    logseq_subdir=self.logseq_subdir,
+                    max_lines=self.max_lines,
+                    n_hard_negs=self.n_hard_negs,
+                    seed=self.seed,
+                )
+                if not pairs:
+                    raise RuntimeError(
+                        "LogSeq2Vec has no training pairs. Did you run "
+                        "`python -m v2_advanced.proposal_b_logseq2vec.data_prep` first?"
+                    )
 
-        # 2) Train
-        with log_step(log, "train", n_pairs=len(pairs), epochs=self.epochs):
-            model = train_logseq2vec(
-                pairs,
-                epochs=self.epochs,
-                batch_size=self.batch_size,
-                lr=self.lr,
-                line_encoder_name=self.line_encoder_name,
-                d_model=self.d_model, n_layers=self.n_layers,
-                n_heads=self.n_heads, max_seq=self.max_lines,
-                seed=self.seed,
-            )
+            with log_step(log, "train", n_pairs=len(pairs), epochs=self.epochs):
+                model = train_logseq2vec(
+                    pairs,
+                    epochs=self.epochs,
+                    batch_size=self.batch_size,
+                    lr=self.lr,
+                    line_encoder_name=self.line_encoder_name,
+                    d_model=self.d_model, n_layers=self.n_layers,
+                    n_heads=self.n_heads, max_seq=self.max_lines,
+                    seed=self.seed,
+                )
 
         # 3) Load dataset + memory; index memory
         with log_step(log, "index_memory"):

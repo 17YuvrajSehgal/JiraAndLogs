@@ -1,0 +1,61 @@
+# v1 + v2 headline metrics — all runs
+
+Aggregated from every `comparison/<run-id>/report.json`. Triage on full test split; retrieval on retrievable subset only.
+
+| Run | Pipeline | PR-AUC | ROC-AUC | R@1 | R@5 | MRR | n_retr |
+|---|---|---:|---:|---:|---:|---:|---:|
+| `movea-logs-vs-humanized` | `memorygraph_hybrid_humanized` | 0.6062 | 0.7865 | 0.0186 | 0.0659 | 0.0998 | 317 |
+| `movea-logs-vs-humanized` | `memorygraph_hybrid_humanized_logs` | 0.6148 | 0.7928 | 0.0211 | 0.0726 | 0.1143 | 317 |
+| `phase-a-anchor` | `hist_gradient_boosting_numeric` | 0.7718 | 0.9267 | 0.0000 | 0.0000 | 0.0000 | 317 |
+| `phase-a-anchor` | `memorygraph_v2_sota_nw080` | 0.6186 | 0.7881 | 0.0214 | 0.0740 | 0.1724 | 317 |
+| `phase-b-finetune` | `hist_gradient_boosting_numeric` | 0.7718 | 0.9267 | 0.0000 | 0.0000 | 0.0000 | 317 |
+| `phase-b-finetune` | `memorygraph_v2_sota_nw080` | 0.6186 | 0.7881 | 0.0214 | 0.0740 | 0.1724 | 317 |
+| `phase-b-finetune` | `memorygraph_v2_sota_nw080_ft` | 0.6211 | 0.7932 | 0.0217 | 0.0812 | 0.1617 | 317 |
+| `phase-c-channels` | `memorygraph_v2_sota_nw080` | 0.6186 | 0.7881 | 0.0214 | 0.0740 | 0.1724 | 317 |
+| `phase-c-channels` | `memorygraph_v2_sota_nw080_no_logs` | 0.6162 | 0.7850 | 0.0185 | 0.0623 | 0.1440 | 317 |
+| `phase-c-channels` | `memorygraph_v2_sota_nw080_no_traces` | 0.6186 | 0.7881 | 0.0214 | 0.0740 | 0.1724 | 317 |
+| `phase-c-channels` | `memorygraph_v2_sota_nw080_no_k8s` | 0.6186 | 0.7881 | 0.0214 | 0.0740 | 0.1724 | 317 |
+| `phase-d-distractors` | `memorygraph_v2_sota_d000pct` | 0.6186 | 0.7881 | 0.0214 | 0.0740 | 0.1724 | 317 |
+| `phase-d-distractors` | `memorygraph_v2_sota_d010pct` | 0.6185 | 0.7881 | 0.0214 | 0.0740 | 0.1724 | 317 |
+| `phase-d-distractors` | `memorygraph_v2_sota_d025pct` | 0.6187 | 0.7866 | 0.0214 | 0.0737 | 0.1719 | 317 |
+| `phase-d-distractors` | `memorygraph_v2_sota_d050pct` | 0.6180 | 0.7860 | 0.0202 | 0.0736 | 0.1683 | 317 |
+| `phase-g-neural` | `hist_gradient_boosting_numeric` | 0.7718 | 0.9267 | 0.0000 | 0.0000 | 0.0000 | 317 |
+| `phase-g-neural` | `tab_transformer` | 0.7687 | 0.9382 | 0.0000 | 0.0000 | 0.0000 | 317 |
+| `phase-g-neural` | `memorygraph_v2_sota_nw080` | 0.6186 | 0.7881 | 0.0214 | 0.0740 | 0.1724 | 317 |
+| `phase-g-neural` | `bi_encoder_retrieval` | 0.2418 | 0.4554 | 0.0330 | 0.1501 | 0.1963 | 317 |
+| `phase5-3-legacy-vs-humanized` | `memorygraph_hybrid` | 0.6599 | 0.8036 | 0.0517 | 0.2018 | 0.2499 | 317 |
+| `phase5-3-legacy-vs-humanized` | `memorygraph_hybrid_humanized` | 0.6062 | 0.7865 | 0.0186 | 0.0659 | 0.0998 | 317 |
+| `phase5-3-legacy-vs-humanized-full` | `memorygraph_full` | 0.6548 | 0.7956 | 0.0538 | 0.2029 | 0.2552 | 317 |
+| `phase5-3-legacy-vs-humanized-full` | `memorygraph_full_humanized` | 0.6045 | 0.7784 | 0.0186 | 0.0668 | 0.1023 | 317 |
+| `v2-broader-panel` | `hist_gradient_boosting_numeric` | 0.7718 | 0.9267 | 0.0000 | 0.0000 | 0.0000 | 317 |
+| `v2-broader-panel` | `logsense_hybrid_bm25` | 0.4393 | 0.6365 | 0.0069 | 0.0323 | 0.0479 | 317 |
+| `v2-broader-panel` | `memorygraph_hybrid_humanized_v2` | 0.6074 | 0.7957 | 0.0152 | 0.0702 | 0.1403 | 317 |
+| `v2-broader-panel` | `ensemble_mean` | 0.6650 | 0.8319 | 0.0193 | 0.0799 | 0.1631 | 317 |
+| `v2-comparative-analysis` | `memorygraph_hybrid_humanized` | 0.6062 | 0.7865 | 0.0186 | 0.0659 | 0.0998 | 317 |
+| `v2-comparative-analysis` | `memorygraph_hybrid_humanized_v2` | 0.6074 | 0.7957 | 0.0152 | 0.0686 | 0.1403 | 317 |
+| `v2-comparative-analysis` | `memorygraph_hybrid_humanized_v2_logs` | 0.6048 | 0.7948 | 0.0214 | 0.0745 | 0.1613 | 317 |
+| `v2-comparative-analysis` | `memorygraph_hybrid_humanized_v2_distractors` | 0.6125 | 0.7965 | 0.0110 | 0.0668 | 0.1258 | 317 |
+| `v2-comparative-analysis` | `ensemble_mean` | 0.6031 | 0.7909 | 0.0212 | 0.0767 | 0.1547 | 317 |
+| `v2-crossencoder` | `memorygraph_hybrid_humanized_v2` | 0.6074 | 0.7957 | 0.0152 | 0.0702 | 0.1403 | 317 |
+| `v2-crossencoder` | `memorygraph_hybrid_humanized_v2_crossenc` | 0.6140 | 0.8010 | 0.0197 | 0.0577 | 0.1550 | 317 |
+| `v2-crossencoder` | `memorygraph_hybrid_humanized_v2_logs_crossenc` | 0.6133 | 0.8000 | 0.0204 | 0.0638 | 0.1592 | 317 |
+| `v2-crossencoder` | `ensemble_mean` | 0.6119 | 0.7972 | 0.0187 | 0.0663 | 0.1569 | 317 |
+| `v2-crossencoder-blend` | `memorygraph_hybrid_humanized_v2` | 0.6074 | 0.7957 | 0.0152 | 0.0702 | 0.1403 | 317 |
+| `v2-crossencoder-blend` | `memorygraph_hybrid_humanized_v2_crossenc` | 0.6003 | 0.7783 | 0.0205 | 0.0618 | 0.1606 | 317 |
+| `v2-crossencoder-blend` | `memorygraph_hybrid_humanized_v2_logs_crossenc` | 0.5948 | 0.7703 | 0.0214 | 0.0740 | 0.1724 | 317 |
+| `v2-crossencoder-blend` | `ensemble_mean` | 0.5967 | 0.7758 | 0.0183 | 0.0708 | 0.1580 | 317 |
+| `v2-nomic-rescue` | `memorygraph_full_humanized_v2` | 0.6084 | 0.7952 | 0.0154 | 0.0702 | 0.1422 | 317 |
+| `v2-sota-followups` | `memorygraph_hybrid_humanized_v2_logs_crossenc` | 0.5948 | 0.7703 | 0.0214 | 0.0740 | 0.1724 | 317 |
+| `v2-sota-followups` | `memorygraph_hybrid_humanized_v2_logs_crossenc_distractors` | 0.5882 | 0.7672 | 0.0164 | 0.0731 | 0.1559 | 317 |
+| `v2-sota-followups` | `memorygraph_v2_sota_nw050` | 0.4706 | 0.7070 | 0.0214 | 0.0740 | 0.1724 | 317 |
+| `v2-sota-followups` | `memorygraph_v2_sota_nw055` | 0.5137 | 0.7372 | 0.0214 | 0.0740 | 0.1724 | 317 |
+| `v2-sota-followups` | `memorygraph_v2_sota_nw065` | 0.5744 | 0.7630 | 0.0214 | 0.0740 | 0.1724 | 317 |
+| `v2-sota-followups` | `memorygraph_v2_sota_nw080` | 0.6186 | 0.7881 | 0.0214 | 0.0740 | 0.1724 | 317 |
+| `v2-sota-followups` | `ensemble_mean` | 0.5758 | 0.7629 | 0.0214 | 0.0740 | 0.1724 | 317 |
+| `v2a-resplit` | `hist_gradient_boosting_numeric` | 0.9998 | 0.9999 | 0.0000 | 0.0000 | 0.0000 | 121 |
+| `v2a-resplit` | `tab_transformer` | 0.9351 | 0.9846 | 0.0000 | 0.0000 | 0.0000 | 121 |
+| `v2a-resplit` | `memorygraph_v2_sota_nw080` | 0.9979 | 0.9995 | 0.0154 | 0.0474 | 0.1281 | 121 |
+| `v2a-resplit` | `bi_encoder_retrieval` | 0.2828 | 0.5622 | 0.1543 | 0.4860 | 0.6759 | 121 |
+| `v2a-smoketest` | `hist_gradient_boosting_numeric` | 0.9998 | 0.9999 | 0.0000 | 0.0000 | 0.0000 | 121 |
+| `v2b-logseq2vec` | `logseq2vec_retrieval_pretrained` | 0.3134 | 0.5526 | 0.1028 | 0.3289 | 0.4924 | 121 |
+| `v2d-kg-rulebased` | `kg_retrieval_rulebased` | 0.2890 | 0.6177 | 0.0040 | 0.1107 | 0.1698 | 121 |

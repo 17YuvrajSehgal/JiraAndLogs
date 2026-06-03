@@ -101,6 +101,94 @@ class AgentDiagnosis:
     top_ids: list[str]              # final ranked top-K ticket IDs
 
 
+class RuleBasedDiagnosisAgent:
+    """Rule-based fallback for the DiagnosisAgent. Used when LM Studio
+    is unavailable. Same interface and output shape as DiagnosisAgent,
+    but the hypothesis + verification stages use keyword overlap
+    instead of LLM reasoning.
+
+    Workflow:
+      1. Hypothesis = extracted services/errors/symptoms from window
+         using the rule-based window extractor.
+      2. Verify each candidate: compute Jaccard overlap between the
+         hypothesized symptoms and the candidate's stated root_cause +
+         services + errors. Confidence = overlap fraction.
+      3. consistent=True if confidence > 0.2.
+      4. is_novel=True if no candidate passes consistent=True.
+    """
+
+    def __init__(
+        self,
+        *,
+        top_k_input: int = 10,
+        top_k_output: int = 5,
+        consistency_threshold: float = 0.2,
+        novelty_threshold: float = 0.4,
+    ) -> None:
+        self.top_k_input = top_k_input
+        self.top_k_output = top_k_output
+        self.consistency_threshold = consistency_threshold
+        self.novelty_threshold = novelty_threshold
+
+    def diagnose(
+        self,
+        *,
+        window_id: str,
+        evidence_text: str,
+        candidates: list[dict[str, Any]],
+    ) -> "AgentDiagnosis":
+        from v2_advanced.proposal_d_knowledge_graph.rule_extractor import (
+            extract_from_window_rules,
+        )
+        ext = extract_from_window_rules(
+            window_id=window_id, evidence_text=evidence_text,
+        )
+        hypothesis = HypothesisOutput(
+            root_cause_hypothesis="; ".join(ext.symptoms) if ext.symptoms else "",
+            key_symptoms=list(ext.symptoms),
+            suspected_services=list(ext.affected_services),
+        )
+
+        window_terms = set(s.lower() for s in ext.affected_services) | \
+                       set(s.lower() for s in ext.error_classes) | \
+                       set(s.lower() for s in ext.symptoms)
+
+        ranked: list[RankedCandidate] = []
+        for c in candidates[: self.top_k_input]:
+            tid = str(c.get("ticket_id") or "")
+            if not tid:
+                continue
+            cand_services = set(str(s).lower() for s in (c.get("affected_services") or []))
+            cand_root = (c.get("root_cause") or "").lower()
+            cand_terms = cand_services | set(t.lower() for t in cand_services)
+            for word in cand_root.split():
+                cand_terms.add(word)
+            if not window_terms or not cand_terms:
+                conf = 0.0
+            else:
+                inter = window_terms & cand_terms
+                union = window_terms | cand_terms
+                conf = len(inter) / max(1, len(union))
+            consistent = conf >= self.consistency_threshold
+            ranked.append(RankedCandidate(
+                ticket_id=tid,
+                confidence=float(conf),
+                consistent=consistent,
+                reason=f"jaccard {conf:.2f}",
+            ))
+        ranked.sort(key=lambda r: -r.confidence)
+        is_novel = not any(r.consistent and r.confidence >= self.novelty_threshold for r in ranked)
+        top_ids = [] if is_novel else [r.ticket_id for r in ranked if r.consistent][: self.top_k_output]
+        return AgentDiagnosis(
+            window_id=window_id,
+            hypothesis=hypothesis,
+            candidates_input=candidates[: self.top_k_input],
+            ranked=ranked,
+            is_novel=is_novel,
+            top_ids=top_ids,
+        )
+
+
 class DiagnosisAgent:
     """Stateless agent — one instance per pipeline run; one call per
     test window.

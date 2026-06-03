@@ -33,7 +33,7 @@ from v2_advanced.shared.lm_studio import LMStudioConfig
 
 from v2_advanced.proposal_c_hybrid_retrieval.pipeline import HybridRRFRetrievalPipeline
 from v2_advanced.proposal_d_knowledge_graph.schema import IncidentExtraction
-from .agent import DiagnosisAgent
+from .agent import DiagnosisAgent, RuleBasedDiagnosisAgent
 
 log = get_logger("phase_e.pipeline")
 
@@ -125,21 +125,29 @@ class DiagnosisAgentPipeline(PipelineRunner):
             extractions_map = self._load_extractions_map(global_dir)
             log.info("extractions", n=len(extractions_map))
 
-        # 3) LM Studio
+        # 3) LM Studio — fall back to rule-based agent if not available.
         lm_cfg = LMStudioConfig(base_url=self.lm_studio_url, model=self.lm_studio_model)
         lm_client = LMStudioClient(lm_cfg)
-        if not lm_client.is_available():
-            raise RuntimeError(
-                f"LM Studio unreachable at {self.lm_studio_url}. "
-                "Start the server and load a model before running the agent."
+        if lm_client.is_available():
+            agent = DiagnosisAgent(
+                lm_client,
+                top_k_input=self.top_k_input,
+                top_k_output=self.top_k_output,
+                novelty_threshold=self.novelty_threshold,
             )
-
-        agent = DiagnosisAgent(
-            lm_client,
-            top_k_input=self.top_k_input,
-            top_k_output=self.top_k_output,
-            novelty_threshold=self.novelty_threshold,
-        )
+            agent_mode = "llm"
+            log.info("using LLM agent", url=self.lm_studio_url)
+        else:
+            log.warning(
+                "LM Studio unreachable; falling back to rule-based agent. "
+                "Load a model in LM Studio for the LLM version."
+            )
+            agent = RuleBasedDiagnosisAgent(
+                top_k_input=self.top_k_input,
+                top_k_output=self.top_k_output,
+                novelty_threshold=self.novelty_threshold,
+            )
+            agent_mode = "rule_based"
 
         # 4) Load test windows
         ds = load_dataset(global_dir)
@@ -230,6 +238,7 @@ class DiagnosisAgentPipeline(PipelineRunner):
                 "top_k_output": self.top_k_output,
                 "novelty_threshold": self.novelty_threshold,
                 "lm_studio_url": self.lm_studio_url,
+                "agent_mode": agent_mode,
                 "retrieval": "diagnosis_agent",
             },
         )

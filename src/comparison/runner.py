@@ -179,6 +179,19 @@ if _HAS_AGENT:
 if _HAS_LOGSEQ:
     KNOWN_PIPELINES["logseq2vec_retrieval"] = LogSeq2VecRetrievalPipeline
 
+    # Pretrained variant: loads weights from the path written by
+    # `python -m v2_advanced.proposal_b_logseq2vec.train ...` to skip
+    # the 14-minute training during comparison runs.
+    class _LogSeq2VecPretrained(LogSeq2VecRetrievalPipeline):
+        name = "logseq2vec_retrieval_pretrained"
+
+        def __init__(self) -> None:
+            super().__init__(
+                pretrained_path="results/v2_advanced/logseq2vec_model/logseq2vec.pt",
+            )
+
+    KNOWN_PIPELINES["logseq2vec_retrieval_pretrained"] = _LogSeq2VecPretrained
+
 if _HAS_MEMORYGRAPH:
     # memorygraph: agentic cross-context retrieval. Builds a typed graph
     # of entities extracted from both observability windows and Jira
