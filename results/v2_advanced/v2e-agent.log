@@ -1,0 +1,20 @@
+[03:53:08] [INFO ] [v2_advanced.phase_a.run_v2] step=patch_split start  manifest=triage-split-manifest-v2-resplit.json
+[03:53:08] [INFO ] [v2_advanced.phase_a.window_split] loaded v2 manifest  windows=6720 seed=42
+[03:53:08] [INFO ] [v2_advanced.phase_a.run_v2] patched iter_split  rebound_in_modules=1
+[03:53:08] [INFO ] [v2_advanced.phase_a.run_v2] step=patch_split done  elapsed_s=0.0000
+[03:53:09] [INFO ] [v2_advanced.phase_a.run_v2] running v2 comparison  pipelines=['diagnosis_agent'] n_bootstrap=500
+[03:53:09] [INFO ] [v2_advanced.phase_a.run_v2] step=run_comparison start  pipelines=1
+[2026-06-03T07:53:09.559725+00:00] notes: comparison: pipelines=['diagnosis_agent']
+[2026-06-03T07:53:09.559784+00:00] training_run open: diagnosis_agent__20260603T075309Z__71747e04
+[2026-06-03T07:53:09.581412+00:00] fit + predict starting for diagnosis_agent
+[03:53:09] [INFO ] [v2_advanced.phase_e.pipeline] step=run_hybrid_retriever start
+[03:53:10] [INFO ] [v2_advanced.phase_c.hybrid] step=load_dataset_and_memory start
+[03:53:10] [INFO ] [v2_advanced.phase_c.hybrid] loaded  train=4701 val=1011 test=1008 memory=347
+[03:53:10] [INFO ] [v2_advanced.phase_c.hybrid] step=load_dataset_and_memory done  elapsed_s=0.3900
+[03:53:10] [INFO ] [v2_advanced.phase_c.hybrid] step=fit_biencoder start
+[bi_encoder_retrieval] training pairs built: 16338 from 1805 windows (use_all_golds=True, n_hard_negs=3)
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+[comparison] running pipeline: diagnosis_agent
+Loading weights:   0%|          | 0/103 [00:00<?, ?it/s]Loading weights: 100%|##########| 103/103 [00:00<00:00, 16410.14it/s]
+[bi_encoder_retrieval] fine-tuning sentence-transformers/all-MiniLM-L6-v2 on 16338 pairs for 3 epochs on cuda
+Computing widget examples:   0%|          | 0/1 [00:00<?, ?example/s]                                                                     

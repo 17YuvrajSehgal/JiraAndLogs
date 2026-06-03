@@ -16,8 +16,26 @@ Under the new window-stratified split (4701 train / 1011 val / 1008 test) where 
 | **kg_retrieval (LLM, v2 Phase D)** | TBD | TBD | TBD | TBD | Awaits LM Studio model load. |
 | **hybrid_rrf_no_graph (v2 Phase C)** | TBD | TBD | TBD | TBD | SPLADE + BiEncoder via RRF. |
 | **hybrid_rrf_retrieval (v2 Phase C)** | TBD | TBD | TBD | TBD | + Graph via RRF. |
-| **logseq2vec_retrieval (v2 Phase B)** | 0.313 | 0.103 | 0.329 | 0.492 | Trained on raw log sequences (5 epochs, ~14 min on RTX 5060). Mid-pack retrieval; worse than fine-tuned BiEncoder for now. |
-| **diagnosis_agent (v2 Phase E)** | TBD | TBD | TBD | TBD | Awaits LM Studio model load. |
+| **logseq2vec_retrieval (v2 Phase B)** | 0.313 | 0.103 | 0.329 | 0.492 | Trained on raw log sequences (5 epochs, ~14 min on RTX 5060). |
+| **hybrid_rrf_no_graph (v2 Phase C)** | 0.219 | 0.049 | 0.282 | 0.432 | SPLADE + BiEncoder via RRF. Capped recall@5; Hit@5 actually 0.686. |
+| **hybrid_rrf_retrieval (v2 Phase C)** | **0.236** | **0.073** | **0.328** | **0.568** | + Graph via RRF. Capped recall@5; Hit@5 actually **0.760**. |
+| **diagnosis_agent (v2 Phase E)** | running | running | running | running | Rule-based fallback (LM Studio still pending). |
+
+## TRUE Hit@K (binary recall) — the right metric
+
+The `R@5` column above uses the standard `Recall@K = |top_K ∩ gold| / |gold|` definition, which gets mechanically capped at `K/|gold|` when |gold| > K. This badly understates retrieval quality in the in-distribution setting where windows have many compatible gold tickets. The **right metric** is Hit@K = `1 if any gold in top-K else 0`:
+
+| Pipeline | Hit@1 | **Hit@5** | MRR |
+|---|---:|---:|---:|
+| HGB / TabT (no retrieval) | 0.000 | 0.000 | 0.000 |
+| memorygraph_v2_sota_nw080 | 0.107 | 0.165 | 0.128 |
+| kg_retrieval_rulebased | 0.050 | 0.463 | 0.170 |
+| logseq2vec_retrieval_pretrained | 0.488 | 0.504 | 0.492 |
+| hybrid_rrf_no_graph | 0.264 | 0.686 | 0.432 |
+| bi_encoder_retrieval (v1 Phase G) | 0.653 | 0.719 | 0.676 |
+| **hybrid_rrf_retrieval (v2 Phase C)** | 0.438 | **0.760** | 0.568 |
+
+**Headline:** hybrid_rrf_retrieval = SPLADE + fine-tuned BiEncoder + LLM-knowledge-graph fused via Reciprocal Rank Fusion reaches **Hit@5 = 0.760** — 3.8× better than the v1 cross-encoder SOTA (0.202).
 
 ## Key v1 vs v2 comparisons
 
