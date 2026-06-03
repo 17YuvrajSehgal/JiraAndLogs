@@ -480,17 +480,3 @@ Implement, in this order:
 A version of the paper with just Proposals A + D + C would already be a substantially stronger ICSE submission than what we have today. Adding B would put it in "best paper candidate" territory.
 
 Let me know which proposal(s) you want me to start building first.
-
----
-
-## 11. The honest meta-observation
-
-Phase G (the current state) shipped a perfectly reasonable paper. The four-pipeline panel is clean; the methodology is honest; the depth-scaling story is novel. We could submit tomorrow.
-
-What you are asking — replacing BM25, replacing the characteristic-line abstraction, adding a knowledge graph, adding an agent — would not be "fixing a broken paper." It would be transforming "an acceptable ICSE paper" into "a paper with a real shot at the spotlight track."
-
-The risk: scope creep. Every proposal above is real engineering work. If we attempt all five and ship in 4 weeks, we end up at the borderline of finish-vs-ship-late.
-
-The conservative reading: ship the current paper now to the next deadline, then incorporate Proposals A+D into a v2 for a stronger journal. The ambitious reading: take a month and make this paper a banger. I'd advocate the ambitious reading because the four-pipeline panel actually has space for two more rows ("hybrid retrieval" and "knowledge graph"), and the knowledge graph in particular is the kind of "wow" that an ICSE PC remembers.
-
-Your call.
