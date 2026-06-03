@@ -67,28 +67,27 @@ def main() -> None:
                    help="cache dir (relative to global-dir)")
     args = p.parse_args()
 
-    timeline_path = args.global_dir / args.humanized_root / args.humanized_subdir / "timeline.jsonl"
-    if not timeline_path.exists():
-        raise SystemExit(f"V2 timeline not found at {timeline_path}")
+    # Load via the humanized loader to get the SHADOW IDs (matching gold).
+    from memorygraph.humanized_loader import load_humanized_corpus
+    issues = load_humanized_corpus(
+        args.global_dir,
+        humanized_subdir=args.humanized_subdir,
+        humanized_root=args.humanized_root,
+    )
 
     cache_dir = args.global_dir / args.out
     cache_dir.mkdir(parents=True, exist_ok=True)
 
-    with log_step(log, "load_timeline", path=str(timeline_path)):
+    with log_step(log, "load_humanized_corpus", n=len(issues)):
         tickets = []
-        with timeline_path.open(encoding="utf-8") as fh:
-            for line in fh:
-                if not line.strip():
-                    continue
-                t = json.loads(line)
-                t_pruned = {
-                    "ticket_id": t.get("ticket_id"),
-                    "memory_text": _build_text(t),
-                    "severity_seen": ", ".join(t.get("severity_seen", []) or []),
-                    "source_episode_id": t.get("source_episode_id", ""),
-                    "_raw_ticket": t,
-                }
-                tickets.append(t_pruned)
+        for iss in issues:
+            tickets.append({
+                "ticket_id": iss.jira_shadow_issue_id,    # SHADOW id, matches gold
+                "memory_text": iss.memory_text or "",
+                "severity_seen": iss.severity or "",
+                "source_episode_id": iss.incident_episode_id or "",
+                "scenario_family": iss.scenario_family or "",
+            })
         log.info("tickets loaded", n=len(tickets))
 
     if args.limit > 0:
@@ -112,7 +111,7 @@ def main() -> None:
         id_field="ticket_id",
         severity_field="severity_seen",
         timestamp_field="source_episode_id",
-        family_extractor=lambda t: _family_from_episode(t.get("_raw_ticket", {})),
+        family_extractor=lambda t: t.get("scenario_family", "") or _family_from_episode(t.get("source_episode_id", "")),
         progress_every=10,
     )
 

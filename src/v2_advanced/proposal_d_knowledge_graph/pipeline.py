@@ -178,10 +178,27 @@ class KnowledgeGraphRetrievalPipeline(PipelineRunner):
             corpus = MemoryCorpus(issues=memory_issues, mode="time_ordered")
             log.info("memory", n_tickets=len(memory_issues))
 
-        # 3) Load pre-extracted ticket facts
+        # 3) Load pre-extracted ticket facts. Prefer LLM extractions if
+        #    available; fall back to rule-based extractions otherwise.
         with log_step(log, "load_ticket_extractions"):
-            extractions = self._load_ticket_extractions(global_dir)
-            log.info("extractions", n=len(extractions))
+            try:
+                extractions = self._load_ticket_extractions(global_dir)
+                source = "llm"
+            except FileNotFoundError:
+                # Fallback to rule-based
+                rule_path = global_dir / "v2_kg_extractions_rules" / "all_extractions.jsonl"
+                if not rule_path.exists():
+                    raise FileNotFoundError(
+                        f"Neither LLM extractions ({global_dir / self.extractions_subdir}) "
+                        f"nor rule extractions ({rule_path}) found. "
+                        "Run one of the extract_*_cli scripts first."
+                    )
+                extractions = []
+                with rule_path.open(encoding="utf-8") as fh:
+                    for line in fh:
+                        extractions.append(IncidentExtraction.from_dict(json.loads(line)))
+                source = "rules"
+            log.info("extractions", n=len(extractions), source=source)
             extractions_by_id = {e.ticket_id: e for e in extractions}
 
         # 4) Load extractions into Neo4j

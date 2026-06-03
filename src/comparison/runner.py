@@ -93,6 +93,14 @@ except ImportError as _e:
     _HAS_AGENT = False
     _AGENT_IMPORT_ERROR = _e
 
+# v2_advanced — Phase B (2026-06-03): LogSeq2Vec
+try:
+    from v2_advanced.proposal_b_logseq2vec.pipeline import LogSeq2VecRetrievalPipeline
+    _HAS_LOGSEQ = True
+except ImportError as _e:
+    _HAS_LOGSEQ = False
+    _LOGSEQ_IMPORT_ERROR = _e
+
 # memorygraph lives in its own top-level package under src/.
 # Soft-import so the comparison harness still works on installs that
 # haven't pulled the optional package — the pipeline simply won't appear
@@ -166,6 +174,10 @@ if _HAS_HYBRID:
 # v2_advanced Phase E — DiagnosisAgent (capstone).
 if _HAS_AGENT:
     KNOWN_PIPELINES["diagnosis_agent"] = DiagnosisAgentPipeline
+
+# v2_advanced Phase B — LogSeq2Vec.
+if _HAS_LOGSEQ:
+    KNOWN_PIPELINES["logseq2vec_retrieval"] = LogSeq2VecRetrievalPipeline
 
 if _HAS_MEMORYGRAPH:
     # memorygraph: agentic cross-context retrieval. Builds a typed graph

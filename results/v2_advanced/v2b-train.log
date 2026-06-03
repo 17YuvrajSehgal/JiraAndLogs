@@ -1,0 +1,7 @@
+[03:10:36] [INFO ] [v2_advanced.phase_b.train] building train pairs  n_windows=3780 n_memory=347
+[03:10:36] [INFO ] [v2_advanced.phase_b.train] BM25 index built for hard-neg mining
+[03:10:40] [INFO ] [v2_advanced.phase_b.train] train pairs built  n=8769 skipped_no_gold=2518 skipped_no_visible_gold=0 skipped_no_logs=17
+[03:10:40] [INFO ] [v2_advanced.phase_b.train] training  n_pairs=8769 epochs=5 batch_size=8 device=cuda
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+Loading weights:   0%|          | 0/103 [00:00<?, ?it/s]Loading weights: 100%|##########| 103/103 [00:00<00:00, 7414.25it/s]
+[03:10:47] [INFO ] [v2_advanced.phase_b.train] step=train_loop start  epochs=5
