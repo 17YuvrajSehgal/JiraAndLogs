@@ -64,6 +64,35 @@ except ImportError as _e:
     _HAS_NEURAL = False
     _NEURAL_IMPORT_ERROR = _e
 
+# v2_advanced — Phase D (2026-06-03): LLM-extracted knowledge graph
+# pipeline. Soft-imported so the harness still works without neo4j.
+try:
+    from v2_advanced.proposal_d_knowledge_graph.pipeline import (
+        KnowledgeGraphRetrievalPipeline,
+    )
+    _HAS_KG = True
+except ImportError as _e:
+    _HAS_KG = False
+    _KG_IMPORT_ERROR = _e
+
+# v2_advanced — Phase C (2026-06-03): Hybrid SPLADE + BiEncoder + Graph
+try:
+    from v2_advanced.proposal_c_hybrid_retrieval.pipeline import (
+        HybridRRFRetrievalPipeline,
+    )
+    _HAS_HYBRID = True
+except ImportError as _e:
+    _HAS_HYBRID = False
+    _HYBRID_IMPORT_ERROR = _e
+
+# v2_advanced — Phase E (2026-06-03): DiagnosisAgent
+try:
+    from v2_advanced.proposal_e_agent.pipeline import DiagnosisAgentPipeline
+    _HAS_AGENT = True
+except ImportError as _e:
+    _HAS_AGENT = False
+    _AGENT_IMPORT_ERROR = _e
+
 # memorygraph lives in its own top-level package under src/.
 # Soft-import so the comparison harness still works on installs that
 # haven't pulled the optional package — the pipeline simply won't appear
@@ -106,6 +135,37 @@ KNOWN_PIPELINES: dict[str, type[PipelineRunner]] = {
 if _HAS_NEURAL:
     KNOWN_PIPELINES["tab_transformer"] = TabTransformerPipeline
     KNOWN_PIPELINES["bi_encoder_retrieval"] = BiEncoderRetrievalPipeline
+
+# v2_advanced Phase D — LLM-extracted knowledge graph retrieval.
+if _HAS_KG:
+    KNOWN_PIPELINES["kg_retrieval"] = KnowledgeGraphRetrievalPipeline
+
+    # Rule-based-only variant (no LM Studio dependency at window-extraction
+    # time; useful for quick sanity checks of the graph schema).
+    class _KGRetrievalRuleBased(KnowledgeGraphRetrievalPipeline):
+        name = "kg_retrieval_rulebased"
+
+        def __init__(self) -> None:
+            super().__init__(skip_window_extraction=True)
+
+    KNOWN_PIPELINES["kg_retrieval_rulebased"] = _KGRetrievalRuleBased
+
+# v2_advanced Phase C — Hybrid SPLADE + BiEncoder + Graph via RRF.
+if _HAS_HYBRID:
+    KNOWN_PIPELINES["hybrid_rrf_retrieval"] = HybridRRFRetrievalPipeline
+
+    class _HybridNoGraph(HybridRRFRetrievalPipeline):
+        """RRF fusion without the graph retriever — sanity check that
+        SPLADE + BiEncoder alone outperforms either component."""
+        name = "hybrid_rrf_no_graph"
+        def __init__(self) -> None:
+            super().__init__(skip_graph=True)
+
+    KNOWN_PIPELINES["hybrid_rrf_no_graph"] = _HybridNoGraph
+
+# v2_advanced Phase E — DiagnosisAgent (capstone).
+if _HAS_AGENT:
+    KNOWN_PIPELINES["diagnosis_agent"] = DiagnosisAgentPipeline
 
 if _HAS_MEMORYGRAPH:
     # memorygraph: agentic cross-context retrieval. Builds a typed graph
