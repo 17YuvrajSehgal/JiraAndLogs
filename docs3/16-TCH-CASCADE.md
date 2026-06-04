@@ -184,21 +184,46 @@ Per-window inference cost (assuming retrieval/triage features already cached for
 
 Adding the agent for novelty (Phase 2, in progress) costs ~75 min of LLM time on 150 hard-case windows. Without that, the cascade still beats every baseline on every metric — Phase 2 only widens the novelty-recall numerator.
 
-## 6. Phase 2 — extending novelty coverage (in progress)
+## 6. Phase 2 — extending novelty coverage (COMPLETE, 2026-06-04)
 
-Phase 1 has agent coverage on 200/1008 windows (the original v2e-agent-llm subsample). Novelty recall on the full split is therefore capped at ~20% even if every agent-flagged-novel is correct.
+Phase 1 had agent coverage on 200/1008 windows. Phase 2 ran the agent on a targeted 150-window subset — the windows the agent had NOT seen with the lowest L2 retrieval confidence (mean conf = 0.496, 77% of which were truly novel by gold).
 
-Phase 2 expands coverage to the 150 windows MOST likely to be novel:
-- Filter: agent hasn't seen yet
-- Sort: ascending by L2 max retrieval confidence
-- Take: bottom 150 (mean confidence = 0.496, 77% truly-novel by gold)
+Wall time: 86 minutes on the RTX 5060 with Qwen3.6 35B-A3B warm.
 
-Expected after Phase 2:
-- Novelty recall: 7% → ~17-20% (115 truly-novel windows in the Phase 2 set × 37% agent recall = ~43 catches, on top of Phase 1's 50)
-- Novelty precision: ≥ 93% (agent precision is stable across confidence regimes)
-- Hit@K: unchanged (agent doesn't re-rank)
+### Combined headline (Phase 1 + Phase 2 merged)
 
-Phase 2 numbers will be filled in here once the run completes.
+| Metric | Phase 1 only | **Phase 1+2** | Change |
+|---|---:|---:|---:|
+| Hit@1 | 0.707 | **0.707** | — (unchanged by design — agent doesn't re-rank) |
+| Hit@5 | 0.912 | **0.912** | — |
+| MRR | 0.788 | **0.788** | — |
+| PR-AUC strict | 0.9998 | **0.9998** | — |
+| PR-AUC inclusive | 0.8527 | **0.8527** | — |
+| Agent coverage | 200 (20%) | **350 (35%)** | +75% rel |
+| Novel flagged | 96 | **117** | +22% rel |
+| Novel precision | 0.948 | **0.940** | −0.8pts |
+| **Novel recall** | 0.134 | **0.162** | **+21% rel** |
+
+### On the 350-window agent-ran subset (apples-to-apples)
+
+| Metric | Value |
+|---|---:|
+| n_with_gold | 101 |
+| Hit@5 | 0.921 |
+| Novel precision | 0.940 |
+| Novel recall (truly novel = 249) | **0.442** |
+
+The agent-ran subset has 44% novelty recall — meaningfully above Phase 1's 37% on its random subset because the hard-case gating put the agent in front of novelty-richer windows.
+
+### What Phase 2 added vs the "free" novelty signal
+
+| Source | Flagged | TP (correctly novel) | Precision | Recall (n=677) |
+|---|---:|---:|---:|---:|
+| Agent (Phase 1+2 combined) | 90 | 84 | 0.933 | 0.124 |
+| Free signal (ret_conf < 0.5) | 52 | 50 | 0.962 | 0.074 |
+| **Combined OR** (TCH output) | **117** | **110** | **0.940** | **0.162** |
+
+Phase 2 nearly doubled the agent's flagged count from 50 → 84 true novels. Without Phase 2, the cascade's novelty recall would have stayed at 13.4%; with Phase 2, it's 16.2% — a 21% relative lift.
 
 ## 6a. Improvement over v1 SOTA
 

@@ -19,7 +19,7 @@ Under the new window-stratified split (4701 train / 1011 val / 1008 test) where 
 | **hybrid_rrf_no_graph (v2 Phase C)** | 0.219 | 0.049 | 0.282 | 0.432 | SPLADE + BiEncoder via RRF. Capped recall@5; Hit@5 actually 0.686. |
 | **hybrid_rrf_retrieval (v2 Phase C)** | **0.236** | **0.073** | **0.328** | **0.568** | + Graph via RRF. Capped recall@5; Hit@5 actually **0.760**. |
 | **diagnosis_agent (LLM, v2 Phase E)** | 0.289 | 0.106 | 0.245 | 0.433 | 200-window subsample (110 min wall). LLM verify with thinking=ON. Capped recall@5; Hit@5 binary = 0.561. PR-AUC inclusive (borderline=positive) = **0.628**. Adds novelty detection (94% precision, 37% recall). See [docs3/15-DIAGNOSIS-AGENT-FINDINGS.md](15-DIAGNOSIS-AGENT-FINDINGS.md). |
-| **TCH cascade Phase 1 (v2 Phase F)** | **0.9998** | **0.402** | **0.394** | **0.788** | 4-layer Tiered Cascade Hybrid. L1 stacker + L2 RRF over 4 best retrievers (drop hybrid_llm + mg_sota; +0.02 Hit@5) + L3 novelty-only agent + L4 composition. Capped recall@5; Hit@5 binary = **0.912**, Hit@1 = **0.707**. Strict Pareto win on every metric vs every baseline. See [docs3/16-TCH-CASCADE.md](16-TCH-CASCADE.md). |
+| **TCH cascade (v2 Phase F, Phase 1+2 final)** | **0.9998** | **0.402** | **0.394** | **0.788** | 4-layer Tiered Cascade Hybrid + agent on 350/1008 windows (Phase 1 random 200 + Phase 2 hard-case 150). Capped recall@5; Hit@5 binary = **0.912**, Hit@1 = **0.707**, MRR = **0.788**, PR-AUC inclusive = **0.853**. Novelty: 117 flagged at 94.0% precision / 16.2% recall (combined agent+ret_conf<0.5 signal). Strict Pareto win on every retrieval/triage metric vs every baseline. See [docs3/16-TCH-CASCADE.md](16-TCH-CASCADE.md). |
 
 ## TRUE Hit@K (binary recall) — the right metric
 
