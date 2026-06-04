@@ -63,6 +63,28 @@ That's the whole product. TCH is the model that delivers it.
 
 ---
 
+## System at a glance
+
+```mermaid
+flowchart LR
+    A[Telemetry Window<br/>logs + metrics + traces + k8s]
+    A --> B[6 trained pipelines<br/>HGB, bi_encoder, hybrid_rrf rule,<br/>hybrid_rrf LLM, logseq2vec, kg_retrieval]
+    B --> L1[L1 Triage Gate<br/>LogReg over 6 triage scores]
+    B --> L2[L2 Retrieval Fusion<br/>overlap-rerank + RRF over 4 retrievers]
+    A -.optional.-> AG[DiagnosisAgent<br/>LLM 3-stage verify]
+    AG --> L3[L3 Novelty Check<br/>agent OR ret_conf less than 0.5]
+    L1 --> L4[L4 Output Composition]
+    L2 --> L4
+    L3 --> L4
+    L4 --> OUT[Output:<br/>triage_score<br/>matched_issue_ids x5<br/>is_novel]
+
+    style L1 fill:#e1f5ff
+    style L2 fill:#fff4e6
+    style L3 fill:#ffe6e6
+    style L4 fill:#e6ffe6
+    style OUT fill:#f0f0f0
+```
+
 ## The big idea behind TCH
 
 We trained **seven different models** over the course of this project. Each was good at something. None was good at everything:
@@ -179,6 +201,42 @@ If the L1 score is below 0.5, we mark the window as noise. We still emit a ranke
 
 The constant `k = 60` is the standard value from the original RRF paper. We confirmed it's optimal on our data through sweeping.
 
+### Diagram — how L2 produces the top-5
+
+```mermaid
+flowchart TB
+    W[Window evidence text]
+
+    W --> BE[bi_encoder<br/>cosine similarity]
+    W --> HR[hybrid_rrf rule<br/>SPLADE+BiE+graph]
+    W --> LS[logseq2vec<br/>log-sequence transformer]
+    W --> KG[kg_retrieval<br/>Neo4j Cypher query]
+    W --> HL[hybrid_rrf LLM<br/>vote pool only]
+
+    BE --> BTOP3[bi_encoder top-3]
+    BE --> RRF{Reciprocal Rank Fusion<br/>k=60, top-10 each}
+    HR --> RRF
+    LS --> RRF
+    KG --> RRF
+
+    BTOP3 --> OR[Overlap Rerank<br/>count how many of HR, HL, LS<br/>place each candidate in their top-3]
+    HR -.vote.-> OR
+    HL -.vote.-> OR
+    LS -.vote.-> OR
+
+    OR --> A1[Position 1<br/>highest overlap score]
+    RRF --> POS25[Positions 2-5<br/>RRF order, anchor removed]
+
+    A1 --> FINAL[Final top-5]
+    POS25 --> FINAL
+
+    style A1 fill:#ffefc1
+    style POS25 fill:#cfe9ff
+    style FINAL fill:#e6ffe6
+```
+
+The key insight: position 1 uses a DIFFERENT rule than positions 2-5. Anchor + rerank for top-1 precision; uniform RRF for top-5 coverage.
+
 ### Layer 3 (L3) — Conditional agent verify (novelty flag only)
 
 **Job:** flag windows where there's probably no past Jira match (i.e., a new failure mode).
@@ -191,6 +249,39 @@ The constant `k = 60` is the standard value from the original RRF paper. We conf
 We mark `is_novel = True` if EITHER signal fires. Empirically, the free signal alone has 96% precision (matches the agent at 94%), and combining them widens recall from 7% to 16% with only a 0.8 percentage point drop in precision.
 
 **What L3 does NOT do:** it does NOT re-rank the L2 top-5. We tested that — the agent overrode L2's top-1 on 80 out of 200 windows and was net wrong (3 right vs 8 wrong). So we explicitly disabled agent re-ranking.
+
+### Diagram — how L3 decides novelty
+
+```mermaid
+flowchart TB
+    W[Window]
+    W --> RC{max retrieval<br/>confidence < 0.5?}
+    W --> AR{agent ran<br/>on this window?}
+
+    RC -->|yes| FREE[free signal: NOVEL<br/>96% precision]
+    RC -->|no| FREENOT[free signal: not novel]
+
+    AR -->|yes| AGENT{agent.is_novel?}
+    AR -->|no| AGENTNA[agent signal: not available]
+
+    AGENT -->|true| AGENTN[agent signal: NOVEL<br/>94% precision]
+    AGENT -->|false| AGENTNOT[agent signal: not novel]
+
+    FREE --> OR{OR}
+    FREENOT --> OR
+    AGENTN --> OR
+    AGENTNOT --> OR
+    AGENTNA --> OR
+
+    OR -->|either says NOVEL| NOVEL[is_novel = True<br/>combined precision: 94%<br/>recall: 16%]
+    OR -->|neither says NOVEL| NOTNOVEL[is_novel = False]
+
+    style FREE fill:#fff4e6
+    style AGENTN fill:#ffe6e6
+    style NOVEL fill:#ffefc1
+```
+
+The agent runs on only 350 / 1008 windows (the most expensive component). The free signal covers everything for ZERO LLM cost. Combining them via OR gives the headline 94% precision / 16% recall.
 
 ### Layer 4 (L4) — Output composition
 
@@ -242,6 +333,35 @@ Final top-5: `[paymentservice-unavailable-r01, paymentservice-deadline-r02, chec
 
 → `is_novel = False`.
 
+### Sequence diagram for this example
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant W as Window<br/>(paymentservice incident)
+    participant P as 6 Pipelines<br/>(pre-computed)
+    participant L1 as L1 Stacker<br/>(LogReg)
+    participant L2 as L2 Fusion
+    participant L3 as L3 Novelty
+    participant L4 as L4 Output
+
+    W->>P: window evidence
+    P-->>L1: 6 triage scores<br/>HGB=0.97, BE=0.61, ...
+    L1-->>L4: triage_score = 0.962<br/>decision = ticket_worthy
+
+    P-->>L2: top-10 from each retriever
+    L2->>L2: overlap rerank top-3<br/>winner: paymentservice-unavailable-r01<br/>(overlap=6)
+    L2->>L2: RRF over 4 retrievers<br/>positions 2-5
+    L2-->>L4: ranked top-5
+
+    P-->>L3: max retrieval conf = 0.71
+    L3->>L3: free signal: 0.71 >= 0.5,<br/>not novel
+    Note over L3: Agent did not run<br/>on this window
+    L3-->>L4: is_novel = False
+
+    L4-->>W: { triage_score: 0.962,<br/>top_5_ids: [...],<br/>is_novel: False }
+```
+
 **Step 5 — L4: compose output.**
 
 ```python
@@ -288,6 +408,35 @@ Where the trained weights `w_i` and bias `b` are:
 | Bias `b` | −4.755 | shifts the decision boundary |
 
 **In plain English:** HGB does almost all the work for triage. The other features push the decision around on borderline cases. The bias of −4.755 means we default to "noise" unless the features add up to overcome it.
+
+### Visualizing the stacker weights
+
+```mermaid
+flowchart LR
+    HGB[HGB triage<br/>x_1]
+    BE[bi_encoder triage<br/>x_2]
+    HR[hybrid_rrf rule<br/>x_3]
+    HL[hybrid_rrf llm<br/>x_4]
+    LS[logseq2vec<br/>x_5]
+    KG[kg_retrieval<br/>x_6]
+
+    HGB -->|w=+8.221<br/>DOMINANT| Z((sum z))
+    KG -->|w=+0.525| Z
+    BE -->|w=+0.292| Z
+    LS -->|w=+0.116| Z
+    HL -->|w=+0.112| Z
+    HR -->|w=-0.048<br/>NEGLIGIBLE| Z
+    B[bias = -4.755] --> Z
+
+    Z --> SIG{sigmoid<br/>1/1+e^-z}
+    SIG --> P[P ticket_worthy]
+
+    style HGB fill:#ffe6e6
+    style KG fill:#fff4e6
+    style P fill:#e6ffe6
+```
+
+The HGB coefficient is ~30× larger than the next-most-influential feature. When HGB is confident, the cascade is confident. The other features matter only in borderline regions.
 
 ### L2: overlap rerank for top-1
 
@@ -340,6 +489,56 @@ No math here. Pack `triage_score`, `matched_issue_ids` (the L2 top-5), and `is_n
 ## Where each piece of tech is used (LLM, Neo4j, etc.)
 
 This is the question "what infrastructure does this require?" answered in detail.
+
+### Tech-stack map
+
+```mermaid
+flowchart LR
+    subgraph "TRAINING TIME (one-off)"
+        LLM1[Qwen 35B<br/>via LM Studio]
+        LLM1 --> EXTRACT[Extract structured<br/>info from 347 Jira tickets<br/>80 min one-shot]
+        EXTRACT --> NEO4J[(Neo4j<br/>knowledge graph<br/>347 incidents,<br/>803 symptoms)]
+
+        TRAIN_DATA[v2 train split]
+        TRAIN_DATA --> HGB_TRAIN[Train HGB<br/>94 numeric features]
+        TRAIN_DATA --> BE_TRAIN[Fine-tune MiniLM<br/>3 epochs, 15 min<br/>RTX 5060]
+        TRAIN_DATA --> SPL_TRAIN[Index SPLADE]
+        TRAIN_DATA --> L2V_TRAIN[Train logseq2vec<br/>14 min]
+    end
+
+    subgraph "INFERENCE TIME (every window)"
+        W[New window]
+        W --> HGB_INF[HGB.predict<br/>1 ms]
+        W --> BE_INF[BiEncoder embed<br/>5 ms]
+        W --> SPL_INF[SPLADE retrieve<br/>5 ms]
+        W --> L2V_INF[logseq2vec score<br/>5 ms]
+        W --> KG_INF[Cypher query<br/>10 ms]
+        NEO4J -.-> KG_INF
+
+        HGB_INF --> CASCADE[TCH cascade<br/>L1+L2+L3+L4<br/>16 microsec/window]
+        BE_INF --> CASCADE
+        SPL_INF --> CASCADE
+        L2V_INF --> CASCADE
+        KG_INF --> CASCADE
+
+        CASCADE --> OUT[Output triple]
+    end
+
+    subgraph "OPTIONAL — Hard cases only"
+        AGENT[DiagnosisAgent<br/>30 sec/window]
+        LLM2[Qwen 35B<br/>verify w/thinking]
+        AGENT --> LLM2
+        LLM2 --> CASCADE
+    end
+
+    style LLM1 fill:#ffe6e6
+    style LLM2 fill:#ffe6e6
+    style NEO4J fill:#e1f5ff
+    style CASCADE fill:#e6ffe6
+    style OUT fill:#fff4e6
+```
+
+**Key takeaway:** the LLM is used HEAVILY at training time (extraction) and SPARINGLY at inference time (only on hard-case windows). Neo4j stores the LLM's extracted graph. Once trained, the cascade itself runs at 16 microseconds per window — no LLM, no GPU, no Neo4j call required (the kg_retrieval results are cached).
 
 ### Large Language Model (Qwen 3.6 35B-A3B via LM Studio)
 
@@ -398,6 +597,46 @@ HGB is by far the most influential feature in the L1 stacker (coefficient +8.221
 
 The full story, simplified.
 
+### Discovery timeline
+
+```mermaid
+gantt
+    title TCH discovery — what we built when
+    dateFormat YYYY-MM-DD
+    axisFormat %b %d
+
+    section Phase A — Re-split
+    Diagnose orphan-family leak       :a1, 2026-04-15, 7d
+    Build v2 in-distribution split    :a2, after a1, 10d
+    HGB hits PR-AUC 0.9998            :milestone, after a2, 0d
+
+    section Phase B — More retrievers
+    Fine-tune BiEncoder               :b1, 2026-05-01, 7d
+    Train logseq2vec                  :b2, after b1, 5d
+    BiEncoder Hit@5 = 0.789           :milestone, after b1, 0d
+
+    section Phase C — Hybrid RRF fusion
+    Build SPLADE+BiE+graph fusion     :c1, 2026-05-12, 7d
+    Hybrid_rrf rule Hit@5 = 0.798     :milestone, after c1, 0d
+
+    section Phase D — Knowledge graph
+    LLM extraction 347 tickets        :d1, 2026-05-23, 4d
+    KG retrieval LLM Hit@1 +230%      :milestone, after d1, 0d
+    Discover RRF density paradox      :d2, after d1, 2d
+
+    section Phase E — DiagnosisAgent
+    Build 3-stage agent               :e1, 2026-06-01, 3d
+    Phase 1 — 200 random windows      :e2, after e1, 2d
+    Find 94 percent novelty precision :milestone, after e2, 0d
+
+    section Phase F — TCH cascade
+    Idea — cascade Pareto winners     :f1, 2026-06-04, 1d
+    Build Phase 1 cascade             :f2, after f1, 1d
+    13 ablations                      :f3, after f2, 1d
+    Phase 2 hard-case agent           :f4, after f3, 1d
+    FINAL TCH locked                  :milestone, after f4, 0d
+```
+
 ### Phase A — Setting the stage (March-April 2026)
 
 We had two earlier datasets (v1, v2) and a SOTA from Phase G — a fine-tuned cross-encoder that hit Hit@5 = 0.202. That was the bar to beat.
@@ -444,6 +683,66 @@ Then Phase 2 ran the agent on 150 more "hardest" windows (lowest L2 retrieval co
 ## All the experiments we ran (ablations)
 
 A complete list of the 13 independent experiments we ran on the TCH design. Each row is a real experiment with measured numbers.
+
+### Ablation decision flow
+
+```mermaid
+flowchart TD
+    START[Initial cascade design<br/>Hit5 = 0.864]
+
+    START --> AB1{Drop hybrid_rrf LLM<br/>from L2 RRF?}
+    AB1 -->|test: drop-one| AB1Y[Hit5 +2.1pts]
+    AB1Y --> AB1Final[DROP it<br/>Hit5 = 0.912]
+
+    AB1Final --> AB6{Wider overlap-rerank<br/>window?}
+    AB6 -->|test: top-3 vs top-5 vs top-10| AB6N[All wider variants hurt]
+    AB6N --> AB6Final[KEEP top-3]
+
+    AB1Final --> AB11{L1 threshold higher?}
+    AB11 -->|test: 0.2, 0.3, 0.5| AB11Y[F1 peaks at 0.5<br/>recall stays 1.000]
+    AB11Y --> AB11Final[USE 0.5]
+
+    AB1Final --> AB7{Let agent rerank<br/>L2 top-1?}
+    AB7 -->|test: 200 windows| AB7N[Net -5 Hit1 wins<br/>Agent 3 right, L2 8 right]
+    AB7N --> AB7Final[DISABLE agent rerank]
+
+    AB1Final --> AB12{Combine agent<br/>with free signal?}
+    AB12 -->|test: OR vs AND| AB12Y[OR gives 95 pct prec<br/>13 pct recall<br/>vs agent alone 7 pct]
+    AB12Y --> AB12Final[USE combined OR]
+
+    AB1Final --> AB2{Score-weighted RRF?}
+    AB2 -->|test: linear, squared, sigmoid| AB2N[All hurt by 4-6pts]
+    AB2N --> AB2Final[KEEP uniform weights]
+
+    AB1Final --> AB3{Per-family<br/>retriever selection?}
+    AB3 -->|test: oracle| AB3N[Oracle Hit5 = 0.888<br/>WORSE than 0.912]
+    AB3N --> AB3Final[Skip per-family logic]
+
+    AB1Final --> AB8{Use GBM stacker?}
+    AB8 -->|test: vs LogReg| AB8N[GBM 0.985, LogReg 0.9998]
+    AB8N --> AB8Final[USE LogReg]
+
+    AB6Final --> FINAL[FINAL DESIGN<br/>Hit5 = 0.912<br/>Hit1 = 0.707<br/>MRR = 0.788<br/>PR-AUC inc = 0.853<br/>Novel prec = 0.94]
+    AB11Final --> FINAL
+    AB7Final --> FINAL
+    AB12Final --> FINAL
+    AB2Final --> FINAL
+    AB3Final --> FINAL
+    AB8Final --> FINAL
+
+    style START fill:#fff4e6
+    style FINAL fill:#e6ffe6
+    style AB1Y fill:#e6ffe6
+    style AB11Y fill:#e6ffe6
+    style AB12Y fill:#e6ffe6
+    style AB7N fill:#ffe6e6
+    style AB2N fill:#ffe6e6
+    style AB3N fill:#ffe6e6
+    style AB8N fill:#ffe6e6
+```
+
+Green boxes = experiments that helped (integrated into design). Red boxes = experiments that hurt (kept the simpler choice).
+
 
 | # | Question | Result | Decision |
 |---|---|---|---|
