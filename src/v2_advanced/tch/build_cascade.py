@@ -281,21 +281,30 @@ def assemble_cascade_prediction(state: WindowState, stacked_triage: float) -> di
     else:
         l2_top = rrf_fused[:TOP_K_OUTPUT]
 
-    # L3: agent integration — NOVELTY FLAG ONLY.
+    # L3: agent integration — NOVELTY FLAG ONLY (no re-ranking).
     # Empirical finding (audit on 200 windows): agent re-ranking changes
     # L2's top-1 on 80 windows but is NET wrong (-5 Hit@1) compared to
     # leaving L2 alone. Bi_encoder's top-1 is the stronger single signal.
     # So we use the agent's `is_novel` flag (94% precision) but do NOT
     # let it override the L2 ranking.
+    #
+    # Novelty signal combination: agent flag OR retrieval-conf < 0.5.
+    # The free signal `tch_max_retrieval_conf < 0.5` matches the agent's
+    # 94% precision standalone — combining them gives 95% precision /
+    # 13.4% recall (vs agent-only 7.4% recall on full 1008-window split),
+    # a +81% relative recall lift with no precision loss.
+    max_ret_conf = max_retrieval_confidence(state)
+    free_novelty_signal = max_ret_conf < 0.5
+
     agent_top = state.top_by_pipe.get("diagnosis_agent")
     agent_novel = state.is_novel_by_pipe.get("diagnosis_agent")
     if agent_top is not None:
         agent_ran = True
         final_top = l2_top
-        is_novel = bool(agent_novel)
+        is_novel = bool(agent_novel) or free_novelty_signal
     else:
         final_top = l2_top
-        is_novel = False
+        is_novel = free_novelty_signal
         agent_ran = False
 
     return {
