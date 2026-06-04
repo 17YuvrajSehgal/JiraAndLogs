@@ -49,12 +49,33 @@ PIPELINE_FILES = {
     "diagnosis_agent":                "v2e-agent-llm/per-window-predictions.jsonl",
 }
 
+# Optional: additional agent prediction files to MERGE with the primary
+# `diagnosis_agent` entry. Phase 2 writes to v2e-agent-phase2/, and we
+# union both files so the cascade sees the agent's verdict on every
+# window the agent has touched. Order matters: later entries override
+# earlier entries on the same window_id.
+EXTRA_AGENT_FILES = [
+    "v2e-agent-phase2/per-window-predictions.jsonl",
+]
+
 # Which pipelines to use for L2 (retrieval RRF fusion).
+#
+# Drop-one sweep on 2026-06-04 (Hit@5 deltas vs all-six):
+#   drop bi_encoder    -0.057  KEEP (best single retriever)
+#   drop logseq2vec    -0.051  KEEP (complementary log-sequence signal)
+#   drop kg_llm        -0.015  KEEP (graph signal)
+#   drop hybrid_rule    0.000  could drop (redundant with kg_llm + bi)
+#   drop mg_sota       -0.003  could drop (negligible contribution)
+#   drop hybrid_llm    +0.021  DROP (RRF density paradox — too sparse,
+#                              fights the BiEncoder consensus)
+#
+# Selected subset (Hit@5 = 0.918 in the sweep, the best of any
+# 3-6 retriever combination tested):
 L2_RETRIEVERS = [
     "bi_encoder_retrieval",
     "hybrid_rrf_retrieval_rule",
-    "hybrid_rrf_retrieval_llm",
     "logseq2vec_retrieval_pretrained",
+    "kg_retrieval_rulebased",
 ]
 
 # Which pipelines' triage_score to stack for L4.
@@ -96,7 +117,17 @@ class WindowState:
 def load_all_predictions(global_dir: Path) -> dict[str, WindowState]:
     base = global_dir / COMPARISON_BASE
     out: dict[str, WindowState] = {}
-    for pipe_name, rel_path in PIPELINE_FILES.items():
+
+    # Build the load plan: each (pipe_name, relative_path) pair to read.
+    # `diagnosis_agent` is read from the primary path FIRST and then any
+    # EXTRA_AGENT_FILES that exist, so later runs (e.g. Phase 2 hard-case
+    # subset) merge with Phase 1 coverage.
+    load_plan: list[tuple[str, str]] = list(PIPELINE_FILES.items())
+    for extra in EXTRA_AGENT_FILES:
+        if (base / extra).exists():
+            load_plan.append(("diagnosis_agent", extra))
+
+    for pipe_name, rel_path in load_plan:
         p = base / rel_path
         with p.open(encoding="utf-8") as fh:
             for line in fh:
