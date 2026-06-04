@@ -111,23 +111,47 @@ class DiagnosisAgentPipeline(PipelineRunner):
     ) -> PipelineResult:
         t_fit_start = time.time()
 
-        # 1) Run the hybrid pipeline to get the candidate pool
-        with log_step(log, "run_hybrid_retriever"):
-            hybrid = HybridRRFRetrievalPipeline(
-                humanized_subdir=self.humanized_subdir,
-                humanized_root=self.humanized_root,
-                extractions_subdir=self.extractions_subdir,
-                top_k_per_retriever=self.top_k_input,
-                top_k_final=self.top_k_input,
-            )
-            hybrid_result = hybrid.train_and_predict(global_dir, runs_root, target_fpr=target_fpr)
-            hybrid_top_by_window = {
-                p.window_id: p.matched_issue_ids for p in hybrid_result.predictions
-            }
-            hybrid_score_by_window = {
-                p.window_id: float(p.triage_score) for p in hybrid_result.predictions
-            }
-            log.info("hybrid pool ready", n_windows=len(hybrid_top_by_window))
+        # 1) Get the candidate pool. Either reuse cached hybrid predictions
+        #    (env var V2_AGENT_HYBRID_PREDICTIONS_PATH) — useful when the
+        #    LLM is already in VRAM and a BiEncoder refit would OOM — or
+        #    refit the hybrid from scratch.
+        import json as _json
+        import os as _os
+        cached_path = _os.environ.get("V2_AGENT_HYBRID_PREDICTIONS_PATH", "").strip()
+        if cached_path:
+            with log_step(log, "load_cached_hybrid", path=cached_path):
+                hybrid_top_by_window: dict[str, list[str]] = {}
+                hybrid_score_by_window: dict[str, float] = {}
+                with open(cached_path, encoding="utf-8") as fh:
+                    for line in fh:
+                        d = _json.loads(line)
+                        wid = d.get("window_id")
+                        if not wid:
+                            continue
+                        hybrid_top_by_window[wid] = list(d.get("matched_issue_ids") or [])
+                        hybrid_score_by_window[wid] = float(d.get("triage_score") or 0.0)
+                log.info(
+                    "hybrid pool loaded from cache",
+                    n_windows=len(hybrid_top_by_window),
+                    path=cached_path,
+                )
+        else:
+            with log_step(log, "run_hybrid_retriever"):
+                hybrid = HybridRRFRetrievalPipeline(
+                    humanized_subdir=self.humanized_subdir,
+                    humanized_root=self.humanized_root,
+                    extractions_subdir=self.extractions_subdir,
+                    top_k_per_retriever=self.top_k_input,
+                    top_k_final=self.top_k_input,
+                )
+                hybrid_result = hybrid.train_and_predict(global_dir, runs_root, target_fpr=target_fpr)
+                hybrid_top_by_window = {
+                    p.window_id: p.matched_issue_ids for p in hybrid_result.predictions
+                }
+                hybrid_score_by_window = {
+                    p.window_id: float(p.triage_score) for p in hybrid_result.predictions
+                }
+                log.info("hybrid pool ready", n_windows=len(hybrid_top_by_window))
 
         # 2) Load extraction map
         with log_step(log, "load_extractions"):

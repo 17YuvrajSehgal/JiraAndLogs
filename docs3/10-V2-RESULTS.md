@@ -18,7 +18,7 @@ Under the new window-stratified split (4701 train / 1011 val / 1008 test) where 
 | **logseq2vec_retrieval (v2 Phase B)** | 0.313 | 0.103 | 0.329 | 0.492 | Trained on raw log sequences (5 epochs, ~14 min on RTX 5060). |
 | **hybrid_rrf_no_graph (v2 Phase C)** | 0.219 | 0.049 | 0.282 | 0.432 | SPLADE + BiEncoder via RRF. Capped recall@5; Hit@5 actually 0.686. |
 | **hybrid_rrf_retrieval (v2 Phase C)** | **0.236** | **0.073** | **0.328** | **0.568** | + Graph via RRF. Capped recall@5; Hit@5 actually **0.760**. |
-| **diagnosis_agent (v2 Phase E)** | running | running | running | running | Rule-based fallback (LM Studio still pending). |
+| **diagnosis_agent (LLM, v2 Phase E)** | 0.289 | 0.106 | 0.245 | 0.433 | 200-window subsample (110 min wall). LLM verify with thinking=ON. Capped recall@5; Hit@5 binary = 0.561. PR-AUC inclusive (borderline=positive) = **0.628**. Adds novelty detection (94% precision, 37% recall). See [docs3/15-DIAGNOSIS-AGENT-FINDINGS.md](15-DIAGNOSIS-AGENT-FINDINGS.md). |
 
 ## TRUE Hit@K (binary recall) — the right metric
 
@@ -35,6 +35,7 @@ The `R@5` column above uses the standard `Recall@K = |top_K ∩ gold| / |gold|` 
 | bi_encoder_retrieval (v1 Phase G) | 0.653 | 0.719 | 0.676 |
 | **hybrid_rrf_retrieval (rule graph)** | 0.438 | **0.760** | 0.568 |
 | hybrid_rrf_retrieval (LLM graph, 2026-06-04) | 0.364 | 0.694 | 0.488 |
+| diagnosis_agent (LLM, n=200 subsample) | **0.485** | 0.561 | 0.514 |
 
 **Headline:** hybrid_rrf_retrieval = SPLADE + fine-tuned BiEncoder + KG-via-RRF reaches **Hit@5 = 0.760** with the rule-extracted graph — 3.8× better than the v1 cross-encoder SOTA (0.202). The LLM-extracted-graph variant reaches Hit@5 = 0.694 but improves triage PR-AUC by +24% relative; the choice between them is product-dependent. See [docs3/14-LLM-GRAPH-FINDINGS.md](14-LLM-GRAPH-FINDINGS.md) for the trade-off analysis.
 
