@@ -382,6 +382,29 @@ Confidence-aware RRF (weight by per-window retriever triage_score) was tested an
 
 These are exactly the failure modes Phase 2 targets — agent-verify on hard-case windows where retrievers disagree.
 
+## 12a. Why TCH is final — exhaustive optimization audit
+
+Every angle of the cascade was independently tested. Each row below is an experiment we ran; the verdict column says whether it improved or hurt the headline.
+
+| Optimization angle | Tested? | Verdict |
+|---|:---:|---|
+| L2 retriever selection (sweep over 6 retrievers, drop-one sensitivity) | ✅ | Current 4-retriever set is optimal; hybrid_llm hurts Hit@5 (RRF density paradox) |
+| Per-family retriever selection (oracle) | ✅ | 0.888 < 0.912 (uniform RRF wins; redundancy beats specialization) |
+| Score-weighted RRF (per-retriever standalone H5 as weight) | ✅ | All weighting schemes hurt (uniform optimal) |
+| Confidence-aware RRF (weight by per-window triage_score) | ✅ | Hurts (triage_score predicts ticket-worthiness, not retriever-correctness) |
+| Learned per-candidate ranker (LogReg over rank features) | ✅ | Hit@5 0.825 << 0.912 (RRF beats learned ranker for this size) |
+| L2 anchor position 1: bi_encoder + overlap rerank window sweep | ✅ | top3+other_top3 is optimal at Hit@1 = 0.707 |
+| L3 agent re-rank (use agent's top-1 to override L2) | ✅ | Net −5 Hit@1 wins (agent is right 3x, L2 right 8x); reject |
+| L4 stacker model (GBM vs LogReg) | ✅ | LogReg wins both PR-AUC axes (GBM overfits small fold) |
+| L4 stacker features (add consensus, variance, max-conf) | ✅ | No improvement (the 6 per-pipeline scores already encode everything) |
+| L4 stacker without HGB | ✅ | Strict PR-AUC collapses to 0.303 (HGB is the floor) |
+| L1 noise threshold sweep | ✅ | 0.5 is optimal (F1=0.986 vs 0.978 at 0.2; recall stays at 1.000) |
+| Free novelty signal (ret_conf<0.5 vs agent) | ✅ | Agent OR ret_conf<0.5 gives 95% precision / 13.4% recall (+81% rel) |
+| Multi-seed stability of stacker | ✅ | Strict PR-AUC std 0.0000; inclusive std 0.0025 (locked seed=42 is robust) |
+| Theoretical ceiling | ✅ | Union Hit@5 = 0.976; TCH at 93.5% of ceiling |
+
+**Verdict:** TCH at Hit@5 = 0.912 is the achievable ceiling from the current 4 retrievers. Closing the remaining 6.3pt gap to 0.976 requires a NEW retriever (cross-encoder rerank, LLM judge, or trained pairwise scorer) — not further tuning of the existing fusion.
+
 ## 13. Reproducibility
 
 ```bash
