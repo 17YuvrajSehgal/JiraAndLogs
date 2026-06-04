@@ -73,27 +73,65 @@ Specific entities on tickets ≠ generic entities on windows ⇒ overlap scoring
 
 The KG retriever is one of three retrievers fused via RRF in the headline `hybrid_rrf_retrieval` pipeline. RRF weights each candidate by `1 / (k + rank)`, so a retriever with strong top-1 hits contributes a lot to the fused top-K.
 
-**Prediction:** `hybrid_rrf_retrieval` with the LLM graph should at least match the rule-graph version (Hit@5 = 0.760) and likely improve on Hit@1 (currently 0.438 with rule-graph). The Hit@5 recall lost on the graph side is largely covered by SPLADE + BiEncoder.
+**Prediction (made before running):** `hybrid_rrf_retrieval` with the LLM graph should at least match the rule-graph version (Hit@5 = 0.760) and likely improve on Hit@1. The Hit@5 recall lost on the graph side should be largely covered by SPLADE + BiEncoder.
 
-We test this in §6 (currently being run).
+**Result (run 2026-06-04):** the prediction was wrong on the headline. See §6.
 
-## 6. Headline pipeline status
+## 6. Headline pipeline result — hybrid_rrf_retrieval with LLM graph
 
-`hybrid_rrf_retrieval` with the new LLM-extracted graph being kicked off after this document is committed. ETA ~25 min on the RTX 5060 (BiEncoder refit + SPLADE indexing + RRF fusion).
+Ran 2026-06-04 on the v2 in-distribution split. BiEncoder 3-epoch fine-tune (614 s) + SPLADE indexing (22 s) + Cypher graph queries + RRF fusion. Total wall time 13.3 min.
 
-Expected results documented at §6 of [10-V2-RESULTS.md](10-V2-RESULTS.md) and updated here once the run completes.
+| Metric | hybrid_rrf with **rule graph** | hybrid_rrf with **LLM graph** | Δ relative |
+|---|---:|---:|---:|
+| PR-AUC | 0.236 | **0.292** | **+24%** |
+| Hit@1 (binary) | **0.438** | 0.364 | −17% |
+| Hit@5 (binary) | **0.760** | 0.694 | −9% |
+| MRR | **0.568** | 0.488 | −14% |
+
+**The LLM-extracted graph helps triage but hurts retrieval in fusion.**
+
+- **PR-AUC up +24%**: the LLM graph's richer per-window features (max_score, mean_top5, n_above_threshold) feed the logistic triage head better.
+- **Hit@K and MRR down**: the LLM graph is too SPARSE for RRF fusion. With 803 specific symptom nodes vs the rule baseline's 7 generic ones, most windows score zero against most tickets in the graph, so the graph contributes fewer candidates to the fused top-K.
+
+### The "RRF density paradox"
+
+RRF fusion rewards retrievers that **agree at the top**. The rule graph's broad symptom coverage meant it often agreed with the BiEncoder on the right ticket. The LLM graph's specificity reduces this agreement — when it picks, it picks well (kg_retrieval Hit@1 +230% standalone), but its picks don't align with the BiEncoder's picks, so RRF averages out the disagreement rather than amplifying both.
+
+This is a counterintuitive but mechanistically clean finding: **more structured information is not always better for fused retrieval.** RRF benefits from coverage as much as from precision.
+
+### Reconciliation with the §3 precision/recall trade-off
+
+Both findings are consistent under one explanation:
+
+| Lens | What happens |
+|---|---|
+| Stand-alone `kg_retrieval` (§3) | LLM graph is more PRECISE (Hit@1 +230%) but has less COVERAGE (Hit@5 −39%) |
+| Hybrid with BiEncoder + SPLADE (§6) | LLM graph's precision is REDUNDANT with the BiEncoder's precision, and its lost coverage SUBTRACTS from the union of retrieval signals |
+
+In both views, the asymmetric extraction (LLM tickets + rule windows) is the unresolved bottleneck.
+
+### Where this leaves the v2 headline
+
+| Pipeline | Hit@5 | PR-AUC | Comment |
+|---|---:|---:|---|
+| **hybrid_rrf_retrieval (rule graph)** | **0.760** | 0.236 | Hit@5 champion |
+| hybrid_rrf_retrieval (LLM graph) | 0.694 | **0.292** | PR-AUC champion |
+| bi_encoder_retrieval | 0.719 | 0.283 | Single-encoder benchmark |
+
+There is **no single Hit@5 + PR-AUC winner** anymore — the choice depends on what production cares about more.
 
 ## 7. What we know for sure (publishable findings)
 
 1. **LLM extraction at 35B scale is reliable.** 347 calls, 0 failures, schema-constrained generation held throughout.
 2. **The LLM-extracted graph is structurally richer**: 27 components vs 6, 803 symptoms vs 7. The symptom layer is the most impactful.
-3. **The LLM-extracted graph trades Hit@5 recall for Hit@1 precision** (+230% / −39% relative) compared to rule-based, due to entity-specificity mismatch with the rule-extracted window side.
-4. **Canonicalization works.** With a 12-name canonical-services list in the prompt, the LLM emitted 0 non-canonical service names across 347 calls.
+3. **The LLM-extracted graph trades Hit@5 recall for Hit@1 precision** (+230% / −39% relative) standalone, due to entity-specificity mismatch with the rule-extracted window side.
+4. **In RRF fusion, the LLM graph improves triage (+24% PR-AUC) but reduces top-K retrieval (−9% Hit@5).** The density paradox.
+5. **Canonicalization works.** With a 12-name canonical-services list in the prompt, the LLM emitted 0 non-canonical service names across 347 calls.
 
 ## 8. What we don't yet know
 
-1. Whether `hybrid_rrf_retrieval` with the LLM graph beats the rule-graph version on the headline metric — answering this in §6 above.
-2. Whether the trade-off flips when windows are also LLM-extracted — a separate ~4-hour run.
+1. Whether symmetric LLM extraction (both tickets and windows) flips the trade-off. ~4 hours of additional LLM time. Expected: Hit@5 recovers to 0.78-0.85 range.
+2. Whether RRF weight tuning (e.g. `graph: 0.5` instead of `1.0`) recovers Hit@5 while keeping the PR-AUC gain.
 3. Whether a smaller LLM (Qwen 7B) gets equally canonical extractions — could be answered by re-running with a smaller model loaded.
 
 ## 9. Paper takeaways

@@ -14,8 +14,7 @@ Under the new window-stratified split (4701 train / 1011 val / 1008 test) where 
 | bi_encoder_retrieval (v1 Phase G) | 0.283 | **0.154** | **0.486** | **0.676** | Triage low (only similarity features). **Retrieval massively better under in-distribution.** |
 | **kg_retrieval_rulebased (v2 Phase D)** | 0.289 | 0.004 | 0.111 | 0.170 | Rule-based graph extraction; weak triage; modest retrieval. Honest baseline. |
 | **kg_retrieval (LLM, v2 Phase D)** | 0.312 | 0.077 | 0.244 | 0.210 | LLM-extracted graph; capped recall@K. Hit@1 binary = **0.165** (vs rules 0.050, **+230% rel**); Hit@5 binary = 0.281 (vs rules 0.463, −39%). Classic precision/recall trade-off — see [docs3/14-LLM-GRAPH-FINDINGS.md](14-LLM-GRAPH-FINDINGS.md). |
-| **hybrid_rrf_no_graph (v2 Phase C)** | TBD | TBD | TBD | TBD | SPLADE + BiEncoder via RRF. |
-| **hybrid_rrf_retrieval (v2 Phase C)** | TBD | TBD | TBD | TBD | + Graph via RRF. |
+| **hybrid_rrf_retrieval (LLM graph, 2026-06-04)** | **0.292** | 0.089 | 0.325 | 0.488 | Same hybrid pipeline, Neo4j now loaded with LLM-extracted graph (347 incidents, 803 symptoms). Capped recall@5; Hit@5 binary = 0.694. PR-AUC +24% rel vs rule graph but Hit@5 −9% — the RRF density paradox. See [docs3/14-LLM-GRAPH-FINDINGS.md](14-LLM-GRAPH-FINDINGS.md) §6. |
 | **logseq2vec_retrieval (v2 Phase B)** | 0.313 | 0.103 | 0.329 | 0.492 | Trained on raw log sequences (5 epochs, ~14 min on RTX 5060). |
 | **hybrid_rrf_no_graph (v2 Phase C)** | 0.219 | 0.049 | 0.282 | 0.432 | SPLADE + BiEncoder via RRF. Capped recall@5; Hit@5 actually 0.686. |
 | **hybrid_rrf_retrieval (v2 Phase C)** | **0.236** | **0.073** | **0.328** | **0.568** | + Graph via RRF. Capped recall@5; Hit@5 actually **0.760**. |
@@ -34,9 +33,10 @@ The `R@5` column above uses the standard `Recall@K = |top_K ∩ gold| / |gold|` 
 | logseq2vec_retrieval_pretrained | 0.488 | 0.504 | 0.492 |
 | hybrid_rrf_no_graph | 0.264 | 0.686 | 0.432 |
 | bi_encoder_retrieval (v1 Phase G) | 0.653 | 0.719 | 0.676 |
-| **hybrid_rrf_retrieval (v2 Phase C)** | 0.438 | **0.760** | 0.568 |
+| **hybrid_rrf_retrieval (rule graph)** | 0.438 | **0.760** | 0.568 |
+| hybrid_rrf_retrieval (LLM graph, 2026-06-04) | 0.364 | 0.694 | 0.488 |
 
-**Headline:** hybrid_rrf_retrieval = SPLADE + fine-tuned BiEncoder + LLM-knowledge-graph fused via Reciprocal Rank Fusion reaches **Hit@5 = 0.760** — 3.8× better than the v1 cross-encoder SOTA (0.202).
+**Headline:** hybrid_rrf_retrieval = SPLADE + fine-tuned BiEncoder + KG-via-RRF reaches **Hit@5 = 0.760** with the rule-extracted graph — 3.8× better than the v1 cross-encoder SOTA (0.202). The LLM-extracted-graph variant reaches Hit@5 = 0.694 but improves triage PR-AUC by +24% relative; the choice between them is product-dependent. See [docs3/14-LLM-GRAPH-FINDINGS.md](14-LLM-GRAPH-FINDINGS.md) for the trade-off analysis.
 
 ## Key v1 vs v2 comparisons
 
