@@ -16,11 +16,13 @@ def main() -> int:
         return 1
     print(f"OK: LM Studio reachable at {cfg.base_url}")
     try:
-        # Test JSON mode
+        # Test JSON mode. Force thinking OFF and give enough tokens for
+        # the JSON answer + any chain-of-thought spillover (defense in depth).
         obj = cli.chat_json(
             system="Reply only with valid JSON.",
             user='Return exactly: {"hello": "world"}',
-            temperature=0.0, max_tokens=50,
+            temperature=0.0, max_tokens=400,
+            enable_thinking=False,
         )
         print(f"OK: JSON mode works. Got: {obj}")
     except Exception as e:

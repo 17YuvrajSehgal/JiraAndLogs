@@ -67,7 +67,20 @@ class LMStudioError(RuntimeError):
 
 
 # Default generic JSON envelope used when caller doesn't supply a schema.
-_GENERIC_JSON_RF: dict[str, Any] = {"type": "json_object"}
+# LM Studio rejects the OpenAI-standard `{"type": "json_object"}` and
+# requires either `json_schema` or `text`. We wrap a permissive
+# "any-object" schema for the generic JSON-mode fallback.
+_GENERIC_JSON_RF: dict[str, Any] = {
+    "type": "json_schema",
+    "json_schema": {
+        "name": "generic_json_object",
+        "strict": False,
+        "schema": {
+            "type": "object",
+            "additionalProperties": True,
+        },
+    },
+}
 
 
 class LMStudioClient:
@@ -163,7 +176,16 @@ class LMStudioClient:
                 )
                 with urllib.request.urlopen(req, timeout=self.config.timeout_s) as resp:
                     obj = json.loads(resp.read().decode("utf-8"))
-                content = obj["choices"][0]["message"]["content"]
+                msg = obj["choices"][0]["message"]
+                # When Qwen3's server-side thinking mode is on, the model
+                # often writes structured output into `reasoning_content`
+                # and leaves `content` empty. Prefer `content`, fall back
+                # to `reasoning_content` so we don't lose the answer.
+                content = msg.get("content") or ""
+                if not str(content).strip():
+                    rc = msg.get("reasoning_content") or ""
+                    if str(rc).strip():
+                        content = rc
                 if not content or not str(content).strip():
                     raise LMStudioError("empty response from LM Studio")
                 return content
