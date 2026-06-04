@@ -305,6 +305,25 @@ TCH shows a **monotone-rising depth curve** from 0.806 (n=1-2) to 0.933 (n=6-20)
 
 Strongest lift at n=3-5 (+16pts) is meaningful: this is the regime where retrieval needs to discriminate between very few candidates, and TCH's overlap-rerank shines.
 
+## 11a. Free secondary novelty signal — `retrieval_conf` threshold
+
+Empirical finding while waiting on Phase 2: the cascade's `tch_max_retrieval_conf` (max triage_score across retrievers) is itself a usable novelty signal — for free, no LLM needed.
+
+| Threshold | Flagged as novel | Novel precision | Novel recall |
+|---|---:|---:|---:|
+| ret_conf < 0.5 | 52 | **96.2%** | 7.4% |
+| ret_conf < 0.6 | 600 | 71.5% | 63.4% |
+| ret_conf < 0.7 | 929 | 67.8% | 93.1% |
+
+The **< 0.5 threshold** matches the agent's confidence almost exactly (96% precision vs agent's 94%, 7% recall vs agent's 7% on the same windows). This means the agent's novelty detection is essentially **calibrated** to the same uncertainty signal the retrievers expose for free — the agent is replicating what max(retriever_triage) already encodes.
+
+**Product implication:** TCH could expose three novelty tiers:
+- **Definite novel** (agent flag): 94% precision, requires LLM
+- **Definite novel** (ret_conf < 0.5): 96% precision, FREE
+- **Likely novel** (ret_conf < 0.6): 71% precision, 63% recall, FREE
+
+The free tier-1 signal is as precise as the LLM. Phase 2's value is therefore narrowed: it's about getting per-window verify CONFIDENCES that calibrate downstream consumers, not about the binary novelty flag itself.
+
 ## 12. Failure analysis
 
 29/331 windows with gold are missed by TCH at Hit@5 (8.7%). Manual review of 10 examples shows:
