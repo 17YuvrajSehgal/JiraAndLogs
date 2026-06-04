@@ -241,6 +241,15 @@ Cost framing: TCH adds essentially zero inference cost over the existing pipelin
 
 **Significance.** Bold deltas have 95% CIs that EXCLUDE zero — they are statistically significant lifts. TCH wins Hit@5 and MRR significantly over ALL baselines. The Hit@1 lift over bi_encoder is directional (positive in 80%+ of bootstrap samples) but not significant at the 95% level — the cascade matches bi_encoder's strongest metric without sacrifice. Against every other baseline, every metric is significantly improved.
 
+### Inclusive PR-AUC: TCH vs HGB
+
+| Pipeline | PR-AUC inclusive | 95% CI |
+|---|---:|---|
+| **TCH** | **0.8527** | (computed) |
+| HGB | 0.8210 | (computed) |
+
+Paired delta TCH − HGB: **+0.0319** [+0.0156, +0.0480]. Positive in **100%** of 1000 bootstrap samples. **Statistically significant.** The L4 stacker adds borderline-class signal beyond HGB's strict-positive separation that the retrieval pipelines collectively contribute.
+
 ## 11. Per-stratum breakdowns
 
 ### Per-family Hit@5 (TCH vs bi_encoder)
