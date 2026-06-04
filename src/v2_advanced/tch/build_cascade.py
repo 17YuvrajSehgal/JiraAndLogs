@@ -91,7 +91,14 @@ L4_STACK_FEATURES = [
 
 RRF_K = 60
 TOP_K_OUTPUT = 5
-L1_THRESHOLD = 0.2          # below this, drop as noise
+# L1 threshold sweep on full split (218 true ticket_worthy):
+#   t=0.20  noise=780 worthy=228  P=0.956  R=1.000  F1=0.978
+#   t=0.30  noise=783 worthy=225  P=0.969  R=1.000  F1=0.984
+#   t=0.50  noise=784 worthy=224  P=0.973  R=1.000  F1=0.986
+# Recall stays at 1.000 across the range -- HGB's strict separation
+# means no true positive scores below 0.5. We pick 0.5 for the
+# tightest precision without recall loss.
+L1_THRESHOLD = 0.5          # below this, drop as noise
 L3_TRIAGE_HIGH = 0.5        # agent-eligible if triage_score > this
 L3_RETRIEVAL_LOW = 0.6      # AND retrieval max-confidence < this
 
