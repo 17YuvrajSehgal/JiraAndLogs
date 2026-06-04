@@ -187,7 +187,21 @@ class DiagnosisAgentPipeline(PipelineRunner):
         test_w = list(iter_split(ds.windows, ds.split_manifest, "test"))
         log.info("test windows", n=len(test_w))
 
-        if self.subsample_size and self.subsample_size < len(test_w):
+        # Optional: filter to a specific window-ID set (env var). Used by
+        # the TCH cascade to run the agent on targeted hard-case windows
+        # instead of a random subsample.
+        import os as _os
+        wid_filter_path = _os.environ.get("V2_AGENT_WINDOW_IDS_PATH", "").strip()
+        if wid_filter_path:
+            with open(wid_filter_path, encoding="utf-8") as fh:
+                wid_set = {line.strip() for line in fh if line.strip()}
+            before = len(test_w)
+            test_w = [w for w in test_w if w.window_id in wid_set]
+            log.info(
+                "filtered to window-ID list",
+                requested=len(wid_set), matched=len(test_w), before=before,
+            )
+        elif self.subsample_size and self.subsample_size < len(test_w):
             rng = np.random.default_rng(self.subsample_seed)
             idx = rng.choice(len(test_w), size=self.subsample_size, replace=False)
             test_w = [test_w[i] for i in sorted(idx)]
