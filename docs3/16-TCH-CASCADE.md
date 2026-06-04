@@ -245,6 +245,17 @@ Cost framing: TCH adds essentially zero inference cost over the existing pipelin
 
 **Significance.** Bold deltas have 95% CIs that EXCLUDE zero — they are statistically significant lifts. TCH wins Hit@5 and MRR significantly over ALL baselines. The Hit@1 lift over bi_encoder is directional (positive in 80%+ of bootstrap samples) but not significant at the 95% level — the cascade matches bi_encoder's strongest metric without sacrifice. Against every other baseline, every metric is significantly improved.
 
+### Multi-seed stability of the L1 stacker
+
+5-seed sweep (seeds 1, 7, 42, 100, 1000) with the same 5-fold CV procedure:
+
+| Metric | Mean | Std | Range |
+|---|---:|---:|---|
+| PR-AUC strict | 0.9998 | 0.0000 | [0.9998, 0.9998] |
+| PR-AUC inclusive | 0.8519 | 0.0025 | [0.8486, 0.8562] |
+
+The stacker is robust: strict PR-AUC is perfectly stable (HGB's signal dominates), inclusive PR-AUC swings within ±0.5pts. Our locked seed=42 sits at 0.8527, near the median.
+
 ### Inclusive PR-AUC: TCH vs HGB
 
 | Pipeline | PR-AUC inclusive | 95% CI |
