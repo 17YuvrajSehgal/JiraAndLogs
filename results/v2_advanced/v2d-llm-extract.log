@@ -1,0 +1,5 @@
+[21:10:50] [INFO ] [v2_advanced.phase_d.extract_cli] step=load_humanized_corpus start  n=347
+[21:10:50] [INFO ] [v2_advanced.phase_d.extract_cli] tickets loaded  n=347
+[21:10:50] [INFO ] [v2_advanced.phase_d.extract_cli] step=load_humanized_corpus done  elapsed_s=0.0000
+[21:10:52] [INFO ] [v2_advanced.phase_d.extract_cli] LM Studio reachable  url=http://localhost:1234
+[21:10:54] [INFO ] [v2_advanced.phase_d.extractor] step=batch_extract_tickets start  n=347

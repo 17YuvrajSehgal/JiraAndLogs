@@ -36,36 +36,104 @@ from .schema import IncidentExtraction, WindowExtraction
 log = get_logger("phase_d.extractor")
 
 
+_CANONICAL_SERVICES_BLOCK = """CANONICAL SERVICE NAMES — use these EXACTLY, never paraphrase:
+  cartservice              checkoutservice          currencyservice
+  paymentservice           productcatalogservice    recommendationservice
+  shippingservice          emailservice             adservice
+  frontend                 redis-cart               loadgenerator
+
+Normalization rules — apply these when extracting:
+  - "product service" / "product-service" / "product catalog" / "category service"
+    / "category-page-service" / "catalog service"  ->  productcatalogservice
+  - "checkout" / "checkout-service" / "cart checkout"  ->  checkoutservice
+  - "cart" / "cart-service"  ->  cartservice
+  - "payment" / "payments" / "payment-service"  ->  paymentservice
+  - "currency" / "currency-service" / "fx service"  ->  currencyservice
+  - "recs" / "recommendations" / "recommendation"  ->  recommendationservice
+  - "shipping" / "ship-service"  ->  shippingservice
+  - "email" / "email-service"  ->  emailservice
+  - "ads" / "ad" / "ad-service"  ->  adservice
+  - "ui" / "web" / "browser" / "frontend-service"  ->  frontend
+  - "redis" mentioned as a backing-store for cart  ->  redis-cart
+  - "load generator" / "loadgen" / "k6"  ->  loadgenerator
+
+If a service is mentioned but does NOT match any canonical name above
+(e.g. an external 3rd-party service), omit it — do not invent new names.
+
+CANONICAL COMPONENT NAMES (use exactly when present in the text):
+  envoy, kubelet, redis, mysql, kafka, postgres, istio, prometheus,
+  grafana, loki, tempo, ingress, configmap, secret, pvc, pod,
+  deployment, hpa, vpa, statefulset
+
+CANONICAL ERROR CLASSES (gRPC + HTTP — use exactly when matching):
+  gRPC: DeadlineExceeded, Unavailable, Internal, ResourceExhausted,
+        NotFound, Unauthenticated, PermissionDenied, Aborted,
+        FailedPrecondition, AlreadyExists, OutOfRange, Cancelled,
+        DataLoss, Unknown, Unimplemented, InvalidArgument
+  K8s:  OOMKilled, CrashLoopBackOff, ImagePullBackOff, ContainerCannotRun,
+        PodPending, NodeNotReady
+  HTTP: 500, 502, 503, 504, 429
+"""
+
+
 _TICKET_SYSTEM_PROMPT = """You are an SRE knowledge engineer extracting structured incident facts from a Jira ticket.
 
-Read the ticket carefully and emit a JSON object with EXACTLY these keys:
-  - affected_services:   list of microservice short-names (e.g. ["cartservice", "redis-cart"])
-  - components:          list of sub-service components or shared infra (e.g. ["envoy", "kubelet"])
-  - error_classes:       list of canonical error names mentioned (e.g. ["DeadlineExceeded", "OOMKilled"])
-  - root_cause:          one short sentence — the underlying cause
-  - fix:                 one short sentence — what the engineer did to resolve
-  - fix_kind:            ONE of: config_change | restart | scale_up | code_fix | rollback | other
-  - symptoms:            list of 2-5 short observable symptom phrases (e.g. "p99 latency > 5s", "cartservice 500 rate spike")
+""" + _CANONICAL_SERVICES_BLOCK + """
 
-Rules:
-  - Use the EXACT short names that appear in the ticket text. If the ticket calls it "cartservice" not "cart-service", use "cartservice".
-  - Do NOT invent services or errors the ticket does not mention.
-  - If a field is genuinely unknown, return an empty list or empty string.
-  - Output VALID JSON only — no markdown, no commentary, no triple-backticks.
+Emit a JSON object with EXACTLY these keys:
+
+  - affected_services:   list of CANONICAL service short-names that are
+                         either the CAUSE or the DOWNSTREAM IMPACT of
+                         the incident. Include BOTH the service whose
+                         fault originated the incident AND the services
+                         visibly affected (e.g. checkoutservice surfacing
+                         a 500 because of productcatalogservice latency).
+                         At minimum 1 service when the ticket mentions
+                         any. Empty list ONLY if the ticket truly
+                         doesn't name a service.
+
+  - components:          list of CANONICAL component / infra names actually
+                         mentioned (e.g. ["envoy", "kubelet"]). Empty list
+                         if none.
+
+  - error_classes:       list of CANONICAL error names matched from the
+                         ticket text (e.g. ["DeadlineExceeded", "OOMKilled"]).
+                         Empty list if none.
+
+  - root_cause:          ONE short sentence describing the underlying cause
+                         in your own words (NOT a copied log line).
+
+  - fix:                 ONE short sentence describing what resolved it
+                         (NOT a copied log line). If the ticket says
+                         "closed as duplicate" or "resolved itself", say so.
+
+  - fix_kind:            EXACTLY ONE of:
+                           config_change | restart | scale_up |
+                           code_fix | rollback | other
+
+  - symptoms:            list of 2-5 short observable symptom phrases.
+                         Prefer concrete, queryable patterns over prose:
+                         GOOD: "cart_redis_p99 > 2s", "checkoutservice 500 rate spike"
+                         BAD:  "things were slow", "users complained"
+
+Output VALID JSON ONLY — no markdown, no commentary, no triple-backticks.
 """
 
 
 _WINDOW_SYSTEM_PROMPT = """You are an SRE engineer extracting structured facts from a live telemetry window.
 
-Read the log lines, metric summary, and entity hints below. Emit a JSON object with EXACTLY these keys:
-  - affected_services:   list of microservice short-names observed in errors
-  - components:          list of sub-service components mentioned
-  - error_classes:       list of canonical error names observed
-  - symptoms:            list of 2-5 short observable symptom phrases
+""" + _CANONICAL_SERVICES_BLOCK + """
+
+Emit a JSON object with EXACTLY these keys:
+  - affected_services:   CANONICAL services observed in errors (cause +
+                         downstream impact). Empty list if none observable.
+  - components:          CANONICAL components mentioned. Empty list if none.
+  - error_classes:       CANONICAL error names observed. Empty list if none.
+  - symptoms:            2-5 short observable symptom phrases.
 
 Rules:
-  - Use EXACT names from the telemetry. Don't paraphrase service names.
-  - Don't invent things; if uncertain, omit.
+  - Use ONLY canonical names from the lists above. Normalize paraphrases.
+  - Don't invent services or errors not in the lists.
   - Output VALID JSON only.
 """
 
