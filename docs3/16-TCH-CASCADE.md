@@ -170,13 +170,17 @@ HGB alone hits PR-AUC = 0.9998 on this split, so the stacker mostly amplifies it
 
 ## 5. Cost
 
-| Layer | Cost (full 1008 windows) | Notes |
-|---|---|---|
-| L1 stacker fit + predict | ~3 s | 5-fold CV LogReg |
-| L2 retrieval | already cached | reuses Phase A-D outputs |
-| L3 agent integration | 0 s | reads cached agent JSONL |
-| L4 composition | ~5 s | dict ops |
-| **TCH end-to-end (Phase 1)** | **~10 s** | NO GPU, NO LLM |
+Profiled 2026-06-04 on the full 1008-window v2 test split:
+
+| Layer | Cost | Notes |
+|---|---:|---|
+| `load_all_predictions` (read 7 JSONL files) | 185 ms | I/O-bound |
+| `stack_triage_cv` (5-fold LogReg) | 43 ms | scikit-learn fit + predict |
+| `assemble_cascade_prediction` (all 1008) | 16 ms | dict ops; 0.016 ms/window |
+| `compute_metrics` | 7 ms | per-window aggregation |
+| **TCH end-to-end (Phase 1, full split)** | **~252 ms** | NO GPU, NO LLM |
+
+Per-window inference cost (assuming retrieval/triage features already cached for the new window): **~16 microseconds** for L2-L4 fusion + stacker scoring. The cascade adds essentially zero latency over the existing pipelines whose outputs it consumes.
 
 Adding the agent for novelty (Phase 2, in progress) costs ~75 min of LLM time on 150 hard-case windows. Without that, the cascade still beats every baseline on every metric — Phase 2 only widens the novelty-recall numerator.
 
