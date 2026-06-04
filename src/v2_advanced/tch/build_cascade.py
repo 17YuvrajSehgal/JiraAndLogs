@@ -461,6 +461,34 @@ def main() -> None:
     for k, v in m_agent_subset.items():
         print(f"  {k:24s}: {v}")
 
+    # Export a stacker trained on the full split — for downstream
+    # deployment / inference without re-training. Saved alongside metrics.
+    full_X = np.asarray(
+        [[s.triage_by_pipe.get(name, 0.0) for name in L4_STACK_FEATURES] for s in state_list],
+        dtype=np.float32,
+    )
+    full_y = np.asarray(
+        [1 if s.gold_label == "ticket_worthy" else 0 for s in state_list],
+        dtype=np.int32,
+    )
+    deploy_stacker = LogisticRegression(
+        max_iter=1000, C=1.0, class_weight="balanced", random_state=42,
+    ).fit(full_X, full_y)
+    import pickle as _pickle
+    stacker_path = args.output_dir / "stacker.pkl"
+    with stacker_path.open("wb") as fh:
+        _pickle.dump({
+            "model": deploy_stacker,
+            "feature_names": L4_STACK_FEATURES,
+            "trained_on_n_windows": len(state_list),
+            "coefficients": deploy_stacker.coef_[0].tolist(),
+            "intercept": float(deploy_stacker.intercept_[0]),
+        }, fh)
+    print(f"\nexported stacker: {stacker_path}")
+    print(f"  feature coefficients:")
+    for name, coef in zip(L4_STACK_FEATURES, deploy_stacker.coef_[0]):
+        print(f"    {name:36s}  {coef:+.3f}")
+
     # Write a human-readable report.md alongside the metrics JSON.
     report_path = args.output_dir / "report.md"
     with report_path.open("w", encoding="utf-8") as fh:
