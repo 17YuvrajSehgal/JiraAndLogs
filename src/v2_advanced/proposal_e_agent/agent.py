@@ -33,6 +33,7 @@ from typing import Any
 
 from v2_advanced.shared import LMStudioClient, get_logger
 from v2_advanced.shared.lm_studio import LMStudioError
+from v2_advanced.shared.json_schemas import HYPOTHESIZE_RF, VERIFY_RF
 
 log = get_logger("phase_e.agent")
 
@@ -220,12 +221,17 @@ class DiagnosisAgent:
         each with keys: ticket_id, root_cause (str), affected_services (list).
         """
         # ----- Stage 1: hypothesize -----
+        # Stage 1 is a short structured emit (hypothesis + symptoms +
+        # services). We don't want chain-of-thought here — it's a
+        # straightforward "what's wrong" call. Thinking OFF.
         try:
             h_dict = self.client.chat_json(
                 system=_HYPOTHESIZE_SYSTEM,
                 user=f"WINDOW: {window_id}\n\n{evidence_text[:3000]}",
                 temperature=0.0,
                 max_tokens=self.max_tokens_per_call,
+                response_format=HYPOTHESIZE_RF,
+                enable_thinking=False,
             )
             hypothesis = HypothesisOutput.from_dict(h_dict)
         except LMStudioError as e:
@@ -246,12 +252,18 @@ class DiagnosisAgent:
             f"CANDIDATES:\n{cand_text}\n\n"
             "Rank them; return JSON."
         )
+        # Stage 3 IS the actual reasoning step — judging consistency of
+        # 10 candidates against the hypothesis. Thinking ON gives us a
+        # meaningfully better consistency check. Increase max_tokens to
+        # accommodate the <think>...</think> block.
         try:
             v_dict = self.client.chat_json(
                 system=_VERIFY_SYSTEM,
                 user=verify_user,
                 temperature=0.0,
-                max_tokens=self.max_tokens_per_call,
+                max_tokens=max(self.max_tokens_per_call, 1500),
+                response_format=VERIFY_RF,
+                enable_thinking=True,
             )
         except LMStudioError as e:
             log.warning("stage3 verify failed", window=window_id, err=str(e)[:120])

@@ -26,6 +26,10 @@ from typing import Any
 
 from v2_advanced.shared import LMStudioClient, get_logger, log_step
 from v2_advanced.shared.lm_studio import LMStudioConfig, LMStudioError
+from v2_advanced.shared.json_schemas import (
+    TICKET_EXTRACTION_RF,
+    WINDOW_EXTRACTION_RF,
+)
 
 from .schema import IncidentExtraction, WindowExtraction
 
@@ -103,6 +107,8 @@ def extract_from_ticket(
             user=f"TICKET ID: {ticket_id}\n\n{ticket_text}",
             temperature=0.0,
             max_tokens=max_tokens,
+            response_format=TICKET_EXTRACTION_RF,
+            enable_thinking=False,   # extraction: fast, no chain-of-thought
         )
     except LMStudioError as e:
         log.error("ticket extraction failed", ticket_id=ticket_id, err=str(e)[:120])
@@ -160,6 +166,8 @@ def extract_from_window(
             user=f"WINDOW ID: {window_id}\n\n{evidence_text}",
             temperature=0.0,
             max_tokens=max_tokens,
+            response_format=WINDOW_EXTRACTION_RF,
+            enable_thinking=False,   # extraction: fast, no chain-of-thought
         )
     except LMStudioError as e:
         log.error("window extraction failed", window_id=window_id, err=str(e)[:120])
