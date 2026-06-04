@@ -13,7 +13,7 @@ Under the new window-stratified split (4701 train / 1011 val / 1008 test) where 
 | memorygraph_v2_sota_nw080 (v1 SOTA) | 0.9979 | 0.015 | 0.047 | 0.128 | Triage near-perfect; cross-encoder retrieval is still mediocre. |
 | bi_encoder_retrieval (v1 Phase G) | 0.283 | **0.154** | **0.486** | **0.676** | Triage low (only similarity features). **Retrieval massively better under in-distribution.** |
 | **kg_retrieval_rulebased (v2 Phase D)** | 0.289 | 0.004 | 0.111 | 0.170 | Rule-based graph extraction; weak triage; modest retrieval. Honest baseline. |
-| **kg_retrieval (LLM, v2 Phase D)** | TBD | TBD | TBD | TBD | Awaits LM Studio model load. |
+| **kg_retrieval (LLM, v2 Phase D)** | 0.312 | 0.077 | 0.244 | 0.210 | LLM-extracted graph; capped recall@K. Hit@1 binary = **0.165** (vs rules 0.050, **+230% rel**); Hit@5 binary = 0.281 (vs rules 0.463, −39%). Classic precision/recall trade-off — see [docs3/14-LLM-GRAPH-FINDINGS.md](14-LLM-GRAPH-FINDINGS.md). |
 | **hybrid_rrf_no_graph (v2 Phase C)** | TBD | TBD | TBD | TBD | SPLADE + BiEncoder via RRF. |
 | **hybrid_rrf_retrieval (v2 Phase C)** | TBD | TBD | TBD | TBD | + Graph via RRF. |
 | **logseq2vec_retrieval (v2 Phase B)** | 0.313 | 0.103 | 0.329 | 0.492 | Trained on raw log sequences (5 epochs, ~14 min on RTX 5060). |
@@ -30,6 +30,7 @@ The `R@5` column above uses the standard `Recall@K = |top_K ∩ gold| / |gold|` 
 | HGB / TabT (no retrieval) | 0.000 | 0.000 | 0.000 |
 | memorygraph_v2_sota_nw080 | 0.107 | 0.165 | 0.128 |
 | kg_retrieval_rulebased | 0.050 | 0.463 | 0.170 |
+| kg_retrieval (LLM tickets) | **0.165** | 0.281 | 0.210 |
 | logseq2vec_retrieval_pretrained | 0.488 | 0.504 | 0.492 |
 | hybrid_rrf_no_graph | 0.264 | 0.686 | 0.432 |
 | bi_encoder_retrieval (v1 Phase G) | 0.653 | 0.719 | 0.676 |
