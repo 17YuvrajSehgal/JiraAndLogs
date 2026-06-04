@@ -348,6 +348,30 @@ The **< 0.5 threshold** matches the agent's confidence almost exactly (96% preci
 
 The free tier-1 signal is as precise as the LLM. Phase 2's value is therefore narrowed: it's about getting per-window verify CONFIDENCES that calibrate downstream consumers, not about the binary novelty flag itself.
 
+## 11b. Theoretical ceiling on Hit@5
+
+What's the absolute maximum Hit@5 achievable from the current retriever pool?
+
+Union Hit@K = `1 if gold in (top-K from ANY retriever) else 0`:
+
+| K | Union Hit@K | Notes |
+|---:|---:|---|
+| 1 | 0.906 | Some retriever has gold at #1 |
+| 5 | **0.976** | Some retriever has gold in top-5 |
+| 10 | 0.976 | No improvement past K=5 — retrievers don't expose the answer beyond their top-5 |
+
+**TCH Hit@5 = 0.912 = 93.5% of the theoretical ceiling.**
+
+The 6.3-point gap between TCH's 0.912 and the ceiling 0.976 represents windows where SOME retriever has the gold but the RRF fusion places it outside the cascade's top-5. The remaining 2.4% of windows (8/331) have no retriever finding the gold at all — unrecoverable without new retrievers.
+
+To close the 6.3pt gap would require either:
+1. A new retriever with complementary signal (e.g., cross-encoder rerank on union of top-10s)
+2. A learned per-window weighting that knows which retriever to trust
+
+Confidence-aware RRF (weight by per-window retriever triage_score) was tested and hurts: it conflates "is this window ticket-worthy" with "does this retriever have the right answer." Empirically these two signals don't correlate per-window.
+
+**Conclusion:** TCH is at the achievable ceiling given the current 4 retrievers. Further lift requires a new model.
+
 ## 12. Failure analysis
 
 29/331 windows with gold are missed by TCH at Hit@5 (8.7%). Manual review of 10 examples shows:
