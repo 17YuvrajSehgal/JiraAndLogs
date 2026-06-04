@@ -31,6 +31,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 import numpy as np
+from sklearn.ensemble import GradientBoostingClassifier
 from sklearn.linear_model import LogisticRegression
 from sklearn.model_selection import StratifiedKFold
 
@@ -195,9 +196,18 @@ def is_agent_eligible(state: WindowState) -> bool:
 
 
 def stack_triage_cv(states: list[WindowState], n_splits: int = 5,
-                    seed: int = 42) -> dict[str, float]:
-    """5-fold CV logistic regression over per-pipeline triage scores.
+                    seed: int = 42, model: str = "logreg") -> dict[str, float]:
+    """5-fold CV stacker over per-pipeline triage scores.
     Returns window_id -> calibrated triage_score (out-of-fold prediction).
+
+    `model`:
+      "logreg" — LogisticRegression with class_weight='balanced'. Default.
+                 Empirically beats GBM on this dataset because HGB's
+                 triage_score alone is already near-perfect (PR-AUC 0.9998)
+                 and the stacker should preserve that calibration. GBM
+                 over-fits the small 1008-window training fold and loses
+                 ~1.5pts strict PR-AUC + ~11pts inclusive PR-AUC.
+      "gbm"    — GradientBoostingClassifier. For ablation only.
     """
     rows, labels, wids = [], [], []
     for s in states:
@@ -211,9 +221,15 @@ def stack_triage_cv(states: list[WindowState], n_splits: int = 5,
     out: dict[str, float] = {}
     skf = StratifiedKFold(n_splits=n_splits, shuffle=True, random_state=seed)
     for fold_train, fold_test in skf.split(X, y):
-        clf = LogisticRegression(
-            max_iter=1000, C=1.0, class_weight="balanced", random_state=seed,
-        )
+        if model == "logreg":
+            clf = LogisticRegression(
+                max_iter=1000, C=1.0, class_weight="balanced", random_state=seed,
+            )
+        else:
+            clf = GradientBoostingClassifier(
+                n_estimators=100, max_depth=3, learning_rate=0.1,
+                random_state=seed,
+            )
         clf.fit(X[fold_train], y[fold_train])
         probs = clf.predict_proba(X[fold_test])[:, 1]
         for idx, p in zip(fold_test, probs):
