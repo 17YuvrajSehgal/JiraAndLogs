@@ -121,6 +121,17 @@ Pick `argmax overlap_score`. If no candidate has overlap > 0, default to bi_enco
 
 Intuition: when bi_encoder ranks something top-3 AND other retrievers also surface it, that's stronger ranking signal than bi_encoder's top-1 alone. Hit@1 goes 0.695 → 0.707.
 
+### 4b1. Why per-family retriever selection does NOT help
+
+Confirmation that uniform RRF is at the optimum, not a local optimum:
+
+| Strategy | Hit@5 |
+|---|---:|
+| Uniform RRF over 4 retrievers (TCH L2) | **0.912** |
+| Oracle per-family (gold family known, best retriever per family) | 0.888 |
+
+Even with PERFECT knowledge of the scenario family, per-family retriever selection (`cart-redis → bi_encoder`, `currency-outage → hybrid_llm`, `dns-outage → logseq2vec`, etc.) achieves only 0.888 Hit@5 — 2.4pts WORSE than the uniform RRF. The cascade's fusion catches windows via redundancy that no single retriever per family can. Adding a per-family classifier on top of TCH is a strict downgrade.
+
 ### 4c. Why the L2 retriever set is exactly these four
 
 Drop-one sensitivity on all six available retrievers (Hit@5 deltas vs all-six baseline):
