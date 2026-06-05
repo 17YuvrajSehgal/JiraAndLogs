@@ -93,6 +93,14 @@ except ImportError as _e:
     _HAS_AGENT = False
     _AGENT_IMPORT_ERROR = _e
 
+# v2_advanced — G2 (2026-06-05): fine-tuned cross-encoder retriever
+try:
+    from v2_advanced.proposal_g_crossencoder.pipeline import CrossEncoderRetrievalPipeline
+    _HAS_CROSSENC = True
+except ImportError as _e:
+    _HAS_CROSSENC = False
+    _CROSSENC_IMPORT_ERROR = _e
+
 # v2_advanced — Phase B (2026-06-03): LogSeq2Vec
 try:
     from v2_advanced.proposal_b_logseq2vec.pipeline import LogSeq2VecRetrievalPipeline
@@ -179,6 +187,10 @@ if _HAS_HYBRID:
             super().__init__(skip_graph=True)
 
     KNOWN_PIPELINES["hybrid_rrf_no_graph"] = _HybridNoGraph
+
+# v2_advanced G2 — fine-tuned cross-encoder retriever.
+if _HAS_CROSSENC:
+    KNOWN_PIPELINES["cross_encoder_retrieval_g2"] = CrossEncoderRetrievalPipeline
 
 # v2_advanced Phase E — DiagnosisAgent (capstone).
 if _HAS_AGENT:

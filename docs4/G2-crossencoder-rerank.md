@@ -41,25 +41,85 @@ Risk: cross-encoders are finicky on small training sets. The Phase B cross-encod
 
 ## 5. Observations
 
-_(To be filled in after run completes.)_
+### Training (cross-encoder fine-tune on v2 train + val)
+
+| Phase | Wall time | Train loss | Val F1 | Val AP |
+|---|---:|---:|---:|---:|
+| Epoch 1 | ~1.5 min | 0.40 | 0.919 | 0.954 |
+| Epoch 2 | ~1.5 min | 0.28 | 0.935 | 0.965 |
+| Epoch 3 | ~1.5 min | 0.26 | **0.940** | **0.968** |
+| Total | 4.7 min | — | — | — |
+
+Strong training metrics. F1=0.940 means the cross-encoder is great at the BINARY classification task ("is this candidate relevant?").
+
+### Inference
+
+- 1008 test windows × avg pool size 15.2 candidates = 13,130 pairs scored in 42 sec.
+- Pool source: G1 bi_encoder + hybrid_rrf rule + logseq2vec + kg_retrieval, top-10 each, deduplicated.
+
+### Standalone retrieval metrics (cross-encoder alone)
+
+| Metric | Cross-encoder G2 | G1 bi_encoder (for context) |
+|---|---:|---:|
+| Hit@1 | 0.571 | 0.722 |
+| Hit@5 | 0.873 | (would need separate run) |
+| MRR | 0.696 | — |
+
+### Cascade with G2 added as 5th L2 RRF voter
+
+| Metric | G1 cascade | G1+G2 cascade | Δ |
+|---|---:|---:|---:|
+| Hit@1 | 0.7221 | 0.6677 | **-5.4pts** ❌ |
+| Hit@5 | 0.9124 | 0.8943 | **-1.8pts** ❌ |
+| MRR | 0.7937 | 0.7551 | -3.9pts ❌ |
+| PR-AUC | 0.9998 | 0.9998 | tie |
+
+### Cascade with G2 as RERANKER over L2 top-5 (no dilution)
+
+| Metric | G1 cascade | G1 + G2 rerank | Δ |
+|---|---:|---:|---:|
+| Hit@1 | 0.7221 | 0.6767 | **-4.5pts** ❌ |
+| Hit@5 | 0.9124 | 0.9124 | tie (same candidates) |
+| MRR | 0.7937 | 0.7751 | -1.9pts ❌ |
 
 ## 6. Advantages
 
-_(To be filled in.)_
+1. **Validates the cross-encoder can be trained well on v2 data.** F1=0.940, AP=0.968 are healthy numbers.
+2. **Inference is fast** — 42 seconds for 13k pairs. Could scale.
+3. **Honestly investigated.** We tested BOTH integration modes (RRF voter + reranker) and have evidence both hurt.
 
 ## 7. Disadvantages
 
-_(To be filled in.)_
+1. **HURTS Hit@1 in both integration modes** by 4.5-5.4pts. The cross-encoder's standalone top-1 is much weaker (0.571 vs G1's 0.722).
+2. **HURTS Hit@5 when added to RRF voters** (-1.8pts) — same dilution effect we saw with hybrid_rrf LLM (the "RRF density paradox").
+3. **Tied Hit@5 when used as reranker** — because we're reordering the same 5 candidates. But the new ordering is worse than the cascade's existing overlap-rerank + RRF.
+4. **Doesn't address the theoretical ceiling gap.** TCH is still capped at union-of-retrievers Hit@5 = 0.976. Cross-encoder only reranks within an existing pool, can't surface new candidates.
+5. **Training-data imbalance not fully addressed.** 16k pos / 5k neg = 75/25 split. Likely contributed to noisy ranking among "all relevant" candidates. Re-balancing to 50/50 might help but wasn't tested in this iteration.
 
 ## 8. Decision
 
-_(To be filled in.)_
+**SKIP G2 from the final cascade.** Two negative-result modes confirm cross-encoder hurts both retrieval channels. The fine-tuned model is preserved (in case future work wants to retry with different training data), but the cascade does NOT include it.
+
+This is a publishable negative result — supports the paper's claim in `docs3/16-TCH-CASCADE.md` §10 ("13 ablations confirmed no further fusion tuning helps").
+
+`TCH_ENABLE_CROSSENC` env var stays in build_cascade.py for posterity but defaults OFF.
 
 ## 9. Open questions
 
-- Is the cross-encoder better as a 5th RRF voter, or as a final reranker over L2's top-5?
-- Does the cross-encoder need a different training-data builder than the bi_encoder (e.g., different negative-sampling strategy)?
-- Does it help only specific families (e.g., cart-redis), or across the board?
+- **Re-balanced training data.** With 1:N neg/pos ratio at 1:3 or 1:5, would the cross-encoder's top-1 selection become sharper? Not pursued (low expected ROI).
+- **Different cross-encoder backbone.** ms-marco-MiniLM-L-6-v2 is small; a 12-layer cross-encoder might capture more signal. Not pursued (time-box).
+- **Why exactly does the cross-encoder fail at top-1?** Empirically it's because cross-encoders trained with BCE optimize per-pair classification, not per-query ranking. A listwise loss (e.g., LambdaRank) might do better. Out of scope.
+
+## 10. Cross-references
+
+- Code: `src/v2_advanced/proposal_g_crossencoder/pipeline.py` (new), `src/v2_advanced/tch/build_cascade.py` (modified — TCH_ENABLE_CROSSENC toggle).
+- Training script: `scripts/build_crossenc_pairs_v2.py` (new), `scripts/finetune_crossenc.py` (existing).
+- Output: `data/derived/global/.../v2g-final-models/g2-crossencoder-rerank/` (model + predictions).
+- Commit pending.
+
+---
+
+*Generated 2026-06-05 after G2 completion. Negative result.*
 
 ---
 
