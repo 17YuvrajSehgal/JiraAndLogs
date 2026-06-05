@@ -144,6 +144,15 @@ if _HAS_NEURAL:
     KNOWN_PIPELINES["tab_transformer"] = TabTransformerPipeline
     KNOWN_PIPELINES["bi_encoder_retrieval"] = BiEncoderRetrievalPipeline
 
+    # G1 (2026-06-05): variant mixing BM25 hard negs with random negs to
+    # break BM25 over-reliance. n_hard_negs=2 + n_random_negs=1 gives a
+    # ~67/33 split that empirically helps cart-redis sub-scenario confusion.
+    class _BiEncoderG1(BiEncoderRetrievalPipeline):
+        name = "bi_encoder_retrieval_g1"
+        def __init__(self) -> None:
+            super().__init__(n_hard_negs=2, n_random_negs=1)
+    KNOWN_PIPELINES["bi_encoder_retrieval_g1"] = _BiEncoderG1
+
 # v2_advanced Phase D — LLM-extracted knowledge graph retrieval.
 if _HAS_KG:
     KNOWN_PIPELINES["kg_retrieval"] = KnowledgeGraphRetrievalPipeline
