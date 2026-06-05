@@ -1,0 +1,86 @@
+% ICSE 2027 — Retrieval-Augmented Incident Triage
+% Build:   pdflatex main.tex; bibtex main; pdflatex main.tex; pdflatex main.tex
+%
+% Uses the ACM acmart class (the ICSE Research Track style). If acmart is
+% not installed, swap to IEEEtran with `\documentclass[conference]{IEEEtran}`.
+
+\documentclass[sigconf, review, anonymous]{acmart}
+
+% --- Packages ---
+\usepackage{booktabs}
+\usepackage{xcolor}
+\usepackage{listings}
+\usepackage{multirow}
+\usepackage{subcaption}
+
+% --- ACM boilerplate (placeholders for submission) ---
+\setcopyright{none}
+\acmConference[ICSE '27]{IEEE/ACM 47th International Conference on Software Engineering}{April 11--19, 2027}{Rio de Janeiro, Brazil}
+\acmYear{2027}
+\acmISBN{}
+\acmDOI{}
+\settopmatter{printacmref=false}
+
+% --- Macros ---
+\newcommand{\sota}{\textsc{SOTA}}
+\newcommand{\sotaft}{\textsc{SOTA+FT}}
+\newcommand{\hgb}{\textsc{HGB}}
+\newcommand{\todo}[1]{\textcolor{red}{\textbf{[TODO:} #1\textbf{]}}}
+
+\begin{document}
+
+\title{Retrieval-Augmented Incident Triage: How Deployment History Sharpens On-Call Diagnosis}
+
+\author{Anonymous Authors}
+\affiliation{%
+  \institution{Submitted for double-blind review}
+  \country{}
+}
+
+\begin{abstract}
+\input{sections/00-abstract}
+\end{abstract}
+
+\begin{CCSXML}
+<ccs2012>
+  <concept>
+    <concept_id>10011007.10011074.10011099</concept_id>
+    <concept_desc>Software and its engineering~Software reliability</concept_desc>
+    <concept_significance>500</concept_significance>
+  </concept>
+  <concept>
+    <concept_id>10002951.10003317.10003338</concept_id>
+    <concept_desc>Information systems~Retrieval models and ranking</concept_desc>
+    <concept_significance>300</concept_significance>
+  </concept>
+  <concept>
+    <concept_id>10010147.10010178.10010179</concept_id>
+    <concept_desc>Computing methodologies~Natural language processing</concept_desc>
+    <concept_significance>300</concept_significance>
+  </concept>
+</ccs2012>
+\end{CCSXML}
+
+\ccsdesc[500]{Software and its engineering~Software reliability}
+\ccsdesc[300]{Information systems~Retrieval models and ranking}
+\ccsdesc[300]{Computing methodologies~Natural language processing}
+
+\keywords{incident triage, site reliability engineering, information retrieval, cross-encoder fine-tuning, deployment history}
+
+\maketitle
+
+\input{sections/01-introduction}
+\input{sections/02-related-work}
+\input{sections/03-system}
+\input{sections/04-methodology}
+\input{sections/05-results}
+\input{sections/05b-neural-models}
+\input{sections/05c-v2-advanced}
+\input{sections/06-discussion}
+\input{sections/07-limitations}
+\input{sections/08-conclusion}
+
+\bibliographystyle{ACM-Reference-Format}
+\bibliography{references}
+
+\end{document}

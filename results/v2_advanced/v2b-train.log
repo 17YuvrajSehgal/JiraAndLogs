@@ -1,0 +1,15 @@
+[03:10:36] [INFO ] [v2_advanced.phase_b.train] building train pairs  n_windows=3780 n_memory=347
+[03:10:36] [INFO ] [v2_advanced.phase_b.train] BM25 index built for hard-neg mining
+[03:10:40] [INFO ] [v2_advanced.phase_b.train] train pairs built  n=8769 skipped_no_gold=2518 skipped_no_visible_gold=0 skipped_no_logs=17
+[03:10:40] [INFO ] [v2_advanced.phase_b.train] training  n_pairs=8769 epochs=5 batch_size=8 device=cuda
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+Loading weights:   0%|          | 0/103 [00:00<?, ?it/s]Loading weights: 100%|##########| 103/103 [00:00<00:00, 7414.25it/s]
+[03:10:47] [INFO ] [v2_advanced.phase_b.train] step=train_loop start  epochs=5
+[03:13:33] [INFO ] [v2_advanced.phase_b.train] epoch 1/5 done  avg_loss=2.1203 n_batches=1097
+[03:16:19] [INFO ] [v2_advanced.phase_b.train] epoch 2/5 done  avg_loss=1.5848 n_batches=1097
+[03:19:05] [INFO ] [v2_advanced.phase_b.train] epoch 3/5 done  avg_loss=1.3864 n_batches=1097
+[03:21:50] [INFO ] [v2_advanced.phase_b.train] epoch 4/5 done  avg_loss=1.2243 n_batches=1097
+[03:24:36] [INFO ] [v2_advanced.phase_b.train] epoch 5/5 done  avg_loss=1.1401 n_batches=1097
+[03:24:36] [INFO ] [v2_advanced.phase_b.train] step=train_loop done  elapsed_s=828.73
+[03:24:36] [INFO ] [v2_advanced.phase_b.train] saved model  path=results\v2_advanced\logseq2vec_model\logseq2vec.pt
+[03:24:36] [INFO ] [v2_advanced.phase_b.train] DONE  elapsed_s=840.70

@@ -1,0 +1,43 @@
+[21:10:50] [INFO ] [v2_advanced.phase_d.extract_cli] step=load_humanized_corpus start  n=347
+[21:10:50] [INFO ] [v2_advanced.phase_d.extract_cli] tickets loaded  n=347
+[21:10:50] [INFO ] [v2_advanced.phase_d.extract_cli] step=load_humanized_corpus done  elapsed_s=0.0000
+[21:10:52] [INFO ] [v2_advanced.phase_d.extract_cli] LM Studio reachable  url=http://localhost:1234
+[21:10:54] [INFO ] [v2_advanced.phase_d.extractor] step=batch_extract_tickets start  n=347
+[21:12:13] [INFO ] [v2_advanced.phase_d.extractor] extraction progress  done=10 total=347 cached=5 extracted=5 failed=0
+[21:14:57] [INFO ] [v2_advanced.phase_d.extractor] extraction progress  done=20 total=347 cached=5 extracted=15 failed=0
+[21:17:02] [INFO ] [v2_advanced.phase_d.extractor] extraction progress  done=30 total=347 cached=5 extracted=25 failed=0
+[21:19:27] [INFO ] [v2_advanced.phase_d.extractor] extraction progress  done=40 total=347 cached=5 extracted=35 failed=0
+[21:21:53] [INFO ] [v2_advanced.phase_d.extractor] extraction progress  done=50 total=347 cached=5 extracted=45 failed=0
+[21:24:13] [INFO ] [v2_advanced.phase_d.extractor] extraction progress  done=60 total=347 cached=5 extracted=55 failed=0
+[21:26:37] [INFO ] [v2_advanced.phase_d.extractor] extraction progress  done=70 total=347 cached=5 extracted=65 failed=0
+[21:28:45] [INFO ] [v2_advanced.phase_d.extractor] extraction progress  done=80 total=347 cached=5 extracted=75 failed=0
+[21:31:01] [INFO ] [v2_advanced.phase_d.extractor] extraction progress  done=90 total=347 cached=5 extracted=85 failed=0
+[21:33:11] [INFO ] [v2_advanced.phase_d.extractor] extraction progress  done=100 total=347 cached=5 extracted=95 failed=0
+[21:35:36] [INFO ] [v2_advanced.phase_d.extractor] extraction progress  done=110 total=347 cached=5 extracted=105 failed=0
+[21:38:09] [INFO ] [v2_advanced.phase_d.extractor] extraction progress  done=120 total=347 cached=5 extracted=115 failed=0
+[21:40:25] [INFO ] [v2_advanced.phase_d.extractor] extraction progress  done=130 total=347 cached=5 extracted=125 failed=0
+[21:42:40] [INFO ] [v2_advanced.phase_d.extractor] extraction progress  done=140 total=347 cached=5 extracted=135 failed=0
+[21:45:15] [INFO ] [v2_advanced.phase_d.extractor] extraction progress  done=150 total=347 cached=5 extracted=145 failed=0
+[21:47:21] [INFO ] [v2_advanced.phase_d.extractor] extraction progress  done=160 total=347 cached=5 extracted=155 failed=0
+[21:49:35] [INFO ] [v2_advanced.phase_d.extractor] extraction progress  done=170 total=347 cached=5 extracted=165 failed=0
+[21:51:47] [INFO ] [v2_advanced.phase_d.extractor] extraction progress  done=180 total=347 cached=5 extracted=175 failed=0
+[21:54:20] [INFO ] [v2_advanced.phase_d.extractor] extraction progress  done=190 total=347 cached=5 extracted=185 failed=0
+[21:56:34] [INFO ] [v2_advanced.phase_d.extractor] extraction progress  done=200 total=347 cached=5 extracted=195 failed=0
+[21:59:00] [INFO ] [v2_advanced.phase_d.extractor] extraction progress  done=210 total=347 cached=5 extracted=205 failed=0
+[22:01:37] [INFO ] [v2_advanced.phase_d.extractor] extraction progress  done=220 total=347 cached=5 extracted=215 failed=0
+[22:04:07] [INFO ] [v2_advanced.phase_d.extractor] extraction progress  done=230 total=347 cached=5 extracted=225 failed=0
+[22:06:40] [INFO ] [v2_advanced.phase_d.extractor] extraction progress  done=240 total=347 cached=5 extracted=235 failed=0
+[22:09:43] [INFO ] [v2_advanced.phase_d.extractor] extraction progress  done=250 total=347 cached=5 extracted=245 failed=0
+[22:11:59] [INFO ] [v2_advanced.phase_d.extractor] extraction progress  done=260 total=347 cached=5 extracted=255 failed=0
+[22:14:20] [INFO ] [v2_advanced.phase_d.extractor] extraction progress  done=270 total=347 cached=5 extracted=265 failed=0
+[22:16:30] [INFO ] [v2_advanced.phase_d.extractor] extraction progress  done=280 total=347 cached=5 extracted=275 failed=0
+[22:18:15] [INFO ] [v2_advanced.phase_d.extractor] extraction progress  done=290 total=347 cached=5 extracted=285 failed=0
+[22:20:14] [INFO ] [v2_advanced.phase_d.extractor] extraction progress  done=300 total=347 cached=5 extracted=295 failed=0
+[22:22:58] [INFO ] [v2_advanced.phase_d.extractor] extraction progress  done=310 total=347 cached=5 extracted=305 failed=0
+[22:25:15] [INFO ] [v2_advanced.phase_d.extractor] extraction progress  done=320 total=347 cached=5 extracted=315 failed=0
+[22:27:15] [INFO ] [v2_advanced.phase_d.extractor] extraction progress  done=330 total=347 cached=5 extracted=325 failed=0
+[22:29:45] [INFO ] [v2_advanced.phase_d.extractor] extraction progress  done=340 total=347 cached=5 extracted=335 failed=0
+[22:31:12] [INFO ] [v2_advanced.phase_d.extractor] extraction complete  total=347 cached=5 extracted=342 failed=0
+[22:31:12] [INFO ] [v2_advanced.phase_d.extractor] step=batch_extract_tickets done  elapsed_s=4817.89
+[22:31:12] [INFO ] [v2_advanced.phase_d.extract_cli] extraction summary  total=347 with_services=346 with_errors=318 with_root_cause=347 with_symptoms=347 empty=0
+[22:31:12] [INFO ] [v2_advanced.phase_d.extract_cli] consolidated extractions written  path=data\derived\global\2026-05-25-dataset-v5-large-global\v2_kg_extractions\all_extractions.jsonl

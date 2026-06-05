@@ -69,6 +69,16 @@ class MemoryGraphPipeline(PipelineRunner):
         top_k_matches: int = 5,
         with_numeric: bool = False,
         with_embeddings: bool = False,
+        with_log_signatures: bool = False,
+        with_cross_encoder: bool = False,
+        numeric_weight: float | None = None,
+        humanized_subdir: str | None = None,
+        humanized_root: str = "jira-shadow-humanized-v1",
+        distractor_path: Path | None = None,
+        cross_encoder_model: str | None = None,
+        mask_logs: bool = False,
+        mask_traces: bool = False,
+        mask_k8s: bool = False,
     ) -> None:
         self.planner_kind = planner
         self.llm_base_url = llm_base_url
@@ -79,6 +89,56 @@ class MemoryGraphPipeline(PipelineRunner):
         # Studio is unreachable — the chain still runs, just without
         # dense similarity. See skills.EmbeddingSimilaritySkill.
         self.with_embeddings = with_embeddings
+        # When True, LogSignatureSimilaritySkill replaces the trace-
+        # aggregate evidence_text query with characteristic log lines
+        # extracted from raw/loki/<window>.json. Move A from
+        # ML-NEW-IDEAS.MD. Requires runs_root to be passed to
+        # train_and_predict so the skill can find the per-window
+        # Loki dumps.
+        self.with_log_signatures = with_log_signatures
+        # When True, CrossEncoderRerankSkill (sentence-transformers
+        # ms-marco-MiniLM-L-6-v2) runs after the bi-encoder similarity
+        # skills to rerank the top-K candidates. The cross-encoder
+        # jointly scores (query, doc) pairs so attention can compare
+        # every token pair — typically +5-10 nDCG vs bi-encoder alone
+        # on retrieval benchmarks. Cost: ~10-30 ms/window on CPU.
+        self.with_cross_encoder = with_cross_encoder
+        # Override TriageDecideSkill's default numeric_weight=0.7. The
+        # cross-encoder shifted the per-candidate score distribution
+        # so the default isn't optimal; allow per-variant retune.
+        self.numeric_weight = numeric_weight
+        # When set, swap the loaded ds.memory_corpus for the humanized
+        # corpus at jira-shadow-humanized-v1/<humanized_subdir>/timeline.jsonl
+        # before any skill sees it. Used for Phase 5.3 cross-train
+        # validation: legacy memory_corpus is known-leaky (see
+        # text-leakage canary, commit b704cb8); humanized is the
+        # production-safe replacement.
+        self.humanized_subdir = humanized_subdir
+        # V2 — defaults to the V1 root; set to "jira-shadow-humanized-v2"
+        # to use the V2 corpus (multi-channel evidence + engineer voice
+        # + description_code). The V2 humanized_loader injects
+        # description_code into memory_text first so BM25 / embeddings
+        # weight the engineer-vocabulary log content most heavily.
+        self.humanized_root = humanized_root
+        # V2 — optional path to a distractor timeline.jsonl. When set,
+        # those tickets are appended to the memory corpus with
+        # scenario_family="__DISTRACTOR__" so the ground-truth retrieval
+        # evaluator can't match a window to a distractor as a TP.
+        # Used to measure top-1 precision against the distractor set
+        # per §13.6.
+        self.distractor_path = distractor_path
+        # Optional override for the cross-encoder model. None = use the
+        # CrossEncoderRerankSkill default (off-the-shelf MS-MARCO MiniLM).
+        # When set to a local path, the skill loads our fine-tuned model
+        # from disk. Used by the `_ft` pipeline variants for Phase B.
+        self.cross_encoder_model = cross_encoder_model
+        # Phase C — per-channel masking. When True, the corresponding
+        # channel (logs / traces / k8s) is stripped from memory_text
+        # AND from any in-pipeline window text builders so the ablation
+        # is symmetric on both sides.
+        self.mask_logs = mask_logs
+        self.mask_traces = mask_traces
+        self.mask_k8s = mask_k8s
         # Set by train_and_predict so the CLI can pull them out for the
         # explanations.jsonl artifact + the graph-stats summary.
         self.last_decisions: list[AgentDecision] = []
@@ -91,6 +151,8 @@ class MemoryGraphPipeline(PipelineRunner):
         return RulePlanner(
             with_numeric=self.with_numeric,
             with_embeddings=self.with_embeddings,
+            with_log_signatures=self.with_log_signatures,
+            with_cross_encoder=self.with_cross_encoder,
         )
 
     def train_and_predict(
@@ -100,12 +162,31 @@ class MemoryGraphPipeline(PipelineRunner):
         *,
         target_fpr: float = 0.05,
     ) -> PipelineResult:
-        del runs_root  # this pipeline does not need raw runs
+        # NB: runs_root was previously unused; the log-signature variant
+        # (with_log_signatures=True) needs it to read raw/loki/<window>.json
+        # per the Move A design (ML-NEW-IDEAS.MD).
 
         ds = load_dataset(global_dir)
         train = list(iter_split(ds.windows, ds.split_manifest, "train"))
         val = list(iter_split(ds.windows, ds.split_manifest, "validation"))
         test = list(iter_split(ds.windows, ds.split_manifest, "test"))
+
+        # Phase 5.3 — when humanized_subdir is set, replace ds.memory_corpus
+        # with the leak-free humanized corpus before any skill reads it.
+        # The legacy corpus is known to be 100% contaminated by the text-
+        # leakage canary; cross-train validation needs both available to
+        # quantify the leakage premium.
+        if self.humanized_subdir:
+            from .humanized_loader import load_humanized_corpus
+            ds.memory_corpus = load_humanized_corpus(
+                global_dir,
+                humanized_subdir=self.humanized_subdir,
+                humanized_root=self.humanized_root,
+                extra_distractor_path=self.distractor_path,
+                mask_logs=self.mask_logs,
+                mask_traces=self.mask_traces,
+                mask_k8s=self.mask_k8s,
+            )
 
         # 1) Build the Jira side of the graph once. This is the
         #    expensive-ish step (still sub-second on v5-quick).
@@ -121,6 +202,32 @@ class MemoryGraphPipeline(PipelineRunner):
         # still finds it ready.
         planner = self._make_planner()
         registry = default_skill_registry()
+        # Variant-level overrides on the default skills. Currently only
+        # numeric_weight on TriageDecideSkill is overridable — the cross-
+        # encoder rerank shifted the per-candidate score distribution
+        # and the default 0.7 numeric_weight isn't optimal.
+        if self.numeric_weight is not None:
+            from .skills import TriageDecideSkill
+            registry["triage_decide"] = TriageDecideSkill(
+                numeric_weight=self.numeric_weight,
+            )
+        # Wire the persistent embedding cache into the Nomic skill so
+        # re-runs hit disk (~1ms/embed) instead of LM Studio (~50-200ms).
+        # The cache root lives next to the global dataset so it's
+        # naturally namespaced by corpus version.
+        if self.with_embeddings:
+            from .skills import EmbeddingSimilaritySkill
+            registry["embedding_similarity"] = EmbeddingSimilaritySkill(
+                cache_root=global_dir / "embeddings",
+            )
+        # Phase B: optionally swap the cross-encoder model to a fine-tuned
+        # local checkpoint. When `cross_encoder_model` is set we re-build
+        # the skill so the lazy-load picks up the local path.
+        if self.with_cross_encoder and self.cross_encoder_model:
+            from .skills import CrossEncoderRerankSkill
+            registry["cross_encoder_rerank"] = CrossEncoderRerankSkill(
+                model_name=self.cross_encoder_model,
+            )
         for skill in registry.values():
             skill.fit(train, ds.feature_columns)
 
@@ -134,6 +241,15 @@ class MemoryGraphPipeline(PipelineRunner):
         gs_skill = registry.get("graph_score")
         if gs_skill is not None and hasattr(gs_skill, "fit_on_pairs"):
             gs_skill.fit_on_pairs(train, memory_by_id_pre, builder)
+
+        # LogSignatureSimilaritySkill needs runs_root to find raw/loki/
+        # files per window. The skill silently disables itself when
+        # runs_root is None, so this is safe even when the variant
+        # isn't enabled — but the pipeline only requests it when
+        # with_log_signatures=True, so the skill is unused otherwise.
+        log_sig_skill = registry.get("log_signature_similarity")
+        if log_sig_skill is not None and self.with_log_signatures:
+            log_sig_skill.runs_root = runs_root
 
         agent = Agent(
             builder.graph,
@@ -156,21 +272,63 @@ class MemoryGraphPipeline(PipelineRunner):
                 builder.remove_window(window.window_id)
             return decision
 
+        import sys
+        # Progress cadence: print one line every PROGRESS_EVERY windows
+        # so a piped run shows it's moving instead of looking hung. The
+        # default of 100 means a 1755-window v5-large test split prints
+        # ~18 lines per pipeline — informative but not chatty.
+        PROGRESS_EVERY = 100
+
         if val:
-            val_decisions = [_score_one(w) for w in val]
+            print(
+                f"[{self.name}] scoring {len(val)} validation windows ...",
+                file=sys.stderr, flush=True,
+            )
+            t_val_start = time.time()
+            val_decisions: list[AgentDecision] = []
+            for i, w in enumerate(val):
+                val_decisions.append(_score_one(w))
+                if (i + 1) % PROGRESS_EVERY == 0 or (i + 1) == len(val):
+                    elapsed = time.time() - t_val_start
+                    avg = elapsed / (i + 1)
+                    remaining = (len(val) - i - 1) * avg
+                    print(
+                        f"[{self.name}] val {i+1}/{len(val)} "
+                        f"elapsed={elapsed:.0f}s avg={avg:.2f}s/w "
+                        f"eta={remaining:.0f}s",
+                        file=sys.stderr, flush=True,
+                    )
             val_scores = [d.triage_score for d in val_decisions]
             val_labels = [1 if w.triage_label == "ticket_worthy" else 0 for w in val]
             _p, _r, threshold = precision_at_fpr(val_scores, val_labels, target_fpr)
+            print(
+                f"[{self.name}] val done; threshold={threshold:.4f}",
+                file=sys.stderr, flush=True,
+            )
         else:
             threshold = 0.5
 
         # 3) Score the test set and emit predictions.
         t0 = time.time()
+        print(
+            f"[{self.name}] scoring {len(test)} test windows ...",
+            file=sys.stderr, flush=True,
+        )
         predictions: list[PipelinePrediction] = []
         decisions: list[AgentDecision] = []
-        for w in test:
+        for i, w in enumerate(test):
             decision = _score_one(w)
             decisions.append(decision)
+            if (i + 1) % PROGRESS_EVERY == 0 or (i + 1) == len(test):
+                elapsed = time.time() - t0
+                avg = elapsed / (i + 1)
+                remaining = (len(test) - i - 1) * avg
+                print(
+                    f"[{self.name}] test {i+1}/{len(test)} "
+                    f"elapsed={elapsed:.0f}s avg={avg:.2f}s/w "
+                    f"eta={remaining:.0f}s",
+                    file=sys.stderr, flush=True,
+                )
             decision_label = (
                 "ticket_worthy" if decision.triage_score >= threshold else "noise"
             )

@@ -79,30 +79,63 @@ def _read_jsonl(path: Path) -> list[dict[str, Any]]:
 def _count_loki_lines(path_str: str) -> tuple[int, int]:
     """Return (line_count, byte_size) for one Loki JSON file.
 
-    Loki dumps come in two shapes:
-      * `{"data": {"result": [{"values": [[ts, line], ...]}, ...]}}` — the
-        standard query response. Sum len(values) across all streams.
-      * Newline-delimited JSON — fallback if the file isn't a single object.
+    `export-telemetry-window.ps1` wraps each window's Loki dump as
+
+        {
+          "fetched_at": ..., "window": ..., "service_query": ...,
+          "service_window":  {"ok": ..., "response": <loki-response>},
+          "service_context": {"ok": ..., "response": <loki-response>},
+          "namespace_context": {"ok": ..., "response": <loki-response>}
+        }
+
+    where each `<loki-response>` is a standard Loki query response
+    (`{"status": "success", "data": {"resultType": "streams",
+    "result": [{"stream": {...}, "values": [[ts, line], ...]}]}}`).
+
+    Line count = sum of `len(values)` across every `result[*]` of every
+    `<sub>.response` we can find. We sum the *service* (per-service)
+    window/context — the namespace_context is intentionally excluded to
+    avoid double-counting (it overlaps with the per-service exports of
+    the other services on the same window).
     """
     p = Path(path_str)
     if not p.exists():
         return 0, 0
     size = p.stat().st_size
+
+    def _sum_streams(response: Any) -> int:
+        if not isinstance(response, dict):
+            return 0
+        data = response.get("data") if isinstance(response.get("data"), dict) else {}
+        result = data.get("result") or []
+        return sum(len(stream.get("values") or []) for stream in result)
+
     try:
         with p.open(encoding="utf-8", errors="ignore") as fh:
             data = json.load(fh)
-        if isinstance(data, dict):
-            result = data.get("data", {}).get("result", [])
-            n = sum(len(stream.get("values", [])) for stream in result)
-            return n, size
-        if isinstance(data, list):
-            return len(data), size
     except (json.JSONDecodeError, OSError):
+        # Fallback: newline-delimited JSON. Older / future variants.
         try:
             with p.open(encoding="utf-8", errors="ignore") as fh:
                 return sum(1 for _ in fh), size
         except OSError:
             return 0, size
+
+    if isinstance(data, dict):
+        # Preferred: the per-window wrapper shape this builder writes.
+        total = 0
+        for sub_key in ("service_window", "service_context"):
+            sub = data.get(sub_key)
+            if isinstance(sub, dict):
+                total += _sum_streams(sub.get("response"))
+        if total > 0:
+            return total, size
+        # Legacy shape: single `{"data": {"result": [...]}}` Loki response.
+        legacy = _sum_streams(data)
+        if legacy:
+            return legacy, size
+    if isinstance(data, list):
+        return len(data), size
     return 0, size
 
 
@@ -266,6 +299,15 @@ class MetricStats:
     bytes_total: int = 0
     samples_per_file_mean: float = 0.0
     metric_name_examples: list[str] = field(default_factory=list)
+    # M0-M5 supplement files (raw/prometheus_supplement/) — emitted by
+    # scripts/research-lab/export_m05_supplement.py with the rich RED /
+    # business / runtime queries that feed `triage_feature_m05_*`. Treated
+    # as a separate stream so the base Prom export numbers don't shift.
+    supplement_file_count: int = 0
+    supplement_bytes_total: int = 0
+    supplement_unique_queries: int = 0
+    supplement_value_count_total: int = 0
+    supplement_query_examples: list[str] = field(default_factory=list)
 
 
 @dataclass
@@ -593,26 +635,68 @@ def collect_log_stats(run_dirs: list[Path], *, fast: bool, workers: int) -> LogS
     )
 
 
+def _scan_supplement_files(paths: list[str]) -> tuple[int, int, set[str]]:
+    """Return (total_value_count, total_bytes, unique_query_keys) for the
+    M0-M5 supplement files (raw/prometheus_supplement/<window>.json).
+
+    Schema (from export_m05_supplement.py):
+        {
+          "window_start": ..., "window_end": ..., "service_name": ...,
+          "queries": {<query_key>: <promql_string>, ...},
+          "values":  {<query_key>: <scalar>, ...}
+        }
+    """
+    total_values = 0
+    total_bytes = 0
+    query_keys: set[str] = set()
+    for ps in paths:
+        p = Path(ps)
+        if not p.exists():
+            continue
+        total_bytes += p.stat().st_size
+        try:
+            data = json.loads(p.read_text(encoding="utf-8-sig", errors="ignore"))
+        except (json.JSONDecodeError, OSError):
+            continue
+        values = data.get("values") if isinstance(data, dict) else None
+        if isinstance(values, dict):
+            total_values += len(values)
+            query_keys.update(values.keys())
+        queries = data.get("queries") if isinstance(data, dict) else None
+        if isinstance(queries, dict):
+            query_keys.update(queries.keys())
+    return total_values, total_bytes, query_keys
+
+
 def collect_metric_stats(run_dirs: list[Path], *, fast: bool, workers: int) -> MetricStats:
     paths: list[str] = []
+    supplement_paths: list[str] = []
     for run_dir in run_dirs:
         prom = run_dir / "raw" / "prometheus"
         if prom.exists():
             for p in prom.rglob("*.json"):
                 paths.append(str(p))
-    if not paths:
+        sup_dir = run_dir / "raw" / "prometheus_supplement"
+        if sup_dir.exists():
+            for p in sup_dir.rglob("*.json"):
+                supplement_paths.append(str(p))
+    if not paths and not supplement_paths:
         return MetricStats()
+
+    # --- base prometheus exports (queries-bundle shape) ----
     sample_paths = paths[:5] if fast else paths
-    with mp.Pool(workers) as pool:
-        results = pool.map(_count_prom_samples, sample_paths)
-    sample_total = sum(r[0] for r in results)
-    bytes_total = sum(r[2] for r in results)
-    if fast:
+    if sample_paths:
+        with mp.Pool(workers) as pool:
+            results = pool.map(_count_prom_samples, sample_paths)
+        sample_total = sum(r[0] for r in results)
+        bytes_total = sum(r[2] for r in results)
+    else:
+        sample_total = 0
+        bytes_total = 0
+    if fast and paths:
         ratio = len(paths) / max(len(sample_paths), 1)
         sample_total = int(sample_total * ratio)
         bytes_total = int(bytes_total * ratio)
-    # Extract metric names from a sample so we can list them in the report.
-    # Uses the same `queries[*].response.data.result` schema as the counter.
     name_set: set[str] = set()
     for p in paths[:30]:
         try:
@@ -625,6 +709,21 @@ def collect_metric_stats(run_dirs: list[Path], *, fast: bool, workers: int) -> M
                         name_set.add(str(name))
         except (json.JSONDecodeError, OSError):
             continue
+
+    # --- M0-M5 supplement files (separate stream) ----
+    sup_total_values = 0
+    sup_bytes = 0
+    sup_keys: set[str] = set()
+    if supplement_paths:
+        sup_sample = supplement_paths[:5] if fast else supplement_paths
+        # Single-process here — supplement files are tiny (<5 KB each),
+        # the IO dominates. mp.Pool overhead isn't worth it.
+        sup_total_values, sup_bytes, sup_keys = _scan_supplement_files(sup_sample)
+        if fast:
+            ratio = len(supplement_paths) / max(len(sup_sample), 1)
+            sup_total_values = int(sup_total_values * ratio)
+            sup_bytes = int(sup_bytes * ratio)
+
     return MetricStats(
         file_count=len(paths),
         sample_count_total=sample_total,
@@ -632,6 +731,11 @@ def collect_metric_stats(run_dirs: list[Path], *, fast: bool, workers: int) -> M
         bytes_total=bytes_total,
         samples_per_file_mean=round(sample_total / max(len(paths), 1), 2),
         metric_name_examples=sorted(name_set)[:50],
+        supplement_file_count=len(supplement_paths),
+        supplement_bytes_total=sup_bytes,
+        supplement_unique_queries=len(sup_keys),
+        supplement_value_count_total=sup_total_values,
+        supplement_query_examples=sorted(sup_keys)[:50],
     )
 
 
@@ -783,17 +887,29 @@ def render_summary(report: DatasetMetadata) -> str:
     m = report.metrics
     out.append("")
     out.append("[5] Metrics (Prometheus)")
-    out.append(f"    files:                   {_fmt_int(m.file_count)}")
-    out.append(f"    samples total:           {_fmt_int(m.sample_count_total)}")
-    out.append(f"    unique metric names:     {m.unique_metric_names}")
-    out.append(f"    avg samples / file:      {m.samples_per_file_mean:,.0f}")
-    out.append(f"    bytes:                   {_fmt_bytes(m.bytes_total)}")
+    out.append(f"    base export files:       {_fmt_int(m.file_count)}")
+    out.append(f"    base samples total:      {_fmt_int(m.sample_count_total)}")
+    out.append(f"    base unique metric names:{m.unique_metric_names}")
+    out.append(f"    base avg samples / file: {m.samples_per_file_mean:,.0f}")
+    out.append(f"    base bytes:              {_fmt_bytes(m.bytes_total)}")
     if m.metric_name_examples:
-        out.append(f"    example metric names ({len(m.metric_name_examples)}):")
+        out.append(f"    base example metric names ({len(m.metric_name_examples)}):")
         for name in m.metric_name_examples[:20]:
             out.append(f"        - {name}")
         if len(m.metric_name_examples) > 20:
             out.append(f"        ... (+{len(m.metric_name_examples)-20})")
+    out.append("")
+    out.append("    M0-M5 supplement (raw/prometheus_supplement/, written by export_m05_supplement.py):")
+    out.append(f"      supplement files:      {_fmt_int(m.supplement_file_count)}")
+    out.append(f"      supplement values:     {_fmt_int(m.supplement_value_count_total)}")
+    out.append(f"      unique m05 queries:    {m.supplement_unique_queries}")
+    out.append(f"      supplement bytes:      {_fmt_bytes(m.supplement_bytes_total)}")
+    if m.supplement_query_examples:
+        out.append(f"      m05 query keys (first 12):")
+        for q in m.supplement_query_examples[:12]:
+            out.append(f"        - {q}")
+        if len(m.supplement_query_examples) > 12:
+            out.append(f"        ... (+{len(m.supplement_query_examples)-12} more)")
 
     t = report.traces
     out.append("")

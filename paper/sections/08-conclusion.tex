@@ -1,0 +1,18 @@
+\section{Conclusion}
+\label{sec:conclusion}
+
+The bottleneck in modern on-call response has shifted from detection (mature) to diagnosis (under-served). We characterized retrieval-augmented incident diagnosis as a complementary capability to anomaly detection, and showed empirically that retrieval quality scales meaningfully with deployment history: Hit@1 grows $5.2\times$ and MRR grows $2.6\times$ as memory accumulates from 1--2 to 21+ compatible prior tickets.
+
+We made four methodological contributions: \emph{(i)} a depth-stratified retrieval-quality characterization with paired bootstrap CIs; \emph{(ii)} a correction of the standard Recall@$K$ definition that is mechanically capped by $|\text{gold}|$, replaced by Hit@$K$ which is the right ``did the engineer find a relevant ticket'' metric; \emph{(iii)} a cross-encoder fine-tune that shifts probability mass into top-5 at a top-1 cost, suggesting ``review top-$K$'' is a better product framing than ``auto-suggest top-1''; \emph{(iv)} a distractor-robustness sweep showing Hit@5 is exactly invariant through 50\% memory occupancy by irrelevant tickets.
+
+We honestly disclaim improvements on anomaly detection itself: telemetry-only gradient boosting already wins that task by 15 PR-AUC points; memory is for \emph{citation}, not \emph{detection}. We also disclose a key failure mode: cold-start novelty detection is broken in the current system (0 of 333 cold-start anomalies flagged correctly), motivating future work on calibrated novelty heads.
+
+The deployment-history scaling result has a direct operational consequence for SRE teams: a memory-augmented triage system gets better as it ages. Every logged incident adds one more candidate for matching against future windows. The system inherits the team's institutional knowledge as it accrues, in contrast to most ML systems that degrade with data drift.
+
+We open-source the full pipeline, the synthetic-but-realistic dataset, the V2 humanized Jira corpus, and the training-run registry. Every reported number is reproducible from a specific git commit through the per-pipeline \texttt{training\_runs/<pipeline>\_\_<UTC>\_\_<sha8>/} directory structure.
+
+\paragraph{Future work.} The most important next step is a calibrated novelty head to close the cold-start gap. Secondary directions include: \emph{(a)} extending the V2 humanizer to emit explicit trace and k8s evidence so per-channel ablations become more diagnostic; \emph{(b)} scaling the cross-encoder fine-tune to a larger pool of $(\text{window}, \text{ticket})$ pairs from real production teams; \emph{(c)} multi-deployment validation to confirm the depth-scaling result generalizes beyond microservices-demo; \emph{(d)} a temporal-dynamics characterization complementing our cross-sectional depth analysis.
+
+\section*{Data availability}
+
+All code, data, fine-tuned model checkpoints, and reproducibility artifacts are released at \texttt{<repo-url-redacted-for-review>}. The submission also includes a \texttt{RESEARCH-CHARTER.md} document that locked the scope and the experimental protocol on 2026-06-01 (git commit \texttt{f649af5}), prior to any of the empirical results reported here, as evidence that the metrics and statistical envelope were pre-specified.

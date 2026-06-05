@@ -1,0 +1,6 @@
+[02:54:28] [INFO ] [v2_advanced.phase_b.data_prep] step=scan_runs start  root=data\runs
+[02:54:28] [INFO ] [v2_advanced.phase_b.data_prep] found runs  n=100
+[02:54:28] [INFO ] [v2_advanced.phase_b.data_prep] step=scan_runs done  elapsed_s=0.0100
+[02:56:17] [INFO ] [v2_advanced.phase_b.data_prep] progress  n_windows=2200 n_lines=167083
+[02:57:47] [INFO ] [v2_advanced.phase_b.data_prep] progress  n_windows=3800 n_lines=288598
+[02:59:16] [INFO ] [v2_advanced.phase_b.data_prep] done  n_windows=6637 total_lines=498784 out_root=data\derived\global\2026-05-25-dataset-v5-large-global\v2_logseq

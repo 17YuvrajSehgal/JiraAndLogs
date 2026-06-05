@@ -1,0 +1,142 @@
+[2026-06-02T13:44:23.024174+00:00] notes: comparison: pipelines=['hgb', 'tab_transformer', 'memorygraph_v2_sota_nw080', 'bi_encoder_retrieval']
+[2026-06-02T13:44:23.024248+00:00] training_run open: hgb__20260602T134423Z__b36d9cbd
+[2026-06-02T13:44:23.037035+00:00] fit + predict starting for hgb
+[2026-06-02T13:44:28.162146+00:00] fit + predict done: fit=4.7s predict=0.0s n_predictions=2940
+[2026-06-02T13:44:28.578273+00:00] training_run close: hgb__20260602T134423Z__b36d9cbd
+[2026-06-02T13:44:28.591527+00:00] notes: comparison: pipelines=['hgb', 'tab_transformer', 'memorygraph_v2_sota_nw080', 'bi_encoder_retrieval']
+[2026-06-02T13:44:28.591597+00:00] training_run open: tab_transformer__20260602T134428Z__b36d9cbd
+[2026-06-02T13:44:28.603553+00:00] fit + predict starting for tab_transformer
+[comparison] running pipeline: hgb
+[comparison] running pipeline: tab_transformer
+[tab_transformer] ep 01/30  train_loss=1.0739  val_loss=0.8674  val_AUC=0.7971
+[tab_transformer] ep 02/30  train_loss=0.7287  val_loss=0.5913  val_AUC=0.9059
+[tab_transformer] ep 03/30  train_loss=0.5827  val_loss=0.5495  val_AUC=0.9206
+[tab_transformer] ep 04/30  train_loss=0.4628  val_loss=1.1118  val_AUC=0.8927
+[tab_transformer] ep 05/30  train_loss=0.5487  val_loss=0.6128  val_AUC=0.9490
+[tab_transformer] ep 06/30  train_loss=0.3164  val_loss=0.3067  val_AUC=0.9759
+[tab_transformer] ep 07/30  train_loss=0.3168  val_loss=0.3161  val_AUC=0.9782
+[tab_transformer] ep 08/30  train_loss=0.2520  val_loss=0.2672  val_AUC=0.9832
+[tab_transformer] ep 09/30  train_loss=0.2027  val_loss=0.2967  val_AUC=0.9686
+[tab_transformer] ep 10/30  train_loss=0.3368  val_loss=0.3369  val_AUC=0.9783
+[tab_transformer] ep 11/30  train_loss=0.1921  val_loss=0.6545  val_AUC=0.9794
+[tab_transformer] ep 12/30  train_loss=0.1859  val_loss=0.2130  val_AUC=0.9891
+[tab_transformer] ep 13/30  train_loss=0.1927  val_loss=0.2309  val_AUC=0.9904
+[tab_transformer] ep 14/30  train_loss=0.1203  val_loss=0.4215  val_AUC=0.9886
+[tab_transformer] ep 15/30  train_loss=0.2076  val_loss=0.3994  val_AUC=0.9804
+[tab_transformer] ep 16/30  train_loss=0.1251  val_loss=0.1799  val_AUC=0.9932
+[tab_transformer] ep 17/30  train_loss=0.1510  val_loss=0.2426  val_AUC=0.9935
+[tab_transformer] ep 18/30  train_loss=0.1257  val_loss=0.3002  val_AUC=0.9939
+[tab_transformer] ep 19/30  train_loss=0.1027  val_loss=0.4380  val_AUC=0.9911
+[tab_transformer] ep 20/30  train_loss=0.1040  val_loss=0.3199  val_AUC=0.9921
+[tab_transformer] ep 21/30  train_loss=0.0984  val_loss=0.1965  val_AUC=0.9955
+[tab_transformer] early stopping at epoch 21 (no val_loss improvement for 5 epochs)
+[tab_transformer] training done in 7.7s (d_model=64, layers=4)
+[2026-06-02T13:44:36.726077+00:00] fit + predict done: fit=7.7s predict=0.1s n_predictions=2940
+[2026-06-02T13:44:37.158452+00:00] training_run close: tab_transformer__20260602T134428Z__b36d9cbd
+[2026-06-02T13:44:37.173428+00:00] notes: comparison: pipelines=['hgb', 'tab_transformer', 'memorygraph_v2_sota_nw080', 'bi_encoder_retrieval']
+[2026-06-02T13:44:37.173483+00:00] training_run open: memorygraph_v2_sota_nw080__20260602T134437Z__b36d9cbd
+[2026-06-02T13:44:37.185384+00:00] fit + predict starting for memorygraph_v2_sota_nw080
+[memorygraph_v2_sota_nw080] scoring 984 validation windows ...
+[cross_encoder_rerank] loading hub: cross-encoder/ms-marco-MiniLM-L-6-v2 ... (first hub run downloads ~80MB)
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+[comparison] running pipeline: memorygraph_v2_sota_nw080
+Loading weights:   0%|          | 0/105 [00:00<?, ?it/s]Loading weights: 100%|##########| 105/105 [00:00<00:00, 7205.29it/s]
+`CrossEncoder._target_device` has been deprecated. Please use `CrossEncoder.device` instead.
+[cross_encoder_rerank] model ready; device=cuda:0
+[log_signature_similarity] scored 100 windows (sig_extracted=9 empty=40) elapsed=9s avg=0.089s/window
+[memorygraph_v2_sota_nw080] val 100/984 elapsed=9s avg=0.09s/w eta=79s
+[memorygraph_v2_sota_nw080] val 200/984 elapsed=13s avg=0.07s/w eta=52s
+[memorygraph_v2_sota_nw080] val 300/984 elapsed=19s avg=0.06s/w eta=42s
+[cross_encoder_rerank] reranked 200 windows (2289 total pair scorings)
+[memorygraph_v2_sota_nw080] val 400/984 elapsed=23s avg=0.06s/w eta=34s
+[log_signature_similarity] scored 500 windows (sig_extracted=133 empty=191) elapsed=36s avg=0.071s/window
+[memorygraph_v2_sota_nw080] val 500/984 elapsed=36s avg=0.07s/w eta=35s
+[cross_encoder_rerank] reranked 400 windows (5538 total pair scorings)
+[memorygraph_v2_sota_nw080] val 600/984 elapsed=47s avg=0.08s/w eta=30s
+[log_signature_similarity] scored 700 windows (sig_extracted=231 empty=287) elapsed=57s avg=0.081s/window
+[memorygraph_v2_sota_nw080] val 700/984 elapsed=57s avg=0.08s/w eta=23s
+[cross_encoder_rerank] reranked 600 windows (8201 total pair scorings)
+[log_signature_similarity] scored 800 windows (sig_extracted=288 empty=330) elapsed=67s avg=0.084s/window
+[memorygraph_v2_sota_nw080] val 800/984 elapsed=67s avg=0.08s/w eta=15s
+[log_signature_similarity] scored 900 windows (sig_extracted=341 empty=377) elapsed=77s avg=0.085s/window
+[memorygraph_v2_sota_nw080] val 900/984 elapsed=77s avg=0.09s/w eta=7s
+[cross_encoder_rerank] reranked 800 windows (11544 total pair scorings)
+[memorygraph_v2_sota_nw080] val 984/984 elapsed=87s avg=0.09s/w eta=0s
+[memorygraph_v2_sota_nw080] val done; threshold=0.7174
+[memorygraph_v2_sota_nw080] scoring 2940 test windows ...
+[memorygraph_v2_sota_nw080] test 100/2940 elapsed=2s avg=0.02s/w eta=52s
+[log_signature_similarity] scored 1100 windows (sig_extracted=434 empty=411) elapsed=89s avg=0.081s/window
+[memorygraph_v2_sota_nw080] test 200/2940 elapsed=5s avg=0.02s/w eta=67s
+[log_signature_similarity] scored 1200 windows (sig_extracted=461 empty=434) elapsed=93s avg=0.077s/window
+[memorygraph_v2_sota_nw080] test 300/2940 elapsed=9s avg=0.03s/w eta=81s
+[memorygraph_v2_sota_nw080] test 400/2940 elapsed=14s avg=0.03s/w eta=87s
+[cross_encoder_rerank] reranked 1000 windows (13505 total pair scorings)
+[memorygraph_v2_sota_nw080] test 500/2940 elapsed=18s avg=0.04s/w eta=89s
+[memorygraph_v2_sota_nw080] test 600/2940 elapsed=23s avg=0.04s/w eta=91s
+[memorygraph_v2_sota_nw080] test 700/2940 elapsed=29s avg=0.04s/w eta=92s
+[log_signature_similarity] scored 1700 windows (sig_extracted=582 empty=594) elapsed=117s avg=0.069s/window
+[cross_encoder_rerank] reranked 1200 windows (16913 total pair scorings)
+[memorygraph_v2_sota_nw080] test 800/2940 elapsed=34s avg=0.04s/w eta=91s
+[memorygraph_v2_sota_nw080] test 900/2940 elapsed=39s avg=0.04s/w eta=89s
+[log_signature_similarity] scored 1900 windows (sig_extracted=633 empty=654) elapsed=127s avg=0.067s/window
+[memorygraph_v2_sota_nw080] test 1000/2940 elapsed=45s avg=0.04s/w eta=87s
+[memorygraph_v2_sota_nw080] test 1100/2940 elapsed=50s avg=0.05s/w eta=84s
+[log_signature_similarity] scored 2100 windows (sig_extracted=672 empty=724) elapsed=138s avg=0.066s/window
+[cross_encoder_rerank] reranked 1400 windows (20582 total pair scorings)
+[memorygraph_v2_sota_nw080] test 1200/2940 elapsed=55s avg=0.05s/w eta=80s
+[memorygraph_v2_sota_nw080] test 1300/2940 elapsed=61s avg=0.05s/w eta=77s
+[memorygraph_v2_sota_nw080] test 1400/2940 elapsed=66s avg=0.05s/w eta=73s
+[memorygraph_v2_sota_nw080] test 1500/2940 elapsed=66s avg=0.04s/w eta=64s
+[cross_encoder_rerank] reranked 1600 windows (23963 total pair scorings)
+[memorygraph_v2_sota_nw080] test 1600/2940 elapsed=72s avg=0.05s/w eta=60s
+[memorygraph_v2_sota_nw080] test 1700/2940 elapsed=80s avg=0.05s/w eta=58s
+[log_signature_similarity] scored 2700 windows (sig_extracted=791 empty=931) elapsed=168s avg=0.062s/window
+[cross_encoder_rerank] reranked 1800 windows (26838 total pair scorings)
+[memorygraph_v2_sota_nw080] test 1800/2940 elapsed=90s avg=0.05s/w eta=57s
+[log_signature_similarity] scored 2800 windows (sig_extracted=847 empty=975) elapsed=179s avg=0.064s/window
+[memorygraph_v2_sota_nw080] test 1900/2940 elapsed=101s avg=0.05s/w eta=55s
+[log_signature_similarity] scored 2900 windows (sig_extracted=900 empty=1022) elapsed=190s avg=0.065s/window
+[cross_encoder_rerank] reranked 2000 windows (30037 total pair scorings)
+[memorygraph_v2_sota_nw080] test 2000/2940 elapsed=112s avg=0.06s/w eta=52s
+[memorygraph_v2_sota_nw080] test 2100/2940 elapsed=122s avg=0.06s/w eta=49s
+[cross_encoder_rerank] reranked 2200 windows (33263 total pair scorings)
+[memorygraph_v2_sota_nw080] test 2200/2940 elapsed=133s avg=0.06s/w eta=45s
+[log_signature_similarity] scored 3200 windows (sig_extracted=1064 empty=1158) elapsed=222s avg=0.069s/window
+[memorygraph_v2_sota_nw080] test 2300/2940 elapsed=144s avg=0.06s/w eta=40s
+[log_signature_similarity] scored 3300 windows (sig_extracted=1122 empty=1200) elapsed=232s avg=0.070s/window
+[cross_encoder_rerank] reranked 2400 windows (36516 total pair scorings)
+[memorygraph_v2_sota_nw080] test 2400/2940 elapsed=154s avg=0.06s/w eta=35s
+[memorygraph_v2_sota_nw080] test 2500/2940 elapsed=165s avg=0.07s/w eta=29s
+[log_signature_similarity] scored 3500 windows (sig_extracted=1227 empty=1295) elapsed=254s avg=0.073s/window
+[cross_encoder_rerank] reranked 2600 windows (39778 total pair scorings)
+[memorygraph_v2_sota_nw080] test 2600/2940 elapsed=176s avg=0.07s/w eta=23s
+[log_signature_similarity] scored 3600 windows (sig_extracted=1281 empty=1341) elapsed=264s avg=0.073s/window
+[memorygraph_v2_sota_nw080] test 2700/2940 elapsed=187s avg=0.07s/w eta=17s
+[log_signature_similarity] scored 3700 windows (sig_extracted=1336 empty=1386) elapsed=275s avg=0.074s/window
+[cross_encoder_rerank] reranked 2800 windows (42950 total pair scorings)
+[memorygraph_v2_sota_nw080] test 2800/2940 elapsed=197s avg=0.07s/w eta=10s
+[log_signature_similarity] scored 3800 windows (sig_extracted=1387 empty=1435) elapsed=286s avg=0.075s/window
+[memorygraph_v2_sota_nw080] test 2900/2940 elapsed=209s avg=0.07s/w eta=3s
+[log_signature_similarity] scored 3900 windows (sig_extracted=1432 empty=1490) elapsed=297s avg=0.076s/window
+[memorygraph_v2_sota_nw080] test 2940/2940 elapsed=213s avg=0.07s/w eta=0s
+[2026-06-02T13:49:41.859076+00:00] fit + predict done: fit=4.4s predict=213.0s n_predictions=2940
+[2026-06-02T13:49:42.414185+00:00] training_run close: memorygraph_v2_sota_nw080__20260602T134437Z__b36d9cbd
+[2026-06-02T13:49:42.437285+00:00] notes: comparison: pipelines=['hgb', 'tab_transformer', 'memorygraph_v2_sota_nw080', 'bi_encoder_retrieval']
+[2026-06-02T13:49:42.437344+00:00] training_run open: bi_encoder_retrieval__20260602T134942Z__b36d9cbd
+[2026-06-02T13:49:42.451657+00:00] fit + predict starting for bi_encoder_retrieval
+[bi_encoder_retrieval] training pairs built: 8855 from 1262 windows (use_all_golds=True, n_hard_negs=3)
+[comparison] running pipeline: bi_encoder_retrieval
+Loading weights:   0%|          | 0/103 [00:00<?, ?it/s]Loading weights: 100%|##########| 103/103 [00:00<00:00, 6525.09it/s]
+[bi_encoder_retrieval] fine-tuning sentence-transformers/all-MiniLM-L6-v2 on 8855 pairs for 5 epochs on cuda
+Computing widget examples:   0%|          | 0/1 [00:00<?, ?example/s]                                                                     [2026-06-02T13:58:45.631278+00:00] fit + predict done: fit=542.7s predict=0.0s n_predictions=2940
+[2026-06-02T13:58:46.233851+00:00] training_run close: bi_encoder_retrieval__20260602T134942Z__b36d9cbd
+{'loss': '3.095', 'grad_norm': '11.69', 'learning_rate': '1.419e-05', 'epoch': '1.805'}
+{'loss': '2.328', 'grad_norm': '12.94', 'learning_rate': '6.135e-06', 'epoch': '3.61'}
+{'train_runtime': '529.5', 'train_samples_per_second': '83.61', 'train_steps_per_second': '2.616', 'train_loss': '2.561', 'epoch': '5'}
+[comparison] computing stratified metrics (strict)
+[comparison] computing stratified metrics (inclusive)
+[comparison] paired bootstrap (1000 resamples) per metric
+[comparison] depth-stratified bootstrap CIs (1000 resamples)
+[comparison] LOFO for hist_gradient_boosting_numeric ...
+[comparison] LOFO for tab_transformer ...
+Wrote comparison report to data\derived\global\2026-05-25-dataset-v5-large-global\comparison\phase-g-neural

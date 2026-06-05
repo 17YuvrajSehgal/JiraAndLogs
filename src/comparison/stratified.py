@@ -112,6 +112,28 @@ class StrataRow:
     retrieval: dict[str, float]
 
 
+def _bucket_n_prior(n: int | None) -> str:
+    """Charter §10 / Phase A2: deployment-history depth buckets.
+
+    The 'depth' axis groups windows by how many memory tickets the
+    gold-truth matcher considers compatible with them. n=0 means no
+    prior tickets in memory are relevant — true cold-start. Higher n
+    means a richer history of similar incidents exists, which is
+    where retrieval-augmented diagnosis is supposed to win.
+    """
+    if n is None:
+        return "n_prior_family=unknown"
+    if n == 0:
+        return "n_prior_family=0"
+    if n <= 2:
+        return "n_prior_family=1-2"
+    if n <= 5:
+        return "n_prior_family=3-5"
+    if n <= 20:
+        return "n_prior_family=6-20"
+    return "n_prior_family=21+"
+
+
 def _key_extractors() -> dict[str, Callable[[Any], str]]:
     return {
         "overall": lambda p: "overall",
@@ -126,6 +148,12 @@ def _key_extractors() -> dict[str, Callable[[Any], str]]:
         "is_novel": lambda p: (
             f"is_novel={'novel' if p.gold_is_novel else ('known' if p.gold_is_novel is False else 'unscored')}"
         ),
+        # Charter §10 / Phase A2: deployment-history depth axis. Anchor
+        # of the headline figure — R@5 vs how many prior tickets in
+        # memory are compatible with the window.
+        "n_prior_family_tickets": lambda p: _bucket_n_prior(
+            getattr(p, "n_prior_family_tickets", None)
+        ),
     }
 
 
@@ -135,6 +163,7 @@ def stratified_metrics(
     include: tuple[str, ...] = (
         "overall", "family", "service", "window_type",
         "is_hard_case", "triage_reason_class", "is_novel",
+        "n_prior_family_tickets",
     ),
     borderline_inclusive: bool = False,
 ) -> list[StrataRow]:

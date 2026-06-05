@@ -12,6 +12,8 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
+from util.training_registry import open_training_run
+
 from .ensemble import EnsemblePipeline, blend_mean
 from .pipelines import (
     CalibratedRandomForestPipeline,
@@ -25,10 +27,16 @@ from .pipelines import (
     _NumericClassifierPipeline,
 )
 from .schema import PipelineResult
-from .significance import paired_bootstrap_ci, render_ci_table, render_pairwise_table
+from .significance import (
+    paired_bootstrap_ci,
+    render_ci_table,
+    render_pairwise_table,
+    stratified_bootstrap_ci,
+)
 from .stratified import (
     OrphanRecallGap,
     StrataRow,
+    _bucket_n_prior,
     compute_orphan_recall_gap,
     render_orphan_recall_gap_table,
     render_strata_table,
@@ -45,6 +53,53 @@ from .pipelines_neural import (
     BiEncoderHybridPipeline,
     XgboostGPUPipeline,
 )
+
+# Phase G (2026-06-02): deep-learning models. Soft-imported so the
+# comparison harness still runs if torch isn't installed.
+try:
+    from neural_models.tab_transformer import TabTransformerPipeline
+    from neural_models.bi_encoder import BiEncoderRetrievalPipeline
+    _HAS_NEURAL = True
+except ImportError as _e:
+    _HAS_NEURAL = False
+    _NEURAL_IMPORT_ERROR = _e
+
+# v2_advanced — Phase D (2026-06-03): LLM-extracted knowledge graph
+# pipeline. Soft-imported so the harness still works without neo4j.
+try:
+    from v2_advanced.proposal_d_knowledge_graph.pipeline import (
+        KnowledgeGraphRetrievalPipeline,
+    )
+    _HAS_KG = True
+except ImportError as _e:
+    _HAS_KG = False
+    _KG_IMPORT_ERROR = _e
+
+# v2_advanced — Phase C (2026-06-03): Hybrid SPLADE + BiEncoder + Graph
+try:
+    from v2_advanced.proposal_c_hybrid_retrieval.pipeline import (
+        HybridRRFRetrievalPipeline,
+    )
+    _HAS_HYBRID = True
+except ImportError as _e:
+    _HAS_HYBRID = False
+    _HYBRID_IMPORT_ERROR = _e
+
+# v2_advanced — Phase E (2026-06-03): DiagnosisAgent
+try:
+    from v2_advanced.proposal_e_agent.pipeline import DiagnosisAgentPipeline
+    _HAS_AGENT = True
+except ImportError as _e:
+    _HAS_AGENT = False
+    _AGENT_IMPORT_ERROR = _e
+
+# v2_advanced — Phase B (2026-06-03): LogSeq2Vec
+try:
+    from v2_advanced.proposal_b_logseq2vec.pipeline import LogSeq2VecRetrievalPipeline
+    _HAS_LOGSEQ = True
+except ImportError as _e:
+    _HAS_LOGSEQ = False
+    _LOGSEQ_IMPORT_ERROR = _e
 
 # memorygraph lives in its own top-level package under src/.
 # Soft-import so the comparison harness still works on installs that
@@ -82,6 +137,71 @@ KNOWN_PIPELINES: dict[str, type[PipelineRunner]] = {
     "xgb_gpu": XgboostGPUPipeline,
 }
 
+# Phase G — register neural models if torch + sentence-transformers are
+# importable. The harness silently omits them otherwise so the existing
+# 18-pipeline panel still works.
+if _HAS_NEURAL:
+    KNOWN_PIPELINES["tab_transformer"] = TabTransformerPipeline
+    KNOWN_PIPELINES["bi_encoder_retrieval"] = BiEncoderRetrievalPipeline
+
+# v2_advanced Phase D — LLM-extracted knowledge graph retrieval.
+if _HAS_KG:
+    KNOWN_PIPELINES["kg_retrieval"] = KnowledgeGraphRetrievalPipeline
+
+    # Rule-based-only variant (no LM Studio dependency at window-extraction
+    # time; useful for quick sanity checks of the graph schema).
+    class _KGRetrievalRuleBased(KnowledgeGraphRetrievalPipeline):
+        name = "kg_retrieval_rulebased"
+
+        def __init__(self) -> None:
+            super().__init__(skip_window_extraction=True)
+
+    KNOWN_PIPELINES["kg_retrieval_rulebased"] = _KGRetrievalRuleBased
+
+# v2_advanced Phase C — Hybrid SPLADE + BiEncoder + Graph via RRF.
+if _HAS_HYBRID:
+    KNOWN_PIPELINES["hybrid_rrf_retrieval"] = HybridRRFRetrievalPipeline
+
+    class _HybridNoGraph(HybridRRFRetrievalPipeline):
+        """RRF fusion without the graph retriever — sanity check that
+        SPLADE + BiEncoder alone outperforms either component."""
+        name = "hybrid_rrf_no_graph"
+        def __init__(self) -> None:
+            super().__init__(skip_graph=True)
+
+    KNOWN_PIPELINES["hybrid_rrf_no_graph"] = _HybridNoGraph
+
+# v2_advanced Phase E — DiagnosisAgent (capstone).
+if _HAS_AGENT:
+    KNOWN_PIPELINES["diagnosis_agent"] = DiagnosisAgentPipeline
+
+    class _DiagnosisAgentPermissive(DiagnosisAgentPipeline):
+        """Lower novelty threshold; the agent commits even on weak
+        consistency matches. Useful for showing the precision/recall
+        trade-off in the rule-based fallback."""
+        name = "diagnosis_agent_permissive"
+        def __init__(self) -> None:
+            super().__init__(novelty_threshold=0.05)
+
+    KNOWN_PIPELINES["diagnosis_agent_permissive"] = _DiagnosisAgentPermissive
+
+# v2_advanced Phase B — LogSeq2Vec.
+if _HAS_LOGSEQ:
+    KNOWN_PIPELINES["logseq2vec_retrieval"] = LogSeq2VecRetrievalPipeline
+
+    # Pretrained variant: loads weights from the path written by
+    # `python -m v2_advanced.proposal_b_logseq2vec.train ...` to skip
+    # the 14-minute training during comparison runs.
+    class _LogSeq2VecPretrained(LogSeq2VecRetrievalPipeline):
+        name = "logseq2vec_retrieval_pretrained"
+
+        def __init__(self) -> None:
+            super().__init__(
+                pretrained_path="results/v2_advanced/logseq2vec_model/logseq2vec.pt",
+            )
+
+    KNOWN_PIPELINES["logseq2vec_retrieval_pretrained"] = _LogSeq2VecPretrained
+
 if _HAS_MEMORYGRAPH:
     # memorygraph: agentic cross-context retrieval. Builds a typed graph
     # of entities extracted from both observability windows and Jira
@@ -115,6 +235,315 @@ if _HAS_MEMORYGRAPH:
 
     KNOWN_PIPELINES["memorygraph_full"] = _MemoryGraphFull
 
+    # Phase 5.3 cross-train pair: identical to memorygraph_hybrid and
+    # memorygraph_full but with the Jira memory corpus swapped from the
+    # known-leaky legacy jira-memory-corpus.jsonl (100% contamination
+    # per the text-leakage canary, commit b704cb8) to the sanitizer-
+    # verified humanized corpus at jira-shadow-humanized-v1/bulk-20260529/.
+    # Running a comparison harness with both legacy and humanized
+    # variants side-by-side quantifies the leakage premium the legacy
+    # corpus was paying.
+    class _MemoryGraphHybridHumanized(MemoryGraphPipeline):
+        name = "memorygraph_hybrid_humanized"
+
+        def __init__(self) -> None:
+            super().__init__(
+                with_numeric=True, humanized_subdir="bulk-20260529",
+            )
+
+    KNOWN_PIPELINES["memorygraph_hybrid_humanized"] = _MemoryGraphHybridHumanized
+
+    class _MemoryGraphFullHumanized(MemoryGraphPipeline):
+        name = "memorygraph_full_humanized"
+
+        def __init__(self) -> None:
+            super().__init__(
+                with_numeric=True, with_embeddings=True,
+                humanized_subdir="bulk-20260529",
+            )
+
+    KNOWN_PIPELINES["memorygraph_full_humanized"] = _MemoryGraphFullHumanized
+
+    # Move A from ML-NEW-IDEAS.MD: swap the trace-aggregate
+    # evidence_text query for a characteristic-log-lines query
+    # extracted from raw/loki/<window>.json. E5+E6 showed both BM25
+    # and Nomic dense embeddings cap at Recall@5 ≈ 0.07 on the clean
+    # humanized corpus when the source-side is evidence_text. This
+    # variant tests whether engineer-vocabulary on the source side
+    # unlocks meaningful retrieval. BM25-only (no Nomic) so the
+    # comparison stays fast and isolates the log-signature effect.
+    class _MemoryGraphHybridHumanizedLogs(MemoryGraphPipeline):
+        name = "memorygraph_hybrid_humanized_logs"
+
+        def __init__(self) -> None:
+            super().__init__(
+                with_numeric=True,
+                with_log_signatures=True,
+                humanized_subdir="bulk-20260529",
+            )
+
+    KNOWN_PIPELINES["memorygraph_hybrid_humanized_logs"] = _MemoryGraphHybridHumanizedLogs
+
+    # V2 pipeline variants (2026-06-01). Identical structure to the V1
+    # humanized variants but read the multi-channel V2 corpus at
+    # jira-shadow-humanized-v2/bulk-20260531/. memory_text in V2 leads
+    # with description_code (engineer-vocabulary log lines per §13.12)
+    # so BM25 / embedding retrieval has rich engineer-vocab to match
+    # against. The hypothesis tested by these variants: V2 lifts
+    # retrieval past the V1 ceiling (R@5 ~0.07 per E5/E6/E7) because
+    # the destination side now speaks the same vocabulary as the
+    # query side. See LLM-Jira-enhancement.md §14 for V2 details.
+    class _MemoryGraphHybridHumanizedV2(MemoryGraphPipeline):
+        name = "memorygraph_hybrid_humanized_v2"
+
+        def __init__(self) -> None:
+            super().__init__(
+                with_numeric=True,
+                humanized_subdir="bulk-20260531",
+                humanized_root="jira-shadow-humanized-v2",
+            )
+
+    KNOWN_PIPELINES["memorygraph_hybrid_humanized_v2"] = _MemoryGraphHybridHumanizedV2
+
+    class _MemoryGraphFullHumanizedV2(MemoryGraphPipeline):
+        name = "memorygraph_full_humanized_v2"
+
+        def __init__(self) -> None:
+            super().__init__(
+                with_numeric=True,
+                with_embeddings=True,
+                humanized_subdir="bulk-20260531",
+                humanized_root="jira-shadow-humanized-v2",
+            )
+
+    KNOWN_PIPELINES["memorygraph_full_humanized_v2"] = _MemoryGraphFullHumanizedV2
+
+    # V2 + log-signature query (Move A) on the V2 corpus. With V2's
+    # description_code on the destination side AND log-signature on the
+    # query side, BOTH sides share engineer vocabulary — this is the
+    # configuration E7's analysis predicted would unlock retrieval.
+    class _MemoryGraphHybridHumanizedV2Logs(MemoryGraphPipeline):
+        name = "memorygraph_hybrid_humanized_v2_logs"
+
+        def __init__(self) -> None:
+            super().__init__(
+                with_numeric=True,
+                with_log_signatures=True,
+                humanized_subdir="bulk-20260531",
+                humanized_root="jira-shadow-humanized-v2",
+            )
+
+    KNOWN_PIPELINES["memorygraph_hybrid_humanized_v2_logs"] = _MemoryGraphHybridHumanizedV2Logs
+
+    # V2 with distractors mixed in — for measuring top-1 precision
+    # against the distractor set per §13.6. Distractors are loaded from
+    # jira-shadow-humanized-v2-distractors/mint-20260601/timeline.jsonl
+    # alongside the real V2 corpus. Distractor tickets carry
+    # scenario_family="__DISTRACTOR__" so the ground-truth evaluator
+    # can never count a distractor as a TP — but the retriever can
+    # surface one as a top-K match, which is exactly what we want to
+    # measure.
+    from pathlib import Path as _Path
+
+    class _MemoryGraphHybridHumanizedV2Distractors(MemoryGraphPipeline):
+        name = "memorygraph_hybrid_humanized_v2_distractors"
+
+        def __init__(self) -> None:
+            super().__init__(
+                with_numeric=True,
+                humanized_subdir="bulk-20260531",
+                humanized_root="jira-shadow-humanized-v2",
+                distractor_path=_Path(
+                    "data/derived/global/2026-05-25-dataset-v5-large-global/"
+                    "jira-shadow-humanized-v2-distractors/mint-20260601/timeline.jsonl"
+                ),
+            )
+
+    KNOWN_PIPELINES["memorygraph_hybrid_humanized_v2_distractors"] = (
+        _MemoryGraphHybridHumanizedV2Distractors
+    )
+
+    # Cross-encoder reranker on V2 (2026-06-01). Layers MS-MARCO
+    # MiniLM-L-6-v2 cross-encoder over the BM25 top-K to rerank.
+    # Cross-encoder joint scoring is +5-10 nDCG over bi-encoder on
+    # retrieval benchmarks — this variant tests whether that lift
+    # closes the V2-comparative-analysis R@5 ceiling (0.0745 ->
+    # hopefully 0.10+).
+    class _MemoryGraphHybridHumanizedV2CrossEnc(MemoryGraphPipeline):
+        name = "memorygraph_hybrid_humanized_v2_crossenc"
+
+        def __init__(self) -> None:
+            super().__init__(
+                with_numeric=True,
+                with_cross_encoder=True,
+                humanized_subdir="bulk-20260531",
+                humanized_root="jira-shadow-humanized-v2",
+            )
+
+    KNOWN_PIPELINES["memorygraph_hybrid_humanized_v2_crossenc"] = (
+        _MemoryGraphHybridHumanizedV2CrossEnc
+    )
+
+    # V2 + Move A logs + Cross-encoder rerank — the maximally-stacked
+    # retrieval pipeline. Tests the ceiling: engineer-vocab on both
+    # source (log signatures) AND destination (V2 description_code)
+    # AND cross-encoder joint scoring on the top-K.
+    class _MemoryGraphHybridHumanizedV2LogsCrossEnc(MemoryGraphPipeline):
+        name = "memorygraph_hybrid_humanized_v2_logs_crossenc"
+
+        def __init__(self) -> None:
+            super().__init__(
+                with_numeric=True,
+                with_log_signatures=True,
+                with_cross_encoder=True,
+                humanized_subdir="bulk-20260531",
+                humanized_root="jira-shadow-humanized-v2",
+            )
+
+    KNOWN_PIPELINES["memorygraph_hybrid_humanized_v2_logs_crossenc"] = (
+        _MemoryGraphHybridHumanizedV2LogsCrossEnc
+    )
+
+    # SOTA + distractors — measures distractor confusion rate on the
+    # best-retrieval variant (§13.6 evaluation contract). 110 fake
+    # tickets mixed into the 347-real corpus; top-1 precision against
+    # distractors is the headline number.
+    class _MemoryGraphSOTADistractors(MemoryGraphPipeline):
+        name = "memorygraph_hybrid_humanized_v2_logs_crossenc_distractors"
+
+        def __init__(self) -> None:
+            super().__init__(
+                with_numeric=True,
+                with_log_signatures=True,
+                with_cross_encoder=True,
+                humanized_subdir="bulk-20260531",
+                humanized_root="jira-shadow-humanized-v2",
+                distractor_path=_Path(
+                    "data/derived/global/2026-05-25-dataset-v5-large-global/"
+                    "jira-shadow-humanized-v2-distractors/mint-20260601/timeline.jsonl"
+                ),
+            )
+
+    KNOWN_PIPELINES["memorygraph_hybrid_humanized_v2_logs_crossenc_distractors"] = (
+        _MemoryGraphSOTADistractors
+    )
+
+    # Numeric-blend retune variants (#1 from the followups). Same SOTA
+    # config but with different numeric_weight in TriageDecideSkill. The
+    # default 0.7 isn't tuned for the cross-encoder score distribution;
+    # try 0.5 / 0.55 / 0.65 / 0.8 to find the val-best.
+    def _make_numeric_weight_variant(weight: float):
+        class _NumericWeightVariant(MemoryGraphPipeline):
+            name = f"memorygraph_v2_sota_nw{int(weight*100):03d}"
+
+            def __init__(self) -> None:
+                super().__init__(
+                    with_numeric=True,
+                    with_log_signatures=True,
+                    with_cross_encoder=True,
+                    numeric_weight=weight,
+                    humanized_subdir="bulk-20260531",
+                    humanized_root="jira-shadow-humanized-v2",
+                )
+        _NumericWeightVariant.__qualname__ = (
+            f"_NumericWeightVariant{int(weight*100):03d}"
+        )
+        return _NumericWeightVariant
+
+    for _w in (0.50, 0.55, 0.65, 0.80):
+        _cls = _make_numeric_weight_variant(_w)
+        KNOWN_PIPELINES[_cls.name] = _cls
+
+    # Phase B (2026-06-01) — fine-tuned cross-encoder reranker on top
+    # of the SOTA. Same skill chain as memorygraph_v2_sota_nw080 but the
+    # CrossEncoderRerankSkill loads our local fine-tuned model instead
+    # of off-the-shelf MS-MARCO MiniLM. The fine-tuning data comes from
+    # `scripts/build_crossenc_pairs.py` (8855 positives + 3786 hard
+    # negatives from the train + val splits).
+    class _MemoryGraphSOTAft(MemoryGraphPipeline):
+        name = "memorygraph_v2_sota_nw080_ft"
+
+        def __init__(self) -> None:
+            super().__init__(
+                with_numeric=True,
+                with_log_signatures=True,
+                with_cross_encoder=True,
+                numeric_weight=0.80,
+                humanized_subdir="bulk-20260531",
+                humanized_root="jira-shadow-humanized-v2",
+                cross_encoder_model=str(
+                    _Path("results/phase-b-finetune/crossenc_ft_v1").resolve()
+                ),
+            )
+
+    KNOWN_PIPELINES["memorygraph_v2_sota_nw080_ft"] = _MemoryGraphSOTAft
+
+    # Phase C (2026-06-01) — per-channel ablation variants of the SOTA.
+    # Each drops one telemetry channel (logs / traces / k8s) from the
+    # memory_text so we can measure each channel's marginal R@5
+    # contribution. The mask is applied symmetrically on the memory
+    # side; window-side query text is built from raw evidence so the
+    # mask there is implicit (the window's logs/traces/k8s evidence
+    # remains untouched).
+    def _make_channel_ablation(mask_logs: bool, mask_traces: bool, mask_k8s: bool, label: str):
+        class _ChannelAblation(MemoryGraphPipeline):
+            name = f"memorygraph_v2_sota_nw080_{label}"
+            def __init__(self) -> None:
+                super().__init__(
+                    with_numeric=True,
+                    with_log_signatures=True,
+                    with_cross_encoder=True,
+                    numeric_weight=0.80,
+                    humanized_subdir="bulk-20260531",
+                    humanized_root="jira-shadow-humanized-v2",
+                    mask_logs=mask_logs,
+                    mask_traces=mask_traces,
+                    mask_k8s=mask_k8s,
+                )
+        _ChannelAblation.__qualname__ = f"_ChannelAblation_{label}"
+        return _ChannelAblation
+
+    for _spec in (
+        (True, False, False, "no_logs"),
+        (False, True, False, "no_traces"),
+        (False, False, True, "no_k8s"),
+    ):
+        _cls = _make_channel_ablation(*_spec)
+        KNOWN_PIPELINES[_cls.name] = _cls
+
+    # Phase D (2026-06-01) — distractor ratio sweep. For each ratio
+    # in {0, 10, 25, 50}%, the variant loads the corresponding
+    # subset file produced by scripts/distractor_ratio_sweep.py.
+    # The 0% variant intentionally has an empty distractor path (no
+    # distractors) so it serves as the SOTA baseline within this
+    # sweep.
+    def _make_distractor_variant(ratio_pct: int):
+        if ratio_pct == 0:
+            distractor_path = None
+        else:
+            distractor_path = _Path(
+                f"results/phase-d-distractors/distractor_pool_{ratio_pct:03d}pct.jsonl"
+            )
+
+        class _DistractorVariant(MemoryGraphPipeline):
+            name = f"memorygraph_v2_sota_d{ratio_pct:03d}pct"
+            def __init__(self) -> None:
+                super().__init__(
+                    with_numeric=True,
+                    with_log_signatures=True,
+                    with_cross_encoder=True,
+                    numeric_weight=0.80,
+                    humanized_subdir="bulk-20260531",
+                    humanized_root="jira-shadow-humanized-v2",
+                    distractor_path=distractor_path,
+                )
+        _DistractorVariant.__qualname__ = f"_DistractorVariant_{ratio_pct:03d}"
+        return _DistractorVariant
+
+    for _pct in (0, 10, 25, 50):
+        _cls = _make_distractor_variant(_pct)
+        KNOWN_PIPELINES[_cls.name] = _cls
+
 
 @dataclass
 class ComparisonReport:
@@ -134,6 +563,9 @@ class ComparisonReport:
     #                                      "micro_pooled": {pr_auc, roc_auc}}}
     inclusive_strata: list[StrataRow] = field(default_factory=list)
     lofo_macros: dict[str, dict[str, Any]] = field(default_factory=dict)
+    # Charter §10 / Phase A3: per-stratum bootstrap CIs along the
+    # deployment-history depth axis. Shape: {metric -> {stratum -> {pipeline -> {point, lo, hi}}}}
+    depth_ci_per_metric: dict[str, dict[str, dict]] = field(default_factory=dict)
 
     def as_dict(self) -> dict[str, Any]:
         return {
@@ -181,6 +613,7 @@ class ComparisonReport:
                 for s in self.strata
             ],
             "orphan_recall_gap": [g.as_dict() for g in self.orphan_recall_gap],
+            "depth_ci_per_metric": self.depth_ci_per_metric,
             "inclusive_strata": [
                 {
                     "pipeline": s.pipeline_name,
@@ -262,7 +695,53 @@ def run_comparison(
         runner = KNOWN_PIPELINES[name]()
         instantiated.append((name, runner))
         print(f"[comparison] running pipeline: {name}")
-        results.append(runner.train_and_predict(global_dir, runs_root, target_fpr=target_fpr))
+        # Wrap each pipeline fit+predict in a training_run for
+        # reproducibility — writes config, predictions, metrics, and a
+        # human-readable log under data/derived/global/<id>/
+        # training_runs/<run_id>/. The aggregate stratified metrics and
+        # bootstrap CIs are written separately to the comparison run
+        # directory by the CLI.
+        with open_training_run(
+            global_dir=global_dir,
+            pipeline_name=name,
+            notes=f"comparison: pipelines={pipelines}",
+        ) as tr:
+            tr.write_config({
+                "pipeline_class": runner.__class__.__name__,
+                "global_dir": str(global_dir),
+                "runs_root": str(runs_root),
+                "target_fpr": target_fpr,
+            })
+            tr.log(f"fit + predict starting for {name}")
+            result = runner.train_and_predict(
+                global_dir, runs_root, target_fpr=target_fpr,
+            )
+            tr.log(
+                f"fit + predict done: fit={result.fit_seconds:.1f}s "
+                f"predict={result.predict_seconds:.1f}s "
+                f"n_predictions={len(result.predictions)}"
+            )
+            # Charter §10 / Phase A2: populate the deployment-history
+            # depth field. We define it as the number of memory tickets
+            # the gold-truth matcher considers compatible with this
+            # window — i.e., len(gold_matched_issue_ids). Pipelines do
+            # not need to know about this; it's a property of the
+            # (window, canonical memory) pair, derived from the gold
+            # annotation, so we compute it centrally here.
+            for pred in result.predictions:
+                pred.n_prior_family_tickets = len(
+                    pred.gold_matched_issue_ids or []
+                )
+            for pred in result.predictions:
+                tr.append_prediction(pred.as_dict())
+            tr.write_metrics({
+                "triage_threshold": result.triage_threshold,
+                "fit_seconds": result.fit_seconds,
+                "predict_seconds": result.predict_seconds,
+                "n_predictions": len(result.predictions),
+                "metadata": result.metadata,
+            })
+        results.append(result)
 
     if include_ensemble and len(results) >= 2:
         print("[comparison] building mean ensemble")
@@ -289,6 +768,33 @@ def run_comparison(
         ci_per_metric[metric] = ci
         pairwise_per_metric[metric] = pairwise
 
+    # Charter §10 / Phase A3: per-stratum bootstrap CIs along the
+    # deployment-history depth axis. The anchor figure of the paper
+    # needs CI error bars on every bucket — this is where they come
+    # from. We compute for R@5 (primary), MRR (secondary), and R@1
+    # (tertiary) so reviewers can compare any of them.
+    depth_ci_per_metric: dict[str, dict[str, dict]] = {}
+    print(f"[comparison] depth-stratified bootstrap CIs ({n_bootstrap} resamples)")
+    for metric in ("recall_at_5", "mrr", "pr_auc"):
+        depth_ci_per_metric[metric] = {}
+        per_stratum = stratified_bootstrap_ci(
+            results,
+            metric=metric,
+            key_fn=lambda p: _bucket_n_prior(
+                getattr(p, "n_prior_family_tickets", None)
+            ),
+            n_resamples=n_bootstrap,
+        )
+        for stratum, (ci, _pairwise) in per_stratum.items():
+            depth_ci_per_metric[metric][stratum] = {
+                name: {
+                    "point": c.point_estimate,
+                    "lo": c.lo,
+                    "hi": c.hi,
+                }
+                for name, c in ci.items()
+            }
+
     lofo_macros: dict[str, dict[str, Any]] = {}
     if include_lofo:
         lofo_macros = _compute_lofo_macros(instantiated, global_dir)
@@ -302,6 +808,7 @@ def run_comparison(
         orphan_recall_gap=orphan_gap,
         inclusive_strata=inclusive_strata,
         lofo_macros=lofo_macros,
+        depth_ci_per_metric=depth_ci_per_metric,
     )
 
 

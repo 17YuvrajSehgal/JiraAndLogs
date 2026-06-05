@@ -136,21 +136,40 @@ class RulePlanner(Planner):
         *,
         with_numeric: bool = False,
         with_embeddings: bool = False,
+        with_log_signatures: bool = False,
+        with_cross_encoder: bool = False,
     ) -> None:
         if chain is not None:
             self.chain = chain
             return
         base = self.HYBRID_CHAIN if with_numeric else self.DEFAULT_CHAIN
-        if with_embeddings:
-            # Insert embedding_similarity right after lexical_similarity so
-            # both write into similarity_scores (the embedding skill reads
-            # the BM25 value and blends).
-            base_list = list(base)
+        base_list = list(base)
+        if with_log_signatures:
+            # log_signature_similarity OVERWRITES similarity_scores —
+            # it replaces the lexical_similarity query vocabulary with
+            # engineer-vocabulary log lines. Place it AFTER
+            # lexical_similarity so it gets the last write.
             insert_at = base_list.index("lexical_similarity") + 1
+            base_list.insert(insert_at, "log_signature_similarity")
+        if with_embeddings:
+            # embedding_similarity BLENDS its scores 50/50 with whatever
+            # is in similarity_scores. Place it AFTER both lexical and
+            # log_signature so it blends with the most recent writer.
+            insert_at = (
+                base_list.index("log_signature_similarity") + 1
+                if with_log_signatures
+                else base_list.index("lexical_similarity") + 1
+            )
             base_list.insert(insert_at, "embedding_similarity")
-            self.chain = tuple(base_list)
-        else:
-            self.chain = base
+        if with_cross_encoder:
+            # cross_encoder_rerank OVERWRITES similarity_scores for the
+            # top-K candidates with cross-encoder joint scoring. Place
+            # it LAST among the similarity skills so it has access to
+            # the consensus from BM25 / log_signature / embedding to
+            # pick a sensible top-K to rerank.
+            insert_at = base_list.index("graph_score")
+            base_list.insert(insert_at, "cross_encoder_rerank")
+        self.chain = tuple(base_list)
 
     def plan(self, ctx: AgentContext) -> list[str]:
         return list(self.chain)

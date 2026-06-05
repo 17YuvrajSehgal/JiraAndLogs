@@ -1,8 +1,0 @@
-[comparison] running pipeline: loganalyzer
-[comparison] running pipeline: loganalyzer_with_jira
-[comparison] running pipeline: jira_only
-[comparison] running pipeline: logsense
-[comparison] building mean ensemble
-[comparison] computing stratified metrics
-[comparison] paired bootstrap (1000 resamples) per metric
-Wrote comparison report to data\derived\global\2026-05-22-dataset-v4-large-global\comparison\phase0.5-full
