@@ -186,6 +186,7 @@ def load_all_predictions(global_dir: Path) -> dict[str, WindowState]:
         },
         "hybrid_rrf_retrieval_llm": {
             "hybrid_rrf_retrieval", "hybrid_rrf_retrieval_llm",
+            "hybrid_rrf_retrieval_g3",
         },
         "kg_retrieval_rulebased": {
             "kg_retrieval_rulebased", "kg_retrieval", "kg_retrieval_g3",
