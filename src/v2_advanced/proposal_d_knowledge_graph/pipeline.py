@@ -62,6 +62,12 @@ class KnowledgeGraphRetrievalPipeline(PipelineRunner):
         humanized_subdir: str = "bulk-20260531",
         humanized_root: str = "jira-shadow-humanized-v2",
         extractions_subdir: str = "v2_kg_extractions",
+        # G3 (2026-06-05): optional separate cache dir for pre-extracted
+        # window facts. When set, kg_retrieval reads from
+        # <global_dir>/<window_extractions_subdir>/window/<wid>__<hash>.json
+        # instead of calling the LLM at query time. Falls through to
+        # rule-based extraction if a window has no cached file.
+        window_extractions_subdir: str | None = None,
         lm_studio_url: str = "http://localhost:1234",
         lm_studio_model: str = "local-model",
         neo4j_uri: str = "neo4j://127.0.0.1:7687",
@@ -76,6 +82,7 @@ class KnowledgeGraphRetrievalPipeline(PipelineRunner):
         self.humanized_subdir = humanized_subdir
         self.humanized_root = humanized_root
         self.extractions_subdir = extractions_subdir
+        self.window_extractions_subdir = window_extractions_subdir
         self.lm_studio_url = lm_studio_url
         self.lm_studio_model = lm_studio_model
         self.neo4j_uri = neo4j_uri
@@ -306,6 +313,38 @@ class KnowledgeGraphRetrievalPipeline(PipelineRunner):
         )
 
     def _extract_window(self, window, lm_client, window_cache) -> WindowExtraction:
+        # G3 (2026-06-05): if a separate window-cache subdir is configured,
+        # try to load a pre-extracted LLM result first. Falls through to
+        # rule-based or live LLM extraction on miss.
+        if self.window_extractions_subdir:
+            from .schema import WindowExtraction as _WE
+            import json as _json
+            g3_cache = (
+                window_cache.parent / self.window_extractions_subdir / "window"
+                if window_cache else None
+            )
+            if g3_cache and g3_cache.exists():
+                # Filename is "<window_id>__<hash>.json"; we don't have the
+                # hash but extract_from_window uses content_hash(evidence).
+                # Easier: use the consolidated jsonl if available.
+                pass
+            # Try the consolidated jsonl shortcut (much faster than per-file lookup)
+            if not hasattr(self, "_g3_index"):
+                self._g3_index = {}
+                consolidated = (
+                    window_cache.parent / self.window_extractions_subdir
+                    / "all_extractions.jsonl"
+                )
+                if consolidated.exists():
+                    with consolidated.open(encoding="utf-8") as fh:
+                        for line in fh:
+                            row = _json.loads(line)
+                            wid = row.get("window_id")
+                            if wid:
+                                self._g3_index[wid] = _WE.from_dict(row)
+            if window.window_id in self._g3_index:
+                return self._g3_index[window.window_id]
+
         if self.skip_window_extraction or lm_client is None:
             return self._rule_based_window_extraction(window)
         evidence = build_window_query_text(window) or ""

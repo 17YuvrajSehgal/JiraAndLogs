@@ -175,6 +175,19 @@ if _HAS_KG:
 
     KNOWN_PIPELINES["kg_retrieval_rulebased"] = _KGRetrievalRuleBased
 
+    # G3 (2026-06-05): symmetric LLM extraction. Uses G3's pre-extracted
+    # window facts (cached in v2_kg_extractions_windows/) instead of
+    # rule-based or live LLM extraction. Both sides of the graph match
+    # now use LLM-quality entities.
+    class _KGRetrievalG3(KnowledgeGraphRetrievalPipeline):
+        name = "kg_retrieval_g3"
+        def __init__(self) -> None:
+            super().__init__(
+                skip_window_extraction=True,
+                window_extractions_subdir="v2_kg_extractions_windows",
+            )
+    KNOWN_PIPELINES["kg_retrieval_g3"] = _KGRetrievalG3
+
 # v2_advanced Phase C — Hybrid SPLADE + BiEncoder + Graph via RRF.
 if _HAS_HYBRID:
     KNOWN_PIPELINES["hybrid_rrf_retrieval"] = HybridRRFRetrievalPipeline
@@ -187,6 +200,16 @@ if _HAS_HYBRID:
             super().__init__(skip_graph=True)
 
     KNOWN_PIPELINES["hybrid_rrf_no_graph"] = _HybridNoGraph
+
+    # G3 (2026-06-05): hybrid_rrf with symmetric LLM extraction.
+    class _HybridG3(HybridRRFRetrievalPipeline):
+        name = "hybrid_rrf_retrieval_g3"
+        def __init__(self) -> None:
+            super().__init__(
+                skip_window_extraction=True,
+                window_extractions_subdir="v2_kg_extractions_windows",
+            )
+    KNOWN_PIPELINES["hybrid_rrf_retrieval_g3"] = _HybridG3
 
 # v2_advanced G2 — fine-tuned cross-encoder retriever.
 if _HAS_CROSSENC:

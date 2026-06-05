@@ -76,6 +76,8 @@ class HybridRRFRetrievalPipeline(PipelineRunner):
         neo4j_user: str = "neo4j",
         neo4j_password: str = "123456789",
         extractions_subdir: str = "v2_kg_extractions",
+        # G3 (2026-06-05): optional pre-extracted window facts cache.
+        window_extractions_subdir: str | None = None,
         # Fusion config
         rrf_k: float = 60.0,
         retriever_weights: dict[str, float] | None = None,
@@ -97,6 +99,7 @@ class HybridRRFRetrievalPipeline(PipelineRunner):
         self.neo4j_user = neo4j_user
         self.neo4j_password = neo4j_password
         self.extractions_subdir = extractions_subdir
+        self.window_extractions_subdir = window_extractions_subdir
         self.rrf_k = rrf_k
         self.retriever_weights = retriever_weights or {"splade": 1.0, "biencoder": 1.0, "graph": 1.0}
         self.top_k_per_retriever = top_k_per_retriever
@@ -207,6 +210,7 @@ class HybridRRFRetrievalPipeline(PipelineRunner):
         kg_pipeline_helper = KnowledgeGraphRetrievalPipeline(
             humanized_subdir=self.humanized_subdir, humanized_root=self.humanized_root,
             skip_window_extraction=self.skip_window_extraction,
+            window_extractions_subdir=self.window_extractions_subdir,
         )
 
         def retrieve_three(w) -> dict[str, list[str]]:
