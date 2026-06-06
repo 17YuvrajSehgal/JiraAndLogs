@@ -24,7 +24,7 @@ Each phase has its own file: `Gn-<short-name>.md`. Structure:
 | G2 | [G2-crossencoder-rerank.md](G2-crossencoder-rerank.md) | ✅ done | SKIP | Cross-encoder rerank hurts cascade (−5pt Hit@5 in fusion mode) |
 | G3 | [G3-symmetric-llm-extraction.md](G3-symmetric-llm-extraction.md) | ✅ done | SKIP | Standalone kg +404% Hit@1, but cascade integration breaks (overlap-rerank shift) |
 | G4 | [G4-agent-phase3.md](G4-agent-phase3.md) | ✅ done | KEEP | Novel recall +119% rel, retrieval/triage all tied or up |
-| G5 | G5-llm-judge-reranker.md | 🟡 starting | TBD | — |
+| G5 | [G5-llm-judge-reranker.md](G5-llm-judge-reranker.md) | ✅ done | SKIP | LLM judge confidence uninformative (84% = 0.85); applying overrides drops Hit@1 by 2.7-13pts |
 | G6 | G6-distractor-sweep.md | pending | TBD | — |
 | G7 | G7-learned-novelty.md | pending | TBD | — |
 | G8 | G8-ood-eval.md | pending | TBD | — |
