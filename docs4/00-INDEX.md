@@ -27,7 +27,7 @@ Each phase has its own file: `Gn-<short-name>.md`. Structure:
 | G5 | [G5-llm-judge-reranker.md](G5-llm-judge-reranker.md) | ✅ done | SKIP | LLM judge confidence uninformative (84% = 0.85); applying overrides drops Hit@1 by 2.7-13pts |
 | G6 | [G6-distractor-sweep.md](G6-distractor-sweep.md) | ✅ done | KEEP (analysis) | Hit@5 only drops 2% at 50% distractor ratio (simulated); cascade is robust |
 | G7 | [G7-learned-novelty.md](G7-learned-novelty.md) | ✅ done | **KEEP** | **Novel recall +388% rel at preserved precision** (largest single-phase lift) |
-| G8 | G8-ood-eval.md | pending | TBD | — |
+| G8 | [G8-ood-eval.md](G8-ood-eval.md) | ✅ done | KEEP (analysis) | OOD F1 within −13% rel of ID; precision robust, recall splits by family structure |
 | FINAL | FINAL-summary.md | pending | — | — |
 
 ## Cumulative cascade as of G7
