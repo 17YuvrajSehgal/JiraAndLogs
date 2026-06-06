@@ -13,7 +13,9 @@ Thirteen independent ablations were run against the v2f cascade. Each tested one
 \caption{13 baseline ablations on the v2f cascade. Outcomes that improved the cascade are \textsc{kept}; outcomes that hurt are \textsc{rejected} (the simpler design wins).}
 \label{tab:baseline-ablations}
 \small
-\begin{tabularx}{\linewidth}{r X l}
+\setlength{\tabcolsep}{4pt}
+\renewcommand{\arraystretch}{1.15}
+\begin{tabularx}{\linewidth}{@{}r >{\raggedright\arraybackslash}X >{\raggedright\arraybackslash}X@{}}
 \toprule
 \# & Question & Outcome \\
 \midrule
@@ -45,7 +47,9 @@ The G-series was launched on 2026-06-05 with a single explicit purpose: try to c
 \caption{G-series outcomes. KEEP-headline = integrated into the final locked cascade. KEEP-analysis = the experiment is published as a robustness/generalization result but does not modify the cascade. SKIP = the variant hurt or didn't help.}
 \label{tab:g-summary}
 \small
-\begin{tabularx}{\linewidth}{l X l}
+\setlength{\tabcolsep}{4pt}
+\renewcommand{\arraystretch}{1.15}
+\begin{tabularx}{\linewidth}{@{}l >{\raggedright\arraybackslash}X >{\raggedright\arraybackslash}X@{}}
 \toprule
 Phase & Intervention & Verdict \\
 \midrule
