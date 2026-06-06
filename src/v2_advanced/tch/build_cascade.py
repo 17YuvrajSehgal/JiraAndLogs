@@ -89,6 +89,11 @@ L4_STACK_FEATURES = [
     "kg_retrieval_rulebased",
 ]
 
+# G7 (2026-06-06): learned novelty index (populated by load_all_predictions
+# when env TCH_LEARNED_NOVELTY_PATH is set). Maps window_id -> P(novel).
+_LEARNED_NOVELTY_INDEX: dict[str, float] = {}
+_LEARNED_NOVELTY_THRESHOLD: float = 0.3
+
 RRF_K = 60
 TOP_K_OUTPUT = 5
 # L1 threshold sweep on full split (218 true ticket_worthy):
@@ -161,6 +166,27 @@ def load_all_predictions(global_dir: Path) -> dict[str, WindowState]:
             if extra and (base / extra).exists():
                 load_plan.append(("diagnosis_agent", extra))
                 print(f"[build_cascade] EXTRA AGENT {extra}")
+
+    # G7 (2026-06-06): load learned-novelty predictions if env var set.
+    _learned_path = _os.environ.get("TCH_LEARNED_NOVELTY_PATH", "").strip()
+    if _learned_path:
+        global _LEARNED_NOVELTY_INDEX, _LEARNED_NOVELTY_THRESHOLD
+        _LEARNED_NOVELTY_INDEX = {}
+        full_path = base / _learned_path
+        if full_path.exists():
+            with full_path.open(encoding="utf-8") as fh:
+                for line in fh:
+                    d = json.loads(line)
+                    wid = d.get("window_id")
+                    if wid:
+                        _LEARNED_NOVELTY_INDEX[wid] = float(d.get("p_novel") or 0.0)
+            _t = _os.environ.get("TCH_LEARNED_NOVELTY_THRESHOLD", "").strip()
+            if _t:
+                try:
+                    _LEARNED_NOVELTY_THRESHOLD = float(_t)
+                except ValueError:
+                    pass
+            print(f"[build_cascade] LEARNED NOVELTY loaded {len(_LEARNED_NOVELTY_INDEX)} rows, threshold={_LEARNED_NOVELTY_THRESHOLD}")
 
     # G-phase aliasing: a file may use a suffixed pipeline_name (e.g.
     # bi_encoder_retrieval_g1) but the cascade still slots it as the
@@ -341,15 +367,26 @@ def assemble_cascade_prediction(state: WindowState, stacked_triage: float) -> di
     max_ret_conf = max_retrieval_confidence(state)
     free_novelty_signal = max_ret_conf < 0.5
 
+    # G7 (2026-06-06): optionally replace free_novelty_signal with a
+    # learned classifier loaded from disk. When _LEARNED_NOVELTY_INDEX
+    # is populated (set by load_all_predictions via env var), it returns
+    # P(novel) per window_id; we OR-combine it with the agent signal
+    # using a learned threshold (default 0.3 from G7's F1 sweep).
+    learned_p = _LEARNED_NOVELTY_INDEX.get(state.window_id) if _LEARNED_NOVELTY_INDEX else None
+    if learned_p is not None:
+        learned_signal = learned_p >= _LEARNED_NOVELTY_THRESHOLD
+    else:
+        learned_signal = False
+
     agent_top = state.top_by_pipe.get("diagnosis_agent")
     agent_novel = state.is_novel_by_pipe.get("diagnosis_agent")
     if agent_top is not None:
         agent_ran = True
         final_top = l2_top
-        is_novel = bool(agent_novel) or free_novelty_signal
+        is_novel = bool(agent_novel) or free_novelty_signal or learned_signal
     else:
         final_top = l2_top
-        is_novel = free_novelty_signal
+        is_novel = free_novelty_signal or learned_signal
         agent_ran = False
 
     return {
