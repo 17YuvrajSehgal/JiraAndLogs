@@ -48,8 +48,6 @@ PIPELINE_FILES = {
     "hybrid_rrf_retrieval_llm":       "v2c-hybrid-llm/per-window-predictions.jsonl",
     "kg_retrieval_rulebased":         "v2d-kg-rulebased/per-window-predictions.jsonl",
     "diagnosis_agent":                "v2e-agent-llm/per-window-predictions.jsonl",
-    # G2 optional — only loaded if TCH_ENABLE_CROSSENC=1 (see below)
-    "cross_encoder_retrieval_g2":     "v2g-final-models/g2-crossencoder-rerank/per-window-predictions.jsonl",
 }
 
 # Optional: additional agent prediction files to MERGE with the primary
@@ -80,12 +78,6 @@ L2_RETRIEVERS = [
     "logseq2vec_retrieval_pretrained",
     "kg_retrieval_rulebased",
 ]
-
-# G2 (2026-06-05): optionally add the fine-tuned cross-encoder as a 5th
-# L2 RRF voter. Enable via TCH_ENABLE_CROSSENC=1.
-import os as _os
-if _os.environ.get("TCH_ENABLE_CROSSENC", "").strip() == "1":
-    L2_RETRIEVERS = list(L2_RETRIEVERS) + ["cross_encoder_retrieval_g2"]
 
 # Which pipelines' triage_score to stack for L4.
 L4_STACK_FEATURES = [
@@ -131,7 +123,6 @@ class WindowState:
 
 
 def load_all_predictions(global_dir: Path) -> dict[str, WindowState]:
-    import os as _os_local
     base = global_dir / COMPARISON_BASE
     out: dict[str, WindowState] = {}
 
@@ -141,22 +132,16 @@ def load_all_predictions(global_dir: Path) -> dict[str, WindowState]:
     # subset) merge with Phase 1 coverage.
     pipeline_files = dict(PIPELINE_FILES)
 
-    # Strip optional pipelines whose files don't exist or whose env-var
-    # toggle is off. cross_encoder_retrieval_g2 is only consulted when
-    # TCH_ENABLE_CROSSENC=1 (matches the L2_RETRIEVERS toggle above).
-    if (base / pipeline_files["cross_encoder_retrieval_g2"]).exists() is False \
-       or _os_local.environ.get("TCH_ENABLE_CROSSENC", "").strip() != "1":
-        pipeline_files.pop("cross_encoder_retrieval_g2", None)
-
     # G-phase overrides (env vars). Each phase that retrains a pipeline can
     # point the cascade at its own per-window-predictions.jsonl without
     # clobbering the locked v2f baseline. The pipeline_name inside the
     # file may have a "_g1" suffix; we strip it via a special-case below
     # so the loader still maps it to the canonical name.
+    import os as _os
     _overrides = {
-        "bi_encoder_retrieval":     _os_local.environ.get("TCH_OVERRIDE_BIENC", "").strip(),
-        "hybrid_rrf_retrieval_llm": _os_local.environ.get("TCH_OVERRIDE_HYBRID_LLM", "").strip(),
-        "kg_retrieval_rulebased":   _os_local.environ.get("TCH_OVERRIDE_KG", "").strip(),
+        "bi_encoder_retrieval":     _os.environ.get("TCH_OVERRIDE_BIENC", "").strip(),
+        "hybrid_rrf_retrieval_llm": _os.environ.get("TCH_OVERRIDE_HYBRID_LLM", "").strip(),
+        "kg_retrieval_rulebased":   _os.environ.get("TCH_OVERRIDE_KG", "").strip(),
     }
     for pipe_name, rel in _overrides.items():
         if rel and (base / rel).exists():
@@ -169,7 +154,7 @@ def load_all_predictions(global_dir: Path) -> dict[str, WindowState]:
             load_plan.append(("diagnosis_agent", extra))
     # G-phase additional agent files (env var: comma-separated paths
     # relative to comparison/)
-    _extra_agent_env = _os_local.environ.get("TCH_EXTRA_AGENT_FILES", "").strip()
+    _extra_agent_env = _os.environ.get("TCH_EXTRA_AGENT_FILES", "").strip()
     if _extra_agent_env:
         for extra in _extra_agent_env.split(","):
             extra = extra.strip()
@@ -186,7 +171,6 @@ def load_all_predictions(global_dir: Path) -> dict[str, WindowState]:
         },
         "hybrid_rrf_retrieval_llm": {
             "hybrid_rrf_retrieval", "hybrid_rrf_retrieval_llm",
-            "hybrid_rrf_retrieval_g3",
         },
         "kg_retrieval_rulebased": {
             "kg_retrieval_rulebased", "kg_retrieval", "kg_retrieval_g3",
