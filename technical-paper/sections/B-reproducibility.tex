@@ -1,0 +1,111 @@
+\section{Reproducibility}
+\label{app:repro}
+
+Every artifact described in this report can be regenerated from scripts and a frozen split manifest. The end-to-end reproduction guide is \texttt{docs3/19-REPRODUCE.md}.
+
+\subsection{Hardware and software requirements}
+
+\begin{itemize}
+\item Windows 11 host with WSL2 or PowerShell + Docker Desktop.
+\item kind (Kubernetes-in-Docker) for the local 3-node cluster, or a single GCE \texttt{e2-standard-16} VM for the full v5-large collection.
+\item NVIDIA GPU with $\geq 8$ GB VRAM (verified on RTX 5060).
+\item LM Studio with Qwen 3.6 35B-A3B loaded (MoE offload to system RAM, $\sim$13 GB resident).
+\item Python 3.11 with the project's \texttt{.venv} (\texttt{requirements.txt} pinned to specific sklearn / sentence-transformers / sklearn versions).
+\item Neo4j Desktop or Docker container for the knowledge-graph storage.
+\end{itemize}
+
+\subsection{One-command dataset workflow}
+
+\begin{lstlisting}[basicstyle=\ttfamily\footnotesize]
+powershell -NoProfile -ExecutionPolicy Bypass `
+  -File scripts\research-lab\collect-dataset-corpus.ps1 `
+  -CorpusFile "deploy\research-lab\corpora\dataset-v5-quick.json" `
+  -DatasetRunPrefix $env:RUN_PREFIX `
+  -GlobalDatasetId $env:GLOBAL_DATASET_ID `
+  -PythonExe .venv\Scripts\python.exe `
+  -Quick -BuildTriage -HaltOnValidationFail `
+  -SkipDerivedBuild -SkipAggregateBuild
+\end{lstlisting}
+
+Produces validated raw runs under \texttt{data/runs/<RUN\_PREFIX>-*}, per-run derived files, and the global derived dataset under \texttt{data/derived/global/<GLOBAL\_DATASET\_ID>/}.
+
+\subsection{Per-pipeline training and prediction}
+
+Each pipeline registers with the comparison runner. Example: train and predict the V2 SOTA pipeline.
+
+\begin{lstlisting}[basicstyle=\ttfamily\footnotesize]
+python -m comparison.cli `
+  --global-dir data/derived/global/2026-05-25-dataset-v5-large-global `
+  --pipelines memorygraph_v2_sota_nw080 `
+  --output-dir data/derived/global/.../comparison/v2a-resplit
+\end{lstlisting}
+
+Produces \texttt{per-window-predictions.jsonl}, \texttt{report.json}, \texttt{report.md} under the output directory.
+
+\subsection{LLM extraction (Qwen 35B via LM Studio)}
+
+Set the OpenAI-compatible endpoint and run the per-ticket extraction CLI:
+
+\begin{lstlisting}[basicstyle=\ttfamily\footnotesize]
+$env:OPENAI_BASE_URL = "http://localhost:1234/v1"
+$env:OPENAI_API_KEY = "lm-studio"
+
+python -m v2_advanced.proposal_d_knowledge_graph.extract_tickets_cli `
+  --memory-corpus data/derived/global/.../jira-memory-corpus.jsonl `
+  --out-dir data/derived/global/.../v2_kg_extractions
+\end{lstlisting}
+
+Output: \texttt{all\_extractions.jsonl} (one row per ticket). Subsequent Neo4j load script populates the knowledge graph.
+
+\subsection{Cascade assembly}
+
+\begin{lstlisting}[basicstyle=\ttfamily\footnotesize]
+$env:TCH_OVERRIDE_BIENC = "v2g-final-models/g1-bienc-hard-negatives/predictions-bienc.jsonl"
+$env:TCH_EXTRA_AGENT_FILES = "v2g-final-models/g4-agent-phase3/per-window-predictions.jsonl"
+$env:TCH_LEARNED_NOVELTY_PATH = "v2g-final-models/g7-learned-novelty/learned_novelty.jsonl"
+$env:TCH_LEARNED_NOVELTY_THRESHOLD = "0.50"
+
+python -m v2_advanced.tch.build_cascade `
+  --global-dir data/derived/global/2026-05-25-dataset-v5-large-global `
+  --output-dir data/derived/global/.../comparison/v2g-final-models/final
+\end{lstlisting}
+
+Output: \texttt{per-window-predictions.jsonl}, \texttt{tch\_metrics.json}, \texttt{stacker.pkl}, \texttt{report.md}, and \texttt{headline-final.json}.
+
+\subsection{Locked git commits per phase}
+
+\begin{table}[h]
+\centering
+\small
+\begin{tabular}{ll}
+\toprule
+Phase / artifact & Commit \\
+\midrule
+v2f cascade lock (baseline ablations done) & \texttt{b3bf12f} \\
+v2f Phase 2 agent integration              & \texttt{b3bf12f} \\
+G1 (BiEncoder hard-neg + random-neg)        & \texttt{c27a54c} \\
+G2 (cross-encoder reranker, SKIP)           & \texttt{0a9e83d} \\
+G3 (symmetric LLM extraction, SKIP)         & \texttt{1481d9f} \\
+G4 (agent Phase 3, KEEP)                    & \texttt{56e53bf} \\
+G5 (LLM judge reranker, SKIP)               & \texttt{59cd3fe} \\
+G6 (distractor robustness sweep)            & \texttt{ae59789} \\
+G7 (learned novelty threshold, KEEP)        & \texttt{a79ba5d} \\
+G8 (OOD evaluation)                         & \texttt{801623b} \\
+Final TCH lock                              & \texttt{b7557c4} \\
+Meta-analysis (cross-phase synthesis)       & \texttt{e485149} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Verifying a headline number}
+
+Any reported headline number can be traced to:
+
+\begin{enumerate}
+\item the cascade output directory at \texttt{data/derived/global/.../comparison/v2g-final-models/final/}
+\item the \texttt{tch\_metrics.json} or \texttt{headline-final.json} within that directory
+\item the source code at \texttt{src/v2\_advanced/tch/build\_cascade.py} (cascade assembly) and \texttt{src/v2\_advanced/tch/novelty\_calibration.py} (G7 learned classifier)
+\item the per-pipeline predictions cached under each phase's directory
+\end{enumerate}
+
+The reproduction guide \texttt{docs3/19-REPRODUCE.md} provides a checklist for re-running each phase from a clean checkout.
