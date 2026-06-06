@@ -29,6 +29,7 @@ Each phase has its own file: `Gn-<short-name>.md`. Structure:
 | G7 | [G7-learned-novelty.md](G7-learned-novelty.md) | ✅ done | **KEEP** | **Novel recall +388% rel at preserved precision** (largest single-phase lift) |
 | G8 | [G8-ood-eval.md](G8-ood-eval.md) | ✅ done | KEEP (analysis) | OOD F1 within −13% rel of ID; precision robust, recall splits by family structure |
 | FINAL | [FINAL-summary.md](FINAL-summary.md) | ✅ done | — | Novel recall +388% rel at preserved precision; cascade robust to noise and OOD shift |
+| META | [META-ANALYSIS.md](META-ANALYSIS.md) | ✅ done | — | Cross-phase synthesis: model is publication-ready; 4 optional follow-ups ranked by ROI |
 
 ## Cumulative cascade as of G7
 
