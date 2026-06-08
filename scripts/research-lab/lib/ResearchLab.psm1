@@ -824,6 +824,12 @@ function Get-ResearchLabScenarioConfig {
         execution_composition_type = Get-ResearchLabYamlScalar -Path $ScenarioFile -KeyPath @("execution", "composition_type") -AsString
         execution_cascade_emergence_window_seconds = Get-ResearchLabYamlScalar -Path $ScenarioFile -KeyPath @("execution", "cascade_emergence_window_seconds")
         execution_components_file = Get-ResearchLabYamlScalar -Path $ScenarioFile -KeyPath @("execution", "components_file") -AsString
+        # OTel Demo Flagd primitive (docs5/01 Phase 1b, 2026-06-08): all
+        # OPTIONAL and null on OB scenarios.
+        execution_flagd_flag = Get-ResearchLabYamlScalar -Path $ScenarioFile -KeyPath @("execution", "flagd_flag") -AsString
+        execution_flagd_variant = Get-ResearchLabYamlScalar -Path $ScenarioFile -KeyPath @("execution", "flagd_variant") -AsString
+        execution_flagd_configmap_name = Get-ResearchLabYamlScalar -Path $ScenarioFile -KeyPath @("execution", "flagd_configmap_name") -AsString
+        execution_flagd_configmap_key = Get-ResearchLabYamlScalar -Path $ScenarioFile -KeyPath @("execution", "flagd_configmap_key") -AsString
     }
 }
 

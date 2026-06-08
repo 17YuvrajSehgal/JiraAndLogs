@@ -47,8 +47,6 @@ execution:
   namespace: otel-demo-research
   flagd_flag: paymentFailure
   flagd_variant: "100%"
-  flagd_configmap_name: otel-demo-flagd-config
-  flagd_configmap_key: demo.flagd.json
 triage:
   schema_version: 1
   scenario_family: payment-outage
