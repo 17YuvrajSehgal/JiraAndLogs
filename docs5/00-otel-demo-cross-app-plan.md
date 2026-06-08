@@ -14,7 +14,7 @@
 2. [Why OTel Demo (vs the alternatives)](#2-why-otel-demo-vs-the-alternatives)
 3. [What we will collect — the data contract](#3-what-we-will-collect--the-data-contract)
 4. [OTel Demo architecture overview](#4-otel-demo-architecture-overview)
-5. [Scenario taxonomy — 27 transferred + 5 new Kafka families](#5-scenario-taxonomy--27-transferred--5-new-kafka-families)
+5. [Scenario taxonomy — single-fault families, graded difficulty (L1–L4), and propagation evidence](#5-scenario-taxonomy--27-transferred--5-new-kafka-families)
 6. [Telemetry plumbing — what we plug into our existing pipeline](#6-telemetry-plumbing--what-we-plug-into-our-existing-pipeline)
 7. [Fault-injection strategy](#7-fault-injection-strategy)
 8. [Humanized Jira corpus generation](#8-humanized-jira-corpus-generation)
@@ -303,6 +303,7 @@ L3 only works if the *secondary* fault genuinely manifests as a downstream obser
 - The secondary service's error rate / latency moves measurably during the active-fault window.
 - The secondary's signal is distinguishable from baseline traffic.
 - The two faults are temporally separable in the telemetry (primary errors → ~10–30s lag → secondary errors).
+- **Trace-level propagation is observable** — error spans at the primary service appear as parent / linked-trace ancestors of error spans at the secondary service, with non-trivial fan-out depth. See §5.6 for the propagation-evidence rationale.
 
 If a cascade scenario doesn't actually cascade (e.g., the dependent service has aggressive retries that mask the failure), drop it from the corpus rather than running it under false-pretense L3 labeling. Better to ship 2 valid L3 scenarios than 4 mislabeled ones.
 
@@ -312,6 +313,122 @@ If a cascade scenario doesn't actually cascade (e.g., the dependent service has 
 2. **Graded-difficulty results are reviewer-credible.** A monotone L1 → L2 → L3 degradation curve, reported with bootstrap CIs, is the kind of result ICSE reviewers expect from an empirical systems paper. It's hard to wave away.
 3. **Multi-gold retrieval is a new claim axis** that the OB experiments cannot make. The paper section §6.5 (cross-app) becomes meaningfully different from §5 (anchor experiment) and §6 (G-series), not just "same experiments on a different app."
 4. **Cascade scenarios are root-cause attribution evidence.** Even if we don't claim "TCH does root-cause attribution," reporting `PrimaryGold@5` on L3 scenarios shows whether the cascade naturally prioritizes upstream causes over downstream symptoms — a property that is highly relevant to real on-call workflows.
+
+### 5.6 Long-request propagation evidence — depth and async-bridged traces
+
+OTel Demo produces substantially longer and topologically richer request traces than Online Boutique. This is a **second-order architectural-distance advantage** that compounds with §5.5: cascading faults are not only injected by us, they are *trace-observable* in the resulting telemetry. The L3 cascade scenarios in §5.5 are the primary consumer of this evidence; the pilot validation step in §5.5.7 depends on it.
+
+#### 5.6.1 What "long request" means quantitatively
+
+The canonical "place an order" trace in OTel Demo, under baseline traffic:
+
+| Trace property | Online Boutique | OTel Demo | Δ |
+|---|---:|---:|---:|
+| Mean spans per checkout request | ~8–10 | ~15–20 | **≈2×** |
+| Distinct services per checkout request | 6 | 10+ | **≈1.7×** |
+| Maximum call-chain depth | 4 | 6–7 | +50% |
+| Async-bridged spans (Kafka header propagation) | 0 | 2 (accounting, fraud-detection) | **new dimension** |
+| Polyglot span emitters per trace | ~3 languages | ~7 languages | **2.3×** |
+
+The exact numbers will be measured in Phase 3 pilot — these are the upstream-documented order-of-magnitude expectations. The point is that the OTel Demo "place an order" path has been deliberately designed by OTel maintainers as a reference for a non-trivial polyglot trace, including the Kafka async bridge specifically because synchronous-only call chains are not representative of production microservices.
+
+#### 5.6.2 Why the Kafka async bridge is a separate architectural axis
+
+Synchronous trace propagation (everything in OB, most of OTel Demo) means a child span has a direct parent span — they share a trace ID and the parent-child relationship is explicit. Async propagation through Kafka is different:
+
+- `checkoutservice` produces a message to topic `orders` with W3C trace context in the message headers.
+- `accountingservice` and `fraud-detection` consume the message and extract the trace context.
+- Their consumer spans are **linked** (via the span-link mechanism in OTel) to the producer span, not nested under it.
+
+This means:
+1. Looking at `checkoutservice`'s trace alone, you cannot tell whether downstream consumers ran successfully — they appear as fire-and-forget produce.
+2. The *absence* of consumer spans during a Kafka-broker-outage is itself the signal. A retrieval system that only looks at error-span counts will miss it; one that looks at expected-vs-observed consumer activity will catch it.
+3. The trace-feature design space is fundamentally larger on OTel Demo than on OB.
+
+This is not a minor footnote — it is the second strongest architectural-distance argument the paper can make (after the existence of Kafka itself as a §5.2 family axis).
+
+#### 5.6.3 How propagation evidence interacts with the L3 cascade scenarios
+
+Each L3 cascade scenario has a *predicted* propagation signature that the pilot validates. Concrete examples:
+
+**`cascade-kafka-broker-checkout` (kafka-broker-outage → checkout-outage):**
+- T+0s: kafka brokers scaled to 0
+- T+~2s: checkoutservice's kafka producer span starts failing with broker-unreachable
+- T+~5s: checkoutservice returns 500 to frontend
+- Meanwhile (the "silence signal"): no new consumer spans appear in accountingservice or fraud-detection
+- Trace pattern: error spans in `checkoutservice.PlaceOrder > kafka.produce` (depth 2) + missing-expected consumer spans
+
+**`cascade-productcatalog-latency-recommendation-timeout`:**
+- T+0s: productcatalog latency env injected
+- T+~5s: recommendationservice's calls to productcatalog start timing out (its retry budget exhausts)
+- T+~10s: recommendation returns degraded responses to frontend
+- Trace pattern: high-latency span at `recommendationservice → productcatalogservice` (depth 2) + error span at `recommendationservice` (depth 1, propagated upward)
+
+**`cascade-valkey-cart-checkout`:**
+- T+0s: valkey-cart scaled to 0
+- T+~3s: cartservice fails on Redis ops
+- T+~6s: checkoutservice's cart-read call fails
+- T+~8s: checkoutservice returns 500
+- Trace pattern: error originates at `cartservice → valkey` (depth 3 from frontend), propagates up to `checkoutservice → cartservice` (depth 2), then `frontend → checkoutservice` (depth 1)
+
+**The propagation depth becomes a labeled property of each L3 scenario.** Recording `cascade_primary_depth` and `cascade_secondary_depth` per scenario lets us stratify L3 results by how deep the cascade reaches into the call chain. A reviewer asking "does the cascade work better when the cause is closer to the leaf or to the root?" gets a direct answer from the data.
+
+#### 5.6.4 Optional propagation-aware feature additions — DEFERRED to future work
+
+We could augment the 94-feature numeric pipeline with new path-aware features specifically for OTel Demo:
+
+- `trace_mean_depth` — mean call-chain depth across requests in the window
+- `trace_max_fanout` — maximum span fan-out
+- `trace_error_propagation_depth` — mean depth at which error spans originate (measures "how deep in the chain did the failure start")
+- `trace_kafka_bridged_count` — number of traces crossing the sync→async boundary
+- `trace_silent_consumer_count` — count of consumer services that processed zero messages despite producer activity (the silence signal)
+
+**Decision: do not add these features to the current cross-app evaluation.** Reasons:
+
+1. Adding features changes the L1 stacker's input dimensionality. The zero-shot transfer claim (§10 column A) requires the OB-trained cascade to consume OTel Demo windows with the **same 94-column input vector**. Adding columns means refitting HGB and the L1 stacker, weakening the claim.
+2. The propagation features would be **OTel Demo-only** — we have no way to produce them retroactively on the locked OB dataset. Asymmetric features prevent direct comparison.
+3. The evidence is **already implicitly captured** in the existing 94 features via `trace_error_count`, `trace_latency_p95_ms`, `trace_span_count`, etc. The propagation features would refine these aggregates, not introduce orthogonal signal.
+
+**Instead, document propagation features as a follow-up.** The paper's `10-future-work.tex` already lists "future trace-path-aware features"-shaped items; an explicit entry for "path-aware retrieval features on OTel Demo" becomes the natural sequel.
+
+#### 5.6.5 What we DO record per window — propagation metadata, not features
+
+Even without adding new features to the cascade, we record propagation evidence as **per-window metadata** in `telemetry_windows.jsonl`:
+
+```json
+{
+  // ... existing fields ...
+  "propagation_evidence": {
+    "max_trace_depth_observed": 6,
+    "kafka_bridged_traces_count": 12,
+    "silent_consumer_services": ["fraud-detection", "accountingservice"],   // L3 kafka cascades only
+    "error_origin_depth_distribution": {"1": 0, "2": 14, "3": 87, "4": 6}    // most errors at depth 3 → cartservice
+  }
+}
+```
+
+This metadata is **not consumed by the cascade** but is preserved for:
+- Cascade-validity check in §5.5.7 (does this L3 scenario actually cascade?)
+- Per-stratum analysis in the cross-app section (do propagation-deep scenarios degrade more than propagation-shallow ones?)
+- Future-work path-aware feature engineering (§5.6.4)
+
+The export script `export-telemetry-window.ps1` needs a small extension to compute these — estimate ~½ day, included within the §6 telemetry-plumbing work already budgeted.
+
+#### 5.6.6 Why this matters for ICSE — and what it does NOT claim
+
+**What this enables in the paper:**
+
+1. A concrete "architectural-distance" argument that goes beyond "OTel Demo has more services" — namely, "OTel Demo has 2× trace depth, polyglot span emitters per trace, and an async bridge that does not exist in any synchronous-only test app."
+2. Per-L3-scenario propagation depth as a stratification axis. Lets the discussion section say "the cascade handles cascade scenarios whose primary cause is at depth 2 better than at depth 4" — or whatever the data shows.
+3. A clean follow-up framing: "path-aware retrieval features on async-bridged traces" becomes a natural next paper without rescoping the current one.
+
+**What this does NOT claim:**
+
+- We do **not** claim TCH leverages propagation features. It doesn't (in this paper). The 94 numeric features are unchanged from OB.
+- We do **not** claim trace-bridged async pattern recognition is something the cascade does explicitly. The existing aggregates may or may not capture it implicitly; we report whichever way the data falls.
+- We do **not** make a "cascade does root-cause attribution" claim beyond reporting `PrimaryGold@5` on L3 scenarios. Propagation evidence is the *substrate* that makes that report meaningful, not a claim of explicit causal reasoning.
+
+The honest framing: propagation evidence is the **observability infrastructure** that makes the L3 cascade scenarios validatable as real cascades. Without it, L3 scenarios are just labeled. With it, the labels are checkable.
 
 ---
 
@@ -597,13 +714,14 @@ So: G4 (free), G6 (~1 hr), G8 (~2 hrs). Skip the rest. Document in the paper whi
 
 A new section (call it `08-cross-app.tex` between `07-results.tex` and `08-discussion.tex`) covering:
 
-1. **Setup** — OTel Demo overview, scenario taxonomy delta (32 single + 10 multi-fault), dataset stats table.
+1. **Setup** — OTel Demo overview, scenario taxonomy delta (32 single + 10 multi-fault), dataset stats table, **trace-propagation profile** (mean depth, polyglot emitters, async bridge — see §5.6).
 2. **Headline cross-app table (L1 single-fault)** — columns A / B / C as in §10.2.
 3. **Kafka-family results** — separate sub-table showing per-family Hit@5 on the 5 new Kafka families.
 4. **Graded-difficulty results (L1 / L2 / L3 / L4)** — the second headline. New table per §10.2. This is the section that does NOT have an OB analogue; it's pure new contribution.
-5. **Per-stratum delta** — does the cascade lose more on certain families / window types / difficulty levels?
-6. **Cross-app robustness** — G6 distractor sweep on OTel, G8 LOFO on OTel.
-7. **Discussion** — what transferred, what didn't, what this tells us about the cascade's structural assumptions; how cascade-difficulty degradation interacts with the cascade's L2 fusion design.
+5. **L3 cascade depth stratification** — per-L3-scenario Hit@5 / PrimaryGold@5 stratified by `cascade_primary_depth`. The substrate for this is the propagation-evidence metadata recorded per §5.6.5.
+6. **Per-stratum delta** — does the cascade lose more on certain families / window types / difficulty levels?
+7. **Cross-app robustness** — G6 distractor sweep on OTel, G8 LOFO on OTel.
+8. **Discussion** — what transferred, what didn't, what this tells us about the cascade's structural assumptions; how cascade-difficulty degradation interacts with the cascade's L2 fusion design; what propagation evidence reveals about which cascades are easy vs hard.
 
 Also update:
 
@@ -782,6 +900,7 @@ These are decisions to make before / during execution. Listed here so they don't
 5. **Does the humanizer need a "Kafka engineer voice" tweak, or does the existing engineer voice work?** Resolve during Phase 5 authoring of the Kafka symptom map.
 6. **Do we run the cascade with the OTel test windows mixed into the OB memory (single combined corpus), separately (two independent evaluations), or both?** Recommend: **separately** for the cleanest cross-app claim. A combined-corpus experiment is a possible follow-up but isn't the primary deliverable.
 7. **Branch strategy.** Cut from `master-final-models` (which has the locked TCH) to preserve the regression baseline. Alternatively, cut from `master` and pull in the G-series. Decide before Phase 0.
+8. **Propagation-aware features as a follow-up paper.** §5.6.4 defers path-aware retrieval features to future work. Decide whether the current paper's §10-future-work.tex gets a single bullet flagging this, or whether a full follow-up paper outline lives in a new `docs5/future-work-propagation-features.md`. Recommend the bullet for now.
 
 ---
 
