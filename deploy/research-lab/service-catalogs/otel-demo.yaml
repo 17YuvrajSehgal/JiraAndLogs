@@ -1,0 +1,190 @@
+# OpenTelemetry Demo (Astronomy Shop) service catalog.
+#
+# Used by extractor / humanizer / Jira generator when invoked against
+# OTel Demo dataset runs (opt-in via KG_SERVICE_CATALOG env var or
+# --service-catalog argument).
+#
+# Sourced from opentelemetry-demo/.env (IMAGE_VERSION=2.2.0) and
+# opentelemetry-demo/src/flagd/demo.flagd.json. The Kafka downstream
+# consumers (accounting + fraud-detection) are deliberately listed
+# because they are the architectural-distance evidence relative to OB.
+
+app_id: otel-demo
+display_name: OpenTelemetry Astronomy Shop
+namespace: otel-demo-research
+
+canonical_services:
+  # Frontend stack
+  - name: frontend
+    aliases: [astronomy-shop, web, ui]
+    language: typescript
+    role: web-ui
+    criticality: critical
+  - name: frontend-proxy
+    aliases: [envoy-frontend, edge-proxy]
+    language: cpp
+    role: edge-proxy
+    criticality: critical
+
+  # Core e-commerce services
+  - name: cart
+    aliases: [cartservice, cart-service]
+    language: dotnet
+    role: cart
+    criticality: high
+  - name: checkout
+    aliases: [checkoutservice, checkout-service]
+    language: go
+    role: order-placement
+    criticality: critical
+  - name: currency
+    aliases: [currencyservice, currency-service, fx service]
+    language: cpp
+    role: fx-conversion
+    criticality: high
+  - name: payment
+    aliases: [paymentservice, payment-service]
+    language: node
+    role: payment-processing
+    criticality: critical
+  - name: product-catalog
+    aliases:
+      - productcatalogservice
+      - product catalog
+      - catalog service
+    language: go
+    role: catalog
+    criticality: critical
+  - name: product-reviews
+    aliases: [productreviews, reviews]
+    language: python
+    role: reviews
+    criticality: medium
+  - name: quote
+    aliases: [quoteservice, quote-service, shipping quote]
+    language: php
+    role: shipping-cost-estimate
+    criticality: high
+  - name: recommendation
+    aliases: [recommendationservice, recs, recommendations]
+    language: python
+    role: recommendations
+    criticality: medium
+  - name: shipping
+    aliases: [shippingservice, ship-service]
+    language: rust
+    role: shipping
+    criticality: high
+  - name: email
+    aliases: [emailservice, email-service]
+    language: ruby
+    role: notifications
+    criticality: medium
+  - name: ad
+    aliases: [adservice, ads, ad-service]
+    language: java
+    role: ads
+    criticality: low
+  - name: image-provider
+    aliases: [imageprovider]
+    language: nginx
+    role: image-serving
+    criticality: low
+  - name: llm
+    aliases: [llm-service, astronomy-llm]
+    language: python
+    role: llm-summaries
+    criticality: medium
+
+  # Kafka downstream consumers — the architectural-distance evidence
+  - name: accounting
+    aliases: [accountingservice]
+    language: dotnet
+    role: kafka-consumer-ledger
+    criticality: low
+  - name: fraud-detection
+    aliases: [frauddetection]
+    language: kotlin
+    role: kafka-consumer-fraud
+    criticality: low
+
+  # Synthetic load
+  - name: load-generator
+    aliases: [loadgenerator, load generator, locust]
+    language: python
+    role: synthetic-traffic
+    criticality: low
+
+canonical_components:
+  # Standard cluster components (inherited from OB catalog)
+  - envoy
+  - kubelet
+  - kafka
+  - postgres
+  - prometheus
+  - grafana
+  - loki
+  - tempo
+  - ingress
+  - configmap
+  - secret
+  - pvc
+  - pod
+  - deployment
+  - hpa
+  - vpa
+  - statefulset
+  # OTel Demo-specific infra
+  - valkey-cart                          # Redis-compatible cache for cart-service
+  - astronomy-db                         # PostgreSQL backing accounting + product-reviews
+  - flagd                                # Feature flag service
+  - flagd-ui                             # Feature flag UI
+
+canonical_error_classes:
+  grpc:
+    - DeadlineExceeded
+    - Unavailable
+    - Internal
+    - ResourceExhausted
+    - NotFound
+    - Unauthenticated
+    - PermissionDenied
+    - Aborted
+    - FailedPrecondition
+    - AlreadyExists
+    - OutOfRange
+    - Cancelled
+    - DataLoss
+    - Unknown
+    - Unimplemented
+    - InvalidArgument
+  k8s:
+    - OOMKilled
+    - CrashLoopBackOff
+    - ImagePullBackOff
+    - ContainerCannotRun
+    - PodPending
+    - NodeNotReady
+  http:
+    - "500"
+    - "502"
+    - "503"
+    - "504"
+    - "429"
+  # OTel Demo-specific error patterns
+  kafka:
+    - BrokerNotAvailable
+    - ConsumerLagSpike
+    - PartitionRebalance
+    - DeadLetterAccumulation
+    - ProducerError
+
+infra_components:
+  - name: kafka
+    role: message-broker
+  - name: valkey-cart
+    role: cache
+  - name: astronomy-db
+    role: database
+  - name: flagd
+    role: feature-flags
