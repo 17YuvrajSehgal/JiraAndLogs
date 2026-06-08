@@ -17,9 +17,13 @@ metadata:
     dataset.research.io/app-id: "otel-demo"
     dataset.research.io/cluster: "research-lab"
     # Pod Security Standards — match the OB namespace policy
-    pod-security.kubernetes.io/enforce: baseline
-    pod-security.kubernetes.io/audit: baseline
-    pod-security.kubernetes.io/warn: baseline
+    # OTel Demo's bundled collector uses a hostPath volume to expose host
+    # metrics (system.cpu.utilization, system.memory.*, etc.). hostPath
+    # requires privileged PSS. The OB namespace does not need this; the
+    # difference is intentional and isolated to the OTel Demo namespace.
+    pod-security.kubernetes.io/enforce: privileged
+    pod-security.kubernetes.io/audit: privileged
+    pod-security.kubernetes.io/warn: privileged
   annotations:
     dataset.research.io/parent-plan: "docs5/00-otel-demo-cross-app-plan.md"
     dataset.research.io/implementation-plan: "docs5/01-otel-demo-implementation-plan.md"

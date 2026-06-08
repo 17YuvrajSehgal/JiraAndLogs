@@ -50,7 +50,7 @@ exporters:
   # Forward all telemetry to the existing observability-namespace collector.
   # That collector fans out to Loki (logs), Tempo (traces), Prometheus (metrics).
   otlp/research:
-    endpoint: opentelemetry-collector.observability.svc.cluster.local:4317
+    endpoint: opentelemetrycollector.observability.svc.cluster.local:4317
     tls:
       insecure: true
 

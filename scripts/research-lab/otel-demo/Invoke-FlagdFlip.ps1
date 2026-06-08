@@ -64,7 +64,9 @@ param(
     [int]$DurationSeconds,
 
     [string]$Namespace = "otel-demo-research",
-    [string]$ConfigMapName = "otel-demo-flagd-config",
+    # Default for the upstream helm chart; verify on first deploy with:
+    #   kubectl get configmap -n otel-demo-research -l 'app.kubernetes.io/name=flagd'
+    [string]$ConfigMapName = "flagd-config",
     [string]$ConfigMapKey = "demo.flagd.json",
 
     [int]$FlagdPropagationSeconds = 3,

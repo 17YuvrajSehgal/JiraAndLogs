@@ -144,7 +144,7 @@ function Apply-Flagd {
     $flag = $Component.flagd_flag
     if (-not $flag) { throw "Flagd component requires flagd_flag" }
     $variant = if ($Component.flagd_variant) { $Component.flagd_variant } else { "on" }
-    $cmName = if ($Component.flagd_configmap_name) { $Component.flagd_configmap_name } else { "otel-demo-flagd-config" }
+    $cmName = if ($Component.flagd_configmap_name) { $Component.flagd_configmap_name } else { "flagd-config" }
     $cmKey = if ($Component.flagd_configmap_key) { $Component.flagd_configmap_key } else { "demo.flagd.json" }
 
     $cm = Invoke-ResearchLabKubectlJson -ArgumentList @(

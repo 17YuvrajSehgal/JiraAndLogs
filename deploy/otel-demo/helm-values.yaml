@@ -27,15 +27,17 @@ default:
     tag: "2.2.0"
     pullPolicy: IfNotPresent
 
-  # Global env applied to every component.
-  # Routes OTLP to our existing collector in the `observability` namespace.
-  # Application-level telemetry NEVER carries our research labels — those
-  # live only at the namespace level.
-  envOverrides:
-    - name: OTEL_EXPORTER_OTLP_ENDPOINT
-      value: "http://otel-demo-otelcol:4318"
-    - name: OTEL_RESOURCE_ATTRIBUTES
-      value: "service.namespace=opentelemetry-demo,service.version=2.2.0"
+  # No envOverrides. The chart's per-component templates already set
+  # OTEL_EXPORTER_OTLP_ENDPOINT (pointing at the in-namespace collector)
+  # and OTEL_RESOURCE_ATTRIBUTES. Adding our own here produces duplicate-
+  # key errors (`failed to create typed patch object: duplicate entries
+  # for key [name="OTEL_EXPORTER_OTLP_ENDPOINT"]`).
+  #
+  # Telemetry routing chain:
+  #   app pod  -->  otel-demo-otelcol (in-namespace, chart default)
+  #              -->  opentelemetrycollector.observability:4317 (our stack)
+  # The second hop is configured via the otlp/research exporter in
+  # opentelemetry-collector.config below.
 
 # -----------------------------------------------------------------------------
 # Bundled observability backends — DISABLED. We use our existing stack.
@@ -60,7 +62,6 @@ opensearch:
 opentelemetry-collector:
   enabled: true
   mode: deployment
-  fullnameOverride: otel-demo-otelcol
 
   # Our custom collector config. Receives OTLP from the demo apps, forwards
   # to our existing OTel Collector in the `observability/` namespace via OTLP.
@@ -90,7 +91,7 @@ opentelemetry-collector:
     exporters:
       # Forward EVERYTHING to our observability-namespace collector.
       otlp/research:
-        endpoint: opentelemetry-collector.observability.svc.cluster.local:4317
+        endpoint: opentelemetrycollector.observability.svc.cluster.local:4317
         tls:
           insecure: true
     service:
@@ -163,6 +164,10 @@ components:
     enabled: true
   flagd:
     enabled: true
+    # Disable the flagd-ui sidecar — it OOMs at 250Mi on local kind, and
+    # we don't need it: our Invoke-FlagdFlip.ps1 patches the flagd
+    # ConfigMap directly. The UI is purely cosmetic.
+    sidecarContainers: []
 
   # Storage
   valkey-cart:

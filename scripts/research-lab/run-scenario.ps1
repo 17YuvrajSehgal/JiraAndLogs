@@ -370,7 +370,7 @@ function Invoke-ScenarioAction {
         }
         $cmName = $Scenario.execution_flagd_configmap_name
         if (-not $cmName) {
-            $cmName = "otel-demo-flagd-config"
+            $cmName = "flagd-config"
         }
         $cmKey = $Scenario.execution_flagd_configmap_key
         if (-not $cmKey) {
