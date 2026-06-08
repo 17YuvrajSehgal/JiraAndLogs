@@ -98,6 +98,7 @@ class BiEncoderRetrievalPipeline(PipelineRunner):
         use_all_golds: bool = True,
         n_hard_negs: int = 3,
         bm25_top_n: int = 20,
+        n_random_negs: int = 0,
     ) -> None:
         self.backbone = backbone
         self.humanized_subdir = humanized_subdir
@@ -116,6 +117,12 @@ class BiEncoderRetrievalPipeline(PipelineRunner):
         self.use_all_golds = use_all_golds
         self.n_hard_negs = n_hard_negs
         self.bm25_top_n = bm25_top_n
+        # G1 (2026-06-05): in addition to BM25-mined hard negatives,
+        # sample N random negatives from tickets NOT in the gold set.
+        # Mixing random negatives forces the model to learn semantic
+        # discrimination beyond BM25 lexical overlap. Set to 0 for the
+        # original Phase G v2 behavior (BM25-only hard negatives).
+        self.n_random_negs = n_random_negs
 
     # --- internals ---
 
@@ -170,6 +177,16 @@ class BiEncoderRetrievalPipeline(PipelineRunner):
             gold_set = set(gold_in_view)
             wrong = [h for h in hits if h.issue_id not in gold_set]
 
+            # G1: random-negative pool = visible memory tickets NOT in gold
+            # and NOT in BM25 top-N (so they're truly "background" — not
+            # confusable on lexical signal alone)
+            wrong_ids = {h.issue_id for h in wrong}
+            random_pool = [
+                iss for iss in visible
+                if iss.jira_shadow_issue_id not in gold_set
+                and iss.jira_shadow_issue_id not in wrong_ids
+            ]
+
             golds_to_emit = gold_in_view if self.use_all_golds else [rng.choice(gold_in_view)]
             for gid in golds_to_emit:
                 positive = _doc_text(by_id[gid], self.max_chars)
@@ -180,12 +197,16 @@ class BiEncoderRetrievalPipeline(PipelineRunner):
                     chosen = rng.sample(wrong, min(self.n_hard_negs, len(wrong)))
                     for h in chosen:
                         texts.append(_doc_text(h.issue, self.max_chars))
+                if random_pool and self.n_random_negs > 0:
+                    chosen = rng.sample(random_pool, min(self.n_random_negs, len(random_pool)))
+                    for iss in chosen:
+                        texts.append(_doc_text(iss, self.max_chars))
                 pairs.append(InputExample(texts=texts))
 
         print(
             f"[{self.name}] training pairs built: {len(pairs)} from "
             f"{n_windows_kept} windows (use_all_golds={self.use_all_golds}, "
-            f"n_hard_negs={self.n_hard_negs})",
+            f"n_hard_negs={self.n_hard_negs}, n_random_negs={self.n_random_negs})",
             file=sys.stderr, flush=True,
         )
         return pairs

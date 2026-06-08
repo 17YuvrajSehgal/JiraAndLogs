@@ -1,0 +1,24 @@
+\section{Future Work}
+\label{sec:future}
+
+The meta-analysis at the conclusion of the G-series identified four optional follow-ups, ranked by expected return on investment. We list them here in priority order so that subsequent work can pick them up directly.
+
+\paragraph{F-1: Score-scale renormalization to rescue G3.} The single highest-value untested experiment. G3 (symmetric LLM extraction) gained $+404\%$ rel Hit@1 standalone but broke cascade integration through score-scale mismatch. Per-pipeline z-score (or percentile-rank) normalization of triage scores before \rrf{} and the L4 stacker could plausibly absorb G3 cleanly, lifting Hit@5 from $0.912$ toward the theoretical ceiling of $0.976$. Estimated cost: 3 hours implementation + cascade rerun. The G3 predictions are already cached.
+
+\paragraph{F-2: Per-window-type novelty thresholds.} G8 OOD analysis showed novelty recall splits sharply by family structure: families dominated by \texttt{active\_fault} windows lose $30$--$50$ points recall when held out. Training a separate G7 threshold per \texttt{window\_type} (active\_fault, observation\_window, pre\_fault\_baseline, recovery\_window) would likely close most of that gap. Estimated cost: 1 hour. Risk: overfitting per window\_type on small buckets; mitigatable with shared regularization across heads.
+
+\paragraph{F-3: G7 lift attribution without G4.} Rerun the G7 cascade with \texttt{TCH\_EXTRA\_AGENT\_FILES} unset, to measure how much of the $+388\%$ rel novel-recall lift is from G7 alone vs G4+G7. If G7 alone delivers most of the win, the paper narrative simplifies to ``free learned-threshold beats expensive LLM-agent.'' Estimated cost: 5 minutes (single cascade rebuild).
+
+\paragraph{F-4: Free / learned / agent novelty redundancy audit.} The L3 currently OR-combines three signals. If the learned signal subsumes the free signal in practice, the architecture can be simplified for the paper without losing recall. Estimated cost: 30 minutes (pairwise-agreement table).
+
+\paragraph{Larger items beyond the META-ANALYSIS list.}
+
+\begin{itemize}
+\item \textbf{Cross-encoder with listwise loss.} The G2 cross-encoder used binary cross-entropy. A listwise (LambdaRank, ApproxNDCG) loss might produce a sharper top-1 selection without the BCE-induced ranking dilution. Worth a focused attempt.
+\item \textbf{Real-Jira corpus evaluation.} The TAWOS dataset (458K real Jira issues in our local MySQL reference) could be used as a noisy retrieval-only test corpus, with the proxy that windows ``retrieve'' tickets via lexical and structural overlap. Would validate the synthetic-corpus results against real-Jira text characteristics.
+\item \textbf{Cross-app generalization.} We have a Train-Ticket scaffolding wired up but full 47-service collection is deferred to a GCP e2-standard-16 VM run. Cross-microservice-app generalization is the most credible external-validity test.
+\item \textbf{Smaller-LLM agent.} The current \agent{} uses Qwen 35B at $\sim$30 sec/window. Qwen 14B or Qwen 7B might match the verify-stage accuracy at 3--5$\times$ the throughput. Would enable real-time agent inference, not just batch.
+\item \textbf{Authentic distractor sweep with re-fit.} G6 was a simulation; a real BiEncoder + SPLADE + KG re-fit per distractor ratio would either confirm or modestly contradict the lower-bound numbers.
+\end{itemize}
+
+\paragraph{What we are deliberately NOT pursuing.} The original research charter (\texttt{RESEARCH-CHARTER.md} §14) lists items explicitly off-limits to avoid scope drift: new corpus generation, LLM-based skill planners, active learning / human-in-the-loop, commercial-tool benchmarks, real-Jira ingestion as primary training, adversarial robustness beyond random distractors. These remain off-limits.

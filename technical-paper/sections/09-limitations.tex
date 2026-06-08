@@ -1,0 +1,53 @@
+\section{Limitations and Threats to Validity}
+\label{sec:limitations}
+
+We list the limitations explicitly because they bound the external validity of every headline number.
+
+\subsection{Dataset realism}
+
+\begin{enumerate}
+\item \textbf{Trace sampling is 100\% (\texttt{AlwaysSample}).} Production typically samples at 1--10\% head or tail-on-error. Models trained on densely-sampled traces may over-rely on span-fan-out features that are partly missing under production sampling. We chose dataset density over sampling realism and disclose the gap.
+
+\item \textbf{Single-cluster, single-region deployment.} No cross-AZ failures, no inter-region partitions, no multi-cluster failover behavior. Cross-region scenarios deferred to a hypothetical v6.
+
+\item \textbf{Synthetic traffic.} The loadgenerator emits a deterministic basket of routes with no diurnal, weekly, or business-hour pattern. Real production traffic carries seasonality that affects baseline metrics; the absence narrows the realistic noise distribution.
+
+\item \textbf{Single fault per run.} Real production incidents often have correlated multi-fault cascades (deploy-induced + DB slow + cache eviction firing within minutes). Our cascading scenarios are limited.
+
+\item \textbf{Shadow Jira, not engineer-authored.} Every ticket in the memory corpus was generated from a scenario YAML template by \texttt{generate-shadow-jira-issues.ps1} and humanized by an LLM. Real engineer-written tickets carry inconsistencies, typos, out-of-band signals (Slack threads, postmortem links, manager pressure) that synthetic tickets do not.
+
+\item \textbf{No alert-fatigue baseline.} Real on-call queues have background false-positive noise from alert rules that pre-date the period under study. Our \texttt{baseline-normal} family emits zero alerts.
+
+\item \textbf{No GPU-served services.} Real recommendation and ad services often use GPU-backed inference; their failures (CUDA OOM, model cold-start, quota throttling) are absent from our dataset.
+\end{enumerate}
+
+\subsection{Methodological constraints}
+
+\begin{enumerate}
+\setcounter{enumi}{7}
+\item \textbf{In-distribution evaluation dominates.} The 1{,}008-window test split has same-family windows in train. The G8 LOFO analysis is the only OOD evaluation; it shows reasonable generalization but only at the family-shift level, not at the architecture-shift level (different microservices, different telemetry conventions).
+
+\item \textbf{Single dataset.} Every retrieval claim is on one V2 humanized corpus of 347 tickets. A real Jira corpus could differ substantially in noise, length, vocabulary, and structure.
+
+\item \textbf{Distractor analysis is a simulation.} G6 simulates distractor injection at the prediction level rather than re-fitting BiEncoder + SPLADE + KG per distractor ratio. The numbers are a lower bound on degradation; real re-fits could be modestly worse.
+
+\item \textbf{The +1.7-point Hit@1 lift over \bienc{} is not statistically significant.} The cascade ties \bienc{} on top-1 within the 95\% CI. The big wins are on Hit@5 (broader coverage), MRR, and novelty---not on top-1 precision.
+
+\item \textbf{Agent novelty recall is bounded.} Even after G4 ran the agent on all 1{,}008 windows, agent-attributable novelty recall plateaus around 35\%. The G7 jump to 79\% comes from the learned signal, not the agent. If the learned signal degrades under genuine distribution shift, novel recall would fall back toward 35\%.
+
+\item \textbf{Triage performance attribution.} \hgb{} alone achieves strict PR-AUC $= 0.9998$ on this dataset. The cascade's triage contribution is on borderline-class windows ($+3.2$ points inclusive PR-AUC). If \hgb{}'s numeric-feature signal degrades on new data (different services, different metric distributions), the cascade's triage degrades with it. The L1 stacker is a small lift on top of \hgb{}, not a substitute.
+\end{enumerate}
+
+\subsection{Non-claims}
+
+We explicitly do \emph{not} claim:
+
+\begin{itemize}
+\item Memory augmentation improves anomaly detection. \hgb{} alone already saturates this dataset. We disclose this honestly as the cost of choosing realistic noise distributions.
+\item Our system outperforms commercial observability tools. We have no commercial-tool comparison; out of scope.
+\item The system is production-ready. It is a research prototype on a synthetic-but-realistic corpus. Production hardening (auth, multi-tenancy, latency SLOs, deploy event correlation) is out of scope.
+\item We solve cold-start. With zero prior tickets, retrieval is $0\%$ by definition. We characterize cold-start behavior; we do not solve it.
+\item The humanized Jira corpus is indistinguishable from real Jira. We claim engineer-voice realism on the dimensions that matter for retrieval (length, multi-channel evidence, log signatures); we do not claim parity.
+\end{itemize}
+
+If a reviewer's question reduces to one of the above, the answer is ``out of scope of this work.''

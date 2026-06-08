@@ -1,0 +1,70 @@
+\section{Discussion}
+\label{sec:discussion}
+
+\subsection{What the project's headline actually is}
+
+The project began with the framing ``can a memory-augmented system improve incident detection and retrieval?'' We answer:
+
+\begin{itemize}
+\item \textbf{Detection} is settled by anomaly-detection baselines (\hgb{} alone hits PR-AUC $= 0.9998$ on this dataset). Memory augmentation does \emph{not} improve detection; we report this honestly as a non-claim. Section~\ref{sec:limitations} expands.
+\item \textbf{Retrieval} scales with deployment history---going from 0\% Recall@5 with empty memory to $\sim$80\% Recall@5 once the corpus is mature on the same scenario family. This is the original headline finding from Phase A and remains true through every subsequent generation.
+\item \textbf{Novelty detection} was an unexpected but defensible result. By combining a free signal (retrieval confidence), an LLM-agent verification stage, and a learned per-window classifier, we lift novel-recall from 0.163 (a fixed-threshold heuristic) to 0.793 (G7-learned threshold at preserved precision)---a $+388\%$ relative improvement. This is the single largest improvement of the project and was discovered, not designed; the structural metadata in window labels carried more signal than the original L3 design extracted.
+\end{itemize}
+
+The cascade composition is what makes the wins compose. Each layer optimizes one sub-task; the layers do not interfere; metrics tied or improved on every axis as we added G1, G4, and G7.
+
+\subsection{The cascade is at a local optimum (and we have evidence)}
+
+Section~\ref{sec:g-series-ablations} reports the 13 baseline ablations and the resulting v2f lock. The G-series confirms the lock from a different angle: \emph{three independent reranking interventions failed} (G2 cross-encoder, Phase E agent rerank, G5 LLM judge). Each used a different mechanism. The shared failure mode is that the cascade's existing overlap-rerank + RRF composition exploits a structural property---multi-retriever consensus on top-1---that no single LLM judgment or learned reranker can replicate from a single window.
+
+This is publishable as a positive finding (\emph{the simple cascade is hard to beat with sophisticated reranking}) rather than a string of negative results. We frame it as such: it tells future practitioners that the marginal value of adding another reranker to a cascade like ours is likely zero; the next gain has to come from a fundamentally different mechanism (a different retrieval source, a different score normalization, or a different decision channel).
+
+\subsection{The cascade is composition-fragile, not component-fragile}
+
+G3 is the cleanest demonstration. Symmetric LLM extraction lifted \kgret{} Hit@1 by $+404\%$ relative as a standalone component. Yet integrating G3 into the cascade hurt Hit@5 by 5+ points. The mechanisms were diagnosed precisely:
+
+\begin{enumerate}
+\item L2's overlap-rerank step counts votes from the other retrievers' top-3 lists. Changing one retriever's top-3 shifts the vote tally on $\sim$99\% of windows; some shifts win, some lose, but the cascade is in a low-noise regime where most shifts hurt.
+\item L4's 5-fold-CV stacker refits cleanly, but the L3 free-novelty trigger (\texttt{max\_conf < 0.5}) is sensitive to the underlying confidence distribution. G3's confidence distribution is different from the asymmetric baseline; the trigger fires on a different population.
+\end{enumerate}
+
+\textbf{Direct implication.} If future retrievers want to participate in this cascade, score normalization needs to be an explicit hyperparameter. Two specific candidates: (a) z-score normalization per retriever before the L4 stacker; (b) percentile-rank conversion before \rrf. Both are untested. The G3 negative result is informative because it tells us \emph{exactly} where to look.
+
+\subsection{The retrieval channel was already at its local ceiling}
+
+Across the entire G-series, Hit@5 stayed at $0.9124$. The retrieval channel of the v2f cascade was already at $93.5\%$ of the theoretical union ceiling of the four L2 retrievers' top-5 sets ($0.976$). Of the remaining $6.4$-point gap to that ceiling, the G2 cross-encoder, G3 symmetric extraction, and G5 LLM judge interventions each attempted to close part of it; each failed.
+
+To close the gap, the cascade needs a structurally new retriever (a different inductive bias---e.g., a graph neural network over the Neo4j knowledge graph, or a cross-encoder fine-tuned with listwise loss instead of binary cross-entropy). None of these are in the current panel.
+
+\subsection{Honest framing of the G7 win}
+
+G7's headline number ($+388\%$ rel novel recall) is real but partly a finding about the original cascade's blind spots. The G7 logistic regression has only 46 features, the top of which are \texttt{window\_type=pre\_fault\_baseline} and \texttt{window\_type=recovery\_window}---features that are \emph{trivially recoverable from window metadata}. The original L3 design used a single fixed-threshold heuristic (\texttt{max\_conf < 0.5}) that ignored this signal entirely. A 46-feature LogReg replacing a fixed threshold and lifting recall 4.9$\times$ tells us the previous L3 was wasting easy signal more than it tells us learned thresholds are powerful.
+
+We state this honestly in the paper: G7 is a finding about how much room a fixed-threshold L3 had to grow, not evidence that learned thresholds are a generally-superior design.
+
+\subsection{Where each piece of infrastructure earns its keep}
+
+\begin{itemize}
+\item \textbf{The LLM (Qwen 35B)} is used heavily at training/preprocessing time (graph extraction over 347 tickets: 80 min; \agent{} on 1{,}008 windows: 6 hours) and not at inference time. The cascade itself runs at 16 $\mu$s per window after caching.
+\item \textbf{Neo4j} stores the LLM-extracted knowledge graph (347 incidents, 803 symptom nodes, 343 root-cause nodes, $\sim$1{,}500 nodes total) and powers the \kgret{} retriever via Cypher queries.
+\item \textbf{sentence-transformers / MiniLM} (fine-tuned per G1) is the strongest single retriever and the L2 anchor.
+\item \textbf{SPLADE} is internal to \hrrf{}, providing sparse-text recall that bi-encoders miss.
+\item \textbf{\hgb{}} is the triage engine; without it, strict PR-AUC collapses to 0.303.
+\item \textbf{LM Studio} hosts Qwen 35B locally with MoE offload, enabling all the LLM work on a single RTX 5060 (8 GB VRAM).
+\end{itemize}
+
+Removing any single piece materially degrades the cascade.
+
+\subsection{Reproducibility}
+
+Every number in this report is reproducible from:
+
+\begin{itemize}
+\item the fault-injection scripts under \texttt{scripts/research-lab/} and the scenario YAMLs under \texttt{deploy/research-lab/scenarios/};
+\item the global derived dataset under \texttt{data/derived/global/2026-05-25-dataset-v5-large-global/};
+\item the per-pipeline predictions cached under \texttt{comparison/<phase>/per-window-predictions.jsonl};
+\item the cascade-assembly script \texttt{src/v2\_advanced/tch/build\_cascade.py};
+\item the G-series files under \texttt{docs4/G\{1..8\}-*.md} and the META-ANALYSIS document.
+\end{itemize}
+
+The end-to-end reproduction guide is \texttt{docs3/19-REPRODUCE.md}. The locked git commits for each phase are: v2f (\texttt{b3bf12f}), G1 (\texttt{c27a54c}), G4 (\texttt{56e53bf}), G7 (\texttt{a79ba5d}), final lock (\texttt{b7557c4}), meta-analysis (\texttt{e485149}).

@@ -1,0 +1,53 @@
+\section{Introduction}
+\label{sec:intro}
+
+\subsection{The diagnosis bottleneck in modern operations}
+
+Production observability stacks in 2026 produce extraordinary volumes of telemetry: structured logs ingested through Loki or OpenSearch, distributed traces through Tempo or Jaeger, metric series through Prometheus, and Kubernetes events through cluster-state collectors. Most of these signals are routine. A small fraction matter, and an even smaller fraction lead to an actionable engineering ticket recorded in Jira.
+
+For an on-call SRE, anomaly detection is no longer the hard part. Histogram-based detectors, threshold rules, and learned classifiers over numeric metrics achieve near-saturating precision-recall on the ``something is wrong'' question. The bottleneck has shifted to a triad of harder questions:
+
+\begin{enumerate}
+\item \textbf{Is this real?} A page may be triggered by genuine customer impact, a brief blip that self-recovered, a post-deploy artifact, or test traffic. Confidently filtering noise is necessary before any human is interrupted.
+
+\item \textbf{Have we seen this before?} The institutional memory of past incidents lives in Jira. Each ticket carries a summary, a description, comments, a resolution, and links back to the telemetry that triggered it. If the current window looks similar to a past ticket, the engineer can read its resolution and act in seconds. The current state of the art is manually searching Jira, which is slow (typically tens of minutes per incident) and brittle (depends on the engineer remembering the right keywords).
+
+\item \textbf{Is this something new?} If no past ticket matches, the failure mode may be genuinely novel and warrants careful investigation rather than a known-good runbook. Conflating ``no match found'' with ``no match exists'' wastes engineering effort.
+\end{enumerate}
+
+This report describes a system that answers all three questions simultaneously for every 5-minute telemetry window: a calibrated triage probability, a ranked top-5 list of past Jira tickets, and a novelty flag.
+
+\subsection{Why a custom dataset was necessary}
+
+We considered using public datasets and concluded none met the joint requirement of (a) realistic multi-service telemetry collected under controlled fault injection and (b) linked Jira ticket records with both pre-incident text and post-incident resolutions. Open log datasets (HDFS, BGL, Thunderbird, etc.) lack the ticket-side ground truth; public Jira corpora such as TAWOS \cite{tawos} contain ticket text but no co-collected telemetry. Without joint data, we cannot evaluate retrieval quality or measure end-to-end utility (time-to-diagnose simulation).
+
+We therefore constructed a paired telemetry-ticket dataset from scratch. The workload is Google's Online Boutique microservices demo \cite{online-boutique}, modified through five sequential instrumentation phases (M0--M5) to add the kinds of structured logs, traces, and metrics a real production team would emit. We deployed twenty-seven scenario families (cart-Redis outage, payment-service unavailable, network latency, near-misses, post-deploy churn, slow leaks, etc.) across one hundred independent runs, producing 6{,}720 labeled telemetry windows. From the same runs we generated a humanized 347-ticket Jira memory corpus using two voice profiles (V1: customer-service voice; V2: engineer voice with embedded code blocks), plus a 110-ticket distractor pool spanning in-architecture noise and cross-architecture references. Section~\ref{sec:dataset} documents the construction in full.
+
+\subsection{Why a hybrid model became necessary}
+
+Over the project we trained seven independent pipelines. Each represents a different inductive bias:
+\hgb{} (gradient boosting on 94 derived numeric features) is excellent at triage but provides no retrieval.
+\bienc{} (fine-tuned MiniLM-L6-v2 sentence encoder) is the best single retriever for top-1 precision.
+\hrrf{} with a rule-extracted graph is the best fusion retriever for Hit@5.
+\hrrf{} with an LLM-extracted graph (Qwen 3.6 35B-A3B via LM~Studio) is precision-heavy at the cost of recall.
+\logseq{} (a small transformer over log sequences) captures patterns nothing else sees on specific families.
+\kgret{} traverses a Neo4j-stored knowledge graph for structural similarity.
+\agent{} is the only pipeline that explicitly detects novelty.
+
+Each pipeline is Pareto-dominant on one axis and Pareto-incomparable on every other. \emph{The hybrid is the answer to this constraint.} Rather than seek a single architecture that wins universally, we built a four-layer cascade that uses each pipeline for the sub-task it is best at: triage stacking, retrieval fusion, novelty detection, and final composition. The cascade structure is what makes the wins compose; without it, the per-pipeline contributions cancel.
+
+\subsection{Headline result and roadmap}
+
+On the 1{,}008-window v2 in-distribution test split, the final hybrid (denoted \tch{} for Tiered Cascade Hybrid) achieves:
+
+\begin{itemize}
+\item \textbf{Hit@5 = 0.912}: the gold past ticket appears in the top-5 candidates 91.2\% of the time, matching the v2f baseline and tied with the best single retriever (\hrrf{} rule).
+\item \textbf{Hit@1 = 0.722}: the gold ticket is the top-1 pick 72.2\% of the time, beating bi-encoder (0.695) and \hrrf{} rule (0.583).
+\item \textbf{Strict PR-AUC = 0.9998}: near-perfect triage gating, matching \hgb{} alone.
+\item \textbf{Inclusive PR-AUC = 0.8562}: +3.2 points absolute over \hgb{} on borderline windows.
+\item \textbf{Novel precision = 0.940, novel recall = 0.793}: the latter represents a $+388\%$ relative improvement over the v2f baseline's 0.163 at unchanged precision. It is the largest single improvement of the project.
+\end{itemize}
+
+The cascade is robust to memory noise (Hit@5 drops only 2\% relative at a 50\% distractor ratio) and to family-distribution shift (novelty F1 within 11\% relative under leave-one-family-out cross-validation). It runs at 16~$\mu$s per window after caching.
+
+The rest of the report is organized as follows. Section~\ref{sec:dataset} documents the dataset construction, including the microservice instrumentation work and the bias-avoidance discipline. Section~\ref{sec:eval-setup} states the splits, metrics, and statistical envelope. Section~\ref{sec:methods-evolution} traces the four method generations from V1 numeric baselines through V2 multi-channel retrieval to V2-advanced LLM-enhanced pipelines, ending with the Pareto-incomparable observation that motivated the cascade. Section~\ref{sec:tch} specifies the \tch{} cascade mathematically. Section~\ref{sec:g-series} reports eight late-stage refinement experiments. Section~\ref{sec:results} consolidates the locked numbers. Section~\ref{sec:discussion} draws cross-cutting findings, Section~\ref{sec:limitations} states limitations, and Section~\ref{sec:future} catalogues optional follow-ups.

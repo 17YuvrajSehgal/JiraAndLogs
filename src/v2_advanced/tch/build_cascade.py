@@ -89,6 +89,11 @@ L4_STACK_FEATURES = [
     "kg_retrieval_rulebased",
 ]
 
+# G7 (2026-06-06): learned novelty index (populated by load_all_predictions
+# when env TCH_LEARNED_NOVELTY_PATH is set). Maps window_id -> P(novel).
+_LEARNED_NOVELTY_INDEX: dict[str, float] = {}
+_LEARNED_NOVELTY_THRESHOLD: float = 0.3
+
 RRF_K = 60
 TOP_K_OUTPUT = 5
 # L1 threshold sweep on full split (218 true ticket_worthy):
@@ -130,23 +135,82 @@ def load_all_predictions(global_dir: Path) -> dict[str, WindowState]:
     # `diagnosis_agent` is read from the primary path FIRST and then any
     # EXTRA_AGENT_FILES that exist, so later runs (e.g. Phase 2 hard-case
     # subset) merge with Phase 1 coverage.
-    load_plan: list[tuple[str, str]] = list(PIPELINE_FILES.items())
+    pipeline_files = dict(PIPELINE_FILES)
+
+    # G-phase overrides (env vars). Each phase that retrains a pipeline can
+    # point the cascade at its own per-window-predictions.jsonl without
+    # clobbering the locked v2f baseline. The pipeline_name inside the
+    # file may have a "_g1" suffix; we strip it via a special-case below
+    # so the loader still maps it to the canonical name.
+    import os as _os
+    _overrides = {
+        "bi_encoder_retrieval":     _os.environ.get("TCH_OVERRIDE_BIENC", "").strip(),
+        "hybrid_rrf_retrieval_llm": _os.environ.get("TCH_OVERRIDE_HYBRID_LLM", "").strip(),
+        "kg_retrieval_rulebased":   _os.environ.get("TCH_OVERRIDE_KG", "").strip(),
+    }
+    for pipe_name, rel in _overrides.items():
+        if rel and (base / rel).exists():
+            pipeline_files[pipe_name] = rel
+            print(f"[build_cascade] OVERRIDE {pipe_name} -> {rel}")
+
+    load_plan: list[tuple[str, str]] = list(pipeline_files.items())
     for extra in EXTRA_AGENT_FILES:
         if (base / extra).exists():
             load_plan.append(("diagnosis_agent", extra))
+    # G-phase additional agent files (env var: comma-separated paths
+    # relative to comparison/)
+    _extra_agent_env = _os.environ.get("TCH_EXTRA_AGENT_FILES", "").strip()
+    if _extra_agent_env:
+        for extra in _extra_agent_env.split(","):
+            extra = extra.strip()
+            if extra and (base / extra).exists():
+                load_plan.append(("diagnosis_agent", extra))
+                print(f"[build_cascade] EXTRA AGENT {extra}")
+
+    # G7 (2026-06-06): load learned-novelty predictions if env var set.
+    _learned_path = _os.environ.get("TCH_LEARNED_NOVELTY_PATH", "").strip()
+    if _learned_path:
+        global _LEARNED_NOVELTY_INDEX, _LEARNED_NOVELTY_THRESHOLD
+        _LEARNED_NOVELTY_INDEX = {}
+        full_path = base / _learned_path
+        if full_path.exists():
+            with full_path.open(encoding="utf-8") as fh:
+                for line in fh:
+                    d = json.loads(line)
+                    wid = d.get("window_id")
+                    if wid:
+                        _LEARNED_NOVELTY_INDEX[wid] = float(d.get("p_novel") or 0.0)
+            _t = _os.environ.get("TCH_LEARNED_NOVELTY_THRESHOLD", "").strip()
+            if _t:
+                try:
+                    _LEARNED_NOVELTY_THRESHOLD = float(_t)
+                except ValueError:
+                    pass
+            print(f"[build_cascade] LEARNED NOVELTY loaded {len(_LEARNED_NOVELTY_INDEX)} rows, threshold={_LEARNED_NOVELTY_THRESHOLD}")
+
+    # G-phase aliasing: a file may use a suffixed pipeline_name (e.g.
+    # bi_encoder_retrieval_g1) but the cascade still slots it as the
+    # canonical name (bi_encoder_retrieval).
+    _CANONICAL_ALIASES: dict[str, set[str]] = {
+        "bi_encoder_retrieval": {
+            "bi_encoder_retrieval", "bi_encoder_retrieval_g1",
+        },
+        "hybrid_rrf_retrieval_llm": {
+            "hybrid_rrf_retrieval", "hybrid_rrf_retrieval_llm",
+        },
+        "kg_retrieval_rulebased": {
+            "kg_retrieval_rulebased", "kg_retrieval", "kg_retrieval_g3",
+        },
+    }
 
     for pipe_name, rel_path in load_plan:
         p = base / rel_path
+        accepted_names = _CANONICAL_ALIASES.get(pipe_name, {pipe_name})
         with p.open(encoding="utf-8") as fh:
             for line in fh:
                 d = json.loads(line)
-                if d.get("pipeline_name") != pipe_name and not (
-                    # the file contains multiple pipelines; only take this one
-                    d.get("pipeline_name") in {pipe_name}
-                ):
-                    # Handle the rule-vs-llm hybrid_rrf alias: both files
-                    # contain `hybrid_rrf_retrieval` as pipeline_name, but
-                    # the file path disambiguates them.
+                if d.get("pipeline_name") not in accepted_names:
+                    # Special path-disambiguation for hybrid_rrf rule vs llm
                     if pipe_name == "hybrid_rrf_retrieval_rule":
                         if d.get("pipeline_name") != "hybrid_rrf_retrieval":
                             continue
@@ -303,15 +367,26 @@ def assemble_cascade_prediction(state: WindowState, stacked_triage: float) -> di
     max_ret_conf = max_retrieval_confidence(state)
     free_novelty_signal = max_ret_conf < 0.5
 
+    # G7 (2026-06-06): optionally replace free_novelty_signal with a
+    # learned classifier loaded from disk. When _LEARNED_NOVELTY_INDEX
+    # is populated (set by load_all_predictions via env var), it returns
+    # P(novel) per window_id; we OR-combine it with the agent signal
+    # using a learned threshold (default 0.3 from G7's F1 sweep).
+    learned_p = _LEARNED_NOVELTY_INDEX.get(state.window_id) if _LEARNED_NOVELTY_INDEX else None
+    if learned_p is not None:
+        learned_signal = learned_p >= _LEARNED_NOVELTY_THRESHOLD
+    else:
+        learned_signal = False
+
     agent_top = state.top_by_pipe.get("diagnosis_agent")
     agent_novel = state.is_novel_by_pipe.get("diagnosis_agent")
     if agent_top is not None:
         agent_ran = True
         final_top = l2_top
-        is_novel = bool(agent_novel) or free_novelty_signal
+        is_novel = bool(agent_novel) or free_novelty_signal or learned_signal
     else:
         final_top = l2_top
-        is_novel = free_novelty_signal
+        is_novel = free_novelty_signal or learned_signal
         agent_ran = False
 
     return {

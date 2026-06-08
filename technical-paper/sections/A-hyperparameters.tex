@@ -1,0 +1,188 @@
+\section{Hyperparameters}
+\label{app:hyperparams}
+
+All hyperparameters of the pipelines feeding the cascade and the cascade's own layers. Every value below was either an sklearn / sentence-transformers default or was found via the ablations referenced in Section~\ref{sec:g-series-ablations}.
+
+\subsection{Histogram Gradient Boosting (\hgb{})}
+
+\begin{table}[h]
+\centering
+\small
+\begin{tabular}{ll}
+\toprule
+Parameter & Value \\
+\midrule
+\texttt{max\_iter} & 300 \\
+\texttt{learning\_rate} & 0.05 \\
+\texttt{max\_depth} & 8 \\
+\texttt{l2\_regularization} & 0.1 \\
+\texttt{random\_state} & 42 \\
+Feature count & 94 derived numeric (see \texttt{triage-feature-columns.json}) \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Bi-encoder retrieval (\bienc{}, post-G1)}
+
+\begin{table}[h]
+\centering
+\small
+\begin{tabular}{ll}
+\toprule
+Parameter & Value \\
+\midrule
+Base model & \texttt{sentence-transformers/all-MiniLM-L6-v2} \\
+Trainable parameters & 22M \\
+Loss & \texttt{MultipleNegativesRankingLoss} \\
+Hard negatives per anchor & 2 (BM25-mined from top-20 not in gold) \\
+Random negatives per anchor & 1 (G1: from visible-not-gold-not-BM25-top-20) \\
+Training examples & 16{,}338 \\
+Epochs & 5 \\
+Batch size & 32 \\
+Learning rate & $2 \times 10^{-5}$ \\
+Warmup ratio & 10\% \\
+Max text length & 512 characters \\
+Optimizer & AdamW \\
+\texttt{seed} & 42 \\
+Triage head & LogReg over [max\_sim, mean\_top5\_sim, n\_above\_0.5] \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Hybrid RRF (\hrrf{})}
+
+\begin{table}[h]
+\centering
+\small
+\begin{tabular}{ll}
+\toprule
+Parameter & Value \\
+\midrule
+Sub-retrievers & BM25, dense bi-encoder, graph score \\
+Internal \rrf{} constant $k$ & 60 \\
+Top-K per sub-retriever & 10 \\
+Graph type & rule-extracted (rule-graph variant) or LLM-extracted (LLM-graph variant) \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Log-sequence transformer (\logseq{})}
+
+\begin{table}[h]
+\centering
+\small
+\begin{tabular}{ll}
+\toprule
+Parameter & Value \\
+\midrule
+Architecture & 4-layer transformer, $d=128$, 4 heads \\
+Epochs & 5 \\
+Training time & $\sim$14 min on RTX 5060 \\
+Input & sequence of templated log lines per window \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Knowledge graph (Neo4j, populated by Qwen extraction)}
+
+\begin{table}[h]
+\centering
+\small
+\begin{tabular}{ll}
+\toprule
+Parameter & Value \\
+\midrule
+LLM & Qwen 3.6 35B-A3B via LM Studio \\
+Extraction schema & strict JSON, fields: affected\_services, components, error\_classes, root\_cause, fix, symptoms \\
+Thinking mode (extraction) & OFF \\
+\texttt{max\_tokens} (extraction) & 600 \\
+Throughput & $\sim$14 sec / ticket \\
+Total extractions (tickets) & 347 (Phase D) \\
+Graph nodes & 347 incidents, 12 services, 27 components, 803 symptoms, 343 root-causes, 313 fixes, 15 error-classes \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{DiagnosisAgent (\agent{})}
+
+\begin{table}[h]
+\centering
+\small
+\begin{tabular}{ll}
+\toprule
+Parameter & Value \\
+\midrule
+LLM & Qwen 3.6 35B-A3B via LM Studio \\
+Stage 1 (hypothesize) & thinking=OFF, $\sim$1 sec/window \\
+Stage 2 (retrieve) & no LLM call (uses cached L2 top-5) \\
+Stage 3 (verify) & thinking=ON, $\sim$25--30 sec/window, \texttt{max\_tokens}=1500 \\
+Output schema (verify) & \texttt{\{best\_idx: int|null, confidence: float, is\_novel: bool, reasoning: string\}} \\
+Novelty threshold (in-agent) & 0.4 confidence \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Cascade L1 stacker}
+
+\begin{table}[h]
+\centering
+\small
+\begin{tabular}{ll}
+\toprule
+Parameter & Value \\
+\midrule
+Model & sklearn \texttt{LogisticRegression} \\
+\texttt{class\_weight} & \texttt{"balanced"} \\
+\texttt{C} & 1.0 \\
+\texttt{max\_iter} & 1000 \\
+CV procedure & 5-fold \texttt{StratifiedKFold} \\
+\texttt{random\_state} & 42 \\
+$L1_{\tau}$ (noise threshold) & 0.5 \\
+Features stacked & six per-pipeline triage scores (see Table~\ref{tab:l1-coefs}) \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Cascade L2 retrieval fusion}
+
+\begin{table}[h]
+\centering
+\small
+\begin{tabular}{ll}
+\toprule
+Parameter & Value \\
+\midrule
+Anchor source (position 1) & \bienc{} top-3 \\
+Vote pool (for overlap rerank) & \hrrf{} rule, \hrrf{} LLM, \logseq{} (each top-3) \\
+\rrf{} retrievers (positions 2--5) & \bienc{}, \hrrf{} rule, \logseq{}, \kgret{} \\
+\rrf{} constant $k$ & 60 \\
+Retriever top-K read & 10 \\
+Final top-K returned & 5 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Cascade L3 novelty (G7 learned classifier)}
+
+\begin{table}[h]
+\centering
+\small
+\begin{tabular}{ll}
+\toprule
+Parameter & Value \\
+\midrule
+Model & sklearn \texttt{LogisticRegression} \\
+\texttt{class\_weight} & \texttt{"balanced"} \\
+\texttt{C} & 1.0 \\
+\texttt{max\_iter} & 1000 \\
+CV procedure & 5-fold \texttt{StratifiedKFold} \\
+\texttt{random\_state} & 42 \\
+Features (46 total) & \texttt{window\_type} one-hot (4), \texttt{scenario\_family} one-hot (27), \texttt{service\_name} one-hot ($\sim$12), \texttt{is\_hard\_case}, \texttt{max\_retrieval\_conf}, \texttt{triage\_score} \\
+Excluded feature & \texttt{n\_prior\_family\_tickets} (leakage tautology) \\
+$L3_{\tau}$ (learned threshold) & 0.50 \\
+Free novelty threshold & \texttt{max\_conf < 0.5} \\
+Agent novelty threshold & 0.4 in-agent confidence \\
+Combining rule & OR of three signals \\
+\bottomrule
+\end{tabular}
+\end{table}

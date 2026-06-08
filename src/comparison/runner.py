@@ -93,6 +93,14 @@ except ImportError as _e:
     _HAS_AGENT = False
     _AGENT_IMPORT_ERROR = _e
 
+# v2_advanced — G2 (2026-06-05): fine-tuned cross-encoder retriever
+try:
+    from v2_advanced.proposal_g_crossencoder.pipeline import CrossEncoderRetrievalPipeline
+    _HAS_CROSSENC = True
+except ImportError as _e:
+    _HAS_CROSSENC = False
+    _CROSSENC_IMPORT_ERROR = _e
+
 # v2_advanced — Phase B (2026-06-03): LogSeq2Vec
 try:
     from v2_advanced.proposal_b_logseq2vec.pipeline import LogSeq2VecRetrievalPipeline
@@ -144,6 +152,15 @@ if _HAS_NEURAL:
     KNOWN_PIPELINES["tab_transformer"] = TabTransformerPipeline
     KNOWN_PIPELINES["bi_encoder_retrieval"] = BiEncoderRetrievalPipeline
 
+    # G1 (2026-06-05): variant mixing BM25 hard negs with random negs to
+    # break BM25 over-reliance. n_hard_negs=2 + n_random_negs=1 gives a
+    # ~67/33 split that empirically helps cart-redis sub-scenario confusion.
+    class _BiEncoderG1(BiEncoderRetrievalPipeline):
+        name = "bi_encoder_retrieval_g1"
+        def __init__(self) -> None:
+            super().__init__(n_hard_negs=2, n_random_negs=1)
+    KNOWN_PIPELINES["bi_encoder_retrieval_g1"] = _BiEncoderG1
+
 # v2_advanced Phase D — LLM-extracted knowledge graph retrieval.
 if _HAS_KG:
     KNOWN_PIPELINES["kg_retrieval"] = KnowledgeGraphRetrievalPipeline
@@ -158,6 +175,19 @@ if _HAS_KG:
 
     KNOWN_PIPELINES["kg_retrieval_rulebased"] = _KGRetrievalRuleBased
 
+    # G3 (2026-06-05): symmetric LLM extraction. Uses G3's pre-extracted
+    # window facts (cached in v2_kg_extractions_windows/) instead of
+    # rule-based or live LLM extraction. Both sides of the graph match
+    # now use LLM-quality entities.
+    class _KGRetrievalG3(KnowledgeGraphRetrievalPipeline):
+        name = "kg_retrieval_g3"
+        def __init__(self) -> None:
+            super().__init__(
+                skip_window_extraction=True,
+                window_extractions_subdir="v2_kg_extractions_windows",
+            )
+    KNOWN_PIPELINES["kg_retrieval_g3"] = _KGRetrievalG3
+
 # v2_advanced Phase C — Hybrid SPLADE + BiEncoder + Graph via RRF.
 if _HAS_HYBRID:
     KNOWN_PIPELINES["hybrid_rrf_retrieval"] = HybridRRFRetrievalPipeline
@@ -170,6 +200,20 @@ if _HAS_HYBRID:
             super().__init__(skip_graph=True)
 
     KNOWN_PIPELINES["hybrid_rrf_no_graph"] = _HybridNoGraph
+
+    # G3 (2026-06-05): hybrid_rrf with symmetric LLM extraction.
+    class _HybridG3(HybridRRFRetrievalPipeline):
+        name = "hybrid_rrf_retrieval_g3"
+        def __init__(self) -> None:
+            super().__init__(
+                skip_window_extraction=True,
+                window_extractions_subdir="v2_kg_extractions_windows",
+            )
+    KNOWN_PIPELINES["hybrid_rrf_retrieval_g3"] = _HybridG3
+
+# v2_advanced G2 — fine-tuned cross-encoder retriever.
+if _HAS_CROSSENC:
+    KNOWN_PIPELINES["cross_encoder_retrieval_g2"] = CrossEncoderRetrievalPipeline
 
 # v2_advanced Phase E — DiagnosisAgent (capstone).
 if _HAS_AGENT:
