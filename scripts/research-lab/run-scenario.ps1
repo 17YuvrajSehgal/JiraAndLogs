@@ -6,7 +6,7 @@ param(
     [Parameter(Mandatory = $true)]
     [string]$ScenarioFile,
 
-    [ValidateSet("Auto", "RecordOnly", "SetEnv", "RestartPods", "ScaleDeployment", "ChaosMeshChaos")]
+    [ValidateSet("Auto", "RecordOnly", "SetEnv", "RestartPods", "ScaleDeployment", "ChaosMeshChaos", "Flagd")]
     [string]$Action = "Auto",
 
     [int]$DurationSeconds = 0,
@@ -301,6 +301,59 @@ function Invoke-ScenarioAction {
             Start-Sleep -Seconds 5
         }
 
+        return $restore
+    }
+
+    if ($SelectedAction -eq "Flagd") {
+        # OTel Demo-specific primitive (introduced 2026-06-08, docs5/01 Phase 1b).
+        # Delegates to scripts/research-lab/otel-demo/Invoke-FlagdFlip.ps1
+        # which patches the flagd ConfigMap, sleeps DurationSeconds, then
+        # restores the original variant. Active-fault window timing is owned
+        # by the helper (the inject/sleep/restore sequence) so we do NOT
+        # Start-Sleep here.
+        $flagName = $Scenario.execution_flagd_flag
+        if (-not $flagName) {
+            $flagName = $Scenario.flagd_flag
+        }
+        if (-not $flagName) {
+            throw "Flagd action requires execution.flagd_flag (flag name)."
+        }
+        $variant = $Scenario.execution_flagd_variant
+        if (-not $variant) {
+            $variant = "on"
+        }
+        $cmName = $Scenario.execution_flagd_configmap_name
+        if (-not $cmName) {
+            $cmName = "otel-demo-flagd-config"
+        }
+        $cmKey = $Scenario.execution_flagd_configmap_key
+        if (-not $cmKey) {
+            $cmKey = "demo.flagd.json"
+        }
+
+        $flipScript = Join-Path $PSScriptRoot (Join-Path "otel-demo" "Invoke-FlagdFlip.ps1")
+        if (-not (Test-Path -LiteralPath $flipScript)) {
+            throw "Invoke-FlagdFlip.ps1 not found at $flipScript"
+        }
+
+        Write-Host "Flagd action: flag='$flagName' variant='$variant' ns='$TargetNamespace' configmap='$cmName/$cmKey'"
+        $flipArgs = @(
+            "-FlagName", $flagName,
+            "-Variant", $variant,
+            "-DurationSeconds", $ActiveDurationSeconds,
+            "-Namespace", $TargetNamespace,
+            "-ConfigMapName", $cmName,
+            "-ConfigMapKey", $cmKey
+        )
+        if ($DoNotRestore) {
+            $flipArgs += "-SkipRestore"
+        }
+
+        $flipResult = & pwsh -NoProfile -ExecutionPolicy Bypass -File $flipScript @flipArgs
+        $restore.flagd_flag = $flagName
+        $restore.flagd_variant_applied = $variant
+        $restore.flagd_configmap = "$cmName/$cmKey"
+        $restore.flagd_result = $flipResult
         return $restore
     }
 
