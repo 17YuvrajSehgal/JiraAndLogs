@@ -1,0 +1,36 @@
+[13:31:37] [INFO ] [v2_advanced.phase_a.run_v2] step=patch_split start  manifest=triage-split-manifest-v2-resplit.json
+[13:31:37] [INFO ] [v2_advanced.phase_a.window_split] loaded v2 manifest  windows=6720 seed=42
+[13:31:37] [INFO ] [v2_advanced.phase_a.run_v2] patched iter_split  rebound_in_modules=1
+[13:31:37] [INFO ] [v2_advanced.phase_a.run_v2] step=patch_split done  elapsed_s=0.0100
+[13:31:42] [INFO ] [v2_advanced.phase_a.run_v2] running v2 comparison  pipelines=['diagnosis_agent'] n_bootstrap=1000
+[13:31:42] [INFO ] [v2_advanced.phase_a.run_v2] step=run_comparison start  pipelines=1
+[2026-06-04T17:31:42.580195+00:00] notes: comparison: pipelines=['diagnosis_agent']
+[2026-06-04T17:31:42.580312+00:00] training_run open: diagnosis_agent__20260604T173142Z__80b82ae2
+[2026-06-04T17:31:42.599099+00:00] fit + predict starting for diagnosis_agent
+[13:31:42] [INFO ] [v2_advanced.phase_e.pipeline] step=load_cached_hybrid start  path=data/derived/global/2026-05-25-dataset-v5-large-global/comparison/v2c-hybrid-llm/per-window-predictions.jsonl
+[13:31:42] [INFO ] [v2_advanced.phase_e.pipeline] hybrid pool loaded from cache  n_windows=1008 path=data/derived/global/2026-05-25-dataset-v5-large-global/comparison/v2c-hybrid-llm/per-window-predictions.jsonl
+[13:31:42] [INFO ] [v2_advanced.phase_e.pipeline] step=load_cached_hybrid done  elapsed_s=0.0100
+[13:31:42] [INFO ] [v2_advanced.phase_e.pipeline] step=load_extractions start
+[13:31:42] [INFO ] [v2_advanced.phase_e.pipeline] using extractions  path=data\derived\global\2026-05-25-dataset-v5-large-global\v2_kg_extractions\all_extractions.jsonl
+[13:31:42] [INFO ] [v2_advanced.phase_e.pipeline] extractions  n=347
+[13:31:42] [INFO ] [v2_advanced.phase_e.pipeline] step=load_extractions done  elapsed_s=0.0000
+[13:31:44] [INFO ] [v2_advanced.phase_e.pipeline] using LLM agent  url=http://localhost:1234
+[13:31:45] [INFO ] [v2_advanced.phase_e.pipeline] test windows  n=1008
+[13:31:45] [INFO ] [v2_advanced.phase_e.pipeline] filtered to window-ID list  requested=150 matched=150 before=1008
+[13:31:45] [INFO ] [v2_advanced.phase_e.pipeline] step=agent_run start  n=150
+[13:46:00] [INFO ] [v2_advanced.phase_e.pipeline] agent progress  done=25 total=150 novel_so_far=11
+[13:55:01] [INFO ] [v2_advanced.phase_e.pipeline] agent progress  done=50 total=150 novel_so_far=29
+[14:10:38] [INFO ] [v2_advanced.phase_e.pipeline] agent progress  done=75 total=150 novel_so_far=33
+[14:25:54] [INFO ] [v2_advanced.phase_e.pipeline] agent progress  done=100 total=150 novel_so_far=40
+[14:42:00] [INFO ] [v2_advanced.phase_e.pipeline] agent progress  done=125 total=150 novel_so_far=46
+[14:58:03] [INFO ] [v2_advanced.phase_e.pipeline] agent progress  done=150 total=150 novel_so_far=50
+[14:58:03] [INFO ] [v2_advanced.phase_e.pipeline] step=agent_run done  elapsed_s=5178.49
+[2026-06-04T18:58:05.036891+00:00] fit + predict done: fit=5181.2s predict=0.0s n_predictions=150
+[2026-06-04T18:58:05.116111+00:00] training_run close: diagnosis_agent__20260604T173142Z__80b82ae2
+[14:58:05] [INFO ] [v2_advanced.phase_a.run_v2] step=run_comparison done  elapsed_s=5183.07
+[14:58:05] [INFO ] [v2_advanced.phase_a.run_v2] v2 comparison done  output_dir=data\derived\global\2026-05-25-dataset-v5-large-global\comparison\v2e-agent-phase2 pipelines=1 report_kb=86.7000
+[comparison] running pipeline: diagnosis_agent
+[comparison] computing stratified metrics (strict)
+[comparison] computing stratified metrics (inclusive)
+[comparison] paired bootstrap (1000 resamples) per metric
+[comparison] depth-stratified bootstrap CIs (1000 resamples)

@@ -1,0 +1,28 @@
+[13:03:39] [INFO ] [v2_advanced.phase_a.run_v2] step=patch_split start  manifest=triage-split-manifest-v2-resplit.json
+[13:03:39] [INFO ] [v2_advanced.phase_a.window_split] loaded v2 manifest  windows=6720 seed=42
+[13:03:39] [INFO ] [v2_advanced.phase_a.run_v2] patched iter_split  rebound_in_modules=1
+[13:03:39] [INFO ] [v2_advanced.phase_a.run_v2] step=patch_split done  elapsed_s=0.0100
+[13:03:43] [INFO ] [v2_advanced.phase_a.run_v2] running v2 comparison  pipelines=['bi_encoder_retrieval_g1'] n_bootstrap=1000
+[13:03:43] [INFO ] [v2_advanced.phase_a.run_v2] step=run_comparison start  pipelines=1
+[2026-06-05T17:03:43.620180+00:00] notes: comparison: pipelines=['bi_encoder_retrieval_g1']
+[2026-06-05T17:03:43.620261+00:00] training_run open: bi_encoder_retrieval_g1__20260605T170343Z__ab1f9234
+[2026-06-05T17:03:43.645404+00:00] fit + predict starting for bi_encoder_retrieval_g1
+[bi_encoder_retrieval_g1] training pairs built: 16338 from 1805 windows (use_all_golds=True, n_hard_negs=2, n_random_negs=1)
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+[comparison] running pipeline: bi_encoder_retrieval_g1
+Loading weights:   0%|          | 0/103 [00:00<?, ?it/s]Loading weights: 100%|##########| 103/103 [00:00<00:00, 6195.52it/s]
+[bi_encoder_retrieval_g1] fine-tuning sentence-transformers/all-MiniLM-L6-v2 on 16338 pairs for 5 epochs on cuda
+Computing widget examples:   0%|          | 0/1 [00:00<?, ?example/s]                                                                     [2026-06-05T17:17:23.258061+00:00] fit + predict done: fit=816.9s predict=0.0s n_predictions=1008
+[2026-06-05T17:17:23.429239+00:00] training_run close: bi_encoder_retrieval_g1__20260605T170343Z__ab1f9234
+[13:17:26] [INFO ] [v2_advanced.phase_a.run_v2] step=run_comparison done  elapsed_s=822.53
+[13:17:26] [INFO ] [v2_advanced.phase_a.run_v2] v2 comparison done  output_dir=data\derived\global\2026-05-25-dataset-v5-large-global\comparison\v2g-final-models\g1-bienc-hard-negatives pipelines=1 report_kb=103.90
+{'loss': '3.426', 'grad_norm': '8.953', 'learning_rate': '1.787e-05', 'epoch': '0.9785'}
+{'loss': '2.709', 'grad_norm': '12.86', 'learning_rate': '1.352e-05', 'epoch': '1.957'}
+{'loss': '2.446', 'grad_norm': '13.72', 'learning_rate': '9.159e-06', 'epoch': '2.935'}
+{'loss': '2.315', 'grad_norm': '10.58', 'learning_rate': '4.802e-06', 'epoch': '3.914'}
+{'loss': '2.242', 'grad_norm': '10.3', 'learning_rate': '4.444e-07', 'epoch': '4.892'}
+{'train_runtime': '792.8', 'train_samples_per_second': '103', 'train_steps_per_second': '3.223', 'train_loss': '2.619', 'epoch': '5'}
+[comparison] computing stratified metrics (strict)
+[comparison] computing stratified metrics (inclusive)
+[comparison] paired bootstrap (1000 resamples) per metric
+[comparison] depth-stratified bootstrap CIs (1000 resamples)
