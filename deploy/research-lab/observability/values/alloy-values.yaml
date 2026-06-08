@@ -22,7 +22,11 @@ alloy:
 
         rule {
           source_labels = ["__meta_kubernetes_namespace"]
-          regex = "online-boutique-research|observability"
+          # Allowlist for namespaces whose pod logs are scraped into Loki.
+          # 2026-06-08: added otel-demo-research for cross-app collection per
+          # docs5/00. Also added trainticket retroactively (it was already
+          # patched into the live CM but missing from this source-of-truth).
+          regex = "online-boutique-research|observability|trainticket|otel-demo-research"
           action = "keep"
         }
 
