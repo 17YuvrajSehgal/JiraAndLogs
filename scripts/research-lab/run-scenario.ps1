@@ -6,7 +6,7 @@ param(
     [Parameter(Mandatory = $true)]
     [string]$ScenarioFile,
 
-    [ValidateSet("Auto", "RecordOnly", "SetEnv", "RestartPods", "ScaleDeployment", "ChaosMeshChaos", "Flagd")]
+    [ValidateSet("Auto", "RecordOnly", "SetEnv", "RestartPods", "ScaleDeployment", "ChaosMeshChaos", "Flagd", "MultiFault")]
     [string]$Action = "Auto",
 
     [int]$DurationSeconds = 0,
@@ -301,6 +301,52 @@ function Invoke-ScenarioAction {
             Start-Sleep -Seconds 5
         }
 
+        return $restore
+    }
+
+    if ($SelectedAction -eq "MultiFault") {
+        # OTel Demo multi-fault orchestration (docs5/01 Phase 1c).
+        # Delegates entirely to scripts/research-lab/otel-demo/Invoke-MultiFaultOrchestration.ps1
+        # which owns the inject/wait/restore sequence for L2/L3/L4 scenarios.
+        $compType = $Scenario.execution_composition_type
+        if (-not $compType) {
+            throw "MultiFault action requires execution.composition_type (concurrent | cascade | compound_primitive)."
+        }
+        $componentsFile = $Scenario.execution_components_file
+        if (-not $componentsFile) {
+            throw "MultiFault action requires execution.components_file (path to sidecar JSON)."
+        }
+        if (-not [System.IO.Path]::IsPathRooted($componentsFile)) {
+            $componentsFile = Join-ResearchLabPath @((Get-ResearchLabRepoRoot), $componentsFile)
+        }
+        if (-not (Test-Path -LiteralPath $componentsFile)) {
+            throw "MultiFault components file not found: $componentsFile"
+        }
+
+        $orchestrator = Join-Path $PSScriptRoot (Join-Path "otel-demo" "Invoke-MultiFaultOrchestration.ps1")
+        if (-not (Test-Path -LiteralPath $orchestrator)) {
+            throw "Invoke-MultiFaultOrchestration.ps1 not found at $orchestrator"
+        }
+
+        $orchestratorArgs = @(
+            "-ComponentsFile", $componentsFile,
+            "-CompositionType", $compType,
+            "-DurationSeconds", $ActiveDurationSeconds,
+            "-Namespace", $TargetNamespace
+        )
+        if ($Scenario.execution_cascade_emergence_window_seconds) {
+            $orchestratorArgs += "-CascadeEmergenceWindowSeconds"
+            $orchestratorArgs += [int]$Scenario.execution_cascade_emergence_window_seconds
+        }
+        if ($DoNotRestore) {
+            $orchestratorArgs += "-SkipRestore"
+        }
+
+        Write-Host "MultiFault dispatch -> $orchestrator"
+        $orchResult = & pwsh -NoProfile -ExecutionPolicy Bypass -File $orchestrator @orchestratorArgs
+        $restore.composition_type = $compType
+        $restore.components_file = $componentsFile
+        $restore.orchestrator_result = $orchResult
         return $restore
     }
 
