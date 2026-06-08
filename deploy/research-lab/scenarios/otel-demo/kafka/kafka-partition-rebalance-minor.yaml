@@ -1,0 +1,43 @@
+schema_version: 1
+scenario_id: otel-demo-kafka-partition-rebalance-minor
+title: Kafka broker restart — partition rebalance noise (recoverable)
+dataset_run_id: otel-demo-placeholder-run
+traffic_profile_id: otel-demo-baseline-checkout-mix
+environment: research-otel-demo
+jira_candidate: false
+expected_jira:
+  issue_type: Task
+  priority: Minor
+  components: [kafka]
+  labels: [synthetic-incident, kafka, partition-rebalance, noise-class, telemetry-linked]
+  summary_template: "Brief Kafka rebalance during broker restart"
+  description_template: |
+    Synthetic lab issue from scenario otel-demo-kafka-partition-rebalance-minor.
+    Kafka broker restarted; consumers brief stall during partition reassignment;
+    auto-recovered. Noise-class.
+
+    NEW FAILURE FAMILY: does not exist in OB v5-large.
+fault:
+  fault_id: kafka-rebalance-001
+  fault_type: pod_restart
+  affected_service: kafka
+  expected_start_offset_seconds: 300
+  expected_duration_seconds: 120
+  blast_radius: {user_visible: false, expected_error_rate: low, expected_latency_impact: low}
+labels:
+  severity: minor
+  incident_type: noise
+  root_cause_category: pod_restart
+  should_alert: false
+  should_create_jira_shadow_issue: false
+execution:
+  action: RestartPods
+  namespace: otel-demo-research
+  selector: app.kubernetes.io/name=kafka
+triage:
+  schema_version: 1
+  scenario_family: kafka-partition-rebalance
+  per_window:
+    pre_fault_baseline: {triage_label: noise, is_hard_case: false, rationale: "Pre-fault; kafka stable."}
+    active_fault: {triage_label: noise, is_hard_case: true, rationale: "Rebalance noise; auto-recovers."}
+    recovery_window: {triage_label: noise, is_hard_case: false, rationale: "Stable."}

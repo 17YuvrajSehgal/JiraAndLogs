@@ -1,0 +1,43 @@
+schema_version: 1
+scenario_id: otel-demo-scheduled-job-spike-minor
+title: Load-generator traffic spike via env (noise class)
+dataset_run_id: otel-demo-placeholder-run
+traffic_profile_id: otel-demo-baseline-checkout-mix
+environment: research-otel-demo
+jira_candidate: false
+expected_jira:
+  issue_type: Task
+  priority: Low
+  components: [load-generator]
+  labels: [synthetic-incident, traffic-spike, noise-class, telemetry-linked]
+  summary_template: "Brief synthetic traffic spike from load-generator"
+  description_template: |
+    Synthetic lab issue from scenario otel-demo-scheduled-job-spike-minor.
+    LOCUST_USERS doubled briefly; transient throughput spike then back to
+    baseline. Noise class.
+fault:
+  fault_id: traffic-spike-001
+  fault_type: traffic_spike
+  affected_service: load-generator
+  expected_start_offset_seconds: 300
+  expected_duration_seconds: 180
+  blast_radius: {user_visible: false, expected_error_rate: low, expected_latency_impact: low}
+labels:
+  severity: minor
+  incident_type: noise
+  root_cause_category: traffic_spike
+  should_alert: false
+  should_create_jira_shadow_issue: false
+execution:
+  action: SetEnv
+  namespace: otel-demo-research
+  target_name: load-generator
+  env:
+    LOCUST_USERS: "10"
+triage:
+  schema_version: 1
+  scenario_family: scheduled-job-spike
+  per_window:
+    pre_fault_baseline: {triage_label: noise, is_hard_case: false, rationale: "Baseline traffic."}
+    active_fault: {triage_label: noise, is_hard_case: true, rationale: "Traffic doubled briefly; no service impact."}
+    recovery_window: {triage_label: noise, is_hard_case: false, rationale: "Env reverted."}

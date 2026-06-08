@@ -1,0 +1,42 @@
+schema_version: 1
+scenario_id: otel-demo-frontend-traffic-pressure-major
+title: Frontend traffic flood (flagd loadGeneratorFloodHomepage)
+dataset_run_id: otel-demo-placeholder-run
+traffic_profile_id: otel-demo-baseline-checkout-mix
+environment: research-otel-demo
+jira_candidate: true
+expected_jira:
+  issue_type: Incident
+  priority: Major
+  components: [frontend, frontend-proxy]
+  labels: [synthetic-incident, traffic-pressure, frontend, telemetry-linked]
+  summary_template: "Frontend overwhelmed by traffic flood"
+  description_template: |
+    Synthetic lab issue from scenario otel-demo-frontend-traffic-pressure-major.
+    flagd loadGeneratorFloodHomepage=on; load-generator floods homepage at
+    100x rate; frontend latency p95 spikes; pods may auto-scale or struggle.
+fault:
+  fault_id: traffic-pressure-001
+  fault_type: traffic_pressure
+  affected_service: load-generator
+  expected_start_offset_seconds: 300
+  expected_duration_seconds: 600
+  blast_radius: {user_visible: true, expected_error_rate: medium, expected_latency_impact: high}
+labels:
+  severity: major
+  incident_type: degradation
+  root_cause_category: traffic_pressure
+  should_alert: true
+  should_create_jira_shadow_issue: true
+execution:
+  action: Flagd
+  namespace: otel-demo-research
+  flagd_flag: loadGeneratorFloodHomepage
+  flagd_variant: "on"
+triage:
+  schema_version: 1
+  scenario_family: frontend-traffic-pressure
+  per_window:
+    pre_fault_baseline: {triage_label: noise, is_hard_case: false, rationale: "Baseline traffic."}
+    active_fault: {triage_label: ticket_worthy, triage_severity: major, triage_components: [frontend], triage_reason_class: traffic_pressure, is_hard_case: false, rationale: "Sustained flood; latency p95 climbing."}
+    recovery_window: {triage_label: borderline, triage_severity: minor, triage_components: [frontend], triage_reason_class: traffic_pressure, is_hard_case: true, rationale: "Flag off; latency normalizes."}

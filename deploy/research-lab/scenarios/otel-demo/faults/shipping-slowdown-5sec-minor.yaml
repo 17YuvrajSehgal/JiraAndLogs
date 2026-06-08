@@ -1,0 +1,42 @@
+schema_version: 1
+scenario_id: otel-demo-shipping-slowdown-5sec-minor
+title: International shipping slowdown — 5sec delay (flagd intensity)
+dataset_run_id: otel-demo-placeholder-run
+traffic_profile_id: otel-demo-baseline-checkout-mix
+environment: research-otel-demo
+jira_candidate: true
+expected_jira:
+  issue_type: Incident
+  priority: Minor
+  components: [shipping]
+  labels: [synthetic-incident, latency, shipping, telemetry-linked, intensity-low]
+  summary_template: "International shipping showing 5sec delay"
+  description_template: |
+    Synthetic lab issue from scenario otel-demo-shipping-slowdown-5sec-minor.
+    flagd intlShippingSlowdown=5sec; checkout's shipping step takes ~5s extra
+    for international addresses. Borderline ticket-worthy.
+fault:
+  fault_id: shipping-slow-5s-001
+  fault_type: latency_injection
+  affected_service: shipping
+  expected_start_offset_seconds: 300
+  expected_duration_seconds: 600
+  blast_radius: {user_visible: true, expected_error_rate: low, expected_latency_impact: medium}
+labels:
+  severity: minor
+  incident_type: degradation
+  root_cause_category: latency_injection
+  should_alert: false
+  should_create_jira_shadow_issue: true
+execution:
+  action: Flagd
+  namespace: otel-demo-research
+  flagd_flag: intlShippingSlowdown
+  flagd_variant: "5sec"
+triage:
+  schema_version: 1
+  scenario_family: latency-near-miss-partial-recovery
+  per_window:
+    pre_fault_baseline: {triage_label: noise, is_hard_case: false, rationale: "Pre-fault; shipping normal."}
+    active_fault: {triage_label: borderline, triage_severity: minor, triage_components: [shipping], triage_reason_class: latency_injection, is_hard_case: true, rationale: "5sec extra latency; possibly tolerable."}
+    recovery_window: {triage_label: noise, is_hard_case: false, rationale: "Flag off; normal latency."}

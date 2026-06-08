@@ -1,0 +1,8 @@
+{
+  "_comment": "L3 cascade: product-catalog latency PRIMARY (injected), recommendation timeout SECONDARY (emergent via retry-budget exhaustion).",
+  "cascade_emergence_window_seconds": 45,
+  "fault_components": [
+    {"action": "SetEnv", "target_name": "product-catalog", "env": {"EXTRA_LATENCY": "750ms"}, "is_primary_cause": true, "cascade_depth": 0, "service_role": "catalog"},
+    {"action": "observation_only", "expected_target": "recommendation", "expected_signal": "recommendation -> product-catalog spans show p95 > timeout threshold; recommendation returns 503 to frontend after retry budget exhausts", "is_primary_cause": false, "cascade_depth": 1, "service_role": "recommendations"}
+  ]
+}

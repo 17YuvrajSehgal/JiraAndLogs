@@ -1,18 +1,32 @@
 {
-  "_comment": "OTel Demo cross-app corpus manifest. Tracks the run plans that compose the full ~135-run collection per docs5/00 §5.5.5. v1 = initial seed corpus authored 2026-06-08; expand after Phase 2 pilot.",
+  "_comment": "OTel Demo cross-app corpus manifest. Tracks the run plans that compose the full ~135-run collection per docs5/00 §5.5.5. Updated 2026-06-08 after authoring the full 47-scenario set.",
   "corpus_id": "otel-demo-v1",
   "display_name": "OpenTelemetry Demo cross-app dataset, v1",
   "app_id": "otel-demo",
   "namespace": "otel-demo-research",
   "service_catalog": "deploy/research-lab/service-catalogs/otel-demo.yaml",
   "schema_version": 1,
+  "scenario_inventory": {
+    "baseline": 1,
+    "L1_transferred": 27,
+    "L1_kafka": 5,
+    "L1_llm_bonus": 2,
+    "L2_concurrent": 5,
+    "L3_cascade": 4,
+    "L4_compound": 0,
+    "total_authored": 44,
+    "deferred_network_chaos_mesh": 4,
+    "deferred_l4_chaos_mesh": 1,
+    "planned_total_if_chaos_mesh_available": 49
+  },
   "run_plans": [
     {
       "plan_id": "otel-demo-pilot",
       "plan_file": "deploy/research-lab/run-plans/otel-demo-pilot.json",
       "n_runs": 1,
-      "purpose": "Phase 2 pilot — validates feature-column compatibility and L3 cascade-emergence before full collection",
-      "go_no_go": true
+      "purpose": "Phase 2 pilot — go/no-go before full collection. 11 representative scenarios.",
+      "go_no_go": true,
+      "status": "VALIDATED_LOCALLY"
     },
     {
       "plan_id": "otel-demo-baseline",
@@ -24,20 +38,27 @@
       "plan_id": "otel-demo-l1-compact",
       "plan_file": "deploy/research-lab/run-plans/otel-demo-l1-compact.json",
       "n_runs": 30,
-      "purpose": "L1 single-fault scenarios (compact mix)"
+      "purpose": "L1 single-fault — 33 distinct scenarios covering all primitives (ScaleDeployment, RestartPods, SetEnv, Flagd-16 flags)"
+    },
+    {
+      "plan_id": "otel-demo-kafka",
+      "plan_file": "deploy/research-lab/run-plans/otel-demo-kafka.json",
+      "n_runs": 16,
+      "purpose": "5 NEW Kafka families — architectural-distance evidence (no OB analogues)"
     },
     {
       "plan_id": "otel-demo-multifault",
       "plan_file": "deploy/research-lab/run-plans/otel-demo-multifault.json",
-      "n_runs": 12,
-      "purpose": "L2 concurrent + L3 cascade scenarios"
+      "n_runs": 16,
+      "purpose": "L2 concurrent (5) + L3 cascade (4) — graded difficulty evidence per docs5/00 §5.5"
     }
   ],
   "deferred_until_chaos_mesh": [
-    "network-latency",
-    "network-packet-loss",
-    "network-partition",
-    "dns-outage"
+    "network-latency-major",
+    "network-packet-loss-major",
+    "network-partition-critical",
+    "dns-outage-critical",
+    "compound-saturation-network-latency (L4)"
   ],
-  "notes": "This v1 manifest is the seed corpus. Once Phase 2 pilot validates feature-column compatibility and L3 cascade-emergence, expand run counts to match docs5/00 §5.5.5 targets (95 L1 + 20 L2 + 16 L3 + 4 L4 = ~135 runs)."
+  "notes": "Phase 2 local pilot validated on 2026-06-08: 94/94 triage_feature_* columns produced, all harness primitives green. Ready for full GCP collection. Total target ~70 runs (matches docs5/00 §5.5.5 targets scaled to the authored 44-scenario set)."
 }

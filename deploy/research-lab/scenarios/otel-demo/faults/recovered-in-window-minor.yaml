@@ -1,0 +1,44 @@
+schema_version: 1
+scenario_id: otel-demo-recovered-in-window-minor
+title: Brief currency outage that auto-recovers mid-window (borderline)
+dataset_run_id: otel-demo-placeholder-run
+traffic_profile_id: otel-demo-baseline-checkout-mix
+environment: research-otel-demo
+jira_candidate: true
+expected_jira:
+  issue_type: Task
+  priority: Minor
+  components: [currency]
+  labels: [synthetic-incident, recovered-in-window, currency, telemetry-linked]
+  summary_template: "Brief currency outage — recovered before page"
+  description_template: |
+    Synthetic lab issue from scenario otel-demo-recovered-in-window-minor.
+    Currency scaled to 0 then restored within 60s; errors brief; pager
+    didn't fire. Possible to misclassify as noise.
+fault:
+  fault_id: recovered-001
+  fault_type: service_outage
+  affected_service: currency
+  expected_start_offset_seconds: 300
+  expected_duration_seconds: 60
+  blast_radius: {user_visible: true, expected_error_rate: medium, expected_latency_impact: low}
+labels:
+  severity: minor
+  incident_type: degradation
+  root_cause_category: service_unavailable
+  should_alert: false
+  should_create_jira_shadow_issue: true
+execution:
+  action: ScaleDeployment
+  namespace: otel-demo-research
+  target_kind: deployment
+  target_name: currency
+  replicas: 0
+  restore_replicas: 1
+triage:
+  schema_version: 1
+  scenario_family: recovered-in-window
+  per_window:
+    pre_fault_baseline: {triage_label: noise, is_hard_case: false, rationale: "Pre-fault."}
+    active_fault: {triage_label: borderline, triage_severity: minor, triage_components: [currency], triage_reason_class: service_unavailable, is_hard_case: true, rationale: "Brief outage; recovered; borderline."}
+    recovery_window: {triage_label: noise, is_hard_case: false, rationale: "Recovered."}

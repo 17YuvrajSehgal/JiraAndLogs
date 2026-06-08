@@ -1,0 +1,51 @@
+schema_version: 1
+scenario_id: otel-demo-cascade-currency-frontend-errors
+title: L3 cascade — currency outage → frontend price-format errors
+dataset_run_id: otel-demo-placeholder-run
+traffic_profile_id: otel-demo-baseline-checkout-mix
+environment: research-otel-demo
+jira_candidate: true
+expected_jira:
+  issue_type: Incident
+  priority: Major
+  components: [currency, frontend]
+  labels: [synthetic-incident, multi-fault, cascade, L3, ui-error, telemetry-linked]
+  summary_template: "Frontend display errors caused by currency service outage (cascade)"
+  description_template: |
+    Synthetic L3 cascade scenario.
+    PRIMARY: currency scaled to 0.
+    SECONDARY (emergent): frontend's product-listing code throws errors
+    when trying to format prices (no FX conversion available). May render
+    fallback UI or actual errors depending on graceful-degradation code.
+
+    Shallow cascade (depth 2). Tests whether the cascade can identify
+    short-chain causality.
+fault:
+  fault_id: multifault-cascade-004
+  fault_type: multi_fault_cascade
+  affected_service: currency
+  expected_start_offset_seconds: 300
+  expected_duration_seconds: 600
+  blast_radius: {user_visible: true, expected_error_rate: medium, expected_latency_impact: low}
+labels:
+  severity: major
+  incident_type: degradation
+  root_cause_category: multi_fault_cascade
+  should_alert: true
+  should_create_jira_shadow_issue: true
+  difficulty_level: L3
+  cascade_primary_target: currency
+  cascade_secondary_target: frontend
+execution:
+  action: MultiFault
+  namespace: otel-demo-research
+  composition_type: cascade
+  cascade_emergence_window_seconds: 30
+  components_file: deploy/research-lab/scenarios/otel-demo/multifault/components/cascade-currency-frontend-errors.json
+triage:
+  schema_version: 1
+  scenario_family: multifault-cascade
+  per_window:
+    pre_fault_baseline: {triage_label: noise, is_hard_case: false, rationale: "Healthy."}
+    active_fault: {triage_label: ticket_worthy, triage_severity: major, triage_components: [currency, frontend], triage_reason_class: multi_fault_cascade, is_hard_case: true, rationale: "Currency outage cascades to frontend price display."}
+    recovery_window: {triage_label: borderline, triage_severity: minor, triage_components: [currency], triage_reason_class: multi_fault_cascade, is_hard_case: true, rationale: "Recovery."}

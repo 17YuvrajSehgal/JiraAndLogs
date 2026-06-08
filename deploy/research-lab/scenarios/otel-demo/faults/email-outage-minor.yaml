@@ -1,0 +1,45 @@
+schema_version: 1
+scenario_id: otel-demo-email-outage-minor
+title: Email service outage — confirmation emails not sent
+dataset_run_id: otel-demo-placeholder-run
+traffic_profile_id: otel-demo-baseline-checkout-mix
+environment: research-otel-demo
+jira_candidate: true
+expected_jira:
+  issue_type: Incident
+  priority: Minor
+  components: [email, checkout]
+  labels: [synthetic-incident, service-outage, email, async, telemetry-linked]
+  summary_template: "Email service outage — order confirmation emails missing"
+  description_template: |
+    Synthetic lab issue generated from scenario otel-demo-email-outage-minor.
+
+    The email service was scaled to 0. Order placement succeeds, but confirmation
+    emails are not sent. Async failure; customer-visible after a delay.
+fault:
+  fault_id: email-outage-001
+  fault_type: service_outage
+  affected_service: email
+  expected_start_offset_seconds: 300
+  expected_duration_seconds: 600
+  blast_radius: {user_visible: false, expected_error_rate: medium, expected_latency_impact: low}
+labels:
+  severity: minor
+  incident_type: outage
+  root_cause_category: service_unavailable
+  should_alert: false
+  should_create_jira_shadow_issue: true
+execution:
+  action: ScaleDeployment
+  namespace: otel-demo-research
+  target_kind: deployment
+  target_name: email
+  replicas: 0
+  restore_replicas: 1
+triage:
+  schema_version: 1
+  scenario_family: email-outage
+  per_window:
+    pre_fault_baseline: {triage_label: noise, is_hard_case: false, rationale: "Pre-fault; email healthy."}
+    active_fault: {triage_label: borderline, triage_severity: minor, triage_components: [email], triage_reason_class: service_unavailable, is_hard_case: true, rationale: "Async failure; minor user impact."}
+    recovery_window: {triage_label: noise, is_hard_case: false, rationale: "Recovered."}

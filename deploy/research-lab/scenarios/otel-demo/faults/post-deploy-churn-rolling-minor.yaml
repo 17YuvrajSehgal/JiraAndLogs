@@ -1,0 +1,41 @@
+schema_version: 1
+scenario_id: otel-demo-post-deploy-churn-rolling-minor
+title: Rolling update on cart service — graceful deploy churn (noise class)
+dataset_run_id: otel-demo-placeholder-run
+traffic_profile_id: otel-demo-baseline-checkout-mix
+environment: research-otel-demo
+jira_candidate: false
+expected_jira:
+  issue_type: Task
+  priority: Low
+  components: [cart]
+  labels: [synthetic-incident, deploy-churn, noise-class, cart, telemetry-linked]
+  summary_template: "Graceful rolling restart on cart"
+  description_template: |
+    Synthetic lab issue from scenario otel-demo-post-deploy-churn-rolling-minor.
+    Rolling restart of cart deployment; readiness probes prevent traffic
+    drop. Some transient 503s during pod rotation. Noise class.
+fault:
+  fault_id: post-deploy-churn-001
+  fault_type: pod_restart
+  affected_service: cart
+  expected_start_offset_seconds: 300
+  expected_duration_seconds: 180
+  blast_radius: {user_visible: false, expected_error_rate: low, expected_latency_impact: low}
+labels:
+  severity: minor
+  incident_type: noise
+  root_cause_category: pod_restart
+  should_alert: false
+  should_create_jira_shadow_issue: false
+execution:
+  action: RestartPods
+  namespace: otel-demo-research
+  selector: app.kubernetes.io/name=cart
+triage:
+  schema_version: 1
+  scenario_family: post-deploy-churn
+  per_window:
+    pre_fault_baseline: {triage_label: noise, is_hard_case: false, rationale: "Pre-deploy baseline."}
+    active_fault: {triage_label: noise, is_hard_case: true, rationale: "Graceful rolling; no real impact."}
+    recovery_window: {triage_label: noise, is_hard_case: false, rationale: "Settled."}

@@ -1,0 +1,43 @@
+schema_version: 1
+scenario_id: otel-demo-productcatalog-latency-major
+title: Product catalog latency injection — slow product pages
+dataset_run_id: otel-demo-placeholder-run
+traffic_profile_id: otel-demo-baseline-checkout-mix
+environment: research-otel-demo
+jira_candidate: true
+expected_jira:
+  issue_type: Incident
+  priority: Major
+  components: [product-catalog, frontend, recommendation]
+  labels: [synthetic-incident, latency, product-catalog, telemetry-linked]
+  summary_template: "Product catalog latency spike — slow product pages"
+  description_template: |
+    Synthetic lab issue from scenario otel-demo-productcatalog-latency-major.
+    EXTRA_LATENCY=750ms set on product-catalog; downstream callers experience
+    elevated latency; recommendation may timeout.
+fault:
+  fault_id: pcat-latency-001
+  fault_type: latency_injection
+  affected_service: product-catalog
+  expected_start_offset_seconds: 300
+  expected_duration_seconds: 600
+  blast_radius: {user_visible: true, expected_error_rate: low, expected_latency_impact: high}
+labels:
+  severity: major
+  incident_type: degradation
+  root_cause_category: latency_injection
+  should_alert: true
+  should_create_jira_shadow_issue: true
+execution:
+  action: SetEnv
+  namespace: otel-demo-research
+  target_name: product-catalog
+  env:
+    EXTRA_LATENCY: "750ms"
+triage:
+  schema_version: 1
+  scenario_family: productcatalog-latency
+  per_window:
+    pre_fault_baseline: {triage_label: noise, is_hard_case: false, rationale: "Pre-fault; catalog fast."}
+    active_fault: {triage_label: ticket_worthy, triage_severity: major, triage_components: [product-catalog, frontend], triage_reason_class: latency_injection, is_hard_case: false, rationale: "750ms added latency; user-visible."}
+    recovery_window: {triage_label: borderline, triage_severity: minor, triage_components: [product-catalog], triage_reason_class: latency_injection, is_hard_case: true, rationale: "Env reverted; tail clears."}

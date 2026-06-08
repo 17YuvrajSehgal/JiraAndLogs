@@ -1,0 +1,43 @@
+schema_version: 1
+scenario_id: otel-demo-latency-near-miss-partial-recovery-minor
+title: Brief latency spike that auto-recovers (borderline)
+dataset_run_id: otel-demo-placeholder-run
+traffic_profile_id: otel-demo-baseline-checkout-mix
+environment: research-otel-demo
+jira_candidate: true
+expected_jira:
+  issue_type: Task
+  priority: Minor
+  components: [product-catalog]
+  labels: [synthetic-incident, near-miss, latency, telemetry-linked]
+  summary_template: "Brief catalog latency spike — auto-recovered"
+  description_template: |
+    Synthetic lab issue from scenario otel-demo-latency-near-miss-partial-recovery-minor.
+    EXTRA_LATENCY=250ms set briefly on product-catalog; user-visible but
+    transient. Engineers may disagree whether to file.
+fault:
+  fault_id: latency-near-miss-001
+  fault_type: latency_injection
+  affected_service: product-catalog
+  expected_start_offset_seconds: 300
+  expected_duration_seconds: 180
+  blast_radius: {user_visible: true, expected_error_rate: low, expected_latency_impact: medium}
+labels:
+  severity: minor
+  incident_type: degradation
+  root_cause_category: latency_injection
+  should_alert: false
+  should_create_jira_shadow_issue: true
+execution:
+  action: SetEnv
+  namespace: otel-demo-research
+  target_name: product-catalog
+  env:
+    EXTRA_LATENCY: "250ms"
+triage:
+  schema_version: 1
+  scenario_family: latency-near-miss-partial-recovery
+  per_window:
+    pre_fault_baseline: {triage_label: noise, is_hard_case: false, rationale: "Pre-fault."}
+    active_fault: {triage_label: borderline, triage_severity: minor, triage_components: [product-catalog], triage_reason_class: latency_injection, is_hard_case: true, rationale: "Borderline — disagreement possible."}
+    recovery_window: {triage_label: noise, is_hard_case: false, rationale: "Recovered."}

@@ -1,0 +1,52 @@
+schema_version: 1
+scenario_id: otel-demo-cascade-productcatalog-latency-recommendation-timeout
+title: L3 cascade — productcatalog latency → recommendation timeouts
+dataset_run_id: otel-demo-placeholder-run
+traffic_profile_id: otel-demo-baseline-checkout-mix
+environment: research-otel-demo
+jira_candidate: true
+expected_jira:
+  issue_type: Incident
+  priority: Major
+  components: [product-catalog, recommendation]
+  labels: [synthetic-incident, multi-fault, cascade, L3, root-cause-evidence, telemetry-linked]
+  summary_template: "Recommendation timeouts caused by product-catalog latency (cascade)"
+  description_template: |
+    Synthetic L3 cascade scenario.
+    PRIMARY: product-catalog gets EXTRA_LATENCY=750ms via env injection.
+    SECONDARY (emergent): recommendation service's calls to product-catalog
+    begin timing out as its retry budget exhausts. Recommendation returns
+    degraded responses.
+
+    PrimaryGold@5 measures whether the cascade prioritizes the root-cause
+    ticket (product-catalog-latency) over the symptom ticket
+    (recommendation-cache-failure).
+fault:
+  fault_id: multifault-cascade-002
+  fault_type: multi_fault_cascade
+  affected_service: product-catalog
+  expected_start_offset_seconds: 300
+  expected_duration_seconds: 600
+  blast_radius: {user_visible: true, expected_error_rate: medium, expected_latency_impact: high}
+labels:
+  severity: major
+  incident_type: degradation
+  root_cause_category: multi_fault_cascade
+  should_alert: true
+  should_create_jira_shadow_issue: true
+  difficulty_level: L3
+  cascade_primary_target: product-catalog
+  cascade_secondary_target: recommendation
+execution:
+  action: MultiFault
+  namespace: otel-demo-research
+  composition_type: cascade
+  cascade_emergence_window_seconds: 45
+  components_file: deploy/research-lab/scenarios/otel-demo/multifault/components/cascade-productcatalog-latency-recommendation-timeout.json
+triage:
+  schema_version: 1
+  scenario_family: multifault-cascade
+  per_window:
+    pre_fault_baseline: {triage_label: noise, is_hard_case: false, rationale: "Both healthy."}
+    active_fault: {triage_label: ticket_worthy, triage_severity: major, triage_components: [product-catalog, recommendation], triage_reason_class: multi_fault_cascade, is_hard_case: true, rationale: "Catalog root cause → rec timeout secondary, observable via trace propagation depth 2."}
+    recovery_window: {triage_label: borderline, triage_severity: minor, triage_components: [product-catalog, recommendation], triage_reason_class: multi_fault_cascade, is_hard_case: true, rationale: "Recovery; tails clear."}

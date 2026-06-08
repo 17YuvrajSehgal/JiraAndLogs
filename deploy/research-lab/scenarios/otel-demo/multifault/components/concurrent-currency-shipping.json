@@ -1,0 +1,7 @@
+{
+  "_comment": "L2 concurrent: currency-outage + shipping-outage simultaneously.",
+  "fault_components": [
+    {"action": "ScaleDeployment", "target_name": "currency", "replicas": 0, "restore_replicas": 1, "is_primary_cause": true, "service_role": "fx-conversion"},
+    {"action": "ScaleDeployment", "target_name": "shipping", "replicas": 0, "restore_replicas": 1, "is_primary_cause": true, "service_role": "shipping"}
+  ]
+}

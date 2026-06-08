@@ -1,0 +1,45 @@
+schema_version: 1
+scenario_id: otel-demo-currency-outage-major
+title: Currency conversion service outage — prices fall back to default currency
+dataset_run_id: otel-demo-placeholder-run
+traffic_profile_id: otel-demo-baseline-checkout-mix
+environment: research-otel-demo
+jira_candidate: true
+expected_jira:
+  issue_type: Incident
+  priority: Major
+  components: [currency, frontend, checkout]
+  labels: [synthetic-incident, service-outage, currency, customer-visible, telemetry-linked]
+  summary_template: "Currency service outage — prices showing fallback values"
+  description_template: |
+    Synthetic lab issue generated from scenario otel-demo-currency-outage-major.
+
+    The currency service was scaled to 0. FX conversion calls fail; product
+    prices on the frontend show in fallback currency. Cosmetic but visible.
+fault:
+  fault_id: currency-outage-001
+  fault_type: service_outage
+  affected_service: currency
+  expected_start_offset_seconds: 300
+  expected_duration_seconds: 600
+  blast_radius: {user_visible: true, expected_error_rate: medium, expected_latency_impact: low}
+labels:
+  severity: major
+  incident_type: outage
+  root_cause_category: service_unavailable
+  should_alert: true
+  should_create_jira_shadow_issue: true
+execution:
+  action: ScaleDeployment
+  namespace: otel-demo-research
+  target_kind: deployment
+  target_name: currency
+  replicas: 0
+  restore_replicas: 1
+triage:
+  schema_version: 1
+  scenario_family: currency-outage
+  per_window:
+    pre_fault_baseline: {triage_label: noise, is_hard_case: false, rationale: "Pre-fault; currency healthy."}
+    active_fault: {triage_label: ticket_worthy, triage_severity: major, triage_components: [currency, frontend], triage_reason_class: service_unavailable, is_hard_case: false, rationale: "Currency down; prices show fallback."}
+    recovery_window: {triage_label: borderline, triage_severity: minor, triage_components: [currency], triage_reason_class: service_unavailable, is_hard_case: true, rationale: "Recovery; price normalization."}

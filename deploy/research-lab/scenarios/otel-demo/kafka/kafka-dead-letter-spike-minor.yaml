@@ -1,0 +1,45 @@
+schema_version: 1
+scenario_id: otel-demo-kafka-dead-letter-spike-minor
+title: Kafka dead-letter accumulation — DLQ depth signal
+dataset_run_id: otel-demo-placeholder-run
+traffic_profile_id: otel-demo-baseline-checkout-mix
+environment: research-otel-demo
+jira_candidate: true
+expected_jira:
+  issue_type: Incident
+  priority: Minor
+  components: [kafka, fraud-detection]
+  labels: [synthetic-incident, kafka, dead-letter, async-bridge, telemetry-linked]
+  summary_template: "Kafka dead-letter queue depth climbing"
+  description_template: |
+    Synthetic lab issue from scenario otel-demo-kafka-dead-letter-spike-minor.
+    flagd kafkaQueueProblems=on; consumer-side delay causes some messages to
+    age out into a dead-letter pattern. DLQ depth is the primary signal;
+    no user-facing errors.
+
+    NEW FAILURE FAMILY: does not exist in OB v5-large.
+fault:
+  fault_id: kafka-dlq-001
+  fault_type: queue_pressure
+  affected_service: kafka
+  expected_start_offset_seconds: 300
+  expected_duration_seconds: 600
+  blast_radius: {user_visible: false, expected_error_rate: low, expected_latency_impact: low}
+labels:
+  severity: minor
+  incident_type: degradation
+  root_cause_category: queue_pressure
+  should_alert: false
+  should_create_jira_shadow_issue: true
+execution:
+  action: Flagd
+  namespace: otel-demo-research
+  flagd_flag: kafkaQueueProblems
+  flagd_variant: "on"
+triage:
+  schema_version: 1
+  scenario_family: kafka-dead-letter-spike
+  per_window:
+    pre_fault_baseline: {triage_label: noise, is_hard_case: false, rationale: "Pre-fault; DLQ stable."}
+    active_fault: {triage_label: borderline, triage_severity: minor, triage_components: [kafka, fraud-detection], triage_reason_class: queue_pressure, is_hard_case: true, rationale: "DLQ depth climbing; no immediate impact."}
+    recovery_window: {triage_label: noise, is_hard_case: false, rationale: "Flag off; DLQ draining."}

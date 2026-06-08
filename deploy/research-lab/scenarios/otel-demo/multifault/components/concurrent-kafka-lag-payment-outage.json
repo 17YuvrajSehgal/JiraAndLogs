@@ -1,0 +1,7 @@
+{
+  "_comment": "L2 concurrent: kafka-consumer-lag (flagd, NEW family) + payment-outage (ScaleDeployment, OB-transferable family). Tests new × known family co-retrieval.",
+  "fault_components": [
+    {"action": "Flagd", "flagd_flag": "kafkaQueueProblems", "flagd_variant": "on", "is_primary_cause": true, "service_role": "message-broker"},
+    {"action": "ScaleDeployment", "target_name": "payment", "replicas": 0, "restore_replicas": 1, "is_primary_cause": true, "service_role": "payment-processing"}
+  ]
+}

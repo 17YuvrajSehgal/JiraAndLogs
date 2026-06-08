@@ -1,0 +1,45 @@
+schema_version: 1
+scenario_id: otel-demo-shipping-outage-major
+title: Shipping service outage — checkout cannot compute shipping
+dataset_run_id: otel-demo-placeholder-run
+traffic_profile_id: otel-demo-baseline-checkout-mix
+environment: research-otel-demo
+jira_candidate: true
+expected_jira:
+  issue_type: Incident
+  priority: Major
+  components: [shipping, checkout]
+  labels: [synthetic-incident, service-outage, shipping, telemetry-linked]
+  summary_template: "Shipping service outage — checkout fails at shipping step"
+  description_template: |
+    Synthetic lab issue generated from scenario otel-demo-shipping-outage-major.
+
+    The shipping service was scaled to 0. Checkout calls to shipping for
+    label/quote fail; users cannot complete orders.
+fault:
+  fault_id: shipping-outage-001
+  fault_type: service_outage
+  affected_service: shipping
+  expected_start_offset_seconds: 300
+  expected_duration_seconds: 600
+  blast_radius: {user_visible: true, expected_error_rate: high, expected_latency_impact: medium}
+labels:
+  severity: major
+  incident_type: outage
+  root_cause_category: service_unavailable
+  should_alert: true
+  should_create_jira_shadow_issue: true
+execution:
+  action: ScaleDeployment
+  namespace: otel-demo-research
+  target_kind: deployment
+  target_name: shipping
+  replicas: 0
+  restore_replicas: 1
+triage:
+  schema_version: 1
+  scenario_family: shipping-outage
+  per_window:
+    pre_fault_baseline: {triage_label: noise, is_hard_case: false, rationale: "Pre-fault; shipping healthy."}
+    active_fault: {triage_label: ticket_worthy, triage_severity: major, triage_components: [shipping, checkout], triage_reason_class: service_unavailable, is_hard_case: false, rationale: "Shipping down; checkout blocked at delivery options."}
+    recovery_window: {triage_label: borderline, triage_severity: minor, triage_components: [shipping], triage_reason_class: service_unavailable, is_hard_case: true, rationale: "Recovery; retries clear."}

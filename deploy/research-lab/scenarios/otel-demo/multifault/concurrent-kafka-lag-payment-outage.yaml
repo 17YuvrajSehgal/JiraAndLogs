@@ -1,0 +1,45 @@
+schema_version: 1
+scenario_id: otel-demo-concurrent-kafka-lag-payment-outage
+title: L2 concurrent — kafka consumer lag + payment outage (new × OB families)
+dataset_run_id: otel-demo-placeholder-run
+traffic_profile_id: otel-demo-baseline-checkout-mix
+environment: research-otel-demo
+jira_candidate: true
+expected_jira:
+  issue_type: Incident
+  priority: Critical
+  components: [kafka, payment, checkout]
+  labels: [synthetic-incident, multi-fault, concurrent, L2, kafka, novel-x-known, telemetry-linked]
+  summary_template: "Kafka consumer lag + payment outage simultaneously"
+  description_template: |
+    Synthetic L2 scenario. Combines a NEW failure family (kafka-consumer-lag,
+    no OB analogue) with an OB family (payment-outage). Tests whether the
+    cascade can retrieve BOTH a new-family ticket AND a known-family ticket
+    when they co-occur. Architectural-distance evidence relevant for the
+    cross-app §6.5 paper section.
+fault:
+  fault_id: multifault-concurrent-005
+  fault_type: multi_fault_concurrent
+  affected_service: kafka+payment
+  expected_start_offset_seconds: 300
+  expected_duration_seconds: 600
+  blast_radius: {user_visible: true, expected_error_rate: high, expected_latency_impact: medium}
+labels:
+  severity: critical
+  incident_type: outage
+  root_cause_category: multi_fault_concurrent
+  should_alert: true
+  should_create_jira_shadow_issue: true
+  difficulty_level: L2
+execution:
+  action: MultiFault
+  namespace: otel-demo-research
+  composition_type: concurrent
+  components_file: deploy/research-lab/scenarios/otel-demo/multifault/components/concurrent-kafka-lag-payment-outage.json
+triage:
+  schema_version: 1
+  scenario_family: multifault-concurrent
+  per_window:
+    pre_fault_baseline: {triage_label: noise, is_hard_case: false, rationale: "Both healthy."}
+    active_fault: {triage_label: ticket_worthy, triage_severity: critical, triage_components: [kafka, payment], triage_reason_class: multi_fault_concurrent, is_hard_case: true, rationale: "New family × known family simultaneously."}
+    recovery_window: {triage_label: borderline, triage_severity: minor, triage_components: [kafka, payment], triage_reason_class: multi_fault_concurrent, is_hard_case: true, rationale: "Recovery."}

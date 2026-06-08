@@ -1,0 +1,51 @@
+schema_version: 1
+scenario_id: otel-demo-cascade-valkey-cart-checkout
+title: L3 cascade — valkey-cart outage → cart errors → checkout failures
+dataset_run_id: otel-demo-placeholder-run
+traffic_profile_id: otel-demo-baseline-checkout-mix
+environment: research-otel-demo
+jira_candidate: true
+expected_jira:
+  issue_type: Incident
+  priority: Critical
+  components: [valkey-cart, cart, checkout]
+  labels: [synthetic-incident, multi-fault, cascade, L3, three-level-depth, telemetry-linked]
+  summary_template: "Checkout failures caused by valkey-cart outage (3-hop cascade)"
+  description_template: |
+    Synthetic L3 cascade scenario.
+    PRIMARY: valkey-cart (Redis-compatible cache) scaled to 0.
+    SECONDARY (emergent): cart service can't read/write; cart endpoints fail.
+    TERTIARY (further emergent): checkout's cart-read step fails; checkout 500s.
+
+    Three-level deep cascade. PrimaryGold@5 should retrieve the
+    valkey-cart-outage ticket (root cause) over cart-failure or
+    checkout-outage symptoms.
+fault:
+  fault_id: multifault-cascade-003
+  fault_type: multi_fault_cascade
+  affected_service: valkey-cart
+  expected_start_offset_seconds: 300
+  expected_duration_seconds: 600
+  blast_radius: {user_visible: true, expected_error_rate: high, expected_latency_impact: medium}
+labels:
+  severity: critical
+  incident_type: outage
+  root_cause_category: multi_fault_cascade
+  should_alert: true
+  should_create_jira_shadow_issue: true
+  difficulty_level: L3
+  cascade_primary_target: valkey-cart
+  cascade_secondary_target: checkout
+execution:
+  action: MultiFault
+  namespace: otel-demo-research
+  composition_type: cascade
+  cascade_emergence_window_seconds: 30
+  components_file: deploy/research-lab/scenarios/otel-demo/multifault/components/cascade-valkey-cart-checkout.json
+triage:
+  schema_version: 1
+  scenario_family: multifault-cascade
+  per_window:
+    pre_fault_baseline: {triage_label: noise, is_hard_case: false, rationale: "Healthy."}
+    active_fault: {triage_label: ticket_worthy, triage_severity: critical, triage_components: [valkey-cart, cart, checkout], triage_reason_class: multi_fault_cascade, is_hard_case: true, rationale: "Cache outage cascades down to checkout failures via cart."}
+    recovery_window: {triage_label: borderline, triage_severity: minor, triage_components: [valkey-cart, cart], triage_reason_class: multi_fault_cascade, is_hard_case: true, rationale: "Recovery; retries clear."}

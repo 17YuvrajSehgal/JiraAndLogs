@@ -1,0 +1,42 @@
+schema_version: 1
+scenario_id: otel-demo-third-party-image-slow-minor
+title: Image provider slow load (flagd imageSlowLoad 5sec)
+dataset_run_id: otel-demo-placeholder-run
+traffic_profile_id: otel-demo-baseline-checkout-mix
+environment: research-otel-demo
+jira_candidate: true
+expected_jira:
+  issue_type: Incident
+  priority: Minor
+  components: [image-provider, frontend]
+  labels: [synthetic-incident, third-party-blip, image, telemetry-linked]
+  summary_template: "Slow image loads from image-provider"
+  description_template: |
+    Synthetic lab issue from scenario otel-demo-third-party-image-slow-minor.
+    flagd imageSlowLoad=5sec; image-provider responses delayed; users see
+    layout shift / slow tile fill on product pages.
+fault:
+  fault_id: image-slow-001
+  fault_type: third_party_blip
+  affected_service: image-provider
+  expected_start_offset_seconds: 300
+  expected_duration_seconds: 600
+  blast_radius: {user_visible: true, expected_error_rate: low, expected_latency_impact: medium}
+labels:
+  severity: minor
+  incident_type: degradation
+  root_cause_category: third_party_blip
+  should_alert: false
+  should_create_jira_shadow_issue: true
+execution:
+  action: Flagd
+  namespace: otel-demo-research
+  flagd_flag: imageSlowLoad
+  flagd_variant: "5sec"
+triage:
+  schema_version: 1
+  scenario_family: third-party-blip
+  per_window:
+    pre_fault_baseline: {triage_label: noise, is_hard_case: false, rationale: "Baseline."}
+    active_fault: {triage_label: borderline, triage_severity: minor, triage_components: [image-provider], triage_reason_class: third_party_blip, is_hard_case: true, rationale: "Image latency 5s; UX impact."}
+    recovery_window: {triage_label: noise, is_hard_case: false, rationale: "Flag off."}
