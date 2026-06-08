@@ -1,0 +1,79 @@
+schema_version: 1
+scenario_id: otel-demo-payment-outage-critical
+title: Payment service unavailable — checkout fails at the payment step
+dataset_run_id: otel-demo-placeholder-run
+traffic_profile_id: otel-demo-baseline-checkout-mix
+environment: research-otel-demo
+jira_candidate: true
+expected_jira:
+  issue_type: Incident
+  priority: Critical
+  components:
+    - payment
+    - checkout
+    - frontend
+  labels:
+    - synthetic-incident
+    - service-outage
+    - payment
+    - revenue-impacting
+    - telemetry-linked
+  summary_template: "Payment service outage caused checkout failures"
+  description_template: |
+    Synthetic lab issue generated from scenario otel-demo-payment-outage-critical.
+
+    The payment service was scaled to zero replicas during checkout traffic.
+    Checkout attempts surface payment-related errors and customers cannot
+    complete orders. Direct revenue impact during the active-fault window.
+fault:
+  fault_id: payment-outage-001
+  fault_type: service_outage
+  affected_service: payment
+  suggested_mechanism: scale payment deployment to 0 replicas
+  expected_start_offset_seconds: 300
+  expected_duration_seconds: 600
+  blast_radius:
+    user_visible: true
+    expected_error_rate: high
+    expected_latency_impact: low
+labels:
+  severity: critical
+  incident_type: outage
+  root_cause_category: service_unavailable
+  should_alert: true
+  should_create_jira_shadow_issue: true
+execution:
+  action: ScaleDeployment
+  namespace: otel-demo-research
+  target_kind: deployment
+  target_name: payment
+  replicas: 0
+  restore_replicas: 1
+triage:
+  schema_version: 1
+  scenario_family: payment-outage
+  per_window:
+    pre_fault_baseline:
+      triage_label: noise
+      triage_severity: null
+      triage_components: null
+      triage_reason_class: null
+      is_hard_case: false
+      rationale: "Pre-fault baseline; payment service healthy."
+    active_fault:
+      triage_label: ticket_worthy
+      triage_severity: critical
+      triage_components:
+        - payment
+        - checkout
+      triage_reason_class: service_unavailable
+      is_hard_case: false
+      rationale: "Payment unavailable; checkout errors and customer impact."
+    recovery_window:
+      triage_label: borderline
+      triage_severity: minor
+      triage_components:
+        - payment
+      triage_reason_class: service_unavailable
+      is_hard_case: true
+      rationale: "Recovery may show transient errors as payment warms up."

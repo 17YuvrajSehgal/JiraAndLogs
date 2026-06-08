@@ -1,0 +1,74 @@
+schema_version: 1
+scenario_id: otel-demo-llm-rate-limit-minor
+title: LLM service rate-limit errors — product summaries fall back to defaults
+dataset_run_id: otel-demo-placeholder-run
+traffic_profile_id: otel-demo-baseline-checkout-mix
+environment: research-otel-demo
+jira_candidate: true
+expected_jira:
+  issue_type: Incident
+  priority: Minor
+  components:
+    - llm
+    - frontend
+  labels:
+    - synthetic-incident
+    - third-party
+    - llm
+    - rate-limit
+    - telemetry-linked
+  summary_template: "LLM rate-limit errors — product summaries degraded"
+  description_template: |
+    Synthetic lab issue generated from scenario otel-demo-llm-rate-limit-minor.
+
+    The mock LLM service intermittently returns rate-limit errors. The
+    product-summary feature on the frontend falls back to default text.
+    Not user-visible as an error but a measurable degradation in feature
+    quality.
+
+    NEW SERVICE: LLM service does not exist in OB v5-large. Tests cascade
+    transfer to a new service family.
+fault:
+  fault_id: llm-rate-limit-001
+  fault_type: third_party_blip
+  affected_service: llm
+  suggested_mechanism: flagd llmRateLimitError -> on
+  expected_start_offset_seconds: 300
+  expected_duration_seconds: 600
+  blast_radius:
+    user_visible: false
+    expected_error_rate: medium
+    expected_latency_impact: low
+labels:
+  severity: minor
+  incident_type: degradation
+  root_cause_category: third_party_blip
+  should_alert: false
+  should_create_jira_shadow_issue: true
+execution:
+  action: Flagd
+  namespace: otel-demo-research
+  flagd_flag: llmRateLimitError
+  flagd_variant: "on"
+  flagd_configmap_name: otel-demo-flagd-config
+  flagd_configmap_key: demo.flagd.json
+triage:
+  schema_version: 1
+  scenario_family: third-party-blip
+  per_window:
+    pre_fault_baseline:
+      triage_label: noise
+      is_hard_case: false
+      rationale: "LLM responding normally."
+    active_fault:
+      triage_label: borderline
+      triage_severity: minor
+      triage_components:
+        - llm
+      triage_reason_class: third_party_blip
+      is_hard_case: true
+      rationale: "Intermittent rate-limit; feature degrades quietly."
+    recovery_window:
+      triage_label: noise
+      is_hard_case: false
+      rationale: "Recovered."

@@ -1,0 +1,21 @@
+{
+  "_comment": "Components sidecar for L2 concurrent dual-fault scenario otel-demo-concurrent-payment-cart-redis. Read by Invoke-MultiFaultOrchestration.ps1.",
+  "fault_components": [
+    {
+      "action": "ScaleDeployment",
+      "target_name": "payment",
+      "replicas": 0,
+      "restore_replicas": 1,
+      "is_primary_cause": true,
+      "service_role": "payment-processing"
+    },
+    {
+      "action": "ScaleDeployment",
+      "target_name": "valkey-cart",
+      "replicas": 0,
+      "restore_replicas": 1,
+      "is_primary_cause": true,
+      "service_role": "cart-cache"
+    }
+  ]
+}

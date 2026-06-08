@@ -1,0 +1,65 @@
+schema_version: 1
+scenario_id: otel-demo-checkout-restart-minor
+title: Checkout service rolling restart — transient errors during deploy
+dataset_run_id: otel-demo-placeholder-run
+traffic_profile_id: otel-demo-baseline-checkout-mix
+environment: research-otel-demo
+jira_candidate: false
+expected_jira:
+  issue_type: Task
+  priority: Minor
+  components:
+    - checkout
+  labels:
+    - synthetic-incident
+    - pod-restart
+    - checkout
+    - telemetry-linked
+  summary_template: "Brief checkout error spike during pod restart"
+  description_template: |
+    Synthetic lab issue generated from scenario otel-demo-checkout-restart-minor.
+
+    The checkout service pods were restarted (rolling). Customers may have
+    seen transient 5xx errors for the ~30-60s during pod-replacement. Auto-
+    recovered. Borderline ticket-worthy.
+fault:
+  fault_id: checkout-restart-001
+  fault_type: pod_restart
+  affected_service: checkout
+  suggested_mechanism: delete pods with label app=checkout
+  expected_start_offset_seconds: 300
+  expected_duration_seconds: 180
+  blast_radius:
+    user_visible: true
+    expected_error_rate: low
+    expected_latency_impact: low
+labels:
+  severity: minor
+  incident_type: degradation
+  root_cause_category: pod_restart
+  should_alert: false
+  should_create_jira_shadow_issue: false
+execution:
+  action: RestartPods
+  namespace: otel-demo-research
+  selector: app.kubernetes.io/name=checkout
+triage:
+  schema_version: 1
+  scenario_family: checkout-restart
+  per_window:
+    pre_fault_baseline:
+      triage_label: noise
+      is_hard_case: false
+      rationale: "Baseline; checkout healthy."
+    active_fault:
+      triage_label: borderline
+      triage_severity: minor
+      triage_components:
+        - checkout
+      triage_reason_class: pod_restart
+      is_hard_case: true
+      rationale: "Brief restart; transient errors clear quickly."
+    recovery_window:
+      triage_label: noise
+      is_hard_case: false
+      rationale: "Recovered."

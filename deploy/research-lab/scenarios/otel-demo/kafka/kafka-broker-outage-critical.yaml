@@ -1,0 +1,84 @@
+schema_version: 1
+scenario_id: otel-demo-kafka-broker-outage-critical
+title: Kafka broker outage — checkout produces fail, downstream consumers silent
+dataset_run_id: otel-demo-placeholder-run
+traffic_profile_id: otel-demo-baseline-checkout-mix
+environment: research-otel-demo
+jira_candidate: true
+expected_jira:
+  issue_type: Incident
+  priority: Critical
+  components:
+    - kafka
+    - checkout
+    - accounting
+    - fraud-detection
+  labels:
+    - synthetic-incident
+    - infrastructure-outage
+    - kafka
+    - async-bridge
+    - telemetry-linked
+  summary_template: "Kafka broker down — order events not flowing to accounting/fraud-detection"
+  description_template: |
+    Synthetic lab issue generated from scenario otel-demo-kafka-broker-outage-critical.
+
+    The Kafka broker was scaled to zero. checkout's producer.send() calls
+    fail with broker-unreachable. Downstream consumers (accounting,
+    fraud-detection) receive zero messages — their inactivity is itself
+    the signal. Order placement succeeds at the HTTP layer if checkout
+    catches the producer error gracefully; but the async ledger and fraud-
+    detection pipelines are effectively offline.
+
+    NEW FAILURE FAMILY: does not exist in the OB v5-large dataset. Tests
+    the cascade's ability to retrieve past tickets describing async-
+    broker outages.
+fault:
+  fault_id: kafka-broker-001
+  fault_type: infrastructure_outage
+  affected_service: kafka
+  suggested_mechanism: scale kafka deployment to 0 replicas
+  expected_start_offset_seconds: 300
+  expected_duration_seconds: 600
+  blast_radius:
+    user_visible: false
+    expected_error_rate: medium
+    expected_latency_impact: low
+labels:
+  severity: critical
+  incident_type: outage
+  root_cause_category: infrastructure_outage
+  should_alert: true
+  should_create_jira_shadow_issue: true
+execution:
+  action: ScaleDeployment
+  namespace: otel-demo-research
+  target_kind: deployment
+  target_name: kafka
+  replicas: 0
+  restore_replicas: 1
+triage:
+  schema_version: 1
+  scenario_family: kafka-broker-outage
+  per_window:
+    pre_fault_baseline:
+      triage_label: noise
+      is_hard_case: false
+      rationale: "Kafka healthy; order events flowing."
+    active_fault:
+      triage_label: ticket_worthy
+      triage_severity: critical
+      triage_components:
+        - kafka
+        - checkout
+      triage_reason_class: infrastructure_outage
+      is_hard_case: true
+      rationale: "Synchronous user path may look healthy at HTTP layer; signal is silent downstream consumers."
+    recovery_window:
+      triage_label: borderline
+      triage_severity: minor
+      triage_components:
+        - kafka
+      triage_reason_class: infrastructure_outage
+      is_hard_case: true
+      rationale: "Consumer lag drains over time; some duplicate processing possible."

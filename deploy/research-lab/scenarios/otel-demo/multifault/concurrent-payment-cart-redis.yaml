@@ -1,0 +1,83 @@
+schema_version: 1
+scenario_id: otel-demo-concurrent-payment-cart-redis
+title: Concurrent dual-fault — payment outage + cart cache outage simultaneously
+dataset_run_id: otel-demo-placeholder-run
+traffic_profile_id: otel-demo-baseline-checkout-mix
+environment: research-otel-demo
+jira_candidate: true
+expected_jira:
+  issue_type: Incident
+  priority: Critical
+  components:
+    - payment
+    - cart
+    - valkey-cart
+    - checkout
+  labels:
+    - synthetic-incident
+    - multi-fault
+    - concurrent
+    - L2
+    - revenue-impacting
+    - telemetry-linked
+  summary_template: "Concurrent payment outage + cart-cache outage during peak checkout"
+  description_template: |
+    Synthetic L2 (concurrent dual-fault) scenario.
+
+    Two independent service outages were applied simultaneously: payment
+    was scaled to 0 replicas, and valkey-cart was scaled to 0. Both faults
+    last the same active-fault window. Customers see two unrelated checkout
+    failure modes at once — common in deploy-correlated incidents.
+
+    Multi-gold retrieval target: this episode contributes two distinct
+    gold tickets (one per fault). Recall@5 should capture at least one;
+    AllGold@5 measures whether the cascade captures both.
+fault:
+  fault_id: multifault-concurrent-001
+  fault_type: multi_fault_concurrent
+  affected_service: payment+valkey-cart
+  expected_start_offset_seconds: 300
+  expected_duration_seconds: 600
+  blast_radius:
+    user_visible: true
+    expected_error_rate: very_high
+    expected_latency_impact: high
+labels:
+  severity: critical
+  incident_type: outage
+  root_cause_category: multi_fault_concurrent
+  should_alert: true
+  should_create_jira_shadow_issue: true
+  difficulty_level: L2
+execution:
+  action: MultiFault
+  namespace: otel-demo-research
+  composition_type: concurrent
+  components_file: deploy/research-lab/scenarios/otel-demo/multifault/components/concurrent-payment-cart-redis.json
+triage:
+  schema_version: 1
+  scenario_family: multifault-concurrent
+  per_window:
+    pre_fault_baseline:
+      triage_label: noise
+      is_hard_case: false
+      rationale: "Both services healthy."
+    active_fault:
+      triage_label: ticket_worthy
+      triage_severity: critical
+      triage_components:
+        - payment
+        - valkey-cart
+        - checkout
+      triage_reason_class: multi_fault_concurrent
+      is_hard_case: true
+      rationale: "Two simultaneous outages; engineers see compound failure."
+    recovery_window:
+      triage_label: borderline
+      triage_severity: minor
+      triage_components:
+        - payment
+        - valkey-cart
+      triage_reason_class: multi_fault_concurrent
+      is_hard_case: true
+      rationale: "Recovery: both faults restored; residual error tail."
