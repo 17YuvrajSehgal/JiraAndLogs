@@ -20,6 +20,7 @@
 | 1d follow-up #3 — pass WorkloadNamespace to export | DONE | `c6820c8` | run-scenario.ps1 wasn't passing namespace to export-telemetry-window.ps1 |
 | 1d follow-up #4 — Alloy values namespace allowlist | DONE | `21a5b6c` | added otel-demo-research; live CM patched + restarted |
 | **Phase 2 — local pilot validation** | **DONE** | `33172f4` | All harness primitives + telemetry export + 94-column compatibility validated end-to-end on local kind |
+| 1d follow-up #5 — full scenario authoring | DONE | `476cba7` | 44 scenarios total (48 YAMLs counting sidecar refs) + 9 sidecar JSONs + 5 run plans + updated corpus manifest |
 
 ---
 
