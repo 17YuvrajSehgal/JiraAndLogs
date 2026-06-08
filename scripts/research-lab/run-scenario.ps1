@@ -653,9 +653,14 @@ $summaryLine = "- $($episode.start_time) scenario=$($scenario.scenario_id) episo
 Add-Content -LiteralPath (Join-ResearchLabPath @($runRoot, "summaries", "run-summary.md")) -Value $summaryLine -Encoding UTF8
 
 if (-not $NoTelemetryExport) {
+    # Pass the scenario's namespace through. Default in export-telemetry-window.ps1
+    # is `online-boutique-research`, which matches OB scenarios; this pass-through
+    # is required for OTel Demo (otel-demo-research) and any future cross-app
+    # collections.
     & $powerShell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $PSScriptRoot "export-telemetry-window.ps1") `
         -DatasetRunId $DatasetRunId `
-        -IncidentEpisodeId $episodeId
+        -IncidentEpisodeId $episodeId `
+        -WorkloadNamespace $Namespace
     if ($LASTEXITCODE -ne 0) {
         throw "Telemetry export failed for episode $episodeId."
     }
