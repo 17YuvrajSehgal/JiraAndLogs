@@ -1,0 +1,25 @@
+# OTel Demo research namespace.
+#
+# Static labels only. Per-run dynamic labels (DATASET_RUN_ID, SCENARIO_ID,
+# TRAFFIC_PROFILE_ID, JIRA_MODE) are patched at run start by the scenario
+# runner (scripts/research-lab/otel-demo/Invoke-Scenario-Primitive.ps1).
+#
+# IMPORTANT: research labels live ONLY at the namespace level. Application-
+# level telemetry must NEVER carry these fields — bias-avoidance discipline
+# per docs5/00 §3 and microservice-changes.md.
+
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: otel-demo-research
+  labels:
+    # Static identification — safe to expose
+    dataset.research.io/app-id: "otel-demo"
+    dataset.research.io/cluster: "research-lab"
+    # Pod Security Standards — match the OB namespace policy
+    pod-security.kubernetes.io/enforce: baseline
+    pod-security.kubernetes.io/audit: baseline
+    pod-security.kubernetes.io/warn: baseline
+  annotations:
+    dataset.research.io/parent-plan: "docs5/00-otel-demo-cross-app-plan.md"
+    dataset.research.io/implementation-plan: "docs5/01-otel-demo-implementation-plan.md"

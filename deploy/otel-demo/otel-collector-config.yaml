@@ -1,0 +1,81 @@
+# OTel Demo's in-namespace OpenTelemetry Collector configuration.
+#
+# This collector receives OTLP from the 18 demo application services and
+# forwards everything to our existing observability stack (`observability/`
+# namespace) which fans out to Loki / Tempo / Prometheus.
+#
+# Why a second collector? Two reasons:
+#   1. Keeps OTel Demo's app->collector traffic in-namespace (low latency, no
+#      cross-namespace permissions needed for the demo).
+#   2. Lets us add per-app labels (e.g. `app.id=otel-demo`) before forwarding
+#      so logs/traces/metrics from OB and OTel Demo can be distinguished
+#      downstream.
+#
+# NOTE: This file is the canonical reference. The same config is INLINED
+# under `opentelemetry-collector.config` in helm-values.yaml. If you edit
+# this file, also update helm-values.yaml, or have helm-install.ps1 inject
+# via --set-file.
+
+receivers:
+  otlp:
+    protocols:
+      grpc:
+        endpoint: 0.0.0.0:4317
+      http:
+        endpoint: 0.0.0.0:4318
+
+processors:
+  memory_limiter:
+    check_interval: 5s
+    limit_percentage: 80
+    spike_limit_percentage: 25
+
+  # Batch for efficiency before forwarding.
+  batch:
+    send_batch_size: 1024
+    timeout: 5s
+
+  # Tag all telemetry from this namespace with the app id so downstream can
+  # distinguish OTel Demo from OB without inspecting service names.
+  resource:
+    attributes:
+      - key: app.id
+        value: otel-demo
+        action: upsert
+      - key: dataset.app.id
+        value: otel-demo
+        action: upsert
+
+exporters:
+  # Forward all telemetry to the existing observability-namespace collector.
+  # That collector fans out to Loki (logs), Tempo (traces), Prometheus (metrics).
+  otlp/research:
+    endpoint: opentelemetry-collector.observability.svc.cluster.local:4317
+    tls:
+      insecure: true
+
+  # Debug exporter for first-deploy smoke testing. Remove or comment out
+  # after the first verification run if log volume becomes a problem.
+  debug:
+    verbosity: basic
+    sampling_initial: 2
+    sampling_thereafter: 100
+
+service:
+  pipelines:
+    traces:
+      receivers: [otlp]
+      processors: [memory_limiter, resource, batch]
+      exporters: [otlp/research]
+    metrics:
+      receivers: [otlp]
+      processors: [memory_limiter, resource, batch]
+      exporters: [otlp/research]
+    logs:
+      receivers: [otlp]
+      processors: [memory_limiter, resource, batch]
+      exporters: [otlp/research]
+
+  telemetry:
+    logs:
+      level: info

@@ -1,0 +1,19 @@
+# OpenTelemetry Demo Helm chart pin
+#
+# Lock file for the cross-app dataset collection. Do not bump mid-collection;
+# image / chart / config drift can invalidate the dataset.
+#
+# Verify the latest version at:
+#   https://github.com/open-telemetry/opentelemetry-helm-charts/releases
+#
+# Compatible with cloned source at opentelemetry-demo/ (IMAGE_VERSION=2.2.0).
+
+CHART_VERSION=0.40.9
+CHART_REPO_URL=https://open-telemetry.github.io/opentelemetry-helm-charts
+CHART_REPO_NAME=open-telemetry
+CHART_NAME=opentelemetry-demo
+APP_IMAGE_VERSION=2.2.0
+
+# Release / install metadata
+RELEASE_NAME=otel-demo
+NAMESPACE=otel-demo-research

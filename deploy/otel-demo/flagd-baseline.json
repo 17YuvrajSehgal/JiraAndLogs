@@ -1,0 +1,101 @@
+{
+  "_comment": "OTel Demo flagd baseline — all 16 flags in their 'off' / 0% state. Used by scripts/research-lab/otel-demo/Invoke-FlagdFlip.ps1 to restore between scenarios. Mirrors opentelemetry-demo/src/flagd/demo.flagd.json structure but with every defaultVariant forced to off.",
+  "$schema": "https://flagd.dev/schema/v0/flags.json",
+  "flags": {
+    "llmInaccurateResponse": {
+      "defaultVariant": "off",
+      "state": "ENABLED",
+      "variants": { "off": false, "on": true }
+    },
+    "llmRateLimitError": {
+      "defaultVariant": "off",
+      "state": "ENABLED",
+      "variants": { "off": false, "on": true }
+    },
+    "productCatalogFailure": {
+      "defaultVariant": "off",
+      "state": "ENABLED",
+      "variants": { "off": false, "on": true }
+    },
+    "recommendationCacheFailure": {
+      "defaultVariant": "off",
+      "state": "ENABLED",
+      "variants": { "off": false, "on": true }
+    },
+    "adManualGc": {
+      "defaultVariant": "off",
+      "state": "ENABLED",
+      "variants": { "off": false, "on": true }
+    },
+    "adHighCpu": {
+      "defaultVariant": "off",
+      "state": "ENABLED",
+      "variants": { "off": false, "on": true }
+    },
+    "adFailure": {
+      "defaultVariant": "off",
+      "state": "ENABLED",
+      "variants": { "off": false, "on": true }
+    },
+    "kafkaQueueProblems": {
+      "defaultVariant": "off",
+      "state": "ENABLED",
+      "variants": { "off": 0, "on": 100 }
+    },
+    "cartFailure": {
+      "defaultVariant": "off",
+      "state": "ENABLED",
+      "variants": { "off": false, "on": true }
+    },
+    "paymentFailure": {
+      "defaultVariant": "off",
+      "state": "ENABLED",
+      "variants": {
+        "off": 0,
+        "10%": 0.1,
+        "25%": 0.25,
+        "50%": 0.5,
+        "75%": 0.75,
+        "90%": 0.95,
+        "100%": 1
+      }
+    },
+    "paymentUnreachable": {
+      "defaultVariant": "off",
+      "state": "ENABLED",
+      "variants": { "off": false, "on": true }
+    },
+    "loadGeneratorFloodHomepage": {
+      "defaultVariant": "off",
+      "state": "ENABLED",
+      "variants": { "off": 0, "on": 100 }
+    },
+    "imageSlowLoad": {
+      "defaultVariant": "off",
+      "state": "ENABLED",
+      "variants": { "off": 0, "5sec": 5000, "10sec": 10000 }
+    },
+    "failedReadinessProbe": {
+      "defaultVariant": "off",
+      "state": "ENABLED",
+      "variants": { "off": false, "on": true }
+    },
+    "emailMemoryLeak": {
+      "defaultVariant": "off",
+      "state": "ENABLED",
+      "variants": {
+        "off": 0,
+        "1x": 1,
+        "10x": 10,
+        "100x": 100,
+        "1000x": 1000,
+        "10000x": 10000
+      }
+    },
+    "intlShippingSlowdown": {
+      "defaultVariant": "off",
+      "state": "ENABLED",
+      "variants": { "off": 0, "5sec": 5, "10sec": 10 }
+    }
+  }
+}
