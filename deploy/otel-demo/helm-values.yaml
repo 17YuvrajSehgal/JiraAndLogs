@@ -124,6 +124,11 @@ components:
   # Core e-commerce services
   ad:
     enabled: true
+    # JVM (Java) + OTel javaagent OOMs at the upstream default 300Mi limit.
+    # Host has ample RAM on the GCP collection VM; raise to 600Mi.
+    resources:
+      limits:
+        memory: 600Mi
   cart:
     enabled: true
   checkout:
@@ -158,6 +163,10 @@ components:
     enabled: true
   fraud-detection:
     enabled: true
+    # JVM (Kotlin) + OTel javaagent OOMs at the upstream default 300Mi limit.
+    resources:
+      limits:
+        memory: 600Mi
 
   # Infrastructure
   kafka:
