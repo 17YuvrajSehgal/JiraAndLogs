@@ -1,0 +1,83 @@
+schema_version: 1
+scenario_id: otel-demo-compound-saturation-network-latency
+title: L4 compound — ad CPU saturation (flagd) + shipping network latency (chaos-mesh)
+dataset_run_id: otel-demo-placeholder-run
+traffic_profile_id: otel-demo-baseline-checkout-mix
+environment: research-otel-demo
+jira_candidate: true
+expected_jira:
+  issue_type: Incident
+  priority: Critical
+  components:
+    - ad
+    - shipping
+    - frontend
+    - checkout
+  labels:
+    - synthetic-incident
+    - multi-fault
+    - compound-primitive
+    - L4
+    - chaos-mesh
+    - telemetry-linked
+  summary_template: "Compound incident — ad CPU saturation and shipping network latency at once"
+  description_template: |
+    Synthetic L4 (compound-primitive) scenario.
+
+    Two faults of DIFFERENT mechanisms were applied together: a resource fault
+    (adHighCpu flag drives ad-service CPU saturation) and a network fault
+    (chaos-mesh NetworkChaos delay of 400ms on shipping-service). The two
+    mechanisms stress different telemetry channels at once — CPU/runtime metrics
+    for ad, span latency for shipping — modelling a heterogeneous incident.
+
+    Multi-gold retrieval target: this episode contributes two distinct gold
+    tickets (one per mechanism). Recall@5 should capture at least one;
+    AllGold@5 measures whether the cascade captures both across mechanism types.
+fault:
+  fault_id: multifault-compound-001
+  fault_type: multi_fault_compound_primitive
+  affected_service: ad+shipping
+  expected_start_offset_seconds: 300
+  expected_duration_seconds: 600
+  blast_radius:
+    user_visible: true
+    expected_error_rate: medium
+    expected_latency_impact: high
+labels:
+  severity: critical
+  incident_type: degradation
+  root_cause_category: multi_fault_compound_primitive
+  should_alert: true
+  should_create_jira_shadow_issue: true
+  difficulty_level: L4
+execution:
+  action: MultiFault
+  namespace: otel-demo-research
+  composition_type: compound_primitive
+  components_file: deploy/research-lab/scenarios/otel-demo/multifault/components/compound-saturation-network-latency.json
+triage:
+  schema_version: 1
+  scenario_family: multifault-compound
+  per_window:
+    pre_fault_baseline:
+      triage_label: noise
+      is_hard_case: false
+      rationale: "Both ad CPU and shipping latency nominal."
+    active_fault:
+      triage_label: ticket_worthy
+      triage_severity: critical
+      triage_components:
+        - ad
+        - shipping
+      triage_reason_class: multi_fault_compound_primitive
+      is_hard_case: true
+      rationale: "Two distinct mechanisms (resource + network) degrade in parallel."
+    recovery_window:
+      triage_label: borderline
+      triage_severity: minor
+      triage_components:
+        - ad
+        - shipping
+      triage_reason_class: multi_fault_compound_primitive
+      is_hard_case: true
+      rationale: "Recovery: flag off and chaos deleted; residual latency/CPU tail."

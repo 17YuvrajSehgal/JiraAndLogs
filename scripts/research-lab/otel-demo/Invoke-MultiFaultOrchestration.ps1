@@ -39,6 +39,8 @@
       - ScaleDeployment
       - Flagd
       - SetEnv
+      - ChaosMeshChaos (applies/deletes a chaos-mesh CR manifest; used by the
+        L4 compound to mix a network fault with a resource fault) — added 2026-06-09
       - observation_only (records expected secondary in restore manifest)
 
 .PARAMETER ComponentsFile
@@ -241,12 +243,76 @@ function Restore-SetEnv {
     ) | Out-Host
 }
 
+function Apply-ChaosMeshChaos {
+    # 2026-06-09: added so L4 compound scenarios can mix a chaos-mesh network
+    # fault with a flagd/scale/env fault. Additive to this otel-demo fork only
+    # (Rule R2) — the OB-shared run-scenario.ps1 ChaosMeshChaos path is unchanged.
+    # The component supplies `chaos_manifest` (repo-relative path to a chaos-mesh
+    # CR yaml); we apply it and capture name/kind/namespace for restore.
+    param([object]$Component, [string]$TargetNamespace)
+    $manifest = $Component.chaos_manifest
+    if (-not $manifest) { throw "ChaosMeshChaos component requires chaos_manifest" }
+    $repoRoot = Get-ResearchLabRepoRoot
+    $manifestPath = if ([System.IO.Path]::IsPathRooted($manifest)) { $manifest } else { Join-ResearchLabPath @($repoRoot, $manifest) }
+    if (-not (Test-Path -LiteralPath $manifestPath)) { throw "ChaosMeshChaos manifest not found: $manifestPath" }
+
+    $chaosKind = (Get-Content -LiteralPath $manifestPath | Select-String -Pattern "^kind:" | Select-Object -First 1).Line -replace "^kind:\s*", ""
+    $chaosName = (Get-Content -LiteralPath $manifestPath | Select-String -Pattern "^\s+name:" | Select-Object -First 1).Line -replace "^\s+name:\s*", ""
+    $chaosNs   = (Get-Content -LiteralPath $manifestPath | Select-String -Pattern "^\s+namespace:" | Select-Object -First 1).Line -replace "^\s+namespace:\s*", ""
+
+    Write-Host "ChaosMeshChaos component applying: $manifestPath ($($chaosKind.ToLower())/$chaosName in $chaosNs)"
+    Invoke-ResearchLabKubectlText -ArgumentList @("apply", "-f", $manifestPath) | Out-Host
+    Start-Sleep -Seconds 5
+    return @{
+        type = "ChaosMeshChaos"
+        manifest_path = $manifestPath
+        chaos_kind = $chaosKind
+        chaos_name = $chaosName
+        chaos_namespace = $chaosNs
+        is_primary_cause = [bool]$Component.is_primary_cause
+    }
+}
+
+function Restore-ChaosMeshChaos {
+    # Bounded delete with a finalizer-removal fallback, mirroring the hardening
+    # in run-scenario.ps1: chaos-mesh CRs carry finalizers that block deletion
+    # until AllRecovered=True, so a failed inject would otherwise hang here.
+    param([hashtable]$Restore, [string]$TargetNamespace)
+    $manifestPath = $Restore.manifest_path
+    $chaosResource = "$($Restore.chaos_kind.ToLower())/$($Restore.chaos_name)"
+    $chaosNs = $Restore.chaos_namespace
+    Write-Host "ChaosMeshChaos component deleting (bounded 45s): $chaosResource"
+    $deleteOk = $false
+    try {
+        Invoke-ResearchLabKubectlText -ArgumentList @(
+            "delete", "-f", $manifestPath, "--ignore-not-found=true", "--timeout=45s"
+        ) | Out-Host
+        $deleteOk = $true
+    } catch {
+        Write-Warning "Bounded delete failed for ${chaosResource}: $($_.Exception.Message)"
+    }
+    if (-not $deleteOk) {
+        Write-Warning "Patching finalizers off $chaosResource in $chaosNs to force removal."
+        try {
+            Invoke-ResearchLabKubectlText -ArgumentList @(
+                "patch", $chaosResource, "-n", $chaosNs, "--type=merge", "-p", '{"metadata":{"finalizers":[]}}'
+            ) | Out-Host
+            Invoke-ResearchLabKubectlText -ArgumentList @(
+                "delete", $chaosResource, "-n", $chaosNs, "--ignore-not-found=true"
+            ) | Out-Host
+        } catch {
+            Write-Warning "Finalizer fallback also failed for ${chaosResource}: $($_.Exception.Message)"
+        }
+    }
+}
+
 function Apply-Component {
     param([object]$Component, [string]$TargetNamespace)
     switch ($Component.action) {
         "ScaleDeployment" { return Apply-ScaleDeployment -Component $Component -TargetNamespace $TargetNamespace }
         "Flagd"           { return Apply-Flagd           -Component $Component -TargetNamespace $TargetNamespace }
         "SetEnv"          { return Apply-SetEnv          -Component $Component -TargetNamespace $TargetNamespace }
+        "ChaosMeshChaos"  { return Apply-ChaosMeshChaos  -Component $Component -TargetNamespace $TargetNamespace }
         "observation_only" {
             return @{
                 type = "observation_only"
@@ -266,6 +332,7 @@ function Restore-Component {
         "ScaleDeployment" { Restore-ScaleDeployment -Restore $Restore -TargetNamespace $TargetNamespace }
         "Flagd"           { Restore-Flagd           -Restore $Restore -TargetNamespace $TargetNamespace }
         "SetEnv"          { Restore-SetEnv          -Restore $Restore -TargetNamespace $TargetNamespace }
+        "ChaosMeshChaos"  { Restore-ChaosMeshChaos  -Restore $Restore -TargetNamespace $TargetNamespace }
         "observation_only" { }   # nothing to restore
         default { Write-Warning "Unknown restore type: $($Restore.type); skipping" }
     }

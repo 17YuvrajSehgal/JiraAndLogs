@@ -1,0 +1,18 @@
+{
+  "_comment": "L4 compound-primitive: adServiceHighCpu (flagd, RESOURCE fault on ad) + network-latency on shipping (chaos-mesh NetworkChaos delay, NETWORK fault). Two DIFFERENT primitive mechanisms on two different services, applied together (behaves like concurrent). Per docs5/00 §5.5.2. Read by Invoke-MultiFaultOrchestration.ps1 with composition_type=compound_primitive; the ChaosMeshChaos component requires the 2026-06-09 orchestrator extension.",
+  "fault_components": [
+    {
+      "action": "Flagd",
+      "flagd_flag": "adHighCpu",
+      "flagd_variant": "on",
+      "is_primary_cause": true,
+      "service_role": "ad-resource-saturation"
+    },
+    {
+      "action": "ChaosMeshChaos",
+      "chaos_manifest": "deploy/research-lab/scenarios/otel-demo/chaos/manifests/network-latency-shipping.yaml",
+      "is_primary_cause": true,
+      "service_role": "shipping-network-latency"
+    }
+  ]
+}

@@ -1,5 +1,5 @@
 {
-  "_comment": "OTel Demo cross-app corpus manifest. Tracks the run plans that compose the full ~135-run collection per docs5/00 §5.5.5. Updated 2026-06-08 after authoring the full 47-scenario set.",
+  "_comment": "OTel Demo cross-app corpus manifest. Tracks the run plans that compose the full ~135-run collection per docs5/00 §5.5.5. Updated 2026-06-09 (GCP VM): authored + smoke-validated the 5 deferred chaos-mesh scenarios (4 network + 1 L4 compound) now that chaos-mesh 2.8.2 is confirmed working; full 49-scenario set is live.",
   "corpus_id": "otel-demo-v1",
   "display_name": "OpenTelemetry Demo cross-app dataset, v1",
   "app_id": "otel-demo",
@@ -13,10 +13,11 @@
     "L1_llm_bonus": 2,
     "L2_concurrent": 5,
     "L3_cascade": 4,
-    "L4_compound": 0,
-    "total_authored": 44,
-    "deferred_network_chaos_mesh": 4,
-    "deferred_l4_chaos_mesh": 1,
+    "L4_compound": 1,
+    "L1_network_chaos_mesh": 4,
+    "total_authored": 49,
+    "deferred_network_chaos_mesh": 0,
+    "deferred_l4_chaos_mesh": 0,
     "planned_total_if_chaos_mesh_available": 49
   },
   "run_plans": [
@@ -51,14 +52,14 @@
       "plan_file": "deploy/research-lab/run-plans/otel-demo-multifault.json",
       "n_runs": 16,
       "purpose": "L2 concurrent (5) + L3 cascade (4) — graded difficulty evidence per docs5/00 §5.5"
+    },
+    {
+      "plan_id": "otel-demo-network",
+      "plan_file": "deploy/research-lab/run-plans/otel-demo-network.json",
+      "n_runs": 8,
+      "purpose": "4 network families (latency/packet-loss/partition/dns via chaos-mesh) + L4 compound (flagd resource + chaos-mesh network). Previously deferred; chaos-mesh-dependent."
     }
   ],
-  "deferred_until_chaos_mesh": [
-    "network-latency-major",
-    "network-packet-loss-major",
-    "network-partition-critical",
-    "dns-outage-critical",
-    "compound-saturation-network-latency (L4)"
-  ],
-  "notes": "Phase 2 local pilot validated on 2026-06-08: 94/94 triage_feature_* columns produced, all harness primitives green. Ready for full GCP collection. Total target ~70 runs (matches docs5/00 §5.5.5 targets scaled to the authored 44-scenario set)."
+  "deferred_until_chaos_mesh": [],
+  "notes": "Phase 2 local pilot validated on 2026-06-08 (94/94 triage_feature_* columns). GCP pilot otel-demo-gcp-pilot-001 validated 2026-06-09 (94/94 columns, L3 cascade observable, flagd+replicas restored). 2026-06-09: chaos-mesh 2.8.2 confirmed working on the GCP VM, so the 5 previously-deferred chaos scenarios were authored, smoke-validated (ChaosMeshChaos apply/restore + L4 compound mixed-primitive orchestration), and added via the otel-demo-network plan — full 49-scenario set is now live. Total target ~78 runs."
 }

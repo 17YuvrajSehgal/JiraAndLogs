@@ -1,0 +1,22 @@
+# chaos-mesh NetworkChaos — packet loss on frontend.
+#
+# Adapted from OB scenarios/chaos/packet-loss-frontend-30pct.yaml.
+# CR in `chaos-mesh` ns; OTel Demo label key; 900s ceiling (harness controls
+# recovery via kubectl delete after the active-fault window).
+apiVersion: chaos-mesh.org/v1alpha1
+kind: NetworkChaos
+metadata:
+  name: otel-demo-network-packet-loss-frontend
+  namespace: chaos-mesh
+spec:
+  action: loss
+  mode: all
+  selector:
+    namespaces:
+      - otel-demo-research
+    labelSelectors:
+      app.kubernetes.io/name: frontend
+  loss:
+    loss: "30"
+    correlation: "0"
+  duration: "900s"

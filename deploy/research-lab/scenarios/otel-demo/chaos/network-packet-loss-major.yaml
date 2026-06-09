@@ -1,0 +1,71 @@
+schema_version: 1
+scenario_id: otel-demo-network-packet-loss-major
+title: Packet loss at frontend — intermittent request failures and retries
+dataset_run_id: otel-demo-placeholder-run
+traffic_profile_id: otel-demo-baseline-checkout-mix
+environment: research-otel-demo
+jira_candidate: true
+expected_jira:
+  issue_type: Incident
+  priority: High
+  components:
+    - frontend
+    - frontend-proxy
+  labels:
+    - synthetic-incident
+    - network-packet-loss
+    - chaos-mesh
+    - telemetry-linked
+  summary_template: "Packet loss at frontend caused intermittent request failures"
+  description_template: |
+    Synthetic lab issue generated from scenario otel-demo-network-packet-loss-major.
+
+    A chaos-mesh NetworkChaos loss action (30% packet loss) was injected on
+    frontend network I/O. Users experience intermittent failures, slow loads,
+    and elevated retry rates as TCP retransmits. Error and latency signals are
+    noisier than a clean outage — the partial-failure signature.
+fault:
+  fault_id: network-packet-loss-001
+  fault_type: network_packet_loss
+  affected_service: frontend
+  suggested_mechanism: chaos-mesh NetworkChaos loss 30% on frontend
+  expected_start_offset_seconds: 300
+  expected_duration_seconds: 600
+  blast_radius:
+    user_visible: true
+    expected_error_rate: medium
+    expected_latency_impact: high
+labels:
+  severity: major
+  incident_type: degradation
+  root_cause_category: network_packet_loss
+  should_alert: true
+  should_create_jira_shadow_issue: true
+execution:
+  action: ChaosMeshChaos
+  namespace: otel-demo-research
+  chaos_manifest: deploy/research-lab/scenarios/otel-demo/chaos/manifests/network-packet-loss-frontend.yaml
+triage:
+  schema_version: 1
+  scenario_family: network-packet-loss
+  per_window:
+    pre_fault_baseline:
+      triage_label: noise
+      is_hard_case: false
+      rationale: "Pre-fault baseline; frontend network healthy."
+    active_fault:
+      triage_label: ticket_worthy
+      triage_severity: major
+      triage_components:
+        - frontend
+      triage_reason_class: network_packet_loss
+      is_hard_case: true
+      rationale: "30% loss produces intermittent failures + retries; noisy signal."
+    recovery_window:
+      triage_label: borderline
+      triage_severity: minor
+      triage_components:
+        - frontend
+      triage_reason_class: network_packet_loss
+      is_hard_case: true
+      rationale: "Retransmit backlog clears as loss is removed."

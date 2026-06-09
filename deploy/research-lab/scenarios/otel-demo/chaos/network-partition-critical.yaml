@@ -1,0 +1,77 @@
+schema_version: 1
+scenario_id: otel-demo-network-partition-critical
+title: Network partition cart <-> valkey-cart — cart cache unreachable
+dataset_run_id: otel-demo-placeholder-run
+traffic_profile_id: otel-demo-baseline-checkout-mix
+environment: research-otel-demo
+jira_candidate: true
+expected_jira:
+  issue_type: Incident
+  priority: Critical
+  components:
+    - cart
+    - valkey-cart
+    - checkout
+  labels:
+    - synthetic-incident
+    - network-partition
+    - chaos-mesh
+    - telemetry-linked
+  summary_template: "Network partition isolated cart from its Valkey cache"
+  description_template: |
+    Synthetic lab issue generated from scenario otel-demo-network-partition-critical.
+
+    A chaos-mesh NetworkChaos partition (direction: to) severed cart's egress to
+    valkey-cart. The cart pod stays up but every cache read/write times out, so
+    cart operations fail and checkout cannot read the cart. Distinct from a
+    valkey-cart ScaleDeployment outage: here the cache pod is alive but
+    unreachable from cart, producing connection-timeout rather than
+    connection-refused signatures.
+fault:
+  fault_id: network-partition-001
+  fault_type: network_partition
+  affected_service: cart
+  suggested_mechanism: chaos-mesh NetworkChaos partition cart -> valkey-cart
+  expected_start_offset_seconds: 300
+  expected_duration_seconds: 600
+  blast_radius:
+    user_visible: true
+    expected_error_rate: high
+    expected_latency_impact: high
+labels:
+  severity: critical
+  incident_type: outage
+  root_cause_category: network_partition
+  should_alert: true
+  should_create_jira_shadow_issue: true
+execution:
+  action: ChaosMeshChaos
+  namespace: otel-demo-research
+  chaos_manifest: deploy/research-lab/scenarios/otel-demo/chaos/manifests/network-partition-cart-valkey.yaml
+triage:
+  schema_version: 1
+  scenario_family: network-partition
+  per_window:
+    pre_fault_baseline:
+      triage_label: noise
+      is_hard_case: false
+      rationale: "Pre-fault baseline; cart reaches valkey-cart normally."
+    active_fault:
+      triage_label: ticket_worthy
+      triage_severity: critical
+      triage_components:
+        - cart
+        - valkey-cart
+        - checkout
+      triage_reason_class: network_partition
+      is_hard_case: true
+      rationale: "Cache unreachable; cart ops time out and checkout cart-reads fail."
+    recovery_window:
+      triage_label: borderline
+      triage_severity: minor
+      triage_components:
+        - cart
+        - valkey-cart
+      triage_reason_class: network_partition
+      is_hard_case: true
+      rationale: "Connectivity restored; residual timeout tail as connections re-establish."

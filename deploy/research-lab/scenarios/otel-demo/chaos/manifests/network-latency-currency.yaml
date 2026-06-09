@@ -1,0 +1,28 @@
+# chaos-mesh NetworkChaos — latency injection on currency-service.
+#
+# Adapted from the OB template scenarios/chaos/network-latency-currency-500ms.yaml.
+# Differences for OTel Demo:
+#   - CR lives in the `chaos-mesh` namespace (where chaos-mesh is installed on
+#     the GCP collection VM), not the OB `chaos-testing` namespace.
+#   - selector uses the OTel Demo label key `app.kubernetes.io/name`.
+#   - `duration` is a generous ceiling (900s) — the research harness
+#     (run-scenario.ps1 ChaosMeshChaos) deletes the CR after the active-fault
+#     window, so the kubectl delete is the authoritative recovery, not this.
+apiVersion: chaos-mesh.org/v1alpha1
+kind: NetworkChaos
+metadata:
+  name: otel-demo-network-latency-currency
+  namespace: chaos-mesh
+spec:
+  action: delay
+  mode: all
+  selector:
+    namespaces:
+      - otel-demo-research
+    labelSelectors:
+      app.kubernetes.io/name: currency
+  delay:
+    latency: "500ms"
+    correlation: "0"
+    jitter: "100ms"
+  duration: "900s"

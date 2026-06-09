@@ -1,0 +1,31 @@
+# chaos-mesh NetworkChaos — partition cart from its Valkey (Redis) cache.
+#
+# Direct analogue of OB scenarios/chaos/network-partition-cart-redis.yaml
+# (cartservice <-> redis-cart), mapped to OTel Demo's cart <-> valkey-cart.
+# Partitions the cart pod's egress to valkey-cart so cache reads/writes fail
+# while cart itself stays up — distinct from a cart-redis ScaleDeployment outage
+# (here the cache is reachable by nobody from cart, but the pod is alive).
+# CR in `chaos-mesh` ns; OTel Demo label keys; 900s ceiling (harness controls
+# recovery via kubectl delete after the active-fault window).
+apiVersion: chaos-mesh.org/v1alpha1
+kind: NetworkChaos
+metadata:
+  name: otel-demo-network-partition-cart-valkey
+  namespace: chaos-mesh
+spec:
+  action: partition
+  mode: all
+  selector:
+    namespaces:
+      - otel-demo-research
+    labelSelectors:
+      app.kubernetes.io/name: cart
+  direction: to
+  target:
+    mode: all
+    selector:
+      namespaces:
+        - otel-demo-research
+      labelSelectors:
+        app.kubernetes.io/name: valkey-cart
+  duration: "900s"
