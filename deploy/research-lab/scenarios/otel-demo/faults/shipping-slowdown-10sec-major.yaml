@@ -1,6 +1,6 @@
 schema_version: 1
 scenario_id: otel-demo-shipping-slowdown-10sec-major
-title: International shipping slowdown — 10sec delay (flagd intensity)
+title: International shipping slowdown — 10sec delay (chaos-mesh network latency)
 dataset_run_id: otel-demo-placeholder-run
 traffic_profile_id: otel-demo-baseline-checkout-mix
 environment: research-otel-demo
@@ -13,8 +13,8 @@ expected_jira:
   summary_template: "International shipping showing 10sec delay"
   description_template: |
     Synthetic lab issue from scenario otel-demo-shipping-slowdown-10sec-major.
-    flagd intlShippingSlowdown=10sec; checkout shipping step blocked 10s+
-    on international orders. Likely to time out upstream.
+    chaos-mesh NetworkChaos delay (~10s) on shipping; checkout shipping step
+    blocked 10s+. Likely to time out upstream.
 fault:
   fault_id: shipping-slow-10s-001
   fault_type: latency_injection
@@ -29,13 +29,12 @@ labels:
   should_alert: true
   should_create_jira_shadow_issue: true
 execution:
-  action: Flagd
+  action: ChaosMeshChaos
   namespace: otel-demo-research
-  flagd_flag: intlShippingSlowdown
-  flagd_variant: "10sec"
+  chaos_manifest: deploy/research-lab/scenarios/otel-demo/chaos/manifests/network-latency-shipping-10sec.yaml
 triage:
   schema_version: 1
-  scenario_family: productcatalog-latency
+  scenario_family: network-latency
   per_window:
     pre_fault_baseline: {triage_label: noise, is_hard_case: false, rationale: "Pre-fault; shipping normal."}
     active_fault: {triage_label: ticket_worthy, triage_severity: major, triage_components: [shipping, checkout], triage_reason_class: latency_injection, is_hard_case: false, rationale: "10sec sustained delay; user impact."}

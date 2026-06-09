@@ -1,0 +1,24 @@
+# chaos-mesh NetworkChaos — 10-second latency on shipping-service.
+#
+# Replaces the original `intlShippingSlowdown=10sec` flagd mechanism (the flag
+# does not exist in image 2.2.0's flagd config; see the 5sec manifest note).
+# CR in `chaos-mesh` ns; otel-demo-research app.kubernetes.io/name selector;
+# 900s ceiling — the harness delete is the authoritative recovery.
+apiVersion: chaos-mesh.org/v1alpha1
+kind: NetworkChaos
+metadata:
+  name: otel-demo-network-latency-shipping-10sec
+  namespace: chaos-mesh
+spec:
+  action: delay
+  mode: all
+  selector:
+    namespaces:
+      - otel-demo-research
+    labelSelectors:
+      app.kubernetes.io/name: shipping
+  delay:
+    latency: "10000ms"
+    correlation: "0"
+    jitter: "1000ms"
+  duration: "900s"
