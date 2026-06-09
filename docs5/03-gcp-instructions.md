@@ -107,14 +107,21 @@ kubectl version --client=true
 
 ### 3.4 helm
 
-```bash
-curl https://baltocdn.com/helm/signing.asc | gpg --dearmor | sudo tee /usr/share/keyrings/helm.gpg > /dev/null
-echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/helm.gpg] https://baltocdn.com/helm/stable/debian/ all main" \
-    | sudo tee /etc/apt/sources.list.d/helm-stable-debian.list
-sudo apt-get update
-sudo apt-get install -y helm
+> **⚠️ 2026-06-09 (clean-VM run):** the `baltocdn.com` apt repo failed (signing key
+> returned `NOSPLIT`, `InRelease` not signed). Use the official install script instead —
+> it's more reliable. See §14b-G7. If you used the apt path and it errored, first
+> `sudo rm -f /etc/apt/sources.list.d/helm-stable-debian.list` so later `apt-get update`s don't break.
 
+```bash
+# Preferred (verified working 2026-06-09):
+curl -fsSL https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | sudo bash
 helm version --short
+
+# Original apt path (may fail — see warning above):
+# curl https://baltocdn.com/helm/signing.asc | gpg --dearmor | sudo tee /usr/share/keyrings/helm.gpg > /dev/null
+# echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/helm.gpg] https://baltocdn.com/helm/stable/debian/ all main" \
+#     | sudo tee /etc/apt/sources.list.d/helm-stable-debian.list
+# sudo apt-get update && sudo apt-get install -y helm
 ```
 
 ### 3.5 kind (Kubernetes-in-Docker)
@@ -171,6 +178,20 @@ docker info | grep -E "CPUs|Total Memory"
 
 If any of these are wildly off, the VM may be the wrong shape. The collection needs ~25 GB of cluster memory + ~150 GB disk headroom.
 
+> **⚠️ 2026-06-09 (clean-VM run):** the actual VM had a **242 GB disk, not the spec'd 1 TB**
+> (220 GB free after setup). That clears the ~150 GB corpus estimate but is much tighter than
+> intended — monitor `df -h /` during collection. Also raise host inotify limits **now**, before
+> deploying anything (kind + chaos-mesh exceed the default `max_user_instances=128`):
+> ```bash
+> sudo tee /etc/sysctl.d/99-kind-inotify.conf > /dev/null <<'EOF'
+> fs.inotify.max_user_instances = 8192
+> fs.inotify.max_user_watches = 1048576
+> net.ipv4.ip_forward = 1
+> EOF
+> sudo sysctl -p /etc/sysctl.d/99-kind-inotify.conf   # do NOT use `sysctl --system` — see §14b-G1
+> ```
+> See §14b-G1 (ip_forward) and §14b-G2 (inotify) for why these matter.
+
 ---
 
 ## 4. Clone the repo + Python environment
@@ -190,12 +211,18 @@ git log --oneline -10
 python3 -m venv .venv
 source .venv/bin/activate
 pip install -U pip
-pip install -r requirements.txt
+# NOTE (2026-06-09): there is NO root requirements.txt in the repo. Install the
+# runtime deps the import-check below needs directly. See §14b-G6.
+pip install pyyaml neo4j requests
 pip install -r scripts/research-lab/requirements.txt
 
 # Confirm key packages
 python3 -c "import yaml, neo4j, requests; print('python deps OK')"
 ```
+
+> **Docker group in fresh shells (2026-06-09):** after `usermod -aG docker $USER`, the group
+> is not active in a brand-new non-interactive shell until you re-login. For one-off commands
+> that need docker/kind (e.g. `create-kind-cluster.ps1`), wrap them: `sg docker -c "<command>"`.
 
 ---
 
@@ -294,11 +321,15 @@ kubectl create namespace chaos-mesh
 
 # CRITICAL: kind uses containerd as the runtime, not docker.
 # Default helm values target docker.sock — those will fail.
+# 2026-06-09: bumped 2.7.0 -> 2.8.2 (2.7.0's client libs are too old for kind's
+# k8s v1.35 node and the controller crashes); dashboard disabled (flaky ghcr pull,
+# not needed headless). See §14b-G2. ALSO ensure §3.8 inotify limits are raised first.
 helm install chaos-mesh chaos-mesh/chaos-mesh \
     --namespace chaos-mesh \
     --set chaosDaemon.runtime=containerd \
     --set chaosDaemon.socketPath=/run/containerd/containerd.sock \
-    --version 2.7.0 \
+    --set dashboard.create=false \
+    --version 2.8.2 \
     --wait
 
 # Verify
@@ -657,6 +688,152 @@ Things that already bit us locally. Pre-emptively guard against them:
 
 ---
 
+## 14b. Clean-VM run log — problems hit on 2026-06-09 and how they were fixed
+
+This section records issues that surfaced on the **first real clean-VM bootstrap**
+(Ubuntu 24.04, `e2-standard-16`, 242 GB disk) of §3–§7. None of these were in §14 —
+they only appear on a genuinely fresh VM, not the previously-warm local cluster.
+**All of §3–§7 ended GREEN after these fixes** (observability 17/17, chaos-mesh 6/6,
+otel-demo-research 23/23 Running; Loki indexes `otel-demo-research`; chaos-mesh targets
+demo pods). Two fixes were committed to the branch (commit `2ae5617`).
+
+Severity legend: 🔴 blocks everything · 🟠 blocks a phase · 🟡 cosmetic/minor.
+
+### G1 — 🔴 `net.ipv4.ip_forward=0` silently kills ALL pod/node egress (the big one)
+
+**Symptom.** Every OTel Demo (and chaos-mesh dashboard) image pull fails with
+`ImagePullBackOff` → `dial tcp <registry-ip>:443: i/o timeout`, **even though** the host
+itself reaches registries fine (`curl https://ghcr.io/v2/` → `HTTP 401` in ~0.1 s). Looks
+exactly like flaky registry egress, but it is not.
+
+**Root cause.** GCP ships a sysctl hardening file that sets `net.ipv4.ip_forward=0`. Docker
+sets it to `1` at startup, but running **`sudo sysctl --system`** (e.g. to apply an inotify
+tweak) re-applies all `/etc/sysctl.d` files and resets it to `0`, breaking the host's ability
+to forward packets from the kind/docker bridges out to the internet. Host-originated traffic
+still works (so it's deceptive); anything *routed* from a pod/node dies.
+
+**Fix.**
+```bash
+sudo sysctl -w net.ipv4.ip_forward=1
+# Pin it persistently (a 99-* file loads last and wins over the GCP default):
+echo 'net.ipv4.ip_forward = 1' | sudo tee -a /etc/sysctl.d/99-kind-inotify.conf
+sysctl net.ipv4.ip_forward   # must print 1
+```
+**Prevention.** Never run `sudo sysctl --system` on this VM. Apply individual files with
+`sudo sysctl -p <file>`. If you ever do run `--system`, re-assert `ip_forward=1` afterward.
+After fixing, force stuck pods to re-pull immediately instead of waiting out kubelet's
+~5-min backoff: `kubectl delete pods --all -n otel-demo-research`.
+
+### G2 — 🟠 chaos-mesh crashes on a fresh kind cluster (inotify limit + version + dashboard)
+
+Three compounding problems, all under §6:
+
+1. **Too-low inotify limits** → controller-manager crashes with `too many open files`
+   (and an earlier, misleading `failed waiting for *v1alpha1.GCPChaos Informer to sync`).
+   Default `fs.inotify.max_user_instances` is **128**; the observability stack + chaos-mesh +
+   OTel Demo blow past it. Fix (do this in §3.8, before any deploy):
+   ```bash
+   sudo tee /etc/sysctl.d/99-kind-inotify.conf > /dev/null <<'EOF'
+   fs.inotify.max_user_instances = 8192
+   fs.inotify.max_user_watches = 1048576
+   net.ipv4.ip_forward = 1
+   EOF
+   sudo sysctl -p /etc/sysctl.d/99-kind-inotify.conf
+   ```
+   If chaos-mesh already crashed, after raising limits: `kubectl rollout restart -n chaos-mesh deploy/chaos-controller-manager`.
+2. **chaos-mesh 2.7.0 too old for kind's k8s v1.35 node** (kind v0.31.0 ships node image
+   `kindest/node:v1.35.0`). Use **2.8.2**: `--version 2.8.2`.
+3. **chaos-dashboard image flaky-pulls from ghcr and isn't needed headless** — its failed
+   pull also makes `helm --wait` time out and leaves the release `STATUS: failed`. Disable it:
+   `--set dashboard.create=false`. (Reflected in the §6 command above.)
+
+Verify the webhook is actually serving before trusting the smoke test: the §6.1 NetworkChaos
+must reach `desiredPhase: Run` (a `connection refused` to `...mutate-chaos-mesh-org...` means
+the controller-manager isn't ready yet — wait and retry).
+
+### G3 — 🟠 Alloy CrashLoopBackOff: `#` comments are illegal in River config
+
+**Symptom.** Both `alloy` pods stay `1/2 CrashLoopBackOff` after §5.2; logs show
+`/etc/alloy/config.alloy:NN: illegal character U+0023 '#'`.
+
+**Root cause.** `deploy/research-lab/observability/values/alloy-values.yaml` had the
+namespace-allowlist comments (added in `21a5b6c`) written with `#`. Alloy's config language
+(River) uses `//`, not `#`. The local pilot never hit this because follow-up #4 patched the
+**live ConfigMap via sed** rather than redeploying from the values file — so the broken source
+file was never exercised until a clean `install-observability.ps1`.
+
+**Fix (committed in `2ae5617`).** Converted the four comment lines from `#` to `//` in the
+source file, then:
+```bash
+helm upgrade alloy grafana/alloy -n observability \
+  --values deploy/research-lab/observability/values/alloy-values.yaml
+kubectl rollout restart -n observability daemonset/alloy
+```
+If you're on a checkout that predates the fix, make the same `#`→`//` edit yourself.
+
+### G4 — 🟠 GCP MTU 1460 vs docker bridge 1500
+
+**Symptom / context.** GCP's primary NIC (`ens4`) is MTU **1460**, but docker's `kind`
+network and the kind node `eth0` default to **1500**. Large TLS packets on the
+node→registry path can be silently dropped (small requests succeed, big layer pulls hang).
+G1 (`ip_forward`) was the real egress blocker here, but the MTU is genuinely wrong for GCP
+and was lowered to be safe/correct:
+```bash
+for n in jira-telemetry-lab-control-plane jira-telemetry-lab-worker jira-telemetry-lab-worker2; do
+  sg docker -c "docker exec $n ip link set eth0 mtu 1460"
+done
+sudo ip link set br-<kind-network-id> mtu 1460   # find via: docker network inspect kind
+```
+**⚠️ Not persistent** across a cluster/VM restart. After any reboot, re-apply, **or** make it
+durable before rebuilding the cluster by setting docker `daemon.json`:
+`{"default-network-opts":{"bridge":{"com.docker.network.driver.mtu":"1460"}}}` then recreate
+the kind network. (`ip_forward` from G1 *is* persistent via the sysctl.d file.)
+
+### G5 — 🟠 `ad` + `fraud-detection` OOMKill-loop at the upstream 300Mi limit
+
+**Symptom.** After §7 all 23 pods reach Running, then `ad` (Java) and `fraud-detection`
+(Kotlin) start `OOMKilled` crash-looping. Host has tens of GB free, so it's the *container*
+limit, not host pressure — the OTel javaagent pushes the JVM over the upstream default 300Mi.
+
+**Fix (committed in `2ae5617`).** Raised both to 600Mi in `deploy/otel-demo/helm-values.yaml`
+(per-component `resources.limits.memory`), then `helm upgrade otel-demo ... --values
+deploy/otel-demo/helm-values.yaml`. If other JVM services (e.g. heavy load) OOM later, bump
+them the same way.
+
+### G6 — 🟡 No root `requirements.txt` (runbook §4 was wrong)
+
+`pip install -r requirements.txt` fails — that file doesn't exist; only
+`scripts/research-lab/requirements.txt` (PyYAML) does. Install the import-check deps directly:
+`pip install pyyaml neo4j requests`. (Fixed inline in §4.)
+
+### G7 — 🟡 helm `baltocdn` apt repo broken
+
+Signing key returned `NOSPLIT`; `InRelease` unsigned; `helm` package not found. Use the
+official script: `curl -fsSL https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | sudo bash`.
+(Fixed inline in §3.4.)
+
+### G8 — 🟡 git identity unset on the VM
+
+Committing failed with `empty ident name not allowed`. Set it to match prior commits:
+```bash
+git config user.name "Yuvraj Sehgal"
+git config user.email "17yuvraj.sehgal@gmail.com"
+```
+
+### Quick reference — order of operations that avoids all of the above
+
+1. §3.8: raise inotify limits **and** `ip_forward=1` in one `/etc/sysctl.d/99-*.conf`, apply
+   with `sudo sysctl -p <file>` (never `--system`).
+2. §3.4: install helm via the official script.
+3. §4: `pip install pyyaml neo4j requests` (no root requirements.txt); use `sg docker -c` for
+   docker/kind in fresh shells.
+4. After cluster create: set node + kind-bridge MTU to 1460.
+5. §5: ensure `alloy-values.yaml` uses `//` comments (fixed in `2ae5617`).
+6. §6: chaos-mesh `--version 2.8.2 --set dashboard.create=false`.
+7. §7: `ad` / `fraud-detection` at 600Mi (fixed in `2ae5617`).
+
+---
+
 ## 15. Charter / contract reminders
 
 - **Rule R1 (output paths)**: all collection outputs go under `data/runs/2026-06-XX-otel-demo-v1-*` and `data/derived/global/2026-06-XX-otel-demo-v1-global/`. Never under any `online-boutique`-prefixed path.
@@ -769,4 +946,4 @@ Total active time: ~3 hours setup + ~½ day data ops, plus 5 days of unattended 
 
 ---
 
-*Last updated 2026-06-08. Authored from the local workstation after Phase 2 pilot validation. Updated for a clean VM (no pre-installed tooling assumed). The GCP VM session should treat this as a runbook; deviate only with explicit re-charter or explicit user direction.*
+*Last updated 2026-06-09. Authored from the local workstation after Phase 2 pilot validation; updated for a clean VM (no pre-installed tooling assumed). **2026-06-09:** first real clean-VM bootstrap of §3–§7 completed GREEN — see §14b for the eight problems hit and their fixes (two committed in `2ae5617`). The GCP VM session should treat this as a runbook; deviate only with explicit re-charter or explicit user direction.*
