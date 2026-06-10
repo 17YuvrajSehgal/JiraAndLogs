@@ -1,0 +1,52 @@
+% Section 8 — Threats to validity
+% Page budget: ~0.5 pages
+%
+% Standard ICSE structure: internal / external / construct.
+%
+% Internal validity:
+%   - The bias-avoidance discipline; pre-registered scenario taxonomy
+%   - LLM seed fixed; bootstrap CI with seed=42
+%   - The 5-fold CV on the L1 stacker prevents window-level leakage
+%
+% External validity:
+%   - Synthetic Jira corpus (mitigated by TAWOS-anchored humanizer redesign)
+%   - 100% trace sampling vs production typical 1-10%
+%   - Single-cluster single-region
+%   - One synthetic app + one cross-app — not five apps in different domains
+%
+% Construct validity:
+%   - Per-window-level labels are scenario-authored, not engineer-adjudicated
+%   - Hit@K assumes engineers review serially; real-world consumption may differ
+
+\section{Threats to Validity}
+\label{sec:threats}
+
+\todo{Half a page; standard ICSE structure (internal / external / construct).
+      Keep it honest: the 100\% trace sampling, synthetic Jira, single-region
+      cluster, and cross-app scope (one cross-app, not five) are real
+      limitations. The bias-avoidance discipline is the strongest internal-
+      validity argument. Cross-reference §6.5 feature-population gap rather
+      than re-listing it here.}
+
+\subsection{Internal validity}
+\label{sec:threats:internal}
+
+\todo{One paragraph. Bias-avoidance discipline; pre-registered scenario
+      taxonomy; fixed bootstrap seed; 5-fold CV on the L1 stacker
+      prevents window-level leakage; LLM determinism via temperature=0
+      + fixed seed.}
+
+\subsection{External validity}
+\label{sec:threats:external}
+
+\todo{One paragraph. List the production-fidelity divergences (100\% trace
+      sampling, single cluster, synthetic Jira, single fault per OB run).
+      Anchor the synthetic-Jira concern in the TAWOS-anchored humanizer
+      redesign. Acknowledge cross-app evidence is one app, not five.}
+
+\subsection{Construct validity}
+\label{sec:threats:construct}
+
+\todo{One paragraph. Hit@K assumes serial candidate review; per-window
+      labels are scenario-authored not engineer-adjudicated; the time-to-
+      diagnose simulation is a back-of-envelope translation.}

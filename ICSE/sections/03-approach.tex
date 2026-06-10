@@ -1,0 +1,83 @@
+% Section 3 — Approach: the TCH cascade
+% Page budget: ~2 pages (the design payload of the paper)
+%
+% Subsections:
+%   3.1 Dataset construction (compressed from technical-paper §2)
+%       - Online Boutique fork with M0-M5 OTel instrumentation
+%       - Scenario library (27 families)
+%       - Per-window labeling + 94 derived numeric features
+%       - V2 humanized Jira memory corpus (347 tickets)
+%       - Distractor pool (110 tickets)
+%
+%   3.2 The Pareto-incomparable pipeline panel
+%       - 7 pipelines, each dominant on one axis (HGB, BiEncoder, HRRF-rule,
+%         HRRF-LLM, LogSeq2Vec, KG-retrieval, DiagnosisAgent)
+%       - Pareto-incomparable table from technical-paper/04-methods-evolution.tex
+%
+%   3.3 The cascade architecture (4 layers)
+%       - L1 — triage gate: class-balanced LogReg stacker, 5-fold CV
+%       - L2 — retrieval fusion: anchor + overlap-rerank for top-1; RRF k=60 for 2-5
+%       - L3 — novelty check: OR of three signals (agent / free / learned)
+%       - L4 — output composition: dict assembly
+%
+%   3.4 Mathematical specification
+%       - L1: z = sum(w_i * x_i) + b; sigma(z); threshold tau = 0.5
+%       - L2 position 1: overlap(c) = sum over voters of position_weight
+%       - L2 positions 2-5: RRF(c) = sum_r 1/(k + rank_r(c)) with k=60
+%       - L3: is_novel = agent OR (max_conf < 0.5) OR (P_learned >= 0.5)
+%
+%   3.5 Implementation map (brief; mention build_cascade.py)
+
+\section{Approach: The Tiered Cascade Hybrid}
+\label{sec:approach}
+
+\todo{Write the approach section. Lead with the Pareto-incomparable
+      observation: no single pipeline dominates, so the cascade picks per
+      sub-task. Then the 4-layer specification. Include the L2 math
+      (overlap-rerank + RRF) explicitly. ~800-1000 words.}
+
+\subsection{Dataset construction}
+\label{sec:approach:dataset}
+
+\todo{Compress technical-paper §2 to half a page. The bias-avoidance
+      discipline + the M0-M5 instrumentation can be summarized in a
+      paragraph each. The 27-family scenario taxonomy goes into a small
+      table. The V2 humanized corpus and distractor pool get one sentence
+      each.}
+
+\subsection{The Pareto-incomparable pipeline panel}
+\label{sec:approach:panel}
+
+\todo{Half-page subsection. Include the per-pipeline standalone metrics
+      table (Hit@1, Hit@5, MRR, PR-AUC, novelty) as a single table.
+      Reference: technical-paper/04-methods-evolution.tex Table 5.
+      The takeaway sentence: "Every column has a different winner; no row
+      Pareto-dominates."}
+
+\subsection{Cascade architecture}
+\label{sec:approach:cascade}
+
+\todo{The four-layer figure goes here. Each layer described in one
+      paragraph. Include the cascade ascii block from
+      technical-paper/05-tch-cascade.tex Figure 4, simplified for the
+      single-column ICSE format.}
+
+\subsection{Mathematical specification}
+\label{sec:approach:math}
+
+\todo{Three numbered equations:
+        (1) L1 stacker: P = sigma(sum_i w_i x_i + b)
+        (2) L2 overlap: overlap(c) = sum_r w(c,r)
+        (3) L2 RRF: RRF(c) = sum_r 1/(60 + rank_r(c))
+      Plus one sentence each on why each layer's choice is what it is
+      (e.g. "overlap-rerank wins position 1 because multi-retriever
+      consensus dominates single-retriever top-1 precision; RRF k=60 is
+      the standard constant from Cormack et al.").}
+
+\subsection{Implementation summary}
+\label{sec:approach:impl}
+
+\todo{Two-sentence paragraph: the cascade is implemented as Python module
+      \texttt{build\_cascade.py} that consumes pre-computed per-pipeline
+      predictions and produces the unified output. Cross-reference the
+      reproducibility appendix if added.}

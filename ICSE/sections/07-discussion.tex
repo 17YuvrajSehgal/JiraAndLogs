@@ -1,0 +1,37 @@
+% Section 7 — Discussion
+% Page budget: ~0.5 pages
+%
+% Three claims that transcend any single experiment:
+%   1. Composition-fragile, not component-fragile
+%      - G3 evidence: +404% rel standalone Hit@1 lift broke cascade integration
+%      - Two specific mechanisms: overlap-rerank vote shifts; L4 stacker score-scale mismatch
+%
+%   2. Three rerankers failed: a pattern
+%      - G2 cross-encoder, agent rerank, G5 LLM judge
+%      - The cascade's overlap-rerank empirically dominates single-LLM judgment
+%      - Implication for future practitioners
+%
+%   3. Retrieval channel was already at its local ceiling
+%      - Hit@5 stayed at 0.9124 across the entire G-series
+%      - The real headline lift came from the novelty channel
+%      - Reframes the work: this is not a retrieval-improvement paper
+
+\section{Discussion}
+\label{sec:discussion}
+
+\todo{Three cross-cutting findings. Half a page. Each gets a one-paragraph
+      treatment.
+
+      Finding 1: composition-fragile vs component-fragile (G3 the cleanest
+      demonstration: +404\% rel standalone broke cascade integration via
+      two specific mechanisms).
+
+      Finding 2: three independent reranker designs all failed
+      (cross-encoder w/ BCE, agent rerank, LLM judge w/ JSON). The
+      cascade's multi-retriever consensus on top-1 dominates single-LLM
+      judgment. Worth claiming as a positive result.
+
+      Finding 3: retrieval channel was already at its local ceiling
+      (0.9124 / 0.976 union ceiling = 93.5\%). The novelty channel was
+      the under-engineered piece. The headline +388\% rel win comes
+      from a 46-feature LogReg replacing a fixed-threshold heuristic.}

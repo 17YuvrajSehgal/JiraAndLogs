@@ -1,0 +1,37 @@
+% Section 10 — Conclusion
+% Page budget: ~0.5 pages
+%
+% Three beats:
+%   1. Recap: cascade composes 7 Pareto-incomparable pipelines; locked numbers
+%   2. Cross-app evidence: transfers to a structurally different application
+%   3. Future work pointer: real-Jira corpus evaluation; cross-domain
+%      generalization (IoT, batch processing); listwise reranker
+%
+% Optional: data + code availability statement (if not anonymized away)
+
+\section{Conclusion}
+\label{sec:conclusion}
+
+\todo{Half a page. Three short paragraphs:
+
+      Paragraph 1 (recap): we built a 4-layer memory-augmented cascade
+      (TCH) composing 7 pipelines. Headline: Hit@5 = 0.912, novel-recall
+      = 0.793 at preserved precision, 16~$\mu$s/window after caching.
+
+      Paragraph 2 (cross-app evidence): TCH transfers to the OTel Demo
+      without retraining, including under graded multi-fault difficulty.
+      94/94 structural feature compatibility; honest report of the
+      12/94-vs-82/94 value-population gap.
+
+      Paragraph 3 (significance + future work): cascades over Pareto-
+      incomparable pipelines compose more robustly than they recompose
+      — three reranker designs all failed to beat the cascade's
+      overlap-rerank, suggesting where the next round of work should
+      not look. Future: real-Jira corpus evaluation, IoT-domain
+      generalization, listwise cross-encoder reranking.}
+
+% Availability statement (review-time; finalize for camera-ready):
+% \begin{description}
+%   \item[Code and data:] Available at an anonymized URL during review;
+%         de-anonymized upon acceptance.
+% \end{description}

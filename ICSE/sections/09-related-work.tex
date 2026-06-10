@@ -1,0 +1,67 @@
+% Section 9 — Related work
+% Page budget: ~0.75 pages
+%
+% Five categories — one paragraph each:
+%
+%   9.1 Log anomaly detection
+%       - Drain, DeepLog, LogAnomaly, MetaLog, etc.
+%       - What they target (detection) vs what we target (diagnosis-by-citation)
+%
+%   9.2 AIOps & incident triage
+%       - Microsoft / Google / FB papers on incident clustering and routing
+%       - Distinction: those operate on tickets alone; we operate on telemetry+tickets joint
+%
+%   9.3 Retrieval-augmented generation (RAG)
+%       - Lewis et al. RAG; Atlas; ColBERT
+%       - Our cascade uses RAG-adjacent techniques but at runtime is not LLM-driven
+%
+%   9.4 Knowledge graph for software engineering
+%       - KG construction from text; LLM-extracted KGs for incident management
+%       - Our LLM-extracted Neo4j graph is one of seven pipelines, not the focus
+%
+%   9.5 Microservice benchmarks
+%       - Online Boutique, Train-Ticket, Sock Shop, DeathStarBench
+%       - Discuss why OTel Demo is the right cross-app testbed (Kafka async + polyglot)
+
+\section{Related Work}
+\label{sec:related}
+
+\todo{Five short paragraphs, one per category. Cite generously — references
+      are unlimited at ICSE. Each paragraph ends with one sentence
+      distinguishing our work from the cited line.}
+
+\subsection{Log anomaly detection}
+\label{sec:related:logs}
+
+\todo{One paragraph. Distinguish detection (their target) from diagnosis-by-
+      citation (ours).}
+
+\subsection{AIOps and incident triage}
+\label{sec:related:aiops}
+
+\todo{One paragraph. Cite the major industrial incident-clustering and
+      routing papers. Distinguish their ticket-only operation from our
+      telemetry+ticket joint approach.}
+
+\subsection{Retrieval-augmented generation and dense retrieval}
+\label{sec:related:rag}
+
+\todo{One paragraph. RAG, Atlas, ColBERT, sentence-transformers, MS-MARCO
+      cross-encoder reranker. Distinguish RAG (generation-time LLM) from
+      our cascade (training/preprocessing-time LLM only; runtime is
+      classical).}
+
+\subsection{Knowledge graphs from operational text}
+\label{sec:related:kg}
+
+\todo{One paragraph. KG construction from text + LLM-extracted graphs.
+      Distinguish our use of the KG as one of seven pipelines from work
+      where the KG is the main contribution.}
+
+\subsection{Microservice benchmarks}
+\label{sec:related:benchmarks}
+
+\todo{One paragraph. Online Boutique, Train-Ticket, Sock Shop,
+      DeathStarBench. Justify the OTel Demo choice for cross-app:
+      Kafka async + polyglot + LLM service give four orthogonal
+      architectural-distance axes.}

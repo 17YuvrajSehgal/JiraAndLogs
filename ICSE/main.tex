@@ -1,0 +1,85 @@
+% ICSE 2027 submission — memory-augmented incident triage with cross-app generalization
+% Build: make  (runs pdflatex -> bibtex -> pdflatex -> pdflatex)
+% See README.md for structure rationale + headline numbers to populate.
+
+\documentclass[sigconf,review,anonymous]{acmart}
+
+% =====================================================================
+% Package preamble (kept minimal; add only when a section needs it)
+% =====================================================================
+\usepackage{booktabs}              % tables
+\usepackage{multirow}              % table multi-row cells
+\usepackage{tabularx}              % stretchy column widths
+\usepackage{microtype}             % typographic refinements
+\usepackage{xspace}                % smarter spacing after macros
+\usepackage{listings}              % code blocks (use sparingly in 10-page paper)
+\usepackage{subcaption}            % sub-figures (a) (b) (c)
+\usepackage{amsmath, amssymb}      % math
+\usepackage{balance}               % balance the last page
+
+% Hide the ACM rights block during review
+\setcopyright{none}
+\settopmatter{printacmref=false, printccs=false, printfolios=true}
+\renewcommand\footnotetextcopyrightpermission[1]{} % keep first-page footer clean
+\pagestyle{plain}
+
+% =====================================================================
+% Macros — short forms for terms used throughout the paper
+% =====================================================================
+\newcommand{\tch}{\textsc{TCH}\xspace}
+\newcommand{\hgb}{\textsc{HGB}\xspace}
+\newcommand{\sota}{\textsc{SOTA}\xspace}
+\newcommand{\bienc}{\textsc{BiEncoder}\xspace}
+\newcommand{\hrrf}{\textsc{Hybrid-RRF}\xspace}
+\newcommand{\logseq}{\textsc{LogSeq2Vec}\xspace}
+\newcommand{\kgret}{\textsc{KG-Retrieval}\xspace}
+\newcommand{\agent}{\textsc{DiagnosisAgent}\xspace}
+\newcommand{\todo}[1]{\textcolor{red}{\textbf{[TODO:\,#1]}}}
+\usepackage{xcolor}
+
+% =====================================================================
+% Title / authors — anonymized for review per ICSE policy
+% =====================================================================
+\title{Memory-Augmented Incident Triage with Cross-App Generalization}
+% Optional subtitle; remove if not used in final
+% \subtitle{Subtitle here}
+
+\author{Anonymous Author(s)}
+\affiliation{
+  \institution{Anonymous Institution}
+  \city{}
+  \country{}
+}
+
+% =====================================================================
+% Document body
+% =====================================================================
+\begin{document}
+
+\begin{abstract}
+\input{sections/00-abstract}
+\end{abstract}
+
+% ACM CCS / keywords — fill in before submission per ICSE template
+% \ccsdesc[500]{Software and its engineering~Software maintenance tools}
+% \keywords{incident triage, memory-augmented retrieval, AIOps, microservices, fault injection}
+
+\maketitle
+
+\input{sections/01-introduction}
+\input{sections/02-background}
+\input{sections/03-approach}
+\input{sections/04-evaluation}
+\input{sections/05-results}
+\input{sections/06-cross-app}
+\input{sections/07-discussion}
+\input{sections/08-threats-to-validity}
+\input{sections/09-related-work}
+\input{sections/10-conclusion}
+
+\balance  % balance the final-page columns
+
+\bibliographystyle{ACM-Reference-Format}
+\bibliography{references}
+
+\end{document}

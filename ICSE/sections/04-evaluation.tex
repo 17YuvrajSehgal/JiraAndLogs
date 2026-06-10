@@ -1,0 +1,54 @@
+% Section 4 — Evaluation setup
+% Page budget: ~0.75 pages
+%
+% Subsections:
+%   4.1 Datasets and splits
+%       - Locked v5-large global dataset
+%       - v2 in-distribution split: 4701 train / 1011 val / 1008 test
+%       - LOFO cross-validation for OOD analysis
+%
+%   4.2 Metrics
+%       - Retrieval: Hit@K, MRR, AllGold@K, PrimaryGold@K (new in cross-app)
+%       - Triage: PR-AUC (strict, inclusive), ROC-AUC, F1 @ FPR<=5%, ECE
+%       - Novelty: precision, recall, F1
+%       - Statistical envelope: paired bootstrap, 1000 resamples, seed=42, 95% CI
+%
+%   4.3 Pipelines compared
+%       - The locked panel from technical-paper §3
+%       - Brief mention of the G-series KEEP/SKIP designations
+%
+%   4.4 Bias-avoidance discipline (compressed)
+%       - Bullet list of what we never add: scenario IDs, fault labels, alert names
+%       - Why the discipline matters for external validity
+
+\section{Evaluation Setup}
+\label{sec:evaluation}
+
+\todo{Write evaluation setup. ~300 words. Get the splits, metrics, and
+      statistical envelope on the page so §5 results can refer back.
+      Keep the bias-avoidance discipline to a single paragraph; it earned
+      its space in technical-paper §2 but here it's a setup constraint.}
+
+\subsection{Datasets and splits}
+\label{sec:evaluation:splits}
+
+\todo{One paragraph: locked v5-large global corpus (6,720 windows; 27
+      scenario families; 100 fault-injection runs); v2 in-distribution
+      split (4,701 / 1,011 / 1,008); LOFO cross-validation for OOD.
+      Mention time-ordered visibility enforcement.}
+
+\subsection{Metrics}
+\label{sec:evaluation:metrics}
+
+\todo{One paragraph + a small table. Group metrics by axis (retrieval,
+      triage, novelty, robustness). Define Hit@K, MRR, PR-AUC strict vs
+      inclusive in compressed form. Reserve the multi-gold metrics
+      (AllGold@K, PrimaryGold@K) for §6 where they actually pay off.}
+
+\subsection{Statistical envelope}
+\label{sec:evaluation:statistics}
+
+\todo{Two sentences: paired bootstrap, 1000 resamples, seed = 42, 95\%
+      CIs reported for every headline number. Stratified metrics across
+      scenario\_family / service\_name / window\_type /
+      n\_prior\_family\_tickets.}

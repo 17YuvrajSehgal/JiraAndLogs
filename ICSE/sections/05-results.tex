@@ -1,0 +1,103 @@
+% Section 5 — Results
+% Page budget: ~2 pages (the empirical payload)
+%
+% Subsections:
+%   5.1 Headline: TCH vs every single-pipeline baseline
+%       - Single table: per-pipeline Hit@1/Hit@5/MRR/PR-AUC, with TCH at the bottom
+%       - Bootstrap CI delta column or footnote
+%
+%   5.2 Per-phase progression to the headline
+%       - Cumulative effect of G1 (BiEncoder mixed-negs), G4 (agent Phase 3),
+%         G7 (learned novelty)
+%       - Single table showing v2f -> +G1 -> +G4 -> +G7
+%
+%   5.3 What the L1 stacker learned
+%       - The HGB coefficient dominance (+8.221) figure or table
+%       - Ablation: stacker without HGB collapses to PR-AUC=0.303
+%
+%   5.4 Three rerankers that failed (publishable negative pattern)
+%       - G2 cross-encoder, Phase E agent rerank, G5 LLM judge
+%       - Single table with each design + its delta vs cascade
+%       - Cross-cutting interpretation: cascade's multi-retriever consensus is at a local optimum
+%
+%   5.5 Robustness
+%       - G6 distractor sweep (Hit@5 -2% rel at 50% distractor ratio)
+%       - G8 LOFO (F1 within 11% rel of in-distribution)
+%       - Compact subsection — one paragraph each
+
+\section{Results}
+\label{sec:results}
+
+\todo{The empirical payload. Write this first; everything else hangs off
+      the numbers. Aim for ~1500 words spread across 4-5 subsections.
+      Open with the headline table.}
+
+\subsection{Headline metrics: TCH vs single-pipeline baselines}
+\label{sec:results:headline}
+
+\todo{Single per-pipeline table; one sentence each per row. Include the
+      paired-bootstrap delta CIs. The table follows the
+      technical-paper §7 Table 5 layout, compressed. End with: "TCH
+      beats or ties every baseline on every metric, significantly so
+      on Hit@5 and MRR; on Hit@1 the cascade ties BiEncoder within the
+      95\% CI."}
+
+% Headline table placeholder — fill from data/derived/global/.../comparison/v2g-final-models/final/tch_metrics.json
+% \begin{table}
+%   \centering
+%   \caption{Per-pipeline metrics on the 1{,}008-window v2 in-distribution test split. Bold = best in column.}
+%   \label{tab:headline}
+%   \small
+%   \begin{tabular}{lrrrr}
+%   \toprule
+%   Pipeline & Hit@1 & Hit@5 & MRR & PR-AUC \\
+%   \midrule
+%   \hgb{}                & ---     & ---     & ---     & \textbf{0.9998} \\
+%   \bienc{}              & 0.695   & 0.789   & 0.729   & 0.287 \\
+%   \hrrf{} rule          & 0.583   & 0.798   & 0.669   & 0.236 \\
+%   \hrrf{} LLM           & 0.432   & 0.667   & 0.517   & 0.292 \\
+%   \logseq{}             & 0.483   & 0.531   & 0.498   & 0.313 \\
+%   \kgret{}              & 0.079   & 0.556   & 0.228   & ---     \\
+%   \agent{}              & 0.386   & 0.436   & 0.405   & 0.243 \\
+%   \midrule
+%   \textbf{\tch{}}       & \textbf{0.722} & \textbf{0.912} & \textbf{0.794} & \textbf{0.9998} \\
+%   \bottomrule
+%   \end{tabular}
+% \end{table}
+
+\subsection{Where the lift came from: per-phase progression}
+\label{sec:results:progression}
+
+\todo{Single small table showing cumulative effect of G1 + G4 + G7.
+      The narrative: G1 contributes a modest Hit@1 lift; G4 doubles
+      novel recall; G7 turns that into a 4.9$\times$ novel-recall lift
+      at preserved precision. Retrieval (Hit@5) stayed unchanged
+      across the whole G-series, which is the headline finding.}
+
+\subsection{Three rerankers that failed: a negative-result pattern}
+\label{sec:results:rerankers}
+
+\todo{This subsection earns the paper an extra novelty point. Three
+      independent reranking designs (cross-encoder w/ BCE, agent rerank,
+      LLM judge with structured JSON) all underperformed the cascade's
+      overlap-rerank. The interpretation: multi-retriever consensus on
+      top-1 dominates any single-LLM judgment on this dataset. Worth
+      one paragraph + a 3-row table.}
+
+\subsection{What the L1 stacker learned}
+\label{sec:results:stacker}
+
+\todo{One paragraph: HGB's coefficient dominates by ~30$\times$ the next
+      largest; removing HGB collapses strict PR-AUC from 0.9998 to 0.303;
+      the other features contribute on borderline-class windows where
+      HGB alone is uncertain (+3.2 points inclusive PR-AUC).}
+
+\subsection{Robustness}
+\label{sec:results:robustness}
+
+\todo{Two paragraphs:
+        (a) Distractor sweep: Hit@5 drops only 2\% rel at 50\% distractor
+            ratio; Hit@1 more sensitive (-14.2\% rel).
+        (b) LOFO: novelty F1 within 11\% rel of in-distribution at the
+            best threshold; precision robust across 19/27 families;
+            recall splits by family structure.}

@@ -1,0 +1,38 @@
+% Section 2 — Background and motivation
+% Page budget: ~0.75 pages
+%
+% Subsections:
+%   2.1 Operational data sources (logs/traces/metrics/k8s)
+%   2.2 Jira as institutional memory
+%   2.3 Why public datasets are insufficient
+%
+% Conceptual beats:
+%   - Modern observability stacks emit large volumes of telemetry; only a tiny
+%     fraction matters for engineering action.
+%   - Past Jira tickets contain rich resolution knowledge but are unindexed
+%     against live telemetry.
+%   - HDFS / BGL / Thunderbird log datasets have no ticket-side ground truth.
+%     TAWOS has tickets but no co-collected telemetry.
+%   - We need joint data, which motivates our controlled lab.
+
+\section{Background and Motivation}
+\label{sec:background}
+
+\todo{Write background. ~400 words. Establish the diagnosis-bottleneck framing
+      with a brief operational walkthrough. Reference the public-dataset gap
+      that motivates the joint corpus. Keep this section short -- save real
+      estate for the approach and results.}
+
+\subsection{Operational telemetry and Jira as institutional memory}
+\label{sec:background:telemetry}
+
+\todo{1-2 paragraphs: what counts as telemetry; what Jira captures that
+      telemetry does not; why bridging them is the right framing.}
+
+\subsection{Why a controlled lab is required}
+\label{sec:background:lab}
+
+\todo{1-2 paragraphs: the public-dataset gap (HDFS/BGL/Thunderbird have no
+      ticket ground truth; TAWOS has tickets but no telemetry). Justifies the
+      synthetic-but-realistic Online Boutique fork. Mention the bias-avoidance
+      discipline.}

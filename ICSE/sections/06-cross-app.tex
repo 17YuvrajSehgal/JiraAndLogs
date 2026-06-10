@@ -1,0 +1,86 @@
+% Section 6 — Cross-app generalization
+% Page budget: ~1 page (the differentiating contribution)
+%
+% This section is the strongest novelty axis of the paper. Many AIOps papers
+% report numbers on one app; almost none demonstrate transfer to a structurally
+% different application. The cross-app result + graded difficulty (L1-L4) +
+% multi-gold metrics are the new claim space.
+%
+% Subsections:
+%   6.1 Setup
+%       - OpenTelemetry Demo (18 services, Kafka async, 12 languages)
+%       - Same harness, same locked cascade, same evaluation protocol
+%       - 4 new architectural axes vs OB: Kafka async bridge, 2x trace depth,
+%         polyglot span emitters, LLM service
+%
+%   6.2 Headline cross-app table (L1 single-fault only, for OB comparison)
+%       - Two columns: zero-shot (locked cascade) + L1-retrained (refit stacker only)
+%       - Same metrics as §5 headline
+%
+%   6.3 Graded difficulty: L1 → L2 → L3 → L4
+%       - New table, no OB analogue
+%       - Hit@5 / AllGold@K / PrimaryGold@K / Recall@K per difficulty
+%       - Monotone degradation expected; report exact numbers
+%
+%   6.4 Kafka families (architectural-distance evidence)
+%       - Sub-table: per-Kafka-family Hit@5
+%       - Discussion: silence-of-downstream-consumer as a novel signal
+%
+%   6.5 Feature-population gap (honest finding)
+%       - 12/94 features populate on OTel Demo (generic telemetry: trace counts, CPU%, memory%)
+%       - 82/94 require OB-specific Prometheus metric names + Loki label structure
+%       - The cascade structurally generalizes; feature values degrade by source-app instrumentation
+
+\section{Cross-App Generalization}
+\label{sec:cross-app}
+
+\todo{The cross-app section. Write after GCP collection completes
+      (currently in progress). Until then, this is a structural placeholder.
+      The architectural-distance evidence is the most novel piece:
+      OTel Demo has Kafka async (no OB analogue), 2$\times$ trace depth,
+      polyglot span emitters, and an LLM service. Numbers will populate
+      from data/derived/global/2026-06-XX-otel-demo-v1-global/.}
+
+\subsection{Experimental setup}
+\label{sec:cross-app:setup}
+
+\todo{Two paragraphs: (a) the OTel Demo (18 services, Kafka async, 12+
+      languages, LLM service); (b) what's locked and what changes
+      (zero-shot transfer: nothing retrained; L1-retrained: only the
+      L1 stacker refit).}
+
+\subsection{Headline transfer results}
+\label{sec:cross-app:headline}
+
+\todo{Single table with three columns: OB locked, OTel zero-shot, OTel
+      L1-retrained, plus a delta column. Same metric rows as §5
+      headline. Numbers TBD pending GCP collection results.}
+
+\subsection{Graded difficulty: L1-L4 multi-fault}
+\label{sec:cross-app:graded}
+
+\todo{New table, has no OB analogue. Rows: Hit@5, AllGold@K,
+      PrimaryGold@5 (L3 only), Recall@K (averaged over golds).
+      Columns: L1 single, L2 concurrent, L3 cascade, L4 compound.
+      The expected story: monotone degradation L1 -> L2 -> L3, with
+      PrimaryGold@5 on L3 being the most demanding metric.}
+
+\subsection{Kafka families: architectural-distance evidence}
+\label{sec:cross-app:kafka}
+
+\todo{Per-Kafka-family Hit@5 sub-table (5 families: broker-outage,
+      consumer-lag, consumer-crash, partition-rebalance, dead-letter-spike).
+      The interpretation: the "silence of downstream consumers" pattern
+      is a novel signal not present in any OB scenario. Whether the
+      cascade catches it without retraining is the key claim.}
+
+\subsection{Feature-population gap (honest finding)}
+\label{sec:cross-app:feature-gap}
+
+\todo{The 12/94 vs 82/94 finding. Frame as: "Structural compatibility
+      of the schema is preserved (94/94 columns produced); value
+      population varies by source-app instrumentation (12/94 from
+      generic telemetry, 82/94 require app-specific Prometheus metric
+      naming)." This is a publishable cross-app generalization
+      finding, not a bug. Belongs to §6 not §8 because it's evidence
+      of how the cascade transfers, not a threat to validity.}

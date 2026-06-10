@@ -1,0 +1,27 @@
+% Abstract — ~200-250 words.
+%
+% Required content (~one sentence each):
+%   1. Problem framing.
+%      Anomaly detection on telemetry is mature; the bottleneck is diagnosis-by-citation.
+%   2. Approach.
+%      A 4-layer memory-augmented cascade (TCH) composing 7 Pareto-incomparable pipelines.
+%   3. Dataset contribution.
+%      Paired telemetry+Jira corpus from a forked Online Boutique with bias-avoidance discipline.
+%   4. Headline numbers.
+%      Hit@5 = 0.912, Hit@1 = 0.722, MRR = 0.794, strict PR-AUC = 0.9998,
+%      novel-recall = 0.793 at precision 0.940 (+388% rel over baseline),
+%      16 microseconds/window inference.
+%   5. Cross-app generalization.
+%      Transfers without retraining to the OpenTelemetry Demo (15 services, Kafka async);
+%      validated under graded difficulty (L1 single-fault through L4 compound multi-fault).
+%   6. Robustness.
+%      Hit@5 drops only 2% rel at 50% distractor ratio; novelty F1 within 11% rel
+%      of in-distribution under leave-one-family-out cross-validation.
+%   7. Significance / contribution claim.
+%      First memory-augmented triage system with cross-app generalization evidence
+%      and an honest negative-finding pattern from three failed reranker experiments.
+
+\todo{Write abstract per the structure outlined in the comment block above.
+      ~200-250 words. Lead with the bottleneck framing, end with the cross-app
+      claim. Keep numbers exact and minimal — Hit@5, novel-recall delta,
+      inference cost, cross-app transfer.}
