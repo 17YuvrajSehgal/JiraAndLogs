@@ -1,37 +1,22 @@
 % Section 7 — Discussion
 % Page budget: ~0.5 pages
 %
-% Three claims that transcend any single experiment:
-%   1. Composition-fragile, not component-fragile
-%      - G3 evidence: +404% rel standalone Hit@1 lift broke cascade integration
-%      - Two specific mechanisms: overlap-rerank vote shifts; L4 stacker score-scale mismatch
-%
-%   2. Three rerankers failed: a pattern
-%      - G2 cross-encoder, agent rerank, G5 LLM judge
-%      - The cascade's overlap-rerank empirically dominates single-LLM judgment
-%      - Implication for future practitioners
-%
-%   3. Retrieval channel was already at its local ceiling
-%      - Hit@5 stayed at 0.9124 across the entire G-series
-%      - The real headline lift came from the novelty channel
-%      - Reframes the work: this is not a retrieval-improvement paper
+% Three cross-cutting findings; one paragraph each.
 
 \section{Discussion}
 \label{sec:discussion}
 
-\todo{Three cross-cutting findings. Half a page. Each gets a one-paragraph
-      treatment.
+\subsection{Composition fragility is not component fragility}
+\label{sec:discussion:composition}
 
-      Finding 1: composition-fragile vs component-fragile (G3 the cleanest
-      demonstration: +404\% rel standalone broke cascade integration via
-      two specific mechanisms).
+A pipeline that improves in isolation can degrade when composed. The cleanest evidence is a knowledge-graph refinement in which the same language-model extractor is applied to both sides of the graph (memory tickets \emph{and} query windows) rather than only the memory side. As a standalone retriever the symmetric variant is dramatically better than the asymmetric one; integrated into the cascade in place of the asymmetric variant it loses retrieval ground on the cascade's top-five. Two mechanisms account for the regression. First, the symmetric extractor produces sparser entity sets per query, which inside Reciprocal Rank Fusion manifests as anti-consensus: the graph retriever's votes pile up on a small set of candidates that no other retriever surfaces, and the additive Rank Fusion contributions cannot overcome the consensus of the dense and sparse retrievers. Second, the symmetric variant's score distribution is shifted relative to the asymmetric one, which destabilizes the Layer-1 triage stacker until it is refit. The general lesson is that the right metric for a pipeline destined for a cascade is its \emph{compositional contribution}, not its standalone performance, and that single-pipeline benchmarks should not be expected to predict cascade behavior.
 
-      Finding 2: three independent reranker designs all failed
-      (cross-encoder w/ BCE, agent rerank, LLM judge w/ JSON). The
-      cascade's multi-retriever consensus on top-1 dominates single-LLM
-      judgment. Worth claiming as a positive result.
+\subsection{Three independent reranker designs failed to beat multi-retriever consensus}
+\label{sec:discussion:rerankers}
 
-      Finding 3: retrieval channel was already at its local ceiling
-      (0.9124 / 0.976 union ceiling = 93.5\%). The novelty channel was
-      the under-engineered piece. The headline +388\% rel win comes
-      from a 46-feature LogReg replacing a fixed-threshold heuristic.}
+The cascade's top-one slot is filled by a multi-retriever overlap rule: a candidate is promoted from the dense retriever's top-three by votes from independent retrievers that also rank it highly. We tried three independent reranker designs that should, in principle, do better. The first fine-tuned a cross-encoder---which scores query and document jointly so that token-level interactions a bi-encoder cannot see become available---with a binary cross-entropy loss on relevance pairs; integrated as a fifth retriever in the fusion it lowered top-one Hit by a meaningful margin, and integrated as a reranker over the cascade's top-five it lowered top-one Hit by a similar margin. The second let the language-model agent override the cascade's top-one when its self-rated confidence cleared a threshold; an audit on a fixed-window subsample showed the agent was wrong when the cascade was right more often than the converse. The third invoked a separate large-language-model judge over the cascade's top-five output with a strict JSON output schema and confidence-gated override; the judge's calibrated-looking confidence distribution turned out to be uninformative in that more than four out of five calls reported a near-constant high-confidence value regardless of whether the candidate was correct, and every override threshold we tested cost Hit at the top-one position. The three designs are mechanistically distinct---a re-encoded joint score, an LLM verification stage, an LLM scoring stage---but the negative result is uniform. The general lesson is that on this dataset, multi-retriever consensus at the top-one slot is empirically harder to beat than any single-model judgment we tested, and a future-work direction that promises to ``do better with a bigger reranker'' should be expected to confront the same empirical wall.
+
+\subsection{The retrieval channel was already at its local ceiling; the headline lift is in the novelty channel}
+\label{sec:discussion:reframe}
+
+We originally framed the work as a retrieval-improvement project and budgeted the bulk of the empirical effort on the cascade's Layer-2 fusion. The data reframed it. Across every refinement integrated after the initial cascade was locked, the cascade's Hit@5 remained essentially unchanged; what moved was novel recall, by a factor of nearly five at preserved precision. The structural explanation is local-ceiling exhaustion: the union of the four chosen retrievers' top-five lists contains the gold ticket on more than ninety-seven percent of windows, and the cascade's Hit@5 is already at over ninety-three percent of that union ceiling, so any further gain on Hit@5 requires adding a structurally novel retriever (one whose top-five covers windows the existing four miss) rather than improving the fusion rule. The novelty channel, by contrast, was resting on a fixed retrieval-confidence threshold that was leaving most of its addressable signal on the table; replacing the threshold with a small learned per-window classifier over coarse window metadata moved the addressable signal in. The general lesson is that on a long-running retrieval project, the highest-leverage open question is rarely the headline retrieval metric---it is whichever auxiliary channel is currently held to a fixed-threshold heuristic.

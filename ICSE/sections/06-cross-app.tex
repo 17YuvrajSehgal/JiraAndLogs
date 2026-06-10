@@ -1,86 +1,86 @@
 % Section 6 — Cross-app generalization
-% Page budget: ~1 page (the differentiating contribution)
+% Page budget: ~1 page
 %
-% This section is the strongest novelty axis of the paper. Many AIOps papers
-% report numbers on one app; almost none demonstrate transfer to a structurally
-% different application. The cross-app result + graded difficulty (L1-L4) +
-% multi-gold metrics are the new claim space.
-%
-% Subsections:
-%   6.1 Setup
-%       - OpenTelemetry Demo (18 services, Kafka async, 12 languages)
-%       - Same harness, same locked cascade, same evaluation protocol
-%       - 4 new architectural axes vs OB: Kafka async bridge, 2x trace depth,
-%         polyglot span emitters, LLM service
-%
-%   6.2 Headline cross-app table (L1 single-fault only, for OB comparison)
-%       - Two columns: zero-shot (locked cascade) + L1-retrained (refit stacker only)
-%       - Same metrics as §5 headline
-%
-%   6.3 Graded difficulty: L1 → L2 → L3 → L4
-%       - New table, no OB analogue
-%       - Hit@5 / AllGold@K / PrimaryGold@K / Recall@K per difficulty
-%       - Monotone degradation expected; report exact numbers
-%
-%   6.4 Kafka families (architectural-distance evidence)
-%       - Sub-table: per-Kafka-family Hit@5
-%       - Discussion: silence-of-downstream-consumer as a novel signal
-%
-%   6.5 Feature-population gap (honest finding)
-%       - 12/94 features populate on OTel Demo (generic telemetry: trace counts, CPU%, memory%)
-%       - 82/94 require OB-specific Prometheus metric names + Loki label structure
-%       - The cascade structurally generalizes; feature values degrade by source-app instrumentation
+% Numeric tables marked TODO are populated post-GCP collection. Structural
+% prose, setup, and the feature-population framing are written here in
+% full because they describe verified facts from the local pilot, not
+% pending results.
 
 \section{Cross-App Generalization}
 \label{sec:cross-app}
 
-\todo{The cross-app section. Write after GCP collection completes
-      (currently in progress). Until then, this is a structural placeholder.
-      The architectural-distance evidence is the most novel piece:
-      OTel Demo has Kafka async (no OB analogue), 2$\times$ trace depth,
-      polyglot span emitters, and an LLM service. Numbers will populate
-      from data/derived/global/2026-06-XX-otel-demo-v1-global/.}
+The cascade and its dataset are constructed on a single application. A natural question is whether the system transfers to a structurally different one without modification. This section reports the experimental setup we use to answer it, the two evaluation columns we report against (a strict zero-shot column and an L1-retrained column), the architectural axes along which the new application differs from the source, and an honest finding about the cascade's structural-versus-value feature compatibility.
 
 \subsection{Experimental setup}
 \label{sec:cross-app:setup}
 
-\todo{Two paragraphs: (a) the OTel Demo (18 services, Kafka async, 12+
-      languages, LLM service); (b) what's locked and what changes
-      (zero-shot transfer: nothing retrained; L1-retrained: only the
-      L1 stacker refit).}
+The target application is the OpenTelemetry Demo (Astronomy Shop)~\cite{otel-demo}, a CNCF-hosted polyglot microservice benchmark that the OpenTelemetry community itself maintains as a reference implementation of native telemetry instrumentation. Relative to the source application from \S\ref{sec:approach:dataset}, the target differs along four orthogonal architectural axes. \emph{Service count and language diversity}: fifteen-plus services written in twelve-plus languages, against ten services in six languages on the source. \emph{Asynchronous messaging}: a Kafka broker carries order events from the checkout service to two downstream consumers (an accounting service and a fraud-detection service), introducing a non-RPC dependency boundary that the source application does not have. \emph{Trace depth}: typical request traces span roughly twice the depth of the source's, owing to the Kafka producer-consumer hand-off and a frontend-proxy layer in front of the user-facing service. \emph{Language-model-backed service}: a dedicated service performs an LLM inference inside the request path, introducing a failure mode (rate limiting, slow inference, malformed output) that has no source-application analogue.
+
+The experimental protocol holds everything that defines the cascade fixed and varies only the upstream workload. The dataset construction harness, the telemetry-collection pipeline, the fault-injection orchestrator, the feature builder, the per-pipeline trainers, the cascade composition, and the evaluation script all run against the new application unchanged. We add two artifacts that the new application requires: a service-name catalog file that lists its canonical service short-names (used by the rule-based and language-model extractors so neither invents names the application does not have), and a scenario taxonomy that covers both the transferable failure modes (service outages, latency injections, pod restarts) and the new failure modes specific to the Kafka layer (broker outage, consumer lag, consumer crash, partition rebalance, dead-letter spike). The taxonomy adds five Kafka-specific families to the twenty-seven transferred from the source, for a total of thirty-two single-fault families.
+
+The cascade is then reported against the new dataset under two evaluation columns. The \emph{zero-shot} column locks every component of the cascade---the Layer-1 triage stacker, the Layer-2 retrieval set and weights, the Layer-3 learned novelty classifier---to its source-application fit and applies the locked artifacts to the new application unchanged. This is the strictest test of external validity: nothing is retrained. The \emph{L1-retrained} column releases only the Layer-1 stacker, refitting it on the new application's training split via the same out-of-fold cross-validation used on the source; everything else stays locked. The motivation for the second column is operational: refitting a small linear stacker on a per-application training set takes seconds, while refitting the bi-encoder or the agent's verification stage is hours, so the L1-retrained column is the more representative number for a team deploying the cascade on its own workload.
+
+A local-cluster pilot validated the harness end-to-end before the full collection: every fault-injection primitive emitted the expected telemetry, the global aggregation step produced a balanced label distribution across the pilot scenarios, and the feature builder ran to completion against the new application's telemetry. The headline cross-application numbers in \S\ref{sec:cross-app:headline} are computed on the full collection that the pilot unblocks.
 
 \subsection{Headline transfer results}
 \label{sec:cross-app:headline}
 
-\todo{Single table with three columns: OB locked, OTel zero-shot, OTel
-      L1-retrained, plus a delta column. Same metric rows as §5
-      headline. Numbers TBD pending GCP collection results.}
+\todo{Numbers pending GCP collection. Table~\ref{tab:cross-app-headline} reports the same metric rows as Table~\ref{tab:headline} across three columns: source application (locked baseline), target application zero-shot, target application L1-retrained. A delta column is reported per cell. Once the GCP collection completes, fill from
+\texttt{data/derived/global/2026-06-XX-otel-demo-v1-global/comparison/v2g-final-models/final/tch\_metrics.json}.}
 
-\subsection{Graded difficulty: L1-L4 multi-fault}
+\begin{table}[ht]
+  \centering
+  \caption{Cross-application transfer. Same metric rows as Table~\ref{tab:headline}. Zero-shot locks every cascade component; L1-retrained refits only the Layer-1 stacker on the target application's training split.}
+  \label{tab:cross-app-headline}
+  \small
+  \begin{tabular}{lrrr}
+    \toprule
+    Metric & Source (locked) & Target zero-shot & Target L1-retr. \\
+    \midrule
+    Hit@1                 & 0.722  & \todo{}        & \todo{} \\
+    Hit@5                 & 0.912  & \todo{}        & \todo{} \\
+    MRR                   & 0.794  & \todo{}        & \todo{} \\
+    PR-AUC strict         & 0.9998 & \todo{}        & \todo{} \\
+    Novel precision       & 0.940  & \todo{}        & \todo{} \\
+    Novel recall          & 0.793  & \todo{}        & \todo{} \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\subsection{Graded difficulty: from single fault to compound anomaly}
 \label{sec:cross-app:graded}
 
-\todo{New table, has no OB analogue. Rows: Hit@5, AllGold@K,
-      PrimaryGold@5 (L3 only), Recall@K (averaged over golds).
-      Columns: L1 single, L2 concurrent, L3 cascade, L4 compound.
-      The expected story: monotone degradation L1 -> L2 -> L3, with
-      PrimaryGold@5 on L3 being the most demanding metric.}
+The target-application collection is, by design, strictly richer than the source's along one axis: every scenario family is exercised at four difficulty levels rather than one. Level~one is a single isolated fault, matching the source-application protocol and supplying the comparison column above. Level~two runs two independent faults concurrently in the same time window, so that more than one root cause is present at once and a system that returns a single top-one cannot fully resolve the page. Level~three runs two faults in a deliberate cascade in which the first fault induces the second after a brief emergence delay, so that the surface symptom (the downstream service breaking) is a derived effect of the upstream service's underlying failure. Level~four compounds an active fault with a slow saturation drift, so that the window's evidence is the superposition of two qualitatively different timescales. The levels are listed in increasing order of expected diagnostic difficulty.
+
+\todo{Numbers pending GCP collection. Table~\ref{tab:cross-app-graded} reports per-level retrieval metrics on the target application. The reporting columns are Hit@5 averaged over windows; an \emph{all-gold} metric defined as the fraction of windows for which every gold ticket appears in the top-K; a \emph{primary-gold} metric defined for level~three only as the fraction of windows for which the upstream-cause ticket (not the downstream-symptom ticket) appears in the top-K; and a per-window recall metric averaged over the windows' gold sets. Filled from the per-difficulty-level metric files produced by the cross-app evaluation script.}
+
+\begin{table}[ht]
+  \centering
+  \caption{Graded-difficulty retrieval on the target application.}
+  \label{tab:cross-app-graded}
+  \small
+  \begin{tabular}{lrrrr}
+    \toprule
+    Difficulty & Hit@5 & AllGold@5 & PrimaryGold@5 & Recall@5 \\
+    \midrule
+    L1 single fault & \todo{} & \todo{} & --- & \todo{} \\
+    L2 concurrent   & \todo{} & \todo{} & --- & \todo{} \\
+    L3 cascade      & \todo{} & \todo{} & \todo{} & \todo{} \\
+    L4 compound     & \todo{} & \todo{} & --- & \todo{} \\
+    \bottomrule
+  \end{tabular}
+\end{table}
 
 \subsection{Kafka families: architectural-distance evidence}
 \label{sec:cross-app:kafka}
 
-\todo{Per-Kafka-family Hit@5 sub-table (5 families: broker-outage,
-      consumer-lag, consumer-crash, partition-rebalance, dead-letter-spike).
-      The interpretation: the "silence of downstream consumers" pattern
-      is a novel signal not present in any OB scenario. Whether the
-      cascade catches it without retraining is the key claim.}
+The five Kafka-specific families exist in the target application because of its broker-mediated asynchronous communication, and have no source-application analogue. Their symptoms are qualitatively distinct from the RPC-based outages that dominate the source taxonomy: the failure surface for a Kafka broker outage manifests as producer-side write errors at the checkout service \emph{and} a near-silent consumer side that simply stops processing, rather than as the symmetric request-failure spike an RPC outage produces. Consumer-lag families exhibit no error-rate spike at all; their signature is an accumulating queue depth that becomes visible only at the next layer of the metric stack. Whether the cascade---trained entirely on RPC failure modes from the source application---can detect these families without retraining is the most architecturally challenging part of the transfer claim. \todo{Per-family table of Hit@5 for the five Kafka families under both zero-shot and L1-retrained settings, populated from the per-family stratification of the cross-app metrics.}
 
-\subsection{Feature-population gap (honest finding)}
+\subsection{Structural compatibility and the feature-population gap}
 \label{sec:cross-app:feature-gap}
 
-\todo{The 12/94 vs 82/94 finding. Frame as: "Structural compatibility
-      of the schema is preserved (94/94 columns produced); value
-      population varies by source-app instrumentation (12/94 from
-      generic telemetry, 82/94 require app-specific Prometheus metric
-      naming)." This is a publishable cross-app generalization
-      finding, not a bug. Belongs to §6 not §8 because it's evidence
-      of how the cascade transfers, not a threat to validity.}
+The cascade's structural compatibility with the target application is complete: every artifact the source-application pipeline produces---scenario-labeled telemetry windows, the ninety-four-column numeric feature vector per window, the gold-linking structure between windows and Jira tickets, the per-pipeline prediction files that the cascade composes---is produced unchanged on the target application by the same code, and the feature-builder validation on a representative subset of target-application windows produces ninety-four out of ninety-four columns in the expected schema.
+
+The cascade's \emph{value} compatibility is partial, and the gap is informative. Of the ninety-four feature columns, twelve populate identically from the OpenTelemetry SDK signals that both applications share (trace span counts, trace latency percentiles, container CPU and memory utilization, request-error counters derived from spans). Eighty-two of the ninety-four columns are application-specific in their value provenance: they depend on metric names that the source application's instrumentation emits (the project's own per-handler error counters, per-cart-operation success rates, per-dependency latency histograms) and on log-label conventions that the source application's logging pipeline produces (an \texttt{app=<service>} label that the target's collector does not emit by default). These eighty-two columns are populated as zero on target-application windows under the source-application configuration.
+
+This is an honest cross-application generalization finding, not a defect of either application. The cascade's structural template is portable; its feature-value provenance is application-specific. In practice, an operator deploying the cascade on a new application has two productive choices. The cheap choice is to retrain the Layer-1 triage stacker on the new application's training split (the L1-retrained column above), which lets the stacker downweight the zero-valued columns automatically. The expensive choice is to extend the feature-builder's metric and label allowlists for the new application, recovering the full value provenance at the cost of a per-application instrumentation pass. Both options leave the cascade's retrieval and novelty layers, and the upstream pipelines that feed them, untouched. The structural-versus-value distinction is what makes the L1-retrained column useful: it isolates the architecture-portable parts of the cascade from the value-population concerns that an instrumentation difference exposes.
