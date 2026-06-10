@@ -1,0 +1,86 @@
+\section{Evaluation Setup}
+\label{sec:eval-setup}
+
+\subsection{Splits and the visibility rule}
+
+Every number reported in this paper is computed on the \textbf{v2 in-distribution test split}: 1{,}008 telemetry windows held out from the global pool of 6{,}720, never seen during any pipeline training. The split is chronological and family-stratified: each of the 27 scenario families contributes windows to train (4{,}701), validation (1{,}011), and test (1{,}008), but from disjoint fault-injection runs. This mirrors a real SRE team that, after a few months of operation, has past tickets for most of the failure modes it encounters.
+
+A complementary \textbf{leave-one-family-out (LOFO)} split is used for the out-of-distribution analysis (Section~\ref{sec:experiments}, experiment G8): 27 folds, each holding out an entire scenario family from training. The resulting per-family novelty F1 tests whether the system memorizes family-specific patterns or learns generic novelty signals.
+
+A strict \textbf{time-ordered visibility} rule is enforced everywhere. A test window at timestamp $t$ may retrieve only memory tickets whose \texttt{available\_as\_memory\_from} timestamp is strictly less than $t$, and may not see tickets from its own dataset run (own-run leakage exclusion). This rules out a model that ``predicts'' an incident by retrieving a ticket that was filed for that very incident.
+
+\subsection{Metrics in plain language}
+
+We report three groups of metrics, all computed with paired-bootstrap 95\% confidence intervals over 1{,}000 resamples with a fixed seed of 42 (so that pairwise pipeline comparisons preserve the per-window resample identity).
+
+\paragraph{Triage detection --- should this window become a ticket?}
+
+\begin{itemize}
+\item \textbf{Strict PR-AUC.} Area under the precision-recall curve where positives are exactly \texttt{ticket\_worthy} windows and negatives are everything else (\texttt{borderline} plus \texttt{noise}). This is the headline triage metric.
+\item \textbf{Inclusive PR-AUC.} Same, but counts \texttt{borderline} windows as positive. A more forgiving variant that rewards models for surfacing genuinely uncertain windows.
+\item \textbf{ROC-AUC.} Standard area-under-the-ROC. Useful for cross-dataset comparison because it is base-rate-independent.
+\item \textbf{F1 at FPR $\leq$ 5\%}, \textbf{Precision at FPR $\leq$ 1\%.} Operating-point metrics for fixed-alert-budget settings. Captures ``what fraction of pages we send are real if we cap our false-positive rate at 5\%?''
+\item \textbf{Expected Calibration Error (ECE).} For models whose probabilities are meant to be calibrated (so downstream tools can threshold them sensibly).
+\end{itemize}
+
+\paragraph{Retrieval --- does the gold past ticket appear in our suggestions?}
+
+\begin{itemize}
+\item \textbf{Hit@5} (primary headline). Among windows that have at least one gold past ticket, what fraction had at least one of those gold tickets appear in our top-5 ranked suggestions? A value of 1.0 means we always include the right ticket in our top-5.
+\item \textbf{Hit@1.} Stricter --- did the gold appear as the very first pick?
+\item \textbf{Hit@3.} Reported for context.
+\item \textbf{Mean Reciprocal Rank (MRR).} The average of $1 / \text{rank}_{\text{first gold}}$ across windows; zero if no gold appears in the top-K. Rewards systems that put the gold high in the ranking, not just somewhere in it.
+\end{itemize}
+
+\paragraph{Novelty --- when no past ticket matches, do we say so?}
+
+\begin{itemize}
+\item \textbf{Novel precision.} Of windows we flagged as novel, what fraction truly had no gold match in memory?
+\item \textbf{Novel recall.} Of truly-novel windows, what fraction did we correctly flag?
+\item \textbf{Novel F1.} Harmonic mean of the two.
+\end{itemize}
+
+\paragraph{Robustness.}
+
+\begin{itemize}
+\item \textbf{Distractor confusion rate.} Relative Hit@K drop when we mix distractor tickets into memory at noise ratios $r \in \{0, 10, 25, 50\}\%$.
+\item \textbf{LOFO novelty F1.} Novelty F1 measured under leave-one-family-out cross-validation, compared against the in-distribution number to quantify generalization.
+\end{itemize}
+
+\paragraph{Engineer utility --- what is this worth in practice?}
+
+\begin{itemize}
+\item \textbf{Expected time-to-diagnose per resolvable incident}, computed under a serial-candidate-review simulation: if the gold ticket appears at rank $k \leq K$, diagnosis takes $30k$ seconds (the engineer reads $k$ candidates at 30 seconds each); if no hit, diagnosis falls back to a 30-minute manual baseline. This gives reviewers one actionable number per pipeline.
+\end{itemize}
+
+\subsection{Stratified reporting}
+
+In addition to the headline averages, every metric is reported stratified along five axes: \texttt{scenario\_family}, \texttt{service\_name}, \texttt{is\_hard\_case}, \texttt{is\_novel}, and \texttt{n\_prior\_family\_tickets} (the depth-stratification axis from Figure~\ref{fig:anchor-depth}). Stratified reporting catches the case where a model wins on average but loses badly on the families that matter most.
+
+\subsection{The pipelines we compare}
+
+Seven pipelines plus the cascade, summarized in Table~\ref{tab:pipeline-panel}. The next section explains each of them in technical detail.
+
+\begin{table}[h]
+\centering
+\caption{The pipeline panel. Inference time is per window in steady state, assuming the per-window features are already extracted.}
+\label{tab:pipeline-panel}
+\small
+\begin{tabularx}{\linewidth}{l X r}
+\toprule
+Pipeline & Role & Inference \\
+\midrule
+\hgb{} & Triage baseline, no retrieval & 1 ms \\
+\bienc{} & Best single retriever for top-1 & 5 ms \\
+\hrrf{} (rule graph) & Best single retriever for top-5 & 10 ms \\
+\hrrf{} (LLM graph) & Precision-heavy retriever using LLM-extracted graph & 10 ms \\
+\logseq{} & Log-sequence family specialist & 5 ms \\
+\kgret{} & Graph-structural retriever via Neo4j Cypher & 10 ms \\
+\agent{} & Three-stage LLM agent with novelty flag & 30 s \\
+\midrule
+\tch{} & Cascade composing the above seven & 16 $\mu$s \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+The agent is the only pipeline that uses an LLM at \emph{inference} time. The cascade uses LLM artifacts heavily at \emph{training and preprocessing} time (the knowledge graph extracted from tickets, the per-window agent novelty labels), but its runtime composition is classical: logistic regression plus Reciprocal Rank Fusion plus dictionary lookups.

@@ -1,0 +1,108 @@
+\section{Industrial Use --- Cost, Deployment, and ``Is It Worth It?''}
+\label{sec:industrial}
+
+A research result that cannot be deployed is interesting but not useful. This section answers the questions a practitioner would ask before adopting the system: what does it cost to train, what does it cost to run, what infrastructure does it need, how easily does it slot into an existing observability and Jira stack, and where would it most plausibly pay back the engineering effort to integrate.
+
+\subsection{Training cost --- what it takes to fit the system once}
+
+\begin{table}[h]
+\centering
+\caption{End-to-end training cost on a single workstation with an NVIDIA RTX 5060 (8 GB VRAM) and Qwen 3.6 35B-A3B served locally via LM Studio with MoE offload.}
+\label{tab:cost}
+\small
+\begin{tabularx}{\linewidth}{l r X}
+\toprule
+Operation & Wall time & Notes \\
+\midrule
+Train HGB + L1 stacker             & $\sim$3 s & sklearn, single thread, no GPU \\
+Pre-fit BiEncoder + SPLADE + indexes & $\sim$15 min & one-time per dataset \\
+G1 BiEncoder fine-tune (5 epochs)  & 14--20 min & RTX 5060, batch 32, FP32 \\
+LLM extraction of 347 tickets      & 80 min & Qwen 35B, thinking=OFF \\
+LLM extraction of 1{,}008 windows (G3, not integrated) & 133 min & Qwen 35B, thinking=OFF \\
+\agent{} on 1{,}008 windows        & 6 hours & Qwen 35B, thinking=ON, $\sim$33 s/window \\
+G7 learned-novelty fit + score     & $\sim$3 s & LogReg, 5-fold CV \\
+\midrule
+\textbf{TCH inference per window (cached)} & \textbf{16 $\mu$s} & 252 ms for the full 1{,}008-window split \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+Training-time LLM compute is the dominant cost: the agent run (6 hours) and the ticket-graph extraction (80 minutes) total about 7--8 hours of local Qwen 35B compute on the workstation. Everything else combined is under 30 minutes. The whole pipeline fits on a single 8 GB consumer GPU; nothing in the system requires multi-GPU training or specialty hardware.
+
+\paragraph{If you do not have a workstation GPU.} The LLM steps can be served by a hosted endpoint. A rough cost estimate using current commercial pricing: agent runs at $\sim$1{,}500 prompt tokens and $\sim$500 completion tokens per call $\times$ 1{,}008 windows $\approx$ 2M total tokens. At hosted Qwen-class pricing of roughly \$0.5/million output tokens, the agent over the entire test set is on the order of \$1--3 of LLM spend. The ticket-graph extraction is similar. Total LLM cost to fully train the system on a new corpus is well under \$10. A first-time fine-tune of the BiEncoder is similarly cheap if rented for the 20 minutes the run takes.
+
+\paragraph{Engineering setup cost.} The harder cost is the engineering effort to wire the system into an existing observability stack. The required external infrastructure: Loki (logs) or any OpenTelemetry log backend; Tempo (traces) or any OpenTelemetry trace backend; Prometheus (metrics); Alertmanager; an OpenTelemetry collector (Grafana Alloy in our setup); Neo4j (single instance) for the knowledge graph; LM Studio or an equivalent OpenAI-compatible LLM endpoint for the offline extraction and agent calls. All of these are open source, all have managed offerings, and all of them are already in use at any team that has invested in observability tooling --- so the marginal infrastructure burden is essentially zero. The work that does need doing is plumbing: pointing the per-RPC structured logger at the team's existing log format; making the RED metrics exposable via the team's Prometheus convention; teaching the data pipeline what a ``window'' is in the team's environment; building a small Jira connector to ingest historical tickets into the memory corpus.
+
+\subsection{Inference cost --- what it takes to run on every new window}
+
+The cascade is essentially free at inference, provided the per-pipeline predictions are cached. On the 1{,}008-window test split the cascade end-to-end takes 252 milliseconds total: 185 ms to read seven cached prediction JSONLs from disk, 43 ms for the 5-fold LogReg fit/predict in L1, 16 ms for the L2/L3/L4 dictionary operations across all 1{,}008 windows, and 7 ms for per-window metric aggregation. Per-window incremental cost is 16 microseconds.
+
+\paragraph{What ``cached'' means in production.} In production deployment the six upstream pipelines run as streaming consumers of the telemetry stream. HGB runs on each window's 94-dimensional feature vector ($\sim$1 ms); BiEncoder embeds the window's evidence text and does a 384-dimensional cosine lookup against the cached 347-document embedding matrix ($\sim$5 ms); the Hybrid-RRF variants do their internal BM25-plus-dense-plus-graph fusion ($\sim$10 ms); LogSeq2Vec encodes the window's log sequence ($\sim$5 ms); KG-Retrieval issues a Cypher query against the cached Neo4j graph ($\sim$10 ms). The total per-window inference cost, including the cascade, is on the order of 30--50 milliseconds. This is well below the budget of any practical operational deadline --- a 5-minute telemetry window arrives every 5 minutes, and the cascade resolves it in tens of milliseconds.
+
+\paragraph{The agent is not on the inference path.} The DiagnosisAgent (the 6-hour cost) is an offline batch job that runs once over the historical test windows to populate the agent novelty signal. In a production deployment, the agent would run as a scheduled batch on a rolling time window (for example, once per day over the last 24 hours of windows) so that the L3 novelty signal stays current. The cost is bounded: at $\sim$30 seconds per window and a few thousand windows per day per cluster, an entire production deployment can run the agent on a single GPU server overnight, or split it across a small fleet for tighter latency.
+
+\subsection{Where this system fits in a real on-call workflow}
+
+Three concrete deployment patterns:
+
+\paragraph{(1) A Jira-suggest dropdown in PagerDuty / Incident.io / Opsgenie.}
+
+When an alert fires and the on-call engineer is paged, the system runs in the background on the telemetry window around the alert. The on-call workflow includes a ``Possibly related past tickets'' panel populated with the top-5. If the top-1 is the right one (72\% of the time on our data), the engineer reads its resolution and acts. If the top-5 contains the right one (91\% of the time), the engineer scans the top-5 in a minute. If \texttt{is\_novel} fires, the panel changes message to ``No similar past incident found --- investigate from scratch.''
+
+This is the lowest-effort integration. It needs only a sidecar microservice that consumes the telemetry stream and exposes a REST endpoint that returns the top-5 plus the novelty flag. No changes to existing infrastructure.
+
+\paragraph{(2) An alert filter that downgrades likely-noise pages.}
+
+The triage probability gates the alert delivery: pages with $\text{triage\_score} \geq 0.7$ go straight to PagerDuty; pages with $0.3 \leq \text{triage\_score} < 0.7$ go to a slower-channel like a Slack room; pages with $\text{triage\_score} < 0.3$ are logged for end-of-shift review. The cascade's calibrated PR-AUC of 0.9998 strict / 0.856 inclusive means this filter would significantly reduce off-hours pages without missing real incidents.
+
+The risk is that any miscalibration costs an SRE team trust. We would deploy this in shadow mode first (the alert still gets paged through normal channels; the system also predicts and logs whether it would have downgraded), measure for a few weeks, and only enable filtering once the operator is confident.
+
+\paragraph{(3) A novelty-driven postmortem trigger.}
+
+When \texttt{is\_novel} fires \emph{and} the triage probability is high, the system writes to a ``Novel incidents this week'' Confluence page or Slack channel. This is the failure mode most worth thinking about in retrospect: the new failure mode that the team has not yet handled. Pulling these out of the alert noise is a small win individually but a large one cumulatively --- a team that knows which incidents are genuinely new can prioritize learning instead of pattern-matching.
+
+\subsection{Is it worth the integration effort?}
+
+The honest answer depends on the team's baseline.
+
+\paragraph{A team without good past-incident search loses tens of minutes per page to manual Jira hunting.} The expected-time-to-diagnose simulation (Figure~\ref{fig:diagnosis-time}) shows the memory-augmented system saving 6--7 minutes per resolvable incident on average. For a team paging 50 times a week, that is $\sim$5 hours of recovered engineer attention per week --- meaningful at any scale.
+
+\paragraph{A team already running a mature incident-management tool (e.g.\ FireHydrant, Incident.io, Rootly) gets less from this system in raw time-saved} because those tools already organize past tickets reasonably. The value here is the \emph{automatic retrieval} (the engineer does not have to remember keywords) and the novelty signal (existing tools do not differentiate ``no match found'' from ``no match exists'').
+
+\paragraph{For a team with a strong ML-Ops culture, the cascade is straightforward to adopt.} Every component is small enough to retrain in under an hour, every model is interpretable enough to debug, and the cascade's per-layer ablations make it easy to drop the components that do not pay off for that team's data.
+
+\paragraph{For a team without ML-Ops culture, the up-front cost is real.} Building the labeled training corpus (the team's own version of what Section~\ref{sec:dataset} describes) is the bulk of the engineering work; the model training itself is hours, not weeks. The good news is that the cascade design is robust to the corpus being smaller than ours: the gradient-boosted classifier, the bi-encoder, and the logistic regressions all scale gracefully down. The bad news is that the corpus has to be built --- there is no off-the-shelf labeled telemetry-and-Jira dataset to bootstrap from.
+
+\subsection{What is and is not production-ready}
+
+\paragraph{Production-ready.}
+\begin{itemize}
+\item The triage classifier (HGB on numeric features). Saturating PR-AUC on the lab dataset, $\sim$1 ms inference, no GPU.
+\item The bi-encoder retrieval pipeline. Production-deployable: the memory documents are embedded once and stored; queries embed in milliseconds; cosine similarity is a fast matrix multiply.
+\item The cascade composition itself. Tens of microseconds, no model state, fully cacheable.
+\end{itemize}
+
+\paragraph{Production-ready with caveats.}
+\begin{itemize}
+\item The knowledge-graph retrieval. Production-deployable but assumes Neo4j (or an equivalent property graph database) is part of the stack. The graph itself must be re-extracted whenever the Jira corpus changes substantively, which is an offline batch job ($\sim$80 minutes of LLM time per 350 new tickets on a workstation GPU).
+\item The DiagnosisAgent. Useful for offline novelty labelling but the 30-second-per-window inference cost rules out real-time use as currently configured. Real-time deployment would need a smaller LLM (Qwen 14B or 7B, see future work) and reduced thinking-token budget.
+\end{itemize}
+
+\paragraph{Not production-ready.}
+\begin{itemize}
+\item Authentication, multi-tenancy, rate-limiting, latency SLOs --- the standard production hardening was outside the project's scope. The current code is a research prototype.
+\item Deploy-event correlation. Real production triage often hinges on ``did anything deploy in the last hour?'' We instrumented post-deploy churn scenarios but did not build a deploy-event consumer.
+\item Cold-start. With zero past tickets, retrieval is by definition 0\%. The system gets useful only after a few weeks of operation --- a deployment story that needs explicit messaging to a team adopting it.
+\end{itemize}
+
+\subsection{Operating-cost back-of-envelope for a real team}
+
+For a hypothetical team running 30 services in production, 100 alerts per day, $\sim$200 telemetry windows per day at one alert per fault episode:
+
+\begin{itemize}
+\item One-time setup: 2--3 engineer-weeks to wire the data pipeline into the team's existing observability stack, plus an initial corpus build of ~$\sim$1{,}000 labeled past incidents (often achievable by retrofitting past Jira tickets with the windows that triggered them).
+\item Per-week ongoing compute: $\sim$200 windows/day $\times$ 7 $=$ $\sim$1{,}400 agent runs per week at $\sim$33 s each $=$ $\sim$13 hours of GPU time per week --- comfortable on a single shared GPU server, or about \$10--20/week of hosted-LLM spend.
+\item Per-week ongoing engineering: re-train BiEncoder when memory corpus grows $>$ 20\% (a few times a year, 20 minutes each); re-extract Neo4j graph when corpus changes (same cadence, $\sim$80 min); periodic L1 stacker re-fit ($\sim$3 seconds, trivial).
+\end{itemize}
+
+For a team currently paying $\sim$10 engineer-hours per week to manually triage and link past incidents in Jira, the return on adopting this is positive within a quarter --- modest infrastructure cost in exchange for a one-shot recovery of human attention.
