@@ -124,7 +124,9 @@ The third sub-retriever scores memory tickets by **entity overlap with the query
 
 Edges: `Incident-AFFECTS-Service`, `Incident-INVOLVES-Component`, `Incident-RAISED-ErrorClass`, `Incident-CAUSED_BY-RootCause`, `Incident-FIXED_BY-Fix`, `Incident-EXHIBITED-Symptom`.
 
-The graph is populated **once** by the LLM extractor (`extract_tickets_cli`) running Qwen 3.6 35B over all 347 memory tickets. This is a one-time offline step; the graph then lives in Neo4j and is queried at retrieval time.
+The graph is populated **once** by the LLM extractor (`extract_tickets_cli`) running Qwen 3.6 35B over all 347 memory tickets. This is a one-time offline step; the graph then lives in Neo4j and is queried at retrieval time. A rendering of this graph in Neo4j Browser is shown below; the full visualization and a readable zoomed-in view of four representative incidents and their one-hop neighborhoods are in [`pipeline-6-KGRetrieval.md`](pipeline-6-KGRetrieval.md#visualization).
+
+![Knowledge graph — zoomed view of four incidents and their entity neighborhoods](visualisation2.png)
 
 **The rule extractor — what makes this the "rule" variant.** At *query* time, the Hybrid-RRF rule pipeline extracts entities from the *window* using `extract_from_window_rules` (`src/v2_advanced/proposal_d_knowledge_graph/rule_extractor.py`). The rule extractor is pure regex + keyword matching:
 

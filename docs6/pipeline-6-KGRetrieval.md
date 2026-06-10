@@ -77,6 +77,35 @@ flowchart TD
 
 **Total: ~1,560 nodes**, ~6,000 edges. Small enough to load into Neo4j in 30 seconds; small enough that a single Cypher query traverses the entire graph in milliseconds.
 
+### Visualization
+
+Both views below are rendered by Neo4j Browser from the same Cypher template, varying only the `LIMIT`:
+
+```cypher
+MATCH p = (i:Incident)-[r]->(n)
+WITH i LIMIT <N>
+MATCH p = (i)-[r]->(n)
+RETURN p;
+```
+
+**Whole-graph view** (`LIMIT 1000000`, the entire 347-incident graph):
+
+![Full knowledge graph view in Neo4j Browser, showing all 347 Incident hubs and their connected entity nodes](full-visualisation.png)
+
+The pink hubs are incident tickets; the lilac and pastel satellites are the typed entity nodes (services, components, error classes, symptoms, root causes, resolutions). Hub-spoke neighborhoods on the periphery are tickets with many distinctive entities; the dense interior is where multiple incidents *share* common services and error classes — exactly the structural overlap that the Cypher retrieval scores on. The visualization makes one design observation concrete: most of the graph is bridged by a small core of high-reuse entity nodes (services, components, common error classes), while symptoms and root-cause nodes mostly hang off individual incidents.
+
+**Zoomed view** (`LIMIT 50`, four incidents and their full one-hop neighborhoods):
+
+![Zoomed Neo4j Browser view of four incidents and their connected entity nodes, with edge labels visible](visualisation2.png)
+
+This view makes the schema legible. The four large pink hubs are incident nodes (`product-catalog` × 2 variants, `cart-redis`, and `payment-outage`). Each carries the six edge types defined by the schema (`AFFECTS` → service, `INVOLVES` → component, `RAISED` → error class, `EXHIBITED` → symptom, `CAUSED_BY` → root cause, `FIXED_BY` → fix). Note how `cartservice`, `frontend`, `deployment`, `pod`, and `Unavailable` are *shared* across multiple incidents — this is exactly the structural signal the cascade exploits: a live window that mentions `cartservice` and `Unavailable` will receive non-zero overlap scores against every incident in this neighborhood, with the additive-overlap rule from §5 choosing among them by which incident shares *more* of the window's entities.
+
+### Reproducing these views
+
+In Neo4j Desktop with the project's dev credentials (`neo4j` / `123456789` at `bolt://127.0.0.1:7687`), open Browser, paste either query above, and adjust the `LIMIT`. The full graph at `LIMIT 1000000` is the entire knowledge graph (the query returns every Incident's one-hop neighborhood). `LIMIT 50` is the smallest value that still surfaces the cross-incident overlap pattern; below ~10 the rendered subgraph is a disconnected set of isolated stars.
+
+---
+
 **Why these specific node types.** The schema was designed top-down to capture *what an SRE thinks about during triage*: "which service is broken, what is the error, what infra component is involved, what does the user see, what caused it, how was it fixed". The first three (Service, Component, ErrorClass) have canonical small vocabularies — high reuse across tickets. The last three (Symptom, RootCause, Fix) are free-text and broader. The Cypher scoring weights this asymmetry: error and service matches count 2–3 points each; symptom matches count 1 point each.
 
 ### How the graph is populated
