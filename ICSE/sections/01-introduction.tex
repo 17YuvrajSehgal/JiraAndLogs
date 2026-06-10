@@ -1,51 +1,29 @@
 % Section 1 — Introduction
-% Page budget: ~1 page (one column = ~½ page in two-column sigconf)
-%
-% Recommended subsection structure (introduction usually flows without subsections;
-% these are the conceptual beats not LaTeX subsections):
-%
-%   1.1 The diagnosis bottleneck
-%       - Anomaly detection is mature; engineers spend time on "have we seen this?"
-%       - Past Jira tickets are an under-exploited corpus
-%
-%   1.2 Why this is hard
-%       - No public dataset jointly contains rich telemetry + linked Jira
-%       - Mature anomaly detectors already saturate detection; the next step is retrieval
-%
-%   1.3 Our approach in one paragraph
-%       - 4-layer cascade composing 7 pipelines
-%       - Each pipeline is Pareto-incomparable; the cascade picks per sub-task
-%       - Locked OB v5-large dataset + OTel Demo cross-app validation
-%
-%   1.4 Contributions (bulleted list)
-%       - A reproducible paired telemetry+Jira dataset
-%       - The TCH cascade design with mathematical specification
-%       - Headline retrieval, triage, and novelty metrics
-%       - Cross-app generalization evidence (zero-shot + L1-retrained)
-%       - Eight late-stage experiments (G-series) including three honest negative results
+% Page budget: ~1 page (~750-850 words in acmart sigconf two-column).
+% Source-of-truth for facts: short-technical/sections/01-introduction.tex and
+%                            technical-paper/sections/01-introduction.tex
+% Every number and claim below is cross-checked against those references and
+% against data/derived/global/.../comparison/v2g-final-models/final/tch_metrics.json.
 
 \section{Introduction}
 \label{sec:intro}
 
-\todo{Write introduction following the four beats above. Aim for ~600 words.
-      Open with the diagnosis-bottleneck framing. State the three claims
-      (retrieval scales with deployment history; cascade composition matters;
-      cross-app transfer works under graded difficulty). Close with the
-      contributions list. Defer all numbers to §5; the introduction names
-      Hit@5 = 0.912 and novel-recall +388\% rel exactly once each.}
+A modern microservice cluster emits structured logs, distributed traces, numeric metrics, and Kubernetes events at the rate of tens of thousands of records per minute. Most of this stream is uneventful; a small fraction matters; a smaller fraction yet is recorded as a Jira ticket and becomes part of a team's institutional memory of past incidents. For an on-call Site Reliability Engineer (SRE), anomaly detection over this stream is no longer the hard part: histogram baselines, learned classifiers over numeric features, and statistical alert rules already perform near-perfectly on the question \emph{``is something wrong?''} The hard part is now diagnosis---identifying which past Jira ticket describes the current incident from the telemetry visible right now. In practice this lookup is performed by manual keyword search of Jira, a process that typically takes tens of minutes per page and depends on the engineer recalling the right vocabulary.
 
-% Contributions — placeholder list; tighten the prose when writing
-% \begin{itemize}
-%   \item \textbf{Dataset.} A reproducible telemetry + Jira corpus from a forked
-%         Online Boutique with bias-avoidance discipline (\S\ref{sec:dataset-construction}).
-%   \item \textbf{System.} The Tiered Cascade Hybrid (TCH), a 4-layer composition
-%         of 7 pipelines with a mathematical specification (\S\ref{sec:approach}).
-%   \item \textbf{Results.} Hit@5 = 0.912, novel-recall = 0.793 at preserved precision,
-%         16~$\mu$s per window inference (\S\ref{sec:results}).
-%   \item \textbf{Cross-app evidence.} TCH transfers to a structurally different
-%         microservice application (OpenTelemetry Demo) under graded difficulty
-%         (L1--L4 multi-fault) without retraining (\S\ref{sec:cross-app}).
-%   \item \textbf{Negative results.} Three independent rerankers all underperformed
-%         the cascade's overlap-rerank, isolating a specific operating regime
-%         (\S\ref{sec:results}).
-% \end{itemize}
+Direct evaluation of automated diagnosis is blocked by a data gap. The largest public log datasets (HDFS, BGL, Thunderbird) carry rich log streams but no ticket-side ground truth, and the largest public Jira corpus, TAWOS, contains 458{,}232 real issues across 39 open-source projects but with no corresponding telemetry. Real production telemetry from cooperating organizations is rarely shareable for legal and competitive reasons and is almost never reproducible by an external reviewer. To enable controlled evaluation, we construct a paired telemetry-Jira corpus by forking Google's Online Boutique microservices demo, adding production-realistic OpenTelemetry instrumentation across its ten services under a strict no-label-leakage discipline, defining 27 incident scenario families, and executing 100 independent fault-injection runs to produce 6{,}720 labeled telemetry windows. From these runs we then generate a 347-ticket humanized Jira memory corpus in engineer-voice style---grounded in TAWOS length and code-block distributions---together with a 110-ticket distractor pool used for robustness evaluation.
+
+Given this dataset, we train seven diagnostic pipelines representing different inductive biases: a histogram gradient-boosted classifier (\hgb{}) on 94 numeric features; a fine-tuned dense bi-encoder retriever; two hybrid sparse-plus-dense fusion retrievers, one with rule-extracted and one with LLM-extracted knowledge graphs; a small log-sequence transformer; Cypher retrieval over a Neo4j knowledge graph; and a three-stage LLM agent. No pipeline dominates: \hgb{} saturates the triage metric at PR-AUC = 0.9998 but produces no retrieval signal; the dense retriever wins top-1 retrieval precision; the hybrid fusion wins top-5 coverage; the log-sequence transformer wins on specific scenario families; and only the LLM agent emits a novelty flag. Building a single larger model that learns the union of these signals is unattractive because \hgb{} already saturates the triage axis. We instead introduce the \emph{Tiered Cascade Hybrid} (\tch{}), a four-layer composition that routes each pipeline to the sub-task it is best at: a class-balanced logistic stacker for triage; Reciprocal Rank Fusion with a multi-retriever overlap-rerank for retrieval; an OR-combined novelty channel of agent verification, retrieval confidence, and a learned per-window classifier; and a final output composition.
+
+On 1{,}008 held-out in-distribution test windows, \tch{} achieves Hit@5 = 0.912, Hit@1 = 0.722, MRR = 0.794, strict PR-AUC = 0.9998, novel precision = 0.940, and novel recall = 0.793---a 388\% relative improvement in novel recall over the locked baseline at preserved precision, and the single largest improvement of the project. Inference cost is 16~$\mu$s per window after the per-pipeline predictions are cached. The cascade degrades gracefully under memory noise (Hit@5 drops only 2\% at a 50\% distractor ratio) and under leave-one-family-out cross-validation (novelty F1 within 11\% relative of in-distribution). To test external validity, we replicate the evaluation on the OpenTelemetry Demo---a structurally distinct polyglot application with 15+ services across 12+ languages and Kafka-based asynchronous communication---and report transfer results under two settings: a strict zero-shot column in which the entire cascade is trained on Online Boutique and applied unmodified, and an L1-retrained column in which only the logistic stacker is re-fit on the new application's training split.
+
+\paragraph{Contributions.} This paper makes the following contributions.
+
+\begin{itemize}
+  \item \textbf{A reproducible paired telemetry-Jira corpus} (\S\ref{sec:approach:dataset}). 6{,}720 telemetry windows linked to a 347-ticket humanized Jira memory corpus plus a 110-ticket distractor pool, with full provenance from fault-injection script to derived feature pipeline, constructed under a strict no-label-leakage discipline.
+  \item \textbf{The Tiered Cascade Hybrid} (\S\ref{sec:approach}). A four-layer cascade that composes seven Pareto-incomparable pipelines into a single triage-and-retrieval system, with an explicit mathematical specification for each layer's composition rule.
+  \item \textbf{Empirical evaluation} (\S\ref{sec:results}). Hit@5 = 0.912 and novel recall = 0.793 at preserved precision (a 388\% relative improvement over the locked baseline), achieved at 16~$\mu$s per window inference, with statistical envelopes from 1{,}000 paired bootstrap resamples.
+  \item \textbf{Cross-application validation} (\S\ref{sec:cross-app}). \tch{} transfers to the OpenTelemetry Demo across two evaluation columns (zero-shot and L1-retrained), with a structural-versus-value feature compatibility analysis that identifies which aspects of the cascade are application-portable and which require per-application calibration.
+  \item \textbf{Negative results} (\S\ref{sec:results}). Three independent reranker designs---a cross-encoder with binary cross-entropy loss, an LLM agent's structured verification output, and an LLM judge with strict JSON output---each underperformed the cascade's multi-retriever overlap-rerank, isolating an operating regime in which multi-retriever consensus dominates single-model judgment.
+\end{itemize}
+
+The remainder of the paper is organized as follows. Section~\ref{sec:background} provides background on incident triage and the public-dataset gap that motivates a controlled lab. Section~\ref{sec:approach} specifies the \tch{} cascade. Section~\ref{sec:evaluation} defines the evaluation methodology, including splits, metrics, and the statistical envelope. Section~\ref{sec:results} reports the headline empirical results. Section~\ref{sec:cross-app} presents the cross-application validation on the OpenTelemetry Demo. Sections~\ref{sec:discussion}--\ref{sec:related} discuss findings, threats to validity, and related work, before concluding in Section~\ref{sec:conclusion}.
