@@ -61,11 +61,20 @@ For positions 2--5 we apply Reciprocal Rank Fusion~\cite{cormack2009rrf}:
 \end{equation}
 summed over a retriever set $\mathcal{R}$ comprising the dense retriever, one of the two hybrid-fusion variants, the log-sequence transformer, and the knowledge-graph retriever. Candidates are sorted by their RRF score; the anchor (already at position~1) is removed; the next four candidates fill positions 2--5. We chose Reciprocal Rank Fusion deliberately over learned or score-weighted alternatives: it requires no per-retriever score calibration and is invariant to monotone score transformations, which makes it robust to retrievers whose confidence distributions differ.
 
-\paragraph{Layer 3: novelty check.} Layer~3 emits a single Boolean. It OR-combines three independent signals,
+
 \begin{equation}
-  \mathtt{is\_novel} \;=\; \mathtt{agent\_novel} \;\lor\; \bigl(\max_i \mathrm{conf}_i < 0.5\bigr) \;\lor\; \bigl(P_{\text{learned}}(\mathrm{novel}) \geq 0.5\bigr),
-  \label{eq:l3}
+\small
+\mathtt{is\_novel}
+=
+\mathtt{agent\_novel}
+\lor
+(\max_i \mathrm{conf}_i < 0.5)
+\lor
+(P_{\text{learned}}(\mathrm{novel}) \geq 0.5)
+\label{eq:l3}
 \end{equation}
+\normalsize
+
 each of which captures a different reason the cascade might be wrong about a window having a past match. The first disjunct is the agent's own verify-stage judgment, expensive but specific. The second is a threshold over the maximum per-retriever confidence: if no retriever is even half-confident in any candidate, the cascade has effectively no past-match hypothesis, regardless of what the agent says. The third is a learned classifier over coarse window metadata---window type, scenario family, service name, a flag for intentionally-difficult cases, the maximum retrieval confidence, and the triage probability---trained again via out-of-fold cross-validation; it captures regularities the other two miss, such as that pre-fault baseline windows are novel by construction and recovery windows are not. We use disjunction rather than a weighted combination because the three signals capture qualitatively different forms of evidence and operators benefit from being able to tune a single learned-signal threshold without redesigning the others.
 
 \paragraph{Layer 4: composition.} Layer~4 packs the calibrated triage probability, the ranked top-five past tickets, and the novelty flag into the final output and derives a coarse ticket-worthy-or-noise decision from the triage probability via the Layer-1 threshold. No further computation occurs.
