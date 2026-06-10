@@ -1,27 +1,8 @@
-% Abstract — ~200-250 words.
-%
-% Required content (~one sentence each):
-%   1. Problem framing.
-%      Anomaly detection on telemetry is mature; the bottleneck is diagnosis-by-citation.
-%   2. Approach.
-%      A 4-layer memory-augmented cascade (TCH) composing 7 Pareto-incomparable pipelines.
-%   3. Dataset contribution.
-%      Paired telemetry+Jira corpus from a forked Online Boutique with bias-avoidance discipline.
-%   4. Headline numbers.
-%      Hit@5 = 0.912, Hit@1 = 0.722, MRR = 0.794, strict PR-AUC = 0.9998,
-%      novel-recall = 0.793 at precision 0.940 (+388% rel over baseline),
-%      16 microseconds/window inference.
-%   5. Cross-app generalization.
-%      Transfers without retraining to the OpenTelemetry Demo (15 services, Kafka async);
-%      validated under graded difficulty (L1 single-fault through L4 compound multi-fault).
-%   6. Robustness.
-%      Hit@5 drops only 2% rel at 50% distractor ratio; novelty F1 within 11% rel
-%      of in-distribution under leave-one-family-out cross-validation.
-%   7. Significance / contribution claim.
-%      First memory-augmented triage system with cross-app generalization evidence
-%      and an honest negative-finding pattern from three failed reranker experiments.
+% Abstract — 3 paragraphs, ~225 words total.
+% Structure: problem + gap -> approach -> results + cross-app + negative finding.
 
-\todo{Write abstract per the structure outlined in the comment block above.
-      ~200-250 words. Lead with the bottleneck framing, end with the cross-app
-      claim. Keep numbers exact and minimal — Hit@5, novel-recall delta,
-      inference cost, cross-app transfer.}
+Modern Site Reliability Engineering teams have mature anomaly detectors, but the bottleneck has shifted from detection to diagnosis: identifying which past Jira ticket describes a recurring incident from current logs, traces, and metrics. No public dataset jointly contains rich telemetry and linked Jira issues, which blocks direct evaluation of memory-augmented retrieval for incident triage.
+
+We construct such a dataset from a forked Google Online Boutique microservices demo with production-realistic OpenTelemetry instrumentation, twenty-seven scenario families across one hundred fault-injection runs, and a 347-ticket humanized Jira memory corpus, all assembled under a strict no-label-leakage discipline. We then introduce the Tiered Cascade Hybrid (\tch{}), a four-layer system composing seven Pareto-incomparable pipelines: a class-balanced logistic stacker for triage; Reciprocal Rank Fusion with a multi-retriever overlap-rerank for retrieval; an OR-combined novelty channel of agent verification, retrieval confidence, and a learned per-window classifier; and a final output composition.
+
+On a 1{,}008-window in-distribution test split, \tch{} achieves Hit@5 of 0.912, MRR of 0.794, strict PR-AUC of 0.9998, and novel recall of 0.793 at preserved precision---a 388\% relative improvement over the locked baseline---at 16~$\mu$s per window after caching. The cascade transfers without retraining to the OpenTelemetry Demo, a structurally distinct polyglot application with Kafka-based asynchronous communication, and degrades gracefully under distractor noise and leave-one-family-out cross-validation. Three independent reranker designs each underperformed the cascade's overlap-rerank, isolating an operating regime in which multi-retriever consensus dominates single-model judgment.
