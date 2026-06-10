@@ -1,0 +1,29 @@
+# chaos-mesh DNSChaos — DNS resolution errors inside the checkout pod.
+#
+# Adapted from OB scenarios/chaos/dns-block-cartservice-60s.yaml. We use
+# DNSChaos (not a NetworkChaos partition of kube-dns) deliberately: chaos-mesh
+# safe-mode blocks modifying kube-system/CoreDNS pods, and DNSChaos achieves the
+# same telemetry effect by intercepting DNS queries inside the targeted pod via
+# the chaos-dns-server sidecar.
+#
+# checkout is chosen as the target for maximum blast radius — it resolves and
+# calls many downstream services (cart, currency, payment, shipping, email,
+# product-catalog, kafka), so DNS errors there cascade across the checkout path.
+# CR in `chaos-mesh` ns; OTel Demo label key; 900s ceiling (harness controls
+# recovery via kubectl delete after the active-fault window).
+apiVersion: chaos-mesh.org/v1alpha1
+kind: DNSChaos
+metadata:
+  name: otel-demo-dns-outage-checkout
+  namespace: chaos-mesh
+spec:
+  action: error
+  mode: all
+  selector:
+    namespaces:
+      - otel-demo-research
+    labelSelectors:
+      app.kubernetes.io/name: checkout
+  patterns:
+    - "*"
+  duration: "900s"

@@ -1,0 +1,49 @@
+schema_version: 1
+scenario_id: otel-demo-baseline-normal-traffic
+title: OTel Demo baseline — normal synthetic traffic, no fault injection
+dataset_run_id: otel-demo-placeholder-run
+traffic_profile_id: otel-demo-baseline-checkout-mix
+environment: research-otel-demo
+jira_candidate: false
+expected_jira:
+  issue_type: Task
+  priority: Low
+  components:
+    - none
+  labels:
+    - synthetic-baseline
+    - telemetry-baseline
+  summary_template: "Baseline observability window"
+  description_template: |
+    Synthetic baseline window for the OTel Demo cross-app dataset.
+    No fault was injected. Used as the negative class for triage labeling.
+fault:
+  fault_id: otel-demo-baseline-001
+  fault_type: none
+  affected_service: ""
+  expected_start_offset_seconds: 0
+  expected_duration_seconds: 600
+  blast_radius:
+    user_visible: false
+    expected_error_rate: low
+    expected_latency_impact: none
+labels:
+  severity: none
+  incident_type: baseline
+  root_cause_category: none
+  should_alert: false
+  should_create_jira_shadow_issue: false
+execution:
+  action: RecordOnly
+  namespace: otel-demo-research
+triage:
+  schema_version: 1
+  scenario_family: baseline-normal
+  per_window:
+    observation_window:
+      triage_label: noise
+      triage_severity: null
+      triage_components: null
+      triage_reason_class: null
+      is_hard_case: false
+      rationale: "Baseline window; all services healthy."

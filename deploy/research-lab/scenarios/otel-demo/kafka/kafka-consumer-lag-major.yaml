@@ -1,0 +1,77 @@
+schema_version: 1
+scenario_id: otel-demo-kafka-consumer-lag-major
+title: Kafka consumer lag spike — fraud-detection / accounting falling behind
+dataset_run_id: otel-demo-placeholder-run
+traffic_profile_id: otel-demo-baseline-checkout-mix
+environment: research-otel-demo
+jira_candidate: true
+expected_jira:
+  issue_type: Incident
+  priority: Major
+  components:
+    - kafka
+    - fraud-detection
+    - accounting
+  labels:
+    - synthetic-incident
+    - kafka
+    - consumer-lag
+    - async-bridge
+    - telemetry-linked
+  summary_template: "Kafka consumer lag spike — downstream pipelines behind"
+  description_template: |
+    Synthetic lab issue generated from scenario otel-demo-kafka-consumer-lag-major.
+
+    The kafkaQueueProblems flag is on, simultaneously overloading the
+    producer side (checkout publishes faster) and introducing a delay in
+    consumer processing. Consumer lag grows; downstream ledger and fraud-
+    detection fall behind. No customer-facing user errors.
+
+    NEW FAILURE FAMILY: does not exist in OB v5-large.
+fault:
+  fault_id: kafka-lag-001
+  fault_type: queue_pressure
+  affected_service: kafka
+  suggested_mechanism: flagd kafkaQueueProblems -> on
+  expected_start_offset_seconds: 300
+  expected_duration_seconds: 600
+  blast_radius:
+    user_visible: false
+    expected_error_rate: low
+    expected_latency_impact: low
+labels:
+  severity: major
+  incident_type: degradation
+  root_cause_category: queue_pressure
+  should_alert: true
+  should_create_jira_shadow_issue: true
+execution:
+  action: Flagd
+  namespace: otel-demo-research
+  flagd_flag: kafkaQueueProblems
+  flagd_variant: "on"
+triage:
+  schema_version: 1
+  scenario_family: kafka-consumer-lag
+  per_window:
+    pre_fault_baseline:
+      triage_label: noise
+      is_hard_case: false
+      rationale: "Pre-fault; consumer lag normal."
+    active_fault:
+      triage_label: ticket_worthy
+      triage_severity: major
+      triage_components:
+        - kafka
+        - fraud-detection
+      triage_reason_class: queue_pressure
+      is_hard_case: true
+      rationale: "No user-facing errors but downstream pipelines silently degraded."
+    recovery_window:
+      triage_label: borderline
+      triage_severity: minor
+      triage_components:
+        - kafka
+      triage_reason_class: queue_pressure
+      is_hard_case: true
+      rationale: "Lag catches up over time."

@@ -1,0 +1,63 @@
+# Service catalog schema (documentation only — never loaded by code).
+#
+# A service catalog describes the application-under-test that produces our
+# telemetry and shadow-Jira corpus. Used by:
+#   - src/v2_advanced/proposal_d_knowledge_graph/extractor.py (LLM extraction prompt)
+#   - src/jira_humanizer/* (humanizer prompts; future)
+#   - scripts/research-lab/generate-shadow-jira-issues.ps1 (Jira ticket templates; future)
+#
+# All callers MUST default to the existing hardcoded Online Boutique behavior
+# when no catalog path is provided. Catalog files are opt-in via:
+#   - KG_SERVICE_CATALOG env var (LLM extractor)
+#   - --service-catalog argument (humanizer, future)
+#   - -ServiceCatalogFile parameter (PowerShell, future)
+#
+# This file is DOCUMENTATION ONLY. The schema is enforced informally by the
+# loader in src/v2_advanced/shared/service_catalog.py (basic field presence
+# + type checks).
+#
+# Field reference:
+
+app_id: example                                  # REQUIRED. Stable identifier ("online-boutique", "otel-demo").
+display_name: Example Application                # REQUIRED. Human-friendly name for prompts and tickets.
+namespace: example-research                      # REQUIRED. Kubernetes namespace.
+
+# REQUIRED. The canonical service short-names used in LLM extraction
+# prompts and symptom-map keys.
+canonical_services:
+  - name: cartservice                            # REQUIRED. Canonical short-name (no spaces).
+    aliases:                                     # OPTIONAL. Paraphrases to normalize to this canonical.
+      - cart
+      - cart-service
+    language: dotnet                             # OPTIONAL. dotnet | go | java | node | python | ruby | rust | cpp | php | typescript
+    role: cart                                   # OPTIONAL. e.g. "cart", "order-placement", "broker-consumer".
+    criticality: high                            # OPTIONAL. low | medium | high | critical.
+
+# REQUIRED. Infrastructure component names mentioned in tickets (lowercase).
+canonical_components:
+  - redis
+  - kafka
+  - envoy
+  - kubelet
+  - postgres
+
+# REQUIRED. Per-protocol error-class lists.
+canonical_error_classes:
+  grpc:
+    - DeadlineExceeded
+    - Unavailable
+    - Internal
+  k8s:
+    - OOMKilled
+    - CrashLoopBackOff
+  http:
+    - 500
+    - 502
+    - 503
+
+# OPTIONAL. Higher-level infrastructure for visualization / future use.
+infra_components:
+  - name: kafka
+    role: message-broker
+  - name: redis
+    role: cache

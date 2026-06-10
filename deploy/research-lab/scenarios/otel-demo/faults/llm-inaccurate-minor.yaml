@@ -1,0 +1,44 @@
+schema_version: 1
+scenario_id: otel-demo-llm-inaccurate-minor
+title: LLM returns inaccurate product summary (flagd llmInaccurateResponse)
+dataset_run_id: otel-demo-placeholder-run
+traffic_profile_id: otel-demo-baseline-checkout-mix
+environment: research-otel-demo
+jira_candidate: true
+expected_jira:
+  issue_type: Incident
+  priority: Minor
+  components: [llm, frontend]
+  labels: [synthetic-incident, third-party, llm, content-quality, telemetry-linked]
+  summary_template: "LLM product summary inaccurate for product L9ECAV7KIM"
+  description_template: |
+    Synthetic lab issue from scenario otel-demo-llm-inaccurate-minor.
+    flagd llmInaccurateResponse=on; LLM returns subtly wrong product
+    summary text. Content-quality issue; no metric or trace anomaly.
+
+    NEW SERVICE: LLM service does not exist in OB v5-large.
+fault:
+  fault_id: llm-inaccurate-001
+  fault_type: third_party_blip
+  affected_service: llm
+  expected_start_offset_seconds: 300
+  expected_duration_seconds: 600
+  blast_radius: {user_visible: true, expected_error_rate: low, expected_latency_impact: low}
+labels:
+  severity: minor
+  incident_type: degradation
+  root_cause_category: third_party_blip
+  should_alert: false
+  should_create_jira_shadow_issue: true
+execution:
+  action: Flagd
+  namespace: otel-demo-research
+  flagd_flag: llmInaccurateResponse
+  flagd_variant: "on"
+triage:
+  schema_version: 1
+  scenario_family: third-party-blip
+  per_window:
+    pre_fault_baseline: {triage_label: noise, is_hard_case: false, rationale: "Baseline."}
+    active_fault: {triage_label: borderline, triage_severity: minor, triage_components: [llm], triage_reason_class: third_party_blip, is_hard_case: true, rationale: "Content quality issue; no telemetry signal."}
+    recovery_window: {triage_label: noise, is_hard_case: false, rationale: "Flag off."}

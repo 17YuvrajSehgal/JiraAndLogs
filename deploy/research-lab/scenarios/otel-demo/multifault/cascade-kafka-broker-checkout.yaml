@@ -1,0 +1,88 @@
+schema_version: 1
+scenario_id: otel-demo-cascade-kafka-broker-checkout
+title: Cascade — Kafka broker outage causes checkout's producer to fail
+dataset_run_id: otel-demo-placeholder-run
+traffic_profile_id: otel-demo-baseline-checkout-mix
+environment: research-otel-demo
+jira_candidate: true
+expected_jira:
+  issue_type: Incident
+  priority: Critical
+  components:
+    - kafka
+    - checkout
+  labels:
+    - synthetic-incident
+    - multi-fault
+    - cascade
+    - L3
+    - root-cause-evidence
+    - telemetry-linked
+  summary_template: "Checkout errors caused by Kafka broker outage (cascade)"
+  description_template: |
+    Synthetic L3 (cascading dual-fault) scenario.
+
+    The Kafka broker was scaled to zero (PRIMARY CAUSE). After a ~30s
+    emergence window, checkout's producer.send() calls begin failing with
+    broker-unreachable errors (SECONDARY, EMERGENT — not directly injected).
+
+    Trace-level propagation: error spans originate in checkout's kafka
+    producer code path (depth 2 from frontend), propagate up to
+    checkoutservice top-level span (depth 1), and the frontend reports
+    elevated checkout errors.
+
+    The retrieval task: identify both the kafka-broker-outage past ticket
+    AND the checkout-outage past ticket. PrimaryGold@5 measures whether
+    the kafka-broker-outage (the ROOT CAUSE) makes it into the top-5,
+    distinguishing root-cause prioritization from mere symptom retrieval.
+fault:
+  fault_id: multifault-cascade-001
+  fault_type: multi_fault_cascade
+  affected_service: kafka
+  expected_start_offset_seconds: 300
+  expected_duration_seconds: 600
+  blast_radius:
+    user_visible: true
+    expected_error_rate: high
+    expected_latency_impact: medium
+labels:
+  severity: critical
+  incident_type: outage
+  root_cause_category: multi_fault_cascade
+  should_alert: true
+  should_create_jira_shadow_issue: true
+  difficulty_level: L3
+  cascade_primary_target: kafka
+  cascade_secondary_target: checkout
+execution:
+  action: MultiFault
+  namespace: otel-demo-research
+  composition_type: cascade
+  cascade_emergence_window_seconds: 30
+  components_file: deploy/research-lab/scenarios/otel-demo/multifault/components/cascade-kafka-broker-checkout.json
+triage:
+  schema_version: 1
+  scenario_family: multifault-cascade
+  per_window:
+    pre_fault_baseline:
+      triage_label: noise
+      is_hard_case: false
+      rationale: "Kafka and checkout both healthy."
+    active_fault:
+      triage_label: ticket_worthy
+      triage_severity: critical
+      triage_components:
+        - kafka
+        - checkout
+      triage_reason_class: multi_fault_cascade
+      is_hard_case: true
+      rationale: "Cascade: kafka root cause -> checkout secondary impact, observable via trace propagation."
+    recovery_window:
+      triage_label: borderline
+      triage_severity: minor
+      triage_components:
+        - kafka
+        - checkout
+      triage_reason_class: multi_fault_cascade
+      is_hard_case: true
+      rationale: "Recovery: kafka restored; checkout retries clear backlog."

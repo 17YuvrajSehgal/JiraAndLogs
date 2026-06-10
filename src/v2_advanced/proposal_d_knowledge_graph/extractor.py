@@ -30,6 +30,11 @@ from v2_advanced.shared.json_schemas import (
     TICKET_EXTRACTION_RF,
     WINDOW_EXTRACTION_RF,
 )
+from v2_advanced.shared.service_catalog import (
+    ServiceCatalog,
+    render_canonical_services_block,
+    resolve_catalog,
+)
 
 from .schema import IncidentExtraction, WindowExtraction
 
@@ -138,6 +143,29 @@ Rules:
 """
 
 
+def _ticket_system_prompt_for(catalog: ServiceCatalog | None) -> str:
+    """Return the ticket-extraction system prompt.
+
+    When `catalog is None` (default), returns the existing hardcoded
+    `_TICKET_SYSTEM_PROMPT` bit-identically — preserves OB regression behavior.
+
+    When `catalog` is provided (opt-in for non-OB apps), rebuilds the prompt
+    with the catalog's canonical-services block substituted for the OB block.
+    """
+    if catalog is None:
+        return _TICKET_SYSTEM_PROMPT
+    block = render_canonical_services_block(catalog)
+    return _TICKET_SYSTEM_PROMPT.replace(_CANONICAL_SERVICES_BLOCK, block)
+
+
+def _window_system_prompt_for(catalog: ServiceCatalog | None) -> str:
+    """Return the window-extraction system prompt; same pattern as above."""
+    if catalog is None:
+        return _WINDOW_SYSTEM_PROMPT
+    block = render_canonical_services_block(catalog)
+    return _WINDOW_SYSTEM_PROMPT.replace(_CANONICAL_SERVICES_BLOCK, block)
+
+
 def _content_hash(text: str) -> str:
     return hashlib.sha1(text.encode("utf-8")).hexdigest()[:8]
 
@@ -156,9 +184,20 @@ def extract_from_ticket(
     timestamp: str = "",
     cache_dir: Path | None = None,
     max_tokens: int = 800,
+    service_catalog_path: Path | str | None = None,
 ) -> IncidentExtraction:
     """Extract structured facts from one Jira ticket. Cached on disk
-    when cache_dir is provided."""
+    when cache_dir is provided.
+
+    `service_catalog_path` is OPT-IN. When None (default), the existing
+    hardcoded OB canonical-services block is used (bit-identical to prior
+    behavior). When provided OR when KG_SERVICE_CATALOG env var is set,
+    the prompt's services block is rebuilt from the named YAML catalog
+    (e.g. for the OTel Demo cross-app evaluation).
+    """
+    catalog = resolve_catalog(explicit_path=service_catalog_path)
+    system_prompt = _ticket_system_prompt_for(catalog)
+
     cache_file = None
     if cache_dir is not None:
         cache_file = cache_dir / "ticket" / f"{ticket_id}__{_content_hash(ticket_text)}.json"
@@ -171,7 +210,7 @@ def extract_from_ticket(
 
     try:
         obj = client.chat_json(
-            system=_TICKET_SYSTEM_PROMPT,
+            system=system_prompt,
             user=f"TICKET ID: {ticket_id}\n\n{ticket_text}",
             temperature=0.0,
             max_tokens=max_tokens,
@@ -216,8 +255,16 @@ def extract_from_window(
     family: str = "",
     cache_dir: Path | None = None,
     max_tokens: int = 500,
+    service_catalog_path: Path | str | None = None,
 ) -> WindowExtraction:
-    """Extract structured facts from a live telemetry window."""
+    """Extract structured facts from a live telemetry window.
+
+    `service_catalog_path` is OPT-IN — see extract_from_ticket() for semantics.
+    Default behavior reproduces OB bit-identically.
+    """
+    catalog = resolve_catalog(explicit_path=service_catalog_path)
+    system_prompt = _window_system_prompt_for(catalog)
+
     cache_file = None
     if cache_dir is not None:
         cache_file = cache_dir / "window" / f"{window_id}__{_content_hash(evidence_text)}.json"
@@ -230,7 +277,7 @@ def extract_from_window(
 
     try:
         obj = client.chat_json(
-            system=_WINDOW_SYSTEM_PROMPT,
+            system=system_prompt,
             user=f"WINDOW ID: {window_id}\n\n{evidence_text}",
             temperature=0.0,
             max_tokens=max_tokens,

@@ -1,0 +1,7 @@
+{
+  "_comment": "L2 concurrent: ad-outage (flagd) + recommendation-outage (ScaleDeployment). Mixed primitive types within the concurrent family.",
+  "fault_components": [
+    {"action": "Flagd", "flagd_flag": "adFailure", "flagd_variant": "on", "is_primary_cause": true, "service_role": "ads"},
+    {"action": "ScaleDeployment", "target_name": "recommendation", "replicas": 0, "restore_replicas": 1, "is_primary_cause": true, "service_role": "recommendations"}
+  ]
+}

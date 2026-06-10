@@ -1,0 +1,136 @@
+\section{Cross-Architecture Generalization --- the Path to ICSE}
+\label{sec:cross-app}
+
+The single most important question for external validity is: \emph{does the cascade work on a different microservice application with a different architecture, or have we just memorized Online Boutique?} This section addresses that question head-on. It explains why we chose the OpenTelemetry Demo (Astronomy Shop) as the second application, how we evaluated and rejected two natural alternatives, what evidence we have from the local pilot, and what the cross-application headline will look like when the full GCP collection completes.
+
+\subsection{The external-validity question in plain terms}
+
+A reviewer at a top-tier software engineering venue (ICSE, FSE, ASE) will ask:
+
+\begin{itemize}
+\item \emph{Is the result an artifact of Online Boutique's particular service shape?}
+\item \emph{Would the cascade still rank past tickets well if the underlying services were written in different languages, used different runtimes, used asynchronous messaging instead of synchronous gRPC, or had different telemetry conventions?}
+\item \emph{Is the 94-dimensional feature vector portable across teams, or did we tune it for one specific cluster?}
+\item \emph{Would the four-layer cascade composition still beat its individual baselines if the underlying retrievers gave noticeably different score distributions?}
+\end{itemize}
+
+The honest answer requires running the system on a second application that is meaningfully different from Online Boutique --- different services, different languages, different architecture --- and reporting what changes. The work to do this is already underway on a separate branch.
+
+\subsection{The three options we considered}
+
+\subsubsection{Option A --- Collect telemetry for the TAWOS projects}
+
+\paragraph{The idea.} TAWOS already gives us Jira tickets for 39 real OSS projects (Moodle, MongoDB, Mesos, Mule, Hyperledger Fabric, and others). The pipeline could be: deploy each project, inject faults that map onto its real architecture, collect telemetry, pair the resulting telemetry windows with the existing TAWOS tickets, and train.
+
+\paragraph{Why we rejected it as primary.}
+
+\begin{enumerate}
+\item \textbf{The Jira-telemetry pairing is the hard part of our dataset, and TAWOS does not give it to us.} TAWOS tickets are post-hoc: they were filed by real engineers in response to incidents that happened in real production environments, with no record of the specific telemetry window that triggered the filing. Reconstructing the pairing means synthesizing a fake telemetry window for each ticket, which loses the realism we wanted in the first place.
+\item \textbf{The 39 projects are wildly heterogeneous.} Moodle is a PHP monolith with Apache; MongoDB is a C++ distributed database cluster; Mesos is a scheduler; Mule is a JVM enterprise integration platform. The standard ``deploy a microservice demo, inject faults, run scenario YAML'' approach we built for Online Boutique does not generalize to these architectures. Each project would need its own deployment harness, its own scenario library, its own telemetry-conventions mapping. The engineering cost is months per project, and most projects have no realistic load-generator that would produce the kind of synthetic traffic our experiments depend on.
+\item \textbf{The 27 scenario families do not transfer.} ``cart-redis-degradation'' is meaningless in MongoDB or Moodle. We would either lose the family taxonomy that all our pipelines are calibrated against, or we would have to redesign the entire scenario library per project.
+\end{enumerate}
+
+\paragraph{Where TAWOS does fit.} TAWOS is invaluable as a \emph{reference} for what real engineer-written Jira tickets look like (we already use it that way for the V2 humanizer's length, voice, and code-block distributions, and as the source for 60 of our 110 distractor tickets). It is also a reasonable basis for a future-paper experiment: use a subset of TAWOS as a noisy real-Jira retrieval test, with each TAWOS ticket scored for retrieval by lexical overlap against a synthesized telemetry-evidence text. That experiment is in scope for follow-up work, not for the current submission.
+
+\subsubsection{Option B --- Stand up a second Online-Boutique-like app and repeat the synthetic collection}
+
+\paragraph{The idea.} Pick a second microservice demo that resembles Online Boutique in shape, instrument it the same way, build a parallel humanized Jira corpus, repeat the full evaluation.
+
+\paragraph{Why this is the right shape of move, but the wrong cousin of an app.} A second Online-Boutique-clone in different languages would let us check that nothing in the pipeline is hard-coded to Online Boutique's specific service names or schemas --- but a reviewer would say ``you tested on two flavors of the same thing.'' The right second app needs to be \emph{architecturally different}, not just nominally different. In particular, the absence of asynchronous messaging in Online Boutique is the dimension we most need to fill: a system that works on pure synchronous gRPC microservices is only half-validated until it is shown to work on async-messaging microservices too.
+
+\subsubsection{Option C --- The OpenTelemetry Demo (Astronomy Shop)}
+
+This is what we chose, and the work is already in progress on a separate branch.
+
+\paragraph{Why the OpenTelemetry Demo specifically.}
+
+\begin{itemize}
+\item \textbf{OpenTelemetry-native.} The demo's services already emit the kinds of structured logs, OTel traces, and OTel metrics that we hand-built as M1--M5 on Online Boutique. We get the instrumentation work \emph{for free}.
+\item \textbf{Kafka asynchronous backbone.} This is the architectural diversity that matters. The OTel Demo has \texttt{checkout-service} producing to Kafka, with \texttt{accounting-service} and \texttt{fraud-detection} consuming. Five failure modes exist here that cannot exist in Online Boutique: \texttt{kafka-broker-outage}, \texttt{kafka-consumer-lag}, \texttt{kafka-consumer-crash}, \texttt{kafka-partition-rebalance}, \texttt{kafka-dead-letter-spike}.
+\item \textbf{15+ services in 12+ languages.} A wider polyglot footprint than Online Boutique: services in Go, TypeScript/React, .NET, Node.js, Python, Java, Kotlin, Ruby, C++, Rust, PHP, Envoy/C++.
+\item \textbf{Built-in fault injection via flagd.} The demo ships with feature-flag-driven fault scenarios (\texttt{paymentFailure}, \texttt{recommendationCacheFailure}, \texttt{kafkaQueueProblems}, \texttt{adServiceFailure}) that map cleanly onto our scenario YAML schema.
+\item \textbf{CNCF provenance.} The OTel Demo is the canonical reference for OpenTelemetry instrumentation; using it signals to reviewers that we did not cherry-pick a friendly testbed.
+\end{itemize}
+
+\subsection{The headline structure --- a two-column claim}
+
+The cross-application result will be reported as two columns in the paper's headline table:
+
+\begin{table}[h]
+\centering
+\caption{The two-column external-validity report. Both columns will be reported in the ICSE submission; the two answer different questions.}
+\label{tab:cross-app-headline}
+\small
+\begin{tabularx}{\linewidth}{l X X}
+\toprule
+Setting & What is locked & What is measured \\
+\midrule
+\textbf{Zero-shot transfer} & The entire cascade --- L1 stacker, L2 fusion weights, L3 novelty model --- trained on Online Boutique and applied unmodified to OTel Demo & Hit@5, Hit@1, MRR, novel precision/recall on the OTel Demo test split; the strict external-validity number \\
+\textbf{L1 retrained on OTel Demo train} & L2 fusion + L3 novelty + all pipeline architectures unchanged; only the L1 stacker re-fit on OTel Demo training data & Apples-to-apples retrieval and novelty number with appropriate per-cluster calibration \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+The zero-shot column is the hard claim: \emph{the cascade, trained on one application, retrieves the right past ticket on a different application without any retraining.} The L1-retrained column is the operating number a practitioner cares about: \emph{here is what the cascade gives you after a single quick re-fit of the cheapest layer.} Reporting both lets reviewers see exactly which parts of the cascade are data-portable (the fusion rules, the novelty signal) and which need per-cluster calibration (the triage threshold).
+
+\subsection{What is already validated locally}
+
+The OpenTelemetry Demo pilot has shipped end-to-end on a local kind cluster. The validation gates are GREEN:
+
+\begin{itemize}
+\item Deployment overlay and observability collector wiring done; OTel Demo runs alongside our existing observability stack with no conflicts.
+\item Service catalog refactor done (the catalog is now YAML-driven and pluggable so different applications can be supported without code changes).
+\item A new fault-injection primitive (\texttt{Flagd}) implemented to drive the OTel Demo's feature-flag-based faults.
+\item Multi-fault orchestration (concurrent, cascade, compound) implemented.
+\item 44 scenario YAMLs authored, covering all 27 transferred families plus the 5 new Kafka families plus 12 multi-fault scenarios.
+\item Telemetry routing verified GREEN. Loki receives 1{,}112 log lines from 13 OTel Demo services in 2 minutes; Tempo captures $\sim$98 MB of trace data per scenario; Prometheus metrics flow.
+\item \textbf{The critical schema-compatibility gate PASSED.} The data-build pipeline applied to OTel Demo windows produces 94/94 \texttt{triage\_feature\_*} columns --- structurally identical to the Online Boutique schema. The cascade builder runs unchanged.
+\end{itemize}
+
+\paragraph{A clean cross-app finding already in hand.} A diagnostic of the feature-value population shows that of the 94 features, 12 populate from generic OTel telemetry (trace counts, latency percentiles, container metrics) and 82 are zero on OTel Demo because they depend on Online Boutique--specific metric names (\texttt{cart\_operations\_total\{op=add,result=success\}} and the like).
+
+This is exactly the kind of honest cross-application result reviewers like to see: \emph{structural compatibility holds; the feature-value gap is the boundary of ``where source-application instrumentation matters.''} A pure-OTel feature subset that does not depend on application-specific metric names can be carved out at the feature-extraction step. The 12-feature subset is sufficient for the L1 stacker to fire (since HGB on 12 features is still a strong baseline), and the cascade's retrieval and novelty channels do not depend on the numeric features at all.
+
+\subsection{What ships in the ICSE submission}
+
+The work-in-progress collection on GCP (\texttt{e2-standard-16} VM, sized for the full 47-service-equivalent footprint) targets:
+
+\begin{itemize}
+\item $\sim$135 runs, $\sim$9{,}300 windows total.
+\item 32 scenario families: 27 transferred from Online Boutique plus 5 Kafka-specific.
+\item One humanized Jira corpus for OTel Demo (same V2 humanizer pipeline; same TAWOS-grounded length, voice, code-block distributions).
+\item Two evaluation passes: zero-shot transfer of the locked cascade, and the L1-retrained variant.
+\end{itemize}
+
+The non-negotiables for submission:
+
+\begin{enumerate}
+\item Finish the OTel Demo full collection (the GCP run is in progress).
+\item Run the cascade in both zero-shot and L1-retrained modes; report the two-column table.
+\item Report the feature-value-gap finding honestly (12/94 features populate generically) as a separate sub-result --- this is itself a publishable observation about cross-application instrumentation portability.
+\item Re-run the leave-one-family-out novelty F1 on the OTel Demo split to show that the headline novel-recall win survives \emph{both} family shift and application shift.
+\end{enumerate}
+
+The nice-to-haves:
+
+\begin{itemize}
+\item Score-scale renormalization (the highest-ROI follow-up from our meta-analysis, $\sim$3 hours of implementation) to rescue the G3 symmetric-LLM-extraction result. This could lift Hit@5 closer to the theoretical ceiling of 0.976.
+\item Train and deploy with a smaller LLM (Qwen 14B or Qwen 7B) for the DiagnosisAgent so that real-time agent inference becomes practical and the cost section of the paper has a clean ``feasible in real-time'' answer.
+\end{itemize}
+
+\subsection{What would push the work further --- the future-work tail}
+
+Beyond the OTel Demo submission, the natural follow-ups in expected-value order:
+
+\begin{enumerate}
+\item \textbf{Score-scale renormalization to rescue G3.} The single highest-ROI experiment we have not done. G3 produced a $+404\%$ rel standalone gain that the cascade could not absorb because of an implicit score-scale assumption. Z-score or percentile-rank normalization per pipeline before RRF and the L4 stacker could plausibly lift Hit@5 from $0.912$ toward the $0.976$ union ceiling.
+\item \textbf{Per-window-type novelty thresholds.} G8 showed novelty recall splits sharply by window type; a separate G7 threshold per window type would likely close most of the OOD gap.
+\item \textbf{Cross-encoder with listwise loss.} The G2 cross-encoder used binary cross-entropy; a listwise loss (LambdaRank, ApproxNDCG) might produce a sharper top-1 selection.
+\item \textbf{Real-Jira evaluation via TAWOS.} Use TAWOS as a noisy retrieval test set with synthetic telemetry-evidence text proxies. Validates synthetic-corpus results against real-Jira text characteristics.
+\item \textbf{Smaller-LLM agent.} A Qwen 14B or 7B variant at 3--5$\times$ throughput would enable real-time agent inference, not just batch.
+\item \textbf{Train-Ticket as a third app.} If OTel Demo cross-application succeeds, Train-Ticket (47 services, FudanSELab benchmark) is the stretch goal. Scaffolding is already wired up locally; the bottleneck is GCP capacity for the full collection.
+\end{enumerate}
+
+\subsection{Bottom-line recommendation for ICSE submission}
+
+\textbf{Stay on the OpenTelemetry Demo cross-application track as the headline external-validity story.} Keep TAWOS as the length/style anchor for the humanizer and as a future-paper real-Jira retrieval reference. Defer the TAWOS-telemetry-pairing direction and Train-Ticket as future work that other papers can build on. The two-column zero-shot / L1-retrained table is the right shape of result: it addresses the most likely reviewer critique (``does this work on something other than Online Boutique?'') with a quantitative answer that lets reviewers see exactly how much of the cascade is data-portable.

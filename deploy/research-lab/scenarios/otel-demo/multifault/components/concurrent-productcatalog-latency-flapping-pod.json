@@ -1,0 +1,7 @@
+{
+  "_comment": "L2 concurrent: productcatalog-latency (SetEnv) + cart-flap (RestartPods). Mixed primitive types + mixed severity tiers.",
+  "fault_components": [
+    {"action": "SetEnv", "target_name": "product-catalog", "env": {"EXTRA_LATENCY": "750ms"}, "is_primary_cause": true, "service_role": "catalog"},
+    {"action": "ScaleDeployment", "target_name": "cart", "replicas": 0, "restore_replicas": 2, "is_primary_cause": true, "service_role": "cart"}
+  ]
+}

@@ -1,0 +1,23 @@
+{
+  "_comment": "Components sidecar for L3 cascade scenario otel-demo-cascade-kafka-broker-checkout. PRIMARY is injected directly. SECONDARY is observation_only — observed organically via trace propagation, never directly injected.",
+  "cascade_emergence_window_seconds": 30,
+  "fault_components": [
+    {
+      "action": "ScaleDeployment",
+      "target_name": "kafka",
+      "replicas": 0,
+      "restore_replicas": 1,
+      "is_primary_cause": true,
+      "cascade_depth": 0,
+      "service_role": "message-broker"
+    },
+    {
+      "action": "observation_only",
+      "expected_target": "checkout",
+      "expected_signal": "kafka producer error span at depth 2 under checkoutservice.PlaceOrder; error rate spike on /api/checkout",
+      "is_primary_cause": false,
+      "cascade_depth": 1,
+      "service_role": "order-placement"
+    }
+  ]
+}

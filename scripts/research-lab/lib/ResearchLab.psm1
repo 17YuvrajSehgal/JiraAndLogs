@@ -810,6 +810,26 @@ function Get-ResearchLabScenarioConfig {
         # file under deploy/research-lab/scenarios/chaos/. Keeps the
         # scenario YAML schema unchanged for non-chaos scenarios.
         execution_chaos_manifest = Get-ResearchLabYamlScalar -Path $ScenarioFile -KeyPath @("execution", "chaos_manifest") -AsString
+        # OTel Demo cross-app (docs5/01 Phase 1c, 2026-06-08): multi-fault
+        # scenarios. Three new fields, all OPTIONAL and null on every OB
+        # scenario (which has no MultiFault action). The orchestrator
+        # under scripts/research-lab/otel-demo/Invoke-MultiFaultOrchestration.ps1
+        # consumes these.
+        #
+        # composition_type ∈ {concurrent, cascade, compound_primitive}.
+        # cascade_emergence_window_seconds: int (default 30) for cascade mode.
+        # components_file: relative path to a sidecar JSON file listing the
+        #   fault_components array. JSON is used because the existing YAML
+        #   parser does not natively support list-of-objects.
+        execution_composition_type = Get-ResearchLabYamlScalar -Path $ScenarioFile -KeyPath @("execution", "composition_type") -AsString
+        execution_cascade_emergence_window_seconds = Get-ResearchLabYamlScalar -Path $ScenarioFile -KeyPath @("execution", "cascade_emergence_window_seconds")
+        execution_components_file = Get-ResearchLabYamlScalar -Path $ScenarioFile -KeyPath @("execution", "components_file") -AsString
+        # OTel Demo Flagd primitive (docs5/01 Phase 1b, 2026-06-08): all
+        # OPTIONAL and null on OB scenarios.
+        execution_flagd_flag = Get-ResearchLabYamlScalar -Path $ScenarioFile -KeyPath @("execution", "flagd_flag") -AsString
+        execution_flagd_variant = Get-ResearchLabYamlScalar -Path $ScenarioFile -KeyPath @("execution", "flagd_variant") -AsString
+        execution_flagd_configmap_name = Get-ResearchLabYamlScalar -Path $ScenarioFile -KeyPath @("execution", "flagd_configmap_name") -AsString
+        execution_flagd_configmap_key = Get-ResearchLabYamlScalar -Path $ScenarioFile -KeyPath @("execution", "flagd_configmap_key") -AsString
     }
 }
 

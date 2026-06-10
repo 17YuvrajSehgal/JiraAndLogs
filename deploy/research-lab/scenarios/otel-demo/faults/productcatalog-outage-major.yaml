@@ -1,0 +1,46 @@
+schema_version: 1
+scenario_id: otel-demo-productcatalog-outage-major
+title: Product catalog service outage — browsing broken site-wide
+dataset_run_id: otel-demo-placeholder-run
+traffic_profile_id: otel-demo-baseline-checkout-mix
+environment: research-otel-demo
+jira_candidate: true
+expected_jira:
+  issue_type: Incident
+  priority: Critical
+  components: [product-catalog, frontend, checkout, recommendation]
+  labels: [synthetic-incident, service-outage, product-catalog, browse-blocking, telemetry-linked]
+  summary_template: "Product catalog outage — empty product pages site-wide"
+  description_template: |
+    Synthetic lab issue generated from scenario otel-demo-productcatalog-outage-major.
+
+    The product-catalog service was scaled to 0. Frontend product listings
+    return errors; recommendation cannot resolve product IDs; checkout
+    pre-validation fails. Browse-blocking.
+fault:
+  fault_id: productcatalog-outage-001
+  fault_type: service_outage
+  affected_service: product-catalog
+  expected_start_offset_seconds: 300
+  expected_duration_seconds: 600
+  blast_radius: {user_visible: true, expected_error_rate: high, expected_latency_impact: low}
+labels:
+  severity: critical
+  incident_type: outage
+  root_cause_category: service_unavailable
+  should_alert: true
+  should_create_jira_shadow_issue: true
+execution:
+  action: ScaleDeployment
+  namespace: otel-demo-research
+  target_kind: deployment
+  target_name: product-catalog
+  replicas: 0
+  restore_replicas: 1
+triage:
+  schema_version: 1
+  scenario_family: productcatalog-outage
+  per_window:
+    pre_fault_baseline: {triage_label: noise, is_hard_case: false, rationale: "Pre-fault; catalog healthy."}
+    active_fault: {triage_label: ticket_worthy, triage_severity: critical, triage_components: [product-catalog, frontend], triage_reason_class: service_unavailable, is_hard_case: false, rationale: "Catalog down; browse broken."}
+    recovery_window: {triage_label: borderline, triage_severity: minor, triage_components: [product-catalog], triage_reason_class: service_unavailable, is_hard_case: true, rationale: "Recovery; cache warmup."}

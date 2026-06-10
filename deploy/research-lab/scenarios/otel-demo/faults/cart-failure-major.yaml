@@ -1,0 +1,43 @@
+schema_version: 1
+scenario_id: otel-demo-cart-failure-major
+title: Cart service application failure via flagd
+dataset_run_id: otel-demo-placeholder-run
+traffic_profile_id: otel-demo-baseline-checkout-mix
+environment: research-otel-demo
+jira_candidate: true
+expected_jira:
+  issue_type: Incident
+  priority: Major
+  components: [cart, checkout, frontend]
+  labels: [synthetic-incident, application-fault, cart, telemetry-linked]
+  summary_template: "Cart service failing on add/get operations"
+  description_template: |
+    Synthetic lab issue from scenario otel-demo-cart-failure-major.
+    flagd cartFailure=on; cart service returns errors at application layer.
+    Pod is Running but operations fail. Distinguishable from cart-redis
+    (which is the backing store failing) by trace structure.
+fault:
+  fault_id: cart-failure-001
+  fault_type: application_fault
+  affected_service: cart
+  expected_start_offset_seconds: 300
+  expected_duration_seconds: 600
+  blast_radius: {user_visible: true, expected_error_rate: high, expected_latency_impact: low}
+labels:
+  severity: major
+  incident_type: outage
+  root_cause_category: application_fault
+  should_alert: true
+  should_create_jira_shadow_issue: true
+execution:
+  action: Flagd
+  namespace: otel-demo-research
+  flagd_flag: cartFailure
+  flagd_variant: "on"
+triage:
+  schema_version: 1
+  scenario_family: cart-redis
+  per_window:
+    pre_fault_baseline: {triage_label: noise, is_hard_case: false, rationale: "Pre-fault; cart healthy."}
+    active_fault: {triage_label: ticket_worthy, triage_severity: major, triage_components: [cart, checkout], triage_reason_class: application_fault, is_hard_case: true, rationale: "App-layer cart errors; easy to confuse with cart-redis."}
+    recovery_window: {triage_label: borderline, triage_severity: minor, triage_components: [cart], triage_reason_class: application_fault, is_hard_case: true, rationale: "Flag off; retries clear."}

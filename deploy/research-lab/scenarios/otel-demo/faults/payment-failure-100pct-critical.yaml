@@ -1,0 +1,74 @@
+schema_version: 1
+scenario_id: otel-demo-payment-failure-100pct-critical
+title: Payment charges fail 100% via flagd — no checkouts complete
+dataset_run_id: otel-demo-placeholder-run
+traffic_profile_id: otel-demo-baseline-checkout-mix
+environment: research-otel-demo
+jira_candidate: true
+expected_jira:
+  issue_type: Incident
+  priority: Critical
+  components:
+    - payment
+    - checkout
+  labels:
+    - synthetic-incident
+    - application-fault
+    - payment
+    - revenue-impacting
+    - telemetry-linked
+  summary_template: "Payment charge requests failing — checkouts blocked"
+  description_template: |
+    Synthetic lab issue generated from scenario otel-demo-payment-failure-100pct-critical.
+
+    The payment service is healthy at the network/pod level but every
+    charge request fails (application-level failure, simulated via flagd).
+    Distinguishable from payment-outage by: payment pods are Ready,
+    network reachable, but business-layer errors spike to 100%.
+fault:
+  fault_id: payment-failure-001
+  fault_type: application_fault
+  affected_service: payment
+  suggested_mechanism: flagd paymentFailure -> 100%
+  expected_start_offset_seconds: 300
+  expected_duration_seconds: 600
+  blast_radius:
+    user_visible: true
+    expected_error_rate: high
+    expected_latency_impact: low
+labels:
+  severity: critical
+  incident_type: outage
+  root_cause_category: application_fault
+  should_alert: true
+  should_create_jira_shadow_issue: true
+execution:
+  action: Flagd
+  namespace: otel-demo-research
+  flagd_flag: paymentFailure
+  flagd_variant: "100%"
+triage:
+  schema_version: 1
+  scenario_family: payment-outage
+  per_window:
+    pre_fault_baseline:
+      triage_label: noise
+      is_hard_case: false
+      rationale: "Pre-fault baseline; payment healthy."
+    active_fault:
+      triage_label: ticket_worthy
+      triage_severity: critical
+      triage_components:
+        - payment
+        - checkout
+      triage_reason_class: application_fault
+      is_hard_case: true
+      rationale: "Pods Ready but 100% charge failure — easy to confuse with payment-outage."
+    recovery_window:
+      triage_label: borderline
+      triage_severity: minor
+      triage_components:
+        - payment
+      triage_reason_class: application_fault
+      is_hard_case: true
+      rationale: "Recovery: flag reverted to off, residual error rate decay."

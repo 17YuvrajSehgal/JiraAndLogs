@@ -1,0 +1,43 @@
+schema_version: 1
+scenario_id: otel-demo-payment-unreachable-critical
+title: Payment service unreachable via flagd — network-layer failure simulation
+dataset_run_id: otel-demo-placeholder-run
+traffic_profile_id: otel-demo-baseline-checkout-mix
+environment: research-otel-demo
+jira_candidate: true
+expected_jira:
+  issue_type: Incident
+  priority: Critical
+  components: [payment, checkout, frontend]
+  labels: [synthetic-incident, network-fault, payment, revenue-impacting, telemetry-linked]
+  summary_template: "Payment service unreachable — connection refused on checkout"
+  description_template: |
+    Synthetic lab issue from scenario otel-demo-payment-unreachable-critical.
+    flagd paymentUnreachable=on; payment endpoints simulate network unreachable.
+    Distinguishable from payment-outage: pod is Running, but downstream
+    cannot establish connection. Different signature in traces.
+fault:
+  fault_id: payment-unreach-001
+  fault_type: network_unreachable
+  affected_service: payment
+  expected_start_offset_seconds: 300
+  expected_duration_seconds: 600
+  blast_radius: {user_visible: true, expected_error_rate: high, expected_latency_impact: high}
+labels:
+  severity: critical
+  incident_type: outage
+  root_cause_category: network_unreachable
+  should_alert: true
+  should_create_jira_shadow_issue: true
+execution:
+  action: Flagd
+  namespace: otel-demo-research
+  flagd_flag: paymentUnreachable
+  flagd_variant: "on"
+triage:
+  schema_version: 1
+  scenario_family: payment-outage
+  per_window:
+    pre_fault_baseline: {triage_label: noise, is_hard_case: false, rationale: "Pre-fault; payment reachable."}
+    active_fault: {triage_label: ticket_worthy, triage_severity: critical, triage_components: [payment, checkout], triage_reason_class: network_unreachable, is_hard_case: true, rationale: "Pod Running but network-layer rejection — easy to misdiagnose as outage."}
+    recovery_window: {triage_label: borderline, triage_severity: minor, triage_components: [payment], triage_reason_class: network_unreachable, is_hard_case: true, rationale: "Flag off; connectivity restored."}

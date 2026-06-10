@@ -1,0 +1,47 @@
+% Section 4 — Evaluation setup
+% Page budget: ~0.75 pages in acmart sigconf two-column (~550-700 words).
+% Source-of-truth: short-technical/sections/03-evaluation-setup.tex
+%
+% Editorial discipline (per author direction):
+%   - Describe the IDEA, not implementation primitives or field names.
+%   - No result values (numbers belong to §5).
+%   - No repetition: §3.1 already covered the split sizes and the scenario
+%     taxonomy at a high level; §3.2 already enumerated the pipelines. This
+%     section adds the METHODOLOGY — partitions and visibility, metric
+%     definitions, statistical envelope, stratification.
+
+\section{Evaluation Setup}
+\label{sec:evaluation}
+
+\subsection{Data partitions and the visibility rule}
+\label{sec:evaluation:splits}
+
+The 6{,}720 telemetry windows introduced in \S\ref{sec:approach:dataset} are partitioned chronologically and stratified by scenario family into three disjoint sets used by every pipeline and the cascade: a training set on which all models are fit, a validation set used to tune thresholds and select operating points, and a held-out test set on which every headline number in this paper is computed. Every scenario family appears in all three sets, but each set draws windows from disjoint fault-injection runs of that family. This setup matches a mature on-call team's operational view, in which past tickets exist for most failure modes the team encounters but each present-day incident still represents a previously-unseen instance of its family.
+
+A complementary partition holds out an entire scenario family for the out-of-distribution analysis in \S\ref{sec:results}. Twenty-seven such folds are constructed, one per family; each fold trains on the remaining twenty-six and evaluates on the held-out family alone. This is a strictly harder regime than the in-distribution split because the model has never seen any examples of the held-out family during fit, and the resulting per-family novelty score measures whether the system has learned a generic notion of ``no past ticket matches'' or has merely memorized the families it saw at training time.
+
+A strict time-ordered visibility rule is enforced across both partitions. A test window with timestamp $t$ may retrieve only memory tickets whose own creation timestamp is strictly less than $t$, and is additionally prevented from seeing any ticket that originated in the same fault-injection run as the window itself. The first rule rules out cheating by ``predicting'' future incidents; the second rules out the subtler form of leakage in which a window retrieves a ticket that was filed about that same incident. Both rules are enforced at retrieval time by the corpus loader, not optionally.
+
+\subsection{Metrics}
+\label{sec:evaluation:metrics}
+
+We report three groups of metrics. Each group answers a different question.
+
+\paragraph{Triage detection: should this window become a ticket?} The primary triage metric is the area under the precision-recall curve in two variants. The strict variant counts only ticket-worthy windows as positive and treats everything else (borderline and noise) as negative; this is the conservative number. The inclusive variant counts borderline windows as positive as well, rewarding systems that surface genuinely uncertain windows. We additionally report the area under the receiver operating characteristic, an operating-point F1 at a 5\% false-positive-rate budget, an operating-point precision at a 1\% false-positive-rate budget, and the expected calibration error. The operating-point metrics matter because a deployed triage gate has a finite alert budget; the calibration error matters because the gate's probability is consumed downstream by other tools.
+
+\paragraph{Retrieval: does the gold past ticket appear in our suggestions?} The primary retrieval metric is Hit@5: among the test windows for which the dataset records at least one gold past ticket, the fraction whose top-five ranked suggestions contain a gold. Hit@1 is the same with a top-one cutoff, and Hit@3 is reported for context. Mean reciprocal rank averages the inverse rank of the first gold appearing in the system's output (zero when none of the top results is gold), rewarding systems that rank the right ticket high rather than merely surfacing it somewhere.
+
+\paragraph{Novelty: when no past ticket matches, do we say so?} Of the windows we flagged as novel, what fraction truly had no past match (novel precision)? Of the truly-novel windows, what fraction did we correctly flag (novel recall)? The harmonic mean of the two is the novelty F1.
+
+\paragraph{Robustness.} Two robustness questions are answered separately. Memory-noise robustness varies the fraction of distractor tickets mixed into the retrieval corpus across four ratios and measures how Hit@K degrades. Family-shift robustness measures the novelty F1 under the leave-one-family-out partition above, comparing it against the in-distribution value to quantify how much of the novelty signal generalizes beyond the families seen during training.
+
+\paragraph{Engineer utility.} We translate retrieval performance into an estimated wall-clock cost by simulating a serial-candidate-review workflow: an engineer reads ranked candidates one at a time at a fixed cost per candidate; when the gold appears at rank $k$ within the system's output, diagnosis is complete at $k$ times that cost; when no candidate is gold, diagnosis falls back to a fixed manual-investigation cost. The resulting expected time-to-diagnose per resolvable incident gives reviewers a single number that translates the abstract ranking metrics into engineering minutes.
+
+\subsection{Statistical envelope and stratification}
+\label{sec:evaluation:statistics}
+
+Every reported metric is accompanied by a 95\% confidence interval obtained from a paired-bootstrap procedure: we resample the test set 1{,}000 times with replacement, preserve the per-window identities across all pipelines so that pairwise differences are computed on the same resamples, and report the central value alongside the 2.5\% and 97.5\% percentiles. The seed is fixed for reproducibility. Pairwise comparisons against baselines are reported as deltas with their own confidence intervals, so that statistical significance can be read directly off the table.
+
+In addition to the headline averages, every metric is reported stratified along five axes: the scenario family of the window, the service implicated in its fault, a flag for windows intentionally designed to be ambiguous to simple models, the novelty status of the window, and the number of prior tickets sharing the window's scenario family that are visible to the cascade at the window's timestamp. The last axis is the depth-of-history axis: it measures how the system's performance scales as the memory corpus grows.
+
+\paragraph{Methods compared.} We evaluate each of the seven pipelines from \S\ref{sec:approach:panel} individually as baselines and the four-layer cascade that composes them. The cascade is the system under test; the individual pipelines are present to localize where its lift comes from.

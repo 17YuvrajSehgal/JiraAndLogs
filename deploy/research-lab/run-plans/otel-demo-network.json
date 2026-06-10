@@ -1,0 +1,13 @@
+{
+  "_comment": "OTel Demo chaos-mesh-dependent scenarios — the 4 network families (latency/packet-loss/partition/dns) + the L4 compound. Deferred from v1 until chaos-mesh was confirmed working; authored + smoke-validated on the GCP VM 2026-06-09 (chaos-mesh 2.8.2). The L4 compound uses the 2026-06-09 ChaosMeshChaos extension to Invoke-MultiFaultOrchestration.ps1.",
+  "plan_id": "otel-demo-network",
+  "namespace": "otel-demo-research",
+  "schema_version": 1,
+  "scenarios": [
+    {"scenario_file": "deploy/research-lab/scenarios/otel-demo/chaos/network-latency-major.yaml", "active_duration_seconds": 600},
+    {"scenario_file": "deploy/research-lab/scenarios/otel-demo/chaos/network-packet-loss-major.yaml", "active_duration_seconds": 600},
+    {"scenario_file": "deploy/research-lab/scenarios/otel-demo/chaos/network-partition-critical.yaml", "active_duration_seconds": 600},
+    {"scenario_file": "deploy/research-lab/scenarios/otel-demo/chaos/dns-outage-critical.yaml", "active_duration_seconds": 600},
+    {"scenario_file": "deploy/research-lab/scenarios/otel-demo/multifault/compound-saturation-network-latency.yaml", "active_duration_seconds": 600}
+  ]
+}

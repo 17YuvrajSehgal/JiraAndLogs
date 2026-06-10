@@ -1,0 +1,72 @@
+schema_version: 1
+scenario_id: otel-demo-dns-outage-critical
+title: DNS resolution failure at checkout — downstream lookups error out
+dataset_run_id: otel-demo-placeholder-run
+traffic_profile_id: otel-demo-baseline-checkout-mix
+environment: research-otel-demo
+jira_candidate: true
+expected_jira:
+  issue_type: Incident
+  priority: Critical
+  components:
+    - checkout
+    - frontend
+  labels:
+    - synthetic-incident
+    - dns-outage
+    - chaos-mesh
+    - telemetry-linked
+  summary_template: "DNS resolution failures at checkout broke downstream service calls"
+  description_template: |
+    Synthetic lab issue generated from scenario otel-demo-dns-outage-critical.
+
+    A chaos-mesh DNSChaos (action: error, patterns: *) was injected inside the
+    checkout pod, so every DNS lookup checkout performs returns an error. Calls
+    to cart, currency, payment, shipping, email, product-catalog and the Kafka
+    brokers fail to resolve, breaking order placement broadly. The failure
+    signature is name-resolution errors rather than connection refusals.
+fault:
+  fault_id: dns-outage-001
+  fault_type: dns_outage
+  affected_service: checkout
+  suggested_mechanism: chaos-mesh DNSChaos error on checkout (all patterns)
+  expected_start_offset_seconds: 300
+  expected_duration_seconds: 600
+  blast_radius:
+    user_visible: true
+    expected_error_rate: high
+    expected_latency_impact: medium
+labels:
+  severity: critical
+  incident_type: outage
+  root_cause_category: dns_outage
+  should_alert: true
+  should_create_jira_shadow_issue: true
+execution:
+  action: ChaosMeshChaos
+  namespace: otel-demo-research
+  chaos_manifest: deploy/research-lab/scenarios/otel-demo/chaos/manifests/dns-outage-checkout.yaml
+triage:
+  schema_version: 1
+  scenario_family: dns-outage
+  per_window:
+    pre_fault_baseline:
+      triage_label: noise
+      is_hard_case: false
+      rationale: "Pre-fault baseline; checkout DNS resolves normally."
+    active_fault:
+      triage_label: ticket_worthy
+      triage_severity: critical
+      triage_components:
+        - checkout
+      triage_reason_class: dns_outage
+      is_hard_case: true
+      rationale: "All checkout DNS lookups error; downstream calls fail to resolve."
+    recovery_window:
+      triage_label: borderline
+      triage_severity: minor
+      triage_components:
+        - checkout
+      triage_reason_class: dns_outage
+      is_hard_case: true
+      rationale: "Resolution restored; brief residual errors as caches repopulate."

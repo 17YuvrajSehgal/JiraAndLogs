@@ -1,0 +1,41 @@
+schema_version: 1
+scenario_id: otel-demo-single-pod-restart-cart-minor
+title: Cart single-pod restart — healthy replication absorbs
+dataset_run_id: otel-demo-placeholder-run
+traffic_profile_id: otel-demo-baseline-checkout-mix
+environment: research-otel-demo
+jira_candidate: false
+expected_jira:
+  issue_type: Task
+  priority: Low
+  components: [cart]
+  labels: [synthetic-incident, pod-restart, noise-class, cart, telemetry-linked]
+  summary_template: "One cart pod restarted; service available"
+  description_template: |
+    Synthetic lab issue from scenario otel-demo-single-pod-restart-cart-minor.
+    One cart pod cycled; other replicas absorbed traffic; no user impact.
+    Noise class.
+fault:
+  fault_id: single-pod-restart-001
+  fault_type: pod_restart
+  affected_service: cart
+  expected_start_offset_seconds: 300
+  expected_duration_seconds: 120
+  blast_radius: {user_visible: false, expected_error_rate: low, expected_latency_impact: low}
+labels:
+  severity: minor
+  incident_type: noise
+  root_cause_category: pod_restart
+  should_alert: false
+  should_create_jira_shadow_issue: false
+execution:
+  action: RestartPods
+  namespace: otel-demo-research
+  selector: app.kubernetes.io/name=cart
+triage:
+  schema_version: 1
+  scenario_family: single-pod-restart-healthy-replication
+  per_window:
+    pre_fault_baseline: {triage_label: noise, is_hard_case: false, rationale: "Baseline."}
+    active_fault: {triage_label: noise, is_hard_case: true, rationale: "One pod restart; healthy replication absorbs."}
+    recovery_window: {triage_label: noise, is_hard_case: false, rationale: "Recovered."}

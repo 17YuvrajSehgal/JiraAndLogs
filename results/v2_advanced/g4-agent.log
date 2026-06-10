@@ -1,0 +1,57 @@
+[17:13:01] [INFO ] [v2_advanced.phase_a.run_v2] step=patch_split start  manifest=triage-split-manifest-v2-resplit.json
+[17:13:01] [INFO ] [v2_advanced.phase_a.window_split] loaded v2 manifest  windows=6720 seed=42
+[17:13:01] [INFO ] [v2_advanced.phase_a.run_v2] patched iter_split  rebound_in_modules=1
+[17:13:01] [INFO ] [v2_advanced.phase_a.run_v2] step=patch_split done  elapsed_s=0.0000
+[17:13:04] [INFO ] [v2_advanced.phase_a.run_v2] running v2 comparison  pipelines=['diagnosis_agent'] n_bootstrap=1000
+[17:13:04] [INFO ] [v2_advanced.phase_a.run_v2] step=run_comparison start  pipelines=1
+[2026-06-05T21:13:04.347136+00:00] notes: comparison: pipelines=['diagnosis_agent']
+[2026-06-05T21:13:04.347203+00:00] training_run open: diagnosis_agent__20260605T211304Z__1481d9fd
+[2026-06-05T21:13:04.360674+00:00] fit + predict starting for diagnosis_agent
+[17:13:04] [INFO ] [v2_advanced.phase_e.pipeline] step=load_cached_hybrid start  path=data/derived/global/2026-05-25-dataset-v5-large-global/comparison/v2c-hybrid-llm/per-window-predictions.jsonl
+[17:13:04] [INFO ] [v2_advanced.phase_e.pipeline] hybrid pool loaded from cache  n_windows=1008 path=data/derived/global/2026-05-25-dataset-v5-large-global/comparison/v2c-hybrid-llm/per-window-predictions.jsonl
+[17:13:04] [INFO ] [v2_advanced.phase_e.pipeline] step=load_cached_hybrid done  elapsed_s=0.0100
+[17:13:04] [INFO ] [v2_advanced.phase_e.pipeline] step=load_extractions start
+[17:13:04] [INFO ] [v2_advanced.phase_e.pipeline] using extractions  path=data\derived\global\2026-05-25-dataset-v5-large-global\v2_kg_extractions\all_extractions.jsonl
+[17:13:04] [INFO ] [v2_advanced.phase_e.pipeline] extractions  n=347
+[17:13:04] [INFO ] [v2_advanced.phase_e.pipeline] step=load_extractions done  elapsed_s=0.0000
+[17:13:06] [INFO ] [v2_advanced.phase_e.pipeline] using LLM agent  url=http://localhost:1234
+[17:13:06] [INFO ] [v2_advanced.phase_e.pipeline] test windows  n=1008
+[17:13:06] [INFO ] [v2_advanced.phase_e.pipeline] filtered to window-ID list  requested=658 matched=658 before=1008
+[17:13:06] [INFO ] [v2_advanced.phase_e.pipeline] step=agent_run start  n=658
+[17:22:46] [WARNING] [v2_advanced.phase_e.agent] stage3 verify failed  window=2026-05-25-dataset-v5-large-compact-a-r04-loadgenerator-noisy-high-traffic-nearmiss-20260525T161756Z-active_fault-productcatalogservice err=could not parse JSON from LM Studio response: '{\n  "ranked": [\n    {\n      "ticket_id": "shadow-2026-05-25-dataset-v5
+[17:27:18] [INFO ] [v2_advanced.phase_e.pipeline] agent progress  done=25 total=658 novel_so_far=10
+[17:40:36] [INFO ] [v2_advanced.phase_e.pipeline] agent progress  done=50 total=658 novel_so_far=14
+[17:58:06] [INFO ] [v2_advanced.phase_e.pipeline] agent progress  done=75 total=658 novel_so_far=19
+[18:13:27] [INFO ] [v2_advanced.phase_e.pipeline] agent progress  done=100 total=658 novel_so_far=25
+[18:24:44] [INFO ] [v2_advanced.phase_e.pipeline] agent progress  done=125 total=658 novel_so_far=35
+[18:37:14] [INFO ] [v2_advanced.phase_e.pipeline] agent progress  done=150 total=658 novel_so_far=42
+[18:50:47] [INFO ] [v2_advanced.phase_e.pipeline] agent progress  done=175 total=658 novel_so_far=44
+[19:05:11] [INFO ] [v2_advanced.phase_e.pipeline] agent progress  done=200 total=658 novel_so_far=47
+[19:19:03] [INFO ] [v2_advanced.phase_e.pipeline] agent progress  done=225 total=658 novel_so_far=49
+[19:31:49] [INFO ] [v2_advanced.phase_e.pipeline] agent progress  done=250 total=658 novel_so_far=56
+[19:45:12] [INFO ] [v2_advanced.phase_e.pipeline] agent progress  done=275 total=658 novel_so_far=59
+[19:59:03] [INFO ] [v2_advanced.phase_e.pipeline] agent progress  done=300 total=658 novel_so_far=63
+[20:12:02] [INFO ] [v2_advanced.phase_e.pipeline] agent progress  done=325 total=658 novel_so_far=70
+[20:24:38] [INFO ] [v2_advanced.phase_e.pipeline] agent progress  done=350 total=658 novel_so_far=78
+[20:37:31] [INFO ] [v2_advanced.phase_e.pipeline] agent progress  done=375 total=658 novel_so_far=83
+[20:50:24] [INFO ] [v2_advanced.phase_e.pipeline] agent progress  done=400 total=658 novel_so_far=90
+[21:03:17] [INFO ] [v2_advanced.phase_e.pipeline] agent progress  done=425 total=658 novel_so_far=99
+[21:16:56] [INFO ] [v2_advanced.phase_e.pipeline] agent progress  done=450 total=658 novel_so_far=102
+[21:30:37] [INFO ] [v2_advanced.phase_e.pipeline] agent progress  done=475 total=658 novel_so_far=107
+[21:45:39] [INFO ] [v2_advanced.phase_e.pipeline] agent progress  done=500 total=658 novel_so_far=111
+[21:59:01] [INFO ] [v2_advanced.phase_e.pipeline] agent progress  done=525 total=658 novel_so_far=117
+[22:13:20] [INFO ] [v2_advanced.phase_e.pipeline] agent progress  done=550 total=658 novel_so_far=122
+[22:27:08] [INFO ] [v2_advanced.phase_e.pipeline] agent progress  done=575 total=658 novel_so_far=127
+[22:41:03] [INFO ] [v2_advanced.phase_e.pipeline] agent progress  done=600 total=658 novel_so_far=131
+[22:55:32] [INFO ] [v2_advanced.phase_e.pipeline] agent progress  done=625 total=658 novel_so_far=134
+[23:09:30] [INFO ] [v2_advanced.phase_e.pipeline] agent progress  done=650 total=658 novel_so_far=142
+[23:14:06] [INFO ] [v2_advanced.phase_e.pipeline] step=agent_run done  elapsed_s=21659.50
+[2026-06-06T03:14:07.682774+00:00] fit + predict done: fit=21662.0s predict=0.0s n_predictions=658
+[2026-06-06T03:14:07.886289+00:00] training_run close: diagnosis_agent__20260605T211304Z__1481d9fd
+[23:14:10] [INFO ] [v2_advanced.phase_a.run_v2] step=run_comparison done  elapsed_s=21665.86
+[23:14:10] [INFO ] [v2_advanced.phase_a.run_v2] v2 comparison done  output_dir=data\derived\global\2026-05-25-dataset-v5-large-global\comparison\v2g-final-models\g4-agent-phase3 pipelines=1 report_kb=102.10
+[comparison] running pipeline: diagnosis_agent
+[comparison] computing stratified metrics (strict)
+[comparison] computing stratified metrics (inclusive)
+[comparison] paired bootstrap (1000 resamples) per metric
+[comparison] depth-stratified bootstrap CIs (1000 resamples)

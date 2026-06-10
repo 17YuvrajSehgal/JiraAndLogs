@@ -1,0 +1,40 @@
+schema_version: 1
+scenario_id: otel-demo-frontend-restart-minor
+title: Frontend rolling restart — brief 5xx during pod replacement
+dataset_run_id: otel-demo-placeholder-run
+traffic_profile_id: otel-demo-baseline-checkout-mix
+environment: research-otel-demo
+jira_candidate: false
+expected_jira:
+  issue_type: Task
+  priority: Minor
+  components: [frontend]
+  labels: [synthetic-incident, pod-restart, frontend, telemetry-linked]
+  summary_template: "Brief frontend error spike during pod restart"
+  description_template: |
+    Synthetic lab issue from scenario otel-demo-frontend-restart-minor.
+    Pod-replacement transient 5xx for ~30-60s. Auto-recovered.
+fault:
+  fault_id: frontend-restart-001
+  fault_type: pod_restart
+  affected_service: frontend
+  expected_start_offset_seconds: 300
+  expected_duration_seconds: 180
+  blast_radius: {user_visible: true, expected_error_rate: low, expected_latency_impact: low}
+labels:
+  severity: minor
+  incident_type: degradation
+  root_cause_category: pod_restart
+  should_alert: false
+  should_create_jira_shadow_issue: false
+execution:
+  action: RestartPods
+  namespace: otel-demo-research
+  selector: app.kubernetes.io/name=frontend
+triage:
+  schema_version: 1
+  scenario_family: frontend-restart
+  per_window:
+    pre_fault_baseline: {triage_label: noise, is_hard_case: false, rationale: "Baseline."}
+    active_fault: {triage_label: borderline, triage_severity: minor, triage_components: [frontend], triage_reason_class: pod_restart, is_hard_case: true, rationale: "Brief restart; transient errors."}
+    recovery_window: {triage_label: noise, is_hard_case: false, rationale: "Recovered."}

@@ -1,0 +1,187 @@
+# OpenTelemetry Demo helm chart values override
+#
+# Purpose:
+#   1. Pin all application images to the locked version (2.2.0).
+#   2. DISABLE the chart's bundled observability backends (jaeger, prometheus,
+#      grafana, opensearch). We use our existing stack in the `observability/`
+#      namespace.
+#   3. Override the bundled OTel Collector config so it exports OTLP to our
+#      existing collector (which fans out to our Loki/Tempo/Prometheus).
+#   4. Keep all 18 application components + kafka + flagd + load-generator
+#      enabled.
+#
+# Chart: open-telemetry/opentelemetry-demo (see helm-version.txt for pinned version)
+# Reference: https://github.com/open-telemetry/opentelemetry-helm-charts/blob/main/charts/opentelemetry-demo/values.yaml
+#
+# VERIFY at first deploy: key paths below match the chart version pinned in
+# helm-version.txt. If `helm install` errors on an unknown key, run
+#   helm show values open-telemetry/opentelemetry-demo --version <VER>
+# and adjust the matching paths in this file.
+
+# -----------------------------------------------------------------------------
+# Default settings applied to all components
+# -----------------------------------------------------------------------------
+default:
+  image:
+    repository: ghcr.io/open-telemetry/demo
+    tag: "2.2.0"
+    pullPolicy: IfNotPresent
+
+  # No envOverrides. The chart's per-component templates already set
+  # OTEL_EXPORTER_OTLP_ENDPOINT (pointing at the in-namespace collector)
+  # and OTEL_RESOURCE_ATTRIBUTES. Adding our own here produces duplicate-
+  # key errors (`failed to create typed patch object: duplicate entries
+  # for key [name="OTEL_EXPORTER_OTLP_ENDPOINT"]`).
+  #
+  # Telemetry routing chain:
+  #   app pod  -->  otel-demo-otelcol (in-namespace, chart default)
+  #              -->  opentelemetrycollector.observability:4317 (our stack)
+  # The second hop is configured via the otlp/research exporter in
+  # opentelemetry-collector.config below.
+
+# -----------------------------------------------------------------------------
+# Bundled observability backends — DISABLED. We use our existing stack.
+# -----------------------------------------------------------------------------
+jaeger:
+  enabled: false
+
+prometheus:
+  enabled: false
+
+grafana:
+  enabled: false
+
+opensearch:
+  enabled: false
+
+# -----------------------------------------------------------------------------
+# OpenTelemetry Collector — ENABLED but with our custom config that exports
+# OTLP to the cluster's observability stack instead of the chart's bundled
+# backends.
+# -----------------------------------------------------------------------------
+opentelemetry-collector:
+  enabled: true
+  mode: deployment
+
+  # Our custom collector config. Receives OTLP from the demo apps, forwards
+  # to our existing OTel Collector in the `observability/` namespace via OTLP.
+  # See deploy/otel-demo/otel-collector-config.yaml for the full config; this
+  # block is injected by helm-install.ps1 via --set-file at install time.
+  config:
+    receivers:
+      otlp:
+        protocols:
+          grpc:
+            endpoint: 0.0.0.0:4317
+          http:
+            endpoint: 0.0.0.0:4318
+    processors:
+      batch:
+        send_batch_size: 1024
+        timeout: 5s
+      memory_limiter:
+        check_interval: 5s
+        limit_percentage: 80
+        spike_limit_percentage: 25
+      resource:
+        attributes:
+          - key: app.id
+            value: otel-demo
+            action: upsert
+    exporters:
+      # Forward EVERYTHING to our observability-namespace collector.
+      otlp/research:
+        endpoint: opentelemetrycollector.observability.svc.cluster.local:4317
+        tls:
+          insecure: true
+    service:
+      pipelines:
+        traces:
+          receivers: [otlp]
+          processors: [memory_limiter, resource, batch]
+          exporters: [otlp/research]
+        metrics:
+          receivers: [otlp]
+          processors: [memory_limiter, resource, batch]
+          exporters: [otlp/research]
+        logs:
+          receivers: [otlp]
+          processors: [memory_limiter, resource, batch]
+          exporters: [otlp/research]
+
+# -----------------------------------------------------------------------------
+# Component toggles — all 18 application services + dependencies enabled
+# -----------------------------------------------------------------------------
+components:
+  # Frontend stack
+  frontend:
+    enabled: true
+  frontend-proxy:
+    enabled: true
+  load-generator:
+    enabled: true
+
+  # Core e-commerce services
+  ad:
+    enabled: true
+    # JVM (Java) + OTel javaagent OOMs at the upstream default 300Mi limit.
+    # Host has ample RAM on the GCP collection VM; raise to 600Mi.
+    resources:
+      limits:
+        memory: 600Mi
+  cart:
+    enabled: true
+  checkout:
+    enabled: true
+  currency:
+    enabled: true
+  email:
+    enabled: true
+  payment:
+    enabled: true
+  product-catalog:
+    enabled: true
+  product-reviews:
+    enabled: true
+  quote:
+    enabled: true
+  recommendation:
+    enabled: true
+  shipping:
+    enabled: true
+
+  # LLM service (NEW vs OB) — gives us 2 bonus fault scenarios
+  llm:
+    enabled: true
+
+  # Image provider
+  image-provider:
+    enabled: true
+
+  # Kafka downstream consumers (the async-bridge headline architectural-distance evidence)
+  accounting:
+    enabled: true
+  fraud-detection:
+    enabled: true
+    # JVM (Kotlin) + OTel javaagent OOMs at the upstream default 300Mi limit.
+    resources:
+      limits:
+        memory: 600Mi
+
+  # Infrastructure
+  kafka:
+    enabled: true
+  flagd:
+    enabled: true
+    # Disable the flagd-ui sidecar — it OOMs at 250Mi on local kind, and
+    # we don't need it: our Invoke-FlagdFlip.ps1 patches the flagd
+    # ConfigMap directly. The UI is purely cosmetic.
+    sidecarContainers: []
+
+  # Storage
+  valkey-cart:
+    enabled: true
+
+  # Postgres for accounting + product-reviews
+  postgresql:
+    enabled: true

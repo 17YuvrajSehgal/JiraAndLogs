@@ -1,0 +1,48 @@
+schema_version: 1
+scenario_id: otel-demo-kafka-consumer-crash-major
+title: Kafka consumer crash — fraud-detection scaled to 0 (downstream silent)
+dataset_run_id: otel-demo-placeholder-run
+traffic_profile_id: otel-demo-baseline-checkout-mix
+environment: research-otel-demo
+jira_candidate: true
+expected_jira:
+  issue_type: Incident
+  priority: Major
+  components: [fraud-detection, kafka]
+  labels: [synthetic-incident, kafka, consumer-crash, async-bridge, telemetry-linked]
+  summary_template: "Fraud-detection consumer crashed — orders not being scored"
+  description_template: |
+    Synthetic lab issue from scenario otel-demo-kafka-consumer-crash-major.
+    fraud-detection scaled to 0; kafka broker healthy; orders continue
+    flowing into the topic but consumer lag grows unbounded; no
+    user-facing errors (checkout's producer.send still succeeds).
+
+    NEW FAILURE FAMILY: does not exist in OB v5-large. Tests detection
+    via the "silent consumer" signal.
+fault:
+  fault_id: kafka-consumer-crash-001
+  fault_type: consumer_unavailable
+  affected_service: fraud-detection
+  expected_start_offset_seconds: 300
+  expected_duration_seconds: 600
+  blast_radius: {user_visible: false, expected_error_rate: low, expected_latency_impact: low}
+labels:
+  severity: major
+  incident_type: outage
+  root_cause_category: consumer_unavailable
+  should_alert: true
+  should_create_jira_shadow_issue: true
+execution:
+  action: ScaleDeployment
+  namespace: otel-demo-research
+  target_kind: deployment
+  target_name: fraud-detection
+  replicas: 0
+  restore_replicas: 1
+triage:
+  schema_version: 1
+  scenario_family: kafka-consumer-crash
+  per_window:
+    pre_fault_baseline: {triage_label: noise, is_hard_case: false, rationale: "Pre-fault; consumer healthy."}
+    active_fault: {triage_label: ticket_worthy, triage_severity: major, triage_components: [fraud-detection, kafka], triage_reason_class: consumer_unavailable, is_hard_case: true, rationale: "Silent consumer; only signal is missing trace spans on fraud-detection."}
+    recovery_window: {triage_label: borderline, triage_severity: minor, triage_components: [fraud-detection], triage_reason_class: consumer_unavailable, is_hard_case: true, rationale: "Lag catches up over time."}

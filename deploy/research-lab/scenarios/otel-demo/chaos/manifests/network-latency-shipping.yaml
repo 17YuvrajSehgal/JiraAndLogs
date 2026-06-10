@@ -1,0 +1,26 @@
+# chaos-mesh NetworkChaos — latency injection on shipping-service.
+#
+# This is the NETWORK component of the L4 compound scenario
+# compound-saturation-network-latency (adServiceHighCpu flagd resource fault +
+# this network-latency fault, per docs5/00 §5.5.2). Applied/deleted by the
+# multi-fault orchestrator's ChaosMeshChaos component handler, not run-scenario.
+# CR in `chaos-mesh` ns; OTel Demo label key; 900s ceiling (orchestrator deletes
+# after the active-fault window).
+apiVersion: chaos-mesh.org/v1alpha1
+kind: NetworkChaos
+metadata:
+  name: otel-demo-network-latency-shipping
+  namespace: chaos-mesh
+spec:
+  action: delay
+  mode: all
+  selector:
+    namespaces:
+      - otel-demo-research
+    labelSelectors:
+      app.kubernetes.io/name: shipping
+  delay:
+    latency: "400ms"
+    correlation: "0"
+    jitter: "100ms"
+  duration: "900s"

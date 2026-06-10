@@ -1,0 +1,42 @@
+schema_version: 1
+scenario_id: otel-demo-ad-gc-pressure-minor
+title: Ad service JVM GC pressure (flagd adManualGc)
+dataset_run_id: otel-demo-placeholder-run
+traffic_profile_id: otel-demo-baseline-checkout-mix
+environment: research-otel-demo
+jira_candidate: true
+expected_jira:
+  issue_type: Incident
+  priority: Minor
+  components: [ad]
+  labels: [synthetic-incident, gc-pressure, ad, java, telemetry-linked]
+  summary_template: "Ad service GC pause spikes — latency tail elevated"
+  description_template: |
+    Synthetic lab issue from scenario otel-demo-ad-gc-pressure-minor.
+    flagd adManualGc=on; ad service triggers full GCs periodically; latency
+    p99 elevated, p50 stable.
+fault:
+  fault_id: ad-gc-001
+  fault_type: gc_pressure
+  affected_service: ad
+  expected_start_offset_seconds: 300
+  expected_duration_seconds: 600
+  blast_radius: {user_visible: false, expected_error_rate: low, expected_latency_impact: medium}
+labels:
+  severity: minor
+  incident_type: degradation
+  root_cause_category: gc_pressure
+  should_alert: false
+  should_create_jira_shadow_issue: true
+execution:
+  action: Flagd
+  namespace: otel-demo-research
+  flagd_flag: adManualGc
+  flagd_variant: "on"
+triage:
+  schema_version: 1
+  scenario_family: resource-saturation
+  per_window:
+    pre_fault_baseline: {triage_label: noise, is_hard_case: false, rationale: "Pre-fault; ad GC normal."}
+    active_fault: {triage_label: borderline, triage_severity: minor, triage_components: [ad], triage_reason_class: gc_pressure, is_hard_case: true, rationale: "GC pauses; latency tail elevated."}
+    recovery_window: {triage_label: noise, is_hard_case: false, rationale: "Flag off; GC normal."}

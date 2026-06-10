@@ -1,0 +1,42 @@
+schema_version: 1
+scenario_id: otel-demo-recommendation-cache-failure-minor
+title: Recommendation cache failure (flagd) — slow rec responses
+dataset_run_id: otel-demo-placeholder-run
+traffic_profile_id: otel-demo-baseline-checkout-mix
+environment: research-otel-demo
+jira_candidate: true
+expected_jira:
+  issue_type: Incident
+  priority: Minor
+  components: [recommendation]
+  labels: [synthetic-incident, cache-failure, recommendation, telemetry-linked]
+  summary_template: "Recommendation service cache misses — slow rec serves"
+  description_template: |
+    Synthetic lab issue from scenario otel-demo-recommendation-cache-failure-minor.
+    flagd recommendationCacheFailure=on; cache layer fails; reads fall through
+    to slow path. p95 latency on rec endpoint elevated.
+fault:
+  fault_id: rec-cache-001
+  fault_type: cache_failure
+  affected_service: recommendation
+  expected_start_offset_seconds: 300
+  expected_duration_seconds: 600
+  blast_radius: {user_visible: false, expected_error_rate: low, expected_latency_impact: medium}
+labels:
+  severity: minor
+  incident_type: degradation
+  root_cause_category: cache_failure
+  should_alert: false
+  should_create_jira_shadow_issue: true
+execution:
+  action: Flagd
+  namespace: otel-demo-research
+  flagd_flag: recommendationCacheFailure
+  flagd_variant: "on"
+triage:
+  schema_version: 1
+  scenario_family: recommendation-outage
+  per_window:
+    pre_fault_baseline: {triage_label: noise, is_hard_case: false, rationale: "Pre-fault; cache healthy."}
+    active_fault: {triage_label: borderline, triage_severity: minor, triage_components: [recommendation], triage_reason_class: cache_failure, is_hard_case: true, rationale: "Slow rec serves; minor UX impact."}
+    recovery_window: {triage_label: noise, is_hard_case: false, rationale: "Flag off; cache repopulating."}

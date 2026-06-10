@@ -1,0 +1,23 @@
+% Section 2 — Background and motivation
+% Page budget: ~0.75 pages
+%
+% Two subsections:
+%   2.1 Operational telemetry and Jira as institutional memory
+%   2.2 Why a controlled lab is required
+
+\section{Background and Motivation}
+\label{sec:background}
+
+\subsection{Operational telemetry and Jira as institutional memory}
+\label{sec:background:telemetry}
+
+A production microservice cluster emits four kinds of evidence on every request: \emph{structured logs} from each service's request-handling and error paths, \emph{distributed traces} that record the per-span timing and error attributes of every dependency call, \emph{numeric metrics} that report request rates, error rates, and latency percentiles per service per second, and \emph{Kubernetes events} that capture pod lifecycle and infrastructure-level state changes. Together this telemetry is the substrate on which automated detection has matured: histogram baselines, learned classifiers on numeric features, and statistical alert rules answer the question \emph{``is something wrong?''} reliably enough that detection is no longer the binding constraint on incident-response time. What remains binding is diagnosis: given the telemetry visible \emph{now}, which past incident does this one resemble, and what was the resolution?
+
+The institutional memory of past incidents is held in Jira~\cite{jira}. Each ticket records, in free text, the symptoms that prompted the page, the engineer's diagnosis, the underlying root cause, and the eventual fix. In a mature organization this corpus accumulates over years and represents the team's accreted understanding of how its system fails. The corpus is, however, almost never indexed against telemetry: tickets are searched manually by an engineer who recalls---or guesses at---the right vocabulary, and the result is tens of minutes of keyword search per page, much of it dead ends. A retrieval system that lifts the right past ticket from telemetry alone is therefore worth measuring, and is the operational target of this work.
+
+\subsection{Why a controlled lab is required}
+\label{sec:background:lab}
+
+Direct evaluation of telemetry-to-ticket retrieval is blocked by a data gap. The widely-used public log datasets---HDFS~\cite{hdfs-dataset}, BlueGene/L~\cite{bgl-dataset}, and Thunderbird~\cite{thunderbird-dataset}---contain rich log streams but no ticket-side ground truth: there is no record of which past incident any given anomaly window corresponds to. Conversely, the largest public Jira corpus, TAWOS~\cite{tawos}, contains 458{,}232 real issues from 39 open-source projects but no co-collected telemetry. Real production telemetry from cooperating organizations is rarely shareable for legal and competitive reasons, is almost never reproducible by external reviewers, and is hard to share at the level of granularity (logs \emph{and} traces \emph{and} metrics, all timestamped at sub-second resolution and joined to ticket IDs) that this evaluation requires.
+
+We therefore construct a controlled lab in which telemetry and Jira are generated jointly under known scenario labels. The lab forks a public microservice benchmark, instruments it with production-realistic OpenTelemetry SDKs across all services, defines a taxonomy of incident scenario families, and executes the taxonomy by automated fault injection while a separate process emits Jira-style tickets describing each incident in engineer voice. The full design is described in \S\ref{sec:approach:dataset}; what matters here is that the joint corpus is reproducible by any external reviewer with access to a Kubernetes cluster, and is generated under a strict no-label-leakage discipline so that the telemetry channel cannot reveal the scenario taxonomy to a model that should be learning it from the joint distribution. The use of a controlled lab is what makes paired evaluation possible at all; the discipline is what makes the evaluation describe the production task rather than a fictional easier surrogate.

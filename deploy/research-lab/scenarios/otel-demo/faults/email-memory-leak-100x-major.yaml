@@ -1,0 +1,42 @@
+schema_version: 1
+scenario_id: otel-demo-email-memory-leak-100x-major
+title: Email service memory leak (100x intensity)
+dataset_run_id: otel-demo-placeholder-run
+traffic_profile_id: otel-demo-baseline-checkout-mix
+environment: research-otel-demo
+jira_candidate: true
+expected_jira:
+  issue_type: Incident
+  priority: Major
+  components: [email]
+  labels: [synthetic-incident, resource-leak, email, telemetry-linked, intensity-medium]
+  summary_template: "Email service memory leak — pod RSS climbing"
+  description_template: |
+    Synthetic lab issue from scenario otel-demo-email-memory-leak-100x-major.
+    flagd emailMemoryLeak=100x; email pod's RSS grows steadily; eventually
+    OOMKilled if active window long enough.
+fault:
+  fault_id: email-memleak-100x-001
+  fault_type: resource_leak
+  affected_service: email
+  expected_start_offset_seconds: 300
+  expected_duration_seconds: 600
+  blast_radius: {user_visible: false, expected_error_rate: low, expected_latency_impact: low}
+labels:
+  severity: major
+  incident_type: degradation
+  root_cause_category: resource_leak
+  should_alert: true
+  should_create_jira_shadow_issue: true
+execution:
+  action: Flagd
+  namespace: otel-demo-research
+  flagd_flag: emailMemoryLeak
+  flagd_variant: "100x"
+triage:
+  schema_version: 1
+  scenario_family: slow-leak-saturation
+  per_window:
+    pre_fault_baseline: {triage_label: noise, is_hard_case: false, rationale: "Pre-fault; email memory stable."}
+    active_fault: {triage_label: ticket_worthy, triage_severity: major, triage_components: [email], triage_reason_class: resource_leak, is_hard_case: true, rationale: "Memory growth detectable but no immediate user impact."}
+    recovery_window: {triage_label: borderline, triage_severity: minor, triage_components: [email], triage_reason_class: resource_leak, is_hard_case: true, rationale: "Pod may restart to clear leak."}

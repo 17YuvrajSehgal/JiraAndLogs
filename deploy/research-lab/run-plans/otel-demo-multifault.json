@@ -1,0 +1,17 @@
+{
+  "_comment": "OTel Demo multi-fault run plan — L2 concurrent (5) + L3 cascade (4). L4 compound deferred (chaos-mesh required).",
+  "plan_id": "otel-demo-multifault",
+  "namespace": "otel-demo-research",
+  "schema_version": 1,
+  "scenarios": [
+    {"scenario_file": "deploy/research-lab/scenarios/otel-demo/multifault/concurrent-payment-cart-redis.yaml", "active_duration_seconds": 600},
+    {"scenario_file": "deploy/research-lab/scenarios/otel-demo/multifault/concurrent-currency-shipping.yaml", "active_duration_seconds": 600},
+    {"scenario_file": "deploy/research-lab/scenarios/otel-demo/multifault/concurrent-ad-recommendation.yaml", "active_duration_seconds": 600},
+    {"scenario_file": "deploy/research-lab/scenarios/otel-demo/multifault/concurrent-productcatalog-latency-flapping-pod.yaml", "active_duration_seconds": 600},
+    {"scenario_file": "deploy/research-lab/scenarios/otel-demo/multifault/concurrent-kafka-lag-payment-outage.yaml", "active_duration_seconds": 600},
+    {"scenario_file": "deploy/research-lab/scenarios/otel-demo/multifault/cascade-kafka-broker-checkout.yaml", "active_duration_seconds": 600},
+    {"scenario_file": "deploy/research-lab/scenarios/otel-demo/multifault/cascade-productcatalog-latency-recommendation-timeout.yaml", "active_duration_seconds": 600},
+    {"scenario_file": "deploy/research-lab/scenarios/otel-demo/multifault/cascade-valkey-cart-checkout.yaml", "active_duration_seconds": 600},
+    {"scenario_file": "deploy/research-lab/scenarios/otel-demo/multifault/cascade-currency-frontend-errors.yaml", "active_duration_seconds": 600}
+  ]
+}

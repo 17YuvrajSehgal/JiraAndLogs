@@ -1,0 +1,81 @@
+schema_version: 1
+scenario_id: otel-demo-cart-redis-degradation-critical
+title: Cart cache (valkey) outage causes checkout failures
+dataset_run_id: otel-demo-placeholder-run
+traffic_profile_id: otel-demo-baseline-checkout-mix
+environment: research-otel-demo
+jira_candidate: true
+expected_jira:
+  issue_type: Incident
+  priority: Critical
+  components:
+    - cart
+    - valkey-cart
+    - checkout
+  labels:
+    - synthetic-incident
+    - dependency-failure
+    - cart
+    - cache
+    - telemetry-linked
+  summary_template: "Cart dependency degradation caused checkout failures"
+  description_template: |
+    Synthetic lab issue generated from scenario otel-demo-cart-redis-degradation-critical.
+
+    valkey-cart (cart's Redis-compatible cache) was scaled to zero replicas
+    during checkout traffic. Cart writes and reads fail; users see add-to-cart
+    not persisting; downstream checkout returns errors.
+fault:
+  fault_id: cart-redis-001
+  fault_type: dependency_failure
+  affected_service: valkey-cart
+  suggested_mechanism: scale valkey-cart deployment to 0 replicas
+  expected_start_offset_seconds: 300
+  expected_duration_seconds: 600
+  blast_radius:
+    user_visible: true
+    expected_error_rate: high
+    expected_latency_impact: medium
+labels:
+  severity: critical
+  incident_type: outage
+  root_cause_category: dependency_failure
+  should_alert: true
+  should_create_jira_shadow_issue: true
+execution:
+  action: ScaleDeployment
+  namespace: otel-demo-research
+  target_kind: deployment
+  target_name: valkey-cart
+  replicas: 0
+  restore_replicas: 1
+triage:
+  schema_version: 1
+  scenario_family: cart-redis
+  per_window:
+    pre_fault_baseline:
+      triage_label: noise
+      triage_severity: null
+      triage_components: null
+      triage_reason_class: null
+      is_hard_case: false
+      rationale: "Pre-fault baseline; valkey-cart still healthy."
+    active_fault:
+      triage_label: ticket_worthy
+      triage_severity: critical
+      triage_components:
+        - cart
+        - valkey-cart
+        - checkout
+      triage_reason_class: dependency_failure
+      is_hard_case: false
+      rationale: "Customer-visible checkout failures during cart cache outage."
+    recovery_window:
+      triage_label: borderline
+      triage_severity: minor
+      triage_components:
+        - cart
+        - valkey-cart
+      triage_reason_class: dependency_failure
+      is_hard_case: true
+      rationale: "Recovery may show residual cart errors before retries clear."

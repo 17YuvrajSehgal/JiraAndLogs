@@ -1,0 +1,42 @@
+schema_version: 1
+scenario_id: otel-demo-productcatalog-targeted-failure-minor
+title: Product catalog targeted product failure (flagd) — one SKU broken
+dataset_run_id: otel-demo-placeholder-run
+traffic_profile_id: otel-demo-baseline-checkout-mix
+environment: research-otel-demo
+jira_candidate: true
+expected_jira:
+  issue_type: Incident
+  priority: Minor
+  components: [product-catalog]
+  labels: [synthetic-incident, targeted-failure, product-catalog, single-product, telemetry-linked]
+  summary_template: "Product OLJCESPC7Z returning errors"
+  description_template: |
+    Synthetic lab issue from scenario otel-demo-productcatalog-targeted-failure-minor.
+    flagd productCatalogFailure=on; requests for a specific product ID
+    (OLJCESPC7Z) fail; others work. Difficult to spot in aggregate metrics.
+fault:
+  fault_id: pcat-targeted-001
+  fault_type: targeted_failure
+  affected_service: product-catalog
+  expected_start_offset_seconds: 300
+  expected_duration_seconds: 600
+  blast_radius: {user_visible: true, expected_error_rate: low, expected_latency_impact: low}
+labels:
+  severity: minor
+  incident_type: degradation
+  root_cause_category: targeted_failure
+  should_alert: false
+  should_create_jira_shadow_issue: true
+execution:
+  action: Flagd
+  namespace: otel-demo-research
+  flagd_flag: productCatalogFailure
+  flagd_variant: "on"
+triage:
+  schema_version: 1
+  scenario_family: productcatalog-outage
+  per_window:
+    pre_fault_baseline: {triage_label: noise, is_hard_case: false, rationale: "Pre-fault; all products serve."}
+    active_fault: {triage_label: borderline, triage_severity: minor, triage_components: [product-catalog], triage_reason_class: targeted_failure, is_hard_case: true, rationale: "Single-product failure; hidden in aggregate."}
+    recovery_window: {triage_label: noise, is_hard_case: false, rationale: "Flag off."}

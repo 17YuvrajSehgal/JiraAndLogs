@@ -1,0 +1,8 @@
+{
+  "_comment": "L3 cascade: valkey-cart outage PRIMARY -> cart failures + checkout failures SECONDARY (emergent through cart's redis client and checkout's cart RPC).",
+  "cascade_emergence_window_seconds": 30,
+  "fault_components": [
+    {"action": "ScaleDeployment", "target_name": "valkey-cart", "replicas": 0, "restore_replicas": 1, "is_primary_cause": true, "cascade_depth": 0, "service_role": "cache"},
+    {"action": "observation_only", "expected_target": "checkout", "expected_signal": "cart.GetCart errors propagate through checkout.PlaceOrder; trace shows error span originating at cart -> valkey at depth 3, propagating up to checkout span at depth 1", "is_primary_cause": false, "cascade_depth": 2, "service_role": "order-placement"}
+  ]
+}

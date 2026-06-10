@@ -316,8 +316,29 @@ If the user proposes work in these areas, the response is: "that's out of scope 
 
 ---
 
+## 17. Cross-app validation (added 2026-06-08)
+
+**Scope addition:** Cross-app evaluation on the OpenTelemetry Demo (Astronomy Shop) is in scope as a single external-validity test, per the strategy plan in `docs5/00-otel-demo-cross-app-plan.md` and the file-level implementation specification in `docs5/01-otel-demo-implementation-plan.md`.
+
+**What this changes:**
+- §5 (system) — unchanged; the locked TCH cascade is dataset-agnostic.
+- §7 (datasets) — adds a second locked corpus on the OTel Demo (~9,300 windows across 47 scenarios, 100+ runs). The OB v5-large corpus remains frozen and primary.
+- §8 (panel) — unchanged; the same locked pipelines run on the second dataset.
+- §9 (metrics) — unchanged for L1 single-fault windows. Additionally reports `AllGold@K` and `PrimaryGold@K` for multi-fault L2 (concurrent), L3 (cascade), and L4 (compound) scenarios. Metric definitions in `docs5/00 §5.5.4`.
+- §13 (paper outline) — adds §6.5 "Cross-app generalization" between current §6 and §7. The new section reports zero-shot transfer (locked cascade, no retraining) and L1-retrained columns, plus the graded-difficulty (L1–L4) table.
+- §14 (non-claims) — IoT / ThingsBoard generalization remains out of scope; this addition is a single new app within the same broad domain (microservice e-commerce) with architectural-distance evidence from Kafka async, longer trace depth, and the LLM service.
+
+**What is NOT changing:** the headline claim (§3), the three sub-claims, the locked OB cascade artifacts (`comparison/v2g-final-models/final/`), or the locked OB dataset.
+
+**Exit criterion:** the cross-app section (§6.5) reports Hit@1 / Hit@5 / MRR / PR-AUC / novel-precision / novel-recall on the OTel Demo test split under both zero-shot and L1-retrained settings, with 95% bootstrap CIs, per-stratum breakdowns, and the graded-difficulty (L1–L4) table from `docs5/00 §5.5`. If zero-shot Hit@5 collapses below 0.5 or L1-retrained Hit@5 misses the OB locked number by more than 20% rel, the result is reported honestly and the cross-app framing is reduced rather than removed (same negative-finding discipline as the rest of the project).
+
+**Hard isolation contract:** see `docs5/01 §1`. Five rules (R1–R5) prevent any modification or override of the locked OB v5-large dataset, cascade artifacts, or pipeline scripts. New files live under new paths (`data/derived/global/2026-XX-XX-otel-demo-v1-global/`, `deploy/otel-demo/`, `deploy/research-lab/scenarios/otel-demo/`, `scripts/research-lab/otel-demo/`, `src/v2_advanced/tch/otel_demo/`). Existing scripts are parameterized additively only, with regression diffs proving OB behavior is bit-identical. Locked TCH artifacts are read-only. All work happens on branch `otel-demo-cross-app` cut from `master-final-models`.
+
+---
+
 ## Change log
 
 | Date | Change | Rationale |
 |---|---|---|
 | 2026-06-01 | Charter created and locked | Pivot from "memory improves anomaly detection" (refuted) to "memory adds retrieval that scales with deployment history" (supported by depth stratification). |
+| 2026-06-08 | §17 added: cross-app validation on OTel Demo | External-validity addition per `docs5/00` + `docs5/01`. Non-destructive: OB primary claim, dataset, and cascade unchanged. Adds a second locked corpus and a graded-difficulty (L1–L4) result axis. |

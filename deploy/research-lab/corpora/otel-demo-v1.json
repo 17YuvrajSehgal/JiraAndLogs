@@ -1,0 +1,65 @@
+{
+  "_comment": "OTel Demo cross-app corpus manifest. Tracks the run plans that compose the full ~135-run collection per docs5/00 §5.5.5. Updated 2026-06-09 (GCP VM): authored + smoke-validated the 5 deferred chaos-mesh scenarios (4 network + 1 L4 compound) now that chaos-mesh 2.8.2 is confirmed working; full 49-scenario set is live.",
+  "corpus_id": "otel-demo-v1",
+  "display_name": "OpenTelemetry Demo cross-app dataset, v1",
+  "app_id": "otel-demo",
+  "namespace": "otel-demo-research",
+  "service_catalog": "deploy/research-lab/service-catalogs/otel-demo.yaml",
+  "schema_version": 1,
+  "scenario_inventory": {
+    "baseline": 1,
+    "L1_transferred": 27,
+    "L1_kafka": 5,
+    "L1_llm_bonus": 2,
+    "L2_concurrent": 5,
+    "L3_cascade": 4,
+    "L4_compound": 1,
+    "L1_network_chaos_mesh": 4,
+    "total_authored": 49,
+    "deferred_network_chaos_mesh": 0,
+    "deferred_l4_chaos_mesh": 0,
+    "planned_total_if_chaos_mesh_available": 49
+  },
+  "default_dataset_run_prefix": "otel-demo-v1",
+  "_plans_comment": "Schema required by collect-dataset-corpus.ps1: each entry needs plan_alias / plan_file / repeat. `repeat` = how many times the WHOLE plan (all its scenarios) executes. Scenario-execs = scenarios_in_plan * repeat. Repeats chosen for docs5/00 §5.5.5 per-scenario coverage (~3 per L1 scenario, 4 per multifault, 8 baseline). Totals: ~21 dataset-runs, ~173 scenario executions. The pilot plan is intentionally NOT in this list (it is a go/no-go subset whose scenarios are already covered here).",
+  "plans": [
+    {
+      "plan_alias": "baseline",
+      "plan_file": "deploy/research-lab/run-plans/otel-demo-baseline.json",
+      "repeat": 8,
+      "purpose": "Baselines (no-fault windows) for the negative class. 1 scenario x 8 = 8 execs."
+    },
+    {
+      "plan_alias": "l1-compact",
+      "plan_file": "deploy/research-lab/run-plans/otel-demo-l1-compact.json",
+      "repeat": 3,
+      "purpose": "L1 single-fault — 33 scenarios x 3 = 99 execs (~docs5/00 L1 target ~95)."
+    },
+    {
+      "plan_alias": "kafka",
+      "plan_file": "deploy/research-lab/run-plans/otel-demo-kafka.json",
+      "repeat": 3,
+      "purpose": "5 NEW Kafka families x 3 = 15 execs — architectural-distance evidence (no OB analogues)."
+    },
+    {
+      "plan_alias": "multifault",
+      "plan_file": "deploy/research-lab/run-plans/otel-demo-multifault.json",
+      "repeat": 4,
+      "purpose": "L2 concurrent (5) + L3 cascade (4) = 9 scenarios x 4 = 36 execs — graded difficulty per docs5/00 §5.5."
+    },
+    {
+      "plan_alias": "network",
+      "plan_file": "deploy/research-lab/run-plans/otel-demo-network.json",
+      "repeat": 3,
+      "purpose": "4 network families + L4 compound = 5 scenarios x 3 = 15 execs (chaos-mesh-dependent; authored 2026-06-09)."
+    }
+  ],
+  "pilot_plan": {
+    "plan_id": "otel-demo-pilot",
+    "plan_file": "deploy/research-lab/run-plans/otel-demo-pilot.json",
+    "purpose": "Phase 2 / GCP go/no-go subset (11 scenarios). Run via collect-dataset-plan.ps1, NOT part of the full-corpus `plans` list above.",
+    "status": "VALIDATED_GCP_2026-06-09"
+  },
+  "deferred_until_chaos_mesh": [],
+  "notes": "Phase 2 local pilot validated on 2026-06-08 (94/94 triage_feature_* columns). GCP pilot otel-demo-gcp-pilot-001 validated 2026-06-09 (94/94 columns, L3 cascade observable, flagd+replicas restored). 2026-06-09: chaos-mesh 2.8.2 confirmed working on the GCP VM, so the 5 previously-deferred chaos scenarios were authored, smoke-validated (ChaosMeshChaos apply/restore + L4 compound mixed-primitive orchestration), and added via the otel-demo-network plan — full 49-scenario set is now live. Total target ~78 runs."
+}

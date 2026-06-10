@@ -1,0 +1,31 @@
+% Section 9 — Related work
+% Page budget: ~0.75 pages
+% Five paragraphs, one per category.
+
+\section{Related Work}
+\label{sec:related}
+
+\subsection{Log anomaly detection}
+\label{sec:related:logs}
+
+Log anomaly detection has been studied extensively on the HDFS, BlueGene/L, and Thunderbird benchmarks, with representative approaches ranging from log-template mining (Drain~\cite{drain}), through sequence-LSTM detectors (DeepLog~\cite{deeplog}), to template-attention transformers (LogAnomaly~\cite{loganomaly}, MetaLog~\cite{metalog}). The target of this line of work is detection: given a log sequence, is the sequence anomalous? Our target is one step further along the incident-response timeline: given that a window has been detected as anomalous, which past Jira ticket describes a recurring incident with the same root cause? The two tasks share the input modality (logs, plus other telemetry channels in our case) but differ in their output and in the ground truth they require. None of the log-only benchmarks above carries a ticket-side ground truth, which is what motivates the joint corpus we construct.
+
+\subsection{AIOps and incident triage}
+\label{sec:related:aiops}
+
+Production AIOps work has produced incident-clustering and routing systems at Microsoft, Google, and Meta scale~\cite{aiops-survey,incident-routing,incident-clustering}, typically operating on the \emph{ticket} side of the problem: tickets are clustered by surface text, root cause, or affected service, and a routing policy decides which on-call queue receives the page. Two distinctions are worth marking. First, those systems consume tickets as their only input and produce a queue-routing decision; our system consumes telemetry as its primary input and produces a ranked list of past tickets together with a novelty flag. Second, those systems are evaluated on production logs from cooperating organizations and so are typically not externally reproducible; our evaluation runs entirely on a synthetic-but-labeled corpus that any reviewer can regenerate from a Kubernetes cluster and a forked microservice benchmark. The cascade we describe is best read as a public, reproducible analogue of the production AIOps stack rather than a competing alternative to it.
+
+\subsection{Retrieval-augmented generation and dense retrieval}
+\label{sec:related:rag}
+
+Dense retrieval~\cite{sentencetransformers,dpr,colbert}, cross-encoder reranking~\cite{ms-marco-reranker,monobert}, sparse-plus-dense hybrids~\cite{splade}, and retrieval-augmented generation~\cite{rag-lewis,atlas} together form the modern toolbox for semantic information retrieval. Our cascade reuses elements of this toolbox (a fine-tuned bi-encoder, a learned-sparse retriever, Reciprocal Rank Fusion) but differs from a canonical retrieval-augmented system in two ways. First, the language model in our cascade runs only inside one of the seven pipelines, and its runtime contribution to the cascade is restricted to a single Boolean flag (the novelty signal); the cascade's runtime is otherwise classical (logistic regression plus rank fusion plus dictionary lookups), which is what makes the per-window inference cost a sixteen-microsecond constant after the per-pipeline predictions are cached. Second, the retrieval target is past Jira tickets, not free-text generation: the cascade does not produce a synthesized explanation; it produces a ranked list of past tickets that an engineer can then consult, plus a novelty flag for the windows where no past ticket plausibly matches.
+
+\subsection{Knowledge graphs from operational text}
+\label{sec:related:kg}
+
+A growing line of work constructs knowledge graphs from operational text (incident reports, postmortems, runbooks) using either rule-based extractors or language-model schema-following~\cite{kg-from-text,llm-kg-extraction,incident-kg}. The contribution in these papers is typically the construction methodology or the downstream-application story for the constructed graph. In our cascade the knowledge graph is one of seven pipelines and is consumed in two distinct roles: as a structural retriever in its own right, and as the underlying entity-overlap signal for one of the two hybrid fusion variants. The cascade's value depends on the graph's structural-overlap signal being \emph{complementary} to the dense and sparse retrievers' text-similarity signals, not on the graph being the single best retriever; the construction-quality concerns that dominate the knowledge-graph-from-text line of work are therefore secondary in our setting, and a coarser hand-rule extractor can be substituted for the language-model extractor at a small overall cost (\S\ref{sec:approach:panel}).
+
+\subsection{Microservice benchmarks and observability suites}
+\label{sec:related:benchmarks}
+
+Public microservice benchmarks vary along three relevant axes: service count and language diversity, communication paradigm (synchronous-RPC versus asynchronous-messaging), and instrumentation depth. Online Boutique~\cite{onlineboutique} is the standard ten-service polyglot RPC benchmark and provides the source-application substrate for our dataset. Train-Ticket~\cite{trainticket} adds forty-plus services and is the largest pure-RPC benchmark, but lacks native OpenTelemetry instrumentation. Sock Shop~\cite{sockshop} and DeathStarBench~\cite{deathstarbench} have been used to study end-to-end performance and tracing rather than incident retrieval. The OpenTelemetry Demo~\cite{otel-demo} is the CNCF-maintained reference implementation of native OpenTelemetry instrumentation across fifteen-plus services in twelve-plus languages, with a Kafka-based asynchronous-messaging path and a language-model-backed service that introduce architectural axes the source-application substrate does not carry; this is the structural reason we use it as the cross-application target. The OpenTelemetry SDK and its collector~\cite{otel-spec} are the instrumentation standard our dataset assumes throughout, and chaos-mesh~\cite{chaosmesh} is the fault-injection tool we use for the network-level fault primitives.

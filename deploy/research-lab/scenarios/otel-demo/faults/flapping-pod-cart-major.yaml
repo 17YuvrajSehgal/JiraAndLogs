@@ -1,0 +1,42 @@
+schema_version: 1
+scenario_id: otel-demo-flapping-pod-cart-major
+title: Cart pod flapping — repeated restarts within window
+dataset_run_id: otel-demo-placeholder-run
+traffic_profile_id: otel-demo-baseline-checkout-mix
+environment: research-otel-demo
+jira_candidate: true
+expected_jira:
+  issue_type: Incident
+  priority: Major
+  components: [cart]
+  labels: [synthetic-incident, flapping-pod, cart, telemetry-linked]
+  summary_template: "Cart pod flapping — multiple restarts in 10 minutes"
+  description_template: |
+    Synthetic lab issue from scenario otel-demo-flapping-pod-cart-major.
+    Cart pods restarted 3+ times within the active window. Each restart is
+    brief; aggregate effect is repeated transient errors with periodic
+    recovery — distinct from a sustained outage.
+fault:
+  fault_id: flapping-pod-001
+  fault_type: pod_restart
+  affected_service: cart
+  expected_start_offset_seconds: 300
+  expected_duration_seconds: 600
+  blast_radius: {user_visible: true, expected_error_rate: medium, expected_latency_impact: low}
+labels:
+  severity: major
+  incident_type: degradation
+  root_cause_category: pod_restart
+  should_alert: true
+  should_create_jira_shadow_issue: true
+execution:
+  action: RestartPods
+  namespace: otel-demo-research
+  selector: app.kubernetes.io/name=cart
+triage:
+  schema_version: 1
+  scenario_family: flapping-pod
+  per_window:
+    pre_fault_baseline: {triage_label: noise, is_hard_case: false, rationale: "Pre-fault; cart stable."}
+    active_fault: {triage_label: ticket_worthy, triage_severity: major, triage_components: [cart], triage_reason_class: pod_restart, is_hard_case: false, rationale: "Repeated restarts; pattern suggests bad rollout."}
+    recovery_window: {triage_label: borderline, triage_severity: minor, triage_components: [cart], triage_reason_class: pod_restart, is_hard_case: true, rationale: "Recovery; pods stable."}

@@ -1,0 +1,42 @@
+schema_version: 1
+scenario_id: otel-demo-payment-failure-50pct-major
+title: Payment charges fail 50% via flagd — intermittent customer impact
+dataset_run_id: otel-demo-placeholder-run
+traffic_profile_id: otel-demo-baseline-checkout-mix
+environment: research-otel-demo
+jira_candidate: true
+expected_jira:
+  issue_type: Incident
+  priority: Major
+  components: [payment, checkout]
+  labels: [synthetic-incident, application-fault, payment, partial-failure, intensity-medium, telemetry-linked]
+  summary_template: "Payment charging intermittently failing — ~50% rate"
+  description_template: |
+    Synthetic lab issue from scenario otel-demo-payment-failure-50pct-major.
+    flagd paymentFailure=50%; about half of charge requests fail. Customers
+    see "try again" prompts; retry usually succeeds. Revenue-degrading.
+fault:
+  fault_id: payment-fail-50pct-001
+  fault_type: application_fault
+  affected_service: payment
+  expected_start_offset_seconds: 300
+  expected_duration_seconds: 600
+  blast_radius: {user_visible: true, expected_error_rate: medium, expected_latency_impact: low}
+labels:
+  severity: major
+  incident_type: degradation
+  root_cause_category: application_fault
+  should_alert: true
+  should_create_jira_shadow_issue: true
+execution:
+  action: Flagd
+  namespace: otel-demo-research
+  flagd_flag: paymentFailure
+  flagd_variant: "50%"
+triage:
+  schema_version: 1
+  scenario_family: payment-outage
+  per_window:
+    pre_fault_baseline: {triage_label: noise, is_hard_case: false, rationale: "Pre-fault; payment healthy."}
+    active_fault: {triage_label: ticket_worthy, triage_severity: major, triage_components: [payment, checkout], triage_reason_class: application_fault, is_hard_case: true, rationale: "Intermittent payment failures; 50% rate."}
+    recovery_window: {triage_label: borderline, triage_severity: minor, triage_components: [payment], triage_reason_class: application_fault, is_hard_case: true, rationale: "Flag off; residual errors decay."}

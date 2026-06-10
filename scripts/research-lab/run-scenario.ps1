@@ -6,7 +6,7 @@ param(
     [Parameter(Mandatory = $true)]
     [string]$ScenarioFile,
 
-    [ValidateSet("Auto", "RecordOnly", "SetEnv", "RestartPods", "ScaleDeployment", "ChaosMeshChaos")]
+    [ValidateSet("Auto", "RecordOnly", "SetEnv", "RestartPods", "ScaleDeployment", "ChaosMeshChaos", "Flagd", "MultiFault")]
     [string]$Action = "Auto",
 
     [int]$DurationSeconds = 0,
@@ -304,6 +304,105 @@ function Invoke-ScenarioAction {
         return $restore
     }
 
+    if ($SelectedAction -eq "MultiFault") {
+        # OTel Demo multi-fault orchestration (docs5/01 Phase 1c).
+        # Delegates entirely to scripts/research-lab/otel-demo/Invoke-MultiFaultOrchestration.ps1
+        # which owns the inject/wait/restore sequence for L2/L3/L4 scenarios.
+        $compType = $Scenario.execution_composition_type
+        if (-not $compType) {
+            throw "MultiFault action requires execution.composition_type (concurrent | cascade | compound_primitive)."
+        }
+        $componentsFile = $Scenario.execution_components_file
+        if (-not $componentsFile) {
+            throw "MultiFault action requires execution.components_file (path to sidecar JSON)."
+        }
+        if (-not [System.IO.Path]::IsPathRooted($componentsFile)) {
+            $componentsFile = Join-ResearchLabPath @((Get-ResearchLabRepoRoot), $componentsFile)
+        }
+        if (-not (Test-Path -LiteralPath $componentsFile)) {
+            throw "MultiFault components file not found: $componentsFile"
+        }
+
+        $orchestrator = Join-Path $PSScriptRoot (Join-Path "otel-demo" "Invoke-MultiFaultOrchestration.ps1")
+        if (-not (Test-Path -LiteralPath $orchestrator)) {
+            throw "Invoke-MultiFaultOrchestration.ps1 not found at $orchestrator"
+        }
+
+        $orchestratorArgs = @(
+            "-ComponentsFile", $componentsFile,
+            "-CompositionType", $compType,
+            "-DurationSeconds", $ActiveDurationSeconds,
+            "-Namespace", $TargetNamespace
+        )
+        if ($Scenario.execution_cascade_emergence_window_seconds) {
+            $orchestratorArgs += "-CascadeEmergenceWindowSeconds"
+            $orchestratorArgs += [int]$Scenario.execution_cascade_emergence_window_seconds
+        }
+        if ($DoNotRestore) {
+            $orchestratorArgs += "-SkipRestore"
+        }
+
+        Write-Host "MultiFault dispatch -> $orchestrator"
+        $orchResult = & pwsh -NoProfile -ExecutionPolicy Bypass -File $orchestrator @orchestratorArgs
+        $restore.composition_type = $compType
+        $restore.components_file = $componentsFile
+        $restore.orchestrator_result = $orchResult
+        return $restore
+    }
+
+    if ($SelectedAction -eq "Flagd") {
+        # OTel Demo-specific primitive (introduced 2026-06-08, docs5/01 Phase 1b).
+        # Delegates to scripts/research-lab/otel-demo/Invoke-FlagdFlip.ps1
+        # which patches the flagd ConfigMap, sleeps DurationSeconds, then
+        # restores the original variant. Active-fault window timing is owned
+        # by the helper (the inject/sleep/restore sequence) so we do NOT
+        # Start-Sleep here.
+        $flagName = $Scenario.execution_flagd_flag
+        if (-not $flagName) {
+            $flagName = $Scenario.flagd_flag
+        }
+        if (-not $flagName) {
+            throw "Flagd action requires execution.flagd_flag (flag name)."
+        }
+        $variant = $Scenario.execution_flagd_variant
+        if (-not $variant) {
+            $variant = "on"
+        }
+        $cmName = $Scenario.execution_flagd_configmap_name
+        if (-not $cmName) {
+            $cmName = "flagd-config"
+        }
+        $cmKey = $Scenario.execution_flagd_configmap_key
+        if (-not $cmKey) {
+            $cmKey = "demo.flagd.json"
+        }
+
+        $flipScript = Join-Path $PSScriptRoot (Join-Path "otel-demo" "Invoke-FlagdFlip.ps1")
+        if (-not (Test-Path -LiteralPath $flipScript)) {
+            throw "Invoke-FlagdFlip.ps1 not found at $flipScript"
+        }
+
+        Write-Host "Flagd action: flag='$flagName' variant='$variant' ns='$TargetNamespace' configmap='$cmName/$cmKey'"
+        $flipArgs = @(
+            "-FlagName", $flagName,
+            "-Variant", $variant,
+            "-DurationSeconds", $ActiveDurationSeconds,
+            "-Namespace", $TargetNamespace,
+            "-ConfigMapName", $cmName,
+            "-ConfigMapKey", $cmKey
+        )
+        if ($DoNotRestore) {
+            $flipArgs += "-SkipRestore"
+        }
+
+        $flipResult = & pwsh -NoProfile -ExecutionPolicy Bypass -File $flipScript @flipArgs
+        $restore.flagd_flag = $flagName
+        $restore.flagd_variant_applied = $variant
+        $restore.flagd_configmap = "$cmName/$cmKey"
+        $restore.flagd_result = $flipResult
+        return $restore
+    }
+
     throw "Unsupported action: $SelectedAction"
 }
 
@@ -554,9 +653,14 @@ $summaryLine = "- $($episode.start_time) scenario=$($scenario.scenario_id) episo
 Add-Content -LiteralPath (Join-ResearchLabPath @($runRoot, "summaries", "run-summary.md")) -Value $summaryLine -Encoding UTF8
 
 if (-not $NoTelemetryExport) {
+    # Pass the scenario's namespace through. Default in export-telemetry-window.ps1
+    # is `online-boutique-research`, which matches OB scenarios; this pass-through
+    # is required for OTel Demo (otel-demo-research) and any future cross-app
+    # collections.
     & $powerShell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $PSScriptRoot "export-telemetry-window.ps1") `
         -DatasetRunId $DatasetRunId `
-        -IncidentEpisodeId $episodeId
+        -IncidentEpisodeId $episodeId `
+        -WorkloadNamespace $Namespace
     if ($LASTEXITCODE -ne 0) {
         throw "Telemetry export failed for episode $episodeId."
     }

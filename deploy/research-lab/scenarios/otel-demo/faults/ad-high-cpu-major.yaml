@@ -1,0 +1,73 @@
+schema_version: 1
+scenario_id: otel-demo-ad-high-cpu-major
+title: Ad service CPU saturation via flagd — page latency degrades
+dataset_run_id: otel-demo-placeholder-run
+traffic_profile_id: otel-demo-baseline-checkout-mix
+environment: research-otel-demo
+jira_candidate: true
+expected_jira:
+  issue_type: Incident
+  priority: Major
+  components:
+    - ad
+    - frontend
+  labels:
+    - synthetic-incident
+    - resource-saturation
+    - ad
+    - performance
+    - telemetry-linked
+  summary_template: "Ad service CPU saturated — frontend rendering slow"
+  description_template: |
+    Synthetic lab issue generated from scenario otel-demo-ad-high-cpu-major.
+
+    The ad service experienced sustained high CPU utilization (simulated
+    via flagd adHighCpu flag). Frontend ad slots load slowly or render
+    fallback content. Backend latency on the /api/data endpoint
+    elevates above baseline.
+fault:
+  fault_id: ad-high-cpu-001
+  fault_type: resource_saturation
+  affected_service: ad
+  suggested_mechanism: flagd adHighCpu -> on
+  expected_start_offset_seconds: 300
+  expected_duration_seconds: 600
+  blast_radius:
+    user_visible: true
+    expected_error_rate: medium
+    expected_latency_impact: high
+labels:
+  severity: major
+  incident_type: degradation
+  root_cause_category: resource_saturation
+  should_alert: true
+  should_create_jira_shadow_issue: true
+execution:
+  action: Flagd
+  namespace: otel-demo-research
+  flagd_flag: adHighCpu
+  flagd_variant: "on"
+triage:
+  schema_version: 1
+  scenario_family: resource-saturation
+  per_window:
+    pre_fault_baseline:
+      triage_label: noise
+      is_hard_case: false
+      rationale: "Pre-fault baseline; ad CPU normal."
+    active_fault:
+      triage_label: ticket_worthy
+      triage_severity: major
+      triage_components:
+        - ad
+      triage_reason_class: resource_saturation
+      is_hard_case: false
+      rationale: "Sustained CPU saturation; degraded user experience."
+    recovery_window:
+      triage_label: borderline
+      triage_severity: minor
+      triage_components:
+        - ad
+      triage_reason_class: resource_saturation
+      is_hard_case: true
+      rationale: "Recovery: flag off, CPU normalizes within window."
