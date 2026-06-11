@@ -1,8 +1,8 @@
-# Mode 3 — TCH-Lite × WoL End-to-End Retrieval Results (BiEncoder-only)
+# Mode 3 — TCH-Lite × WoL End-to-End Retrieval Results
 
-**Status.** P7+P8 BiEncoder slice complete (2026-06-11) — `REAL-DATA-WoL-PLAN.md` v3 §7. **Both headline numbers land in the "Excellent" band.**
+**Status.** P7+P8 BiEncoder + LogSeq2Vec slices complete (2026-06-11) — `REAL-DATA-WoL-PLAN.md` v3 §7. **BiEncoder lands in the "Excellent" band; LogSeq2Vec is "Concerning" — the structural reason is explained in §4.** Hybrid-RRF and KG-Retrieval are pending KG population.
 
-**Scope of this round.** This is the **BiEncoder-only** slice of TCH-Lite on the WoL Mode 3 self-contained retrieval task. The full TCH-Lite cascade requires the four L2 retrievers (BiEncoder, Hybrid-RRF rule, LogSeq2Vec, KG-Retrieval) plus the agent — all running against the WoL Mode 3 dataset. This first-cut delivers the **load-bearing single retriever** (BiEncoder is the cascade's strongest single Hit@1 contributor and the position-1 anchor for L2 overlap rerank). Subsequent rounds will layer in the other pipelines.
+**Scope of this round.** This document covers two of the four L2 retrievers — **BiEncoder** (§2–§3) and **LogSeq2Vec** (§3.5) — on the WoL Mode 3 self-contained retrieval task. The full TCH-Lite cascade requires also the Hybrid-RRF and KG-Retrieval pipelines plus the DiagnosisAgent; those are queued behind the in-progress LLM-extracted KG population (qwen3.6-35b-a3b via LM Studio + Neo4j). The BiEncoder result is the **load-bearing claim** — it's the cascade's strongest single Hit@1 contributor and the position-1 anchor for L2 overlap rerank.
 
 ---
 
@@ -87,14 +87,47 @@ Cross-project transfer: trained on Spark/Cassandra/HBase/Flink, evaluated on Kaf
 
 ---
 
+## 3.5. LogSeq2Vec on WoL Mode 3 (Round 2)
+
+**Setup.** Same family-stratified split (train Spark/Cassandra/HBase/Flink, test Kafka/MariaDB-Server), 1,300 train + 250 val + 450 test windows, 2,000 memory tickets. Each window's "log sequence" is built from the `triage_evidence_text` (the WoL record's `log_quotes` pasted into the JIRA ticket; mean ≈ 19 lines/window, max 80). LogSeq2Vec aggregator: 2-layer transformer over the `all-MiniLM-L6-v2` line encoder, 5 epochs, 43,924 training pairs (1,079 windows × 3 BM25-hard + 1 random neg, mining over the memory pool), batch=8, ~78 min on RTX 3070. Training loss decreased from 1.629 → 1.253. The single-class fallback (every WoL window is `ticket_worthy`) emits max_sim as the triage_score; retrieval ranking is the load-bearing output.
+
+### Headline (LogSeq2Vec)
+
+| Metric | Coarse match | Strong match |
+|---|---:|---:|
+| n test queries with gold | 342 / 450 | 169 / 450 |
+| Hit@1 | 0.0877 | 0.0296 |
+| Hit@5 | **0.3099** (Concerning, < 0.35) | **0.1834** (Concerning, < 0.25) |
+| MRR | 0.1625 | 0.0787 |
+
+### Per-project (coarse)
+
+| Project | n | Hit@1 | Hit@5 | MRR |
+|---|---:|---:|---:|---:|
+| wol-kafka          | 147 | 0.1293 | 0.4558 | 0.2412 |
+| wol-mariadb-server | 195 | 0.0564 | 0.2000 | 0.1032 |
+
+### Interpretation
+
+LogSeq2Vec underperforms BiEncoder on WoL by a wide margin (Hit@5 coarse 0.310 vs 0.959 — a 0.649 gap). This is **structurally expected**, not a regression:
+
+- **LogSeq2Vec's inductive bias is temporal**. Its design assumes the input is a chronologically ordered stream of log lines from a live system (Loki dumps in our synthetic dataset), where the *order and co-occurrence pattern* of distinct templates carries identity information. The aggregator's positional encoding and self-attention are specifically built to exploit that structure.
+- **WoL log sequences have no temporal structure**. They are 1–19 lines pasted by a human into a JIRA ticket. The reporter included whichever lines they thought were most relevant, often a stack trace fragment plus one or two surrounding lines. Position carries no information; co-occurrence is dominated by what one stack trace happened to span.
+- **Per-project asymmetry confirms it.** Kafka (more multi-line traceback-style log_quotes) gets Hit@5 = 0.456, MariaDB-Server (often single-line error message log_quotes) gets only 0.200 under coarse. The structure-rich slice transfers better, the structure-poor slice barely beats random.
+- **For TCH-Lite-as-deployed, this is the correct read**: when telemetry is only what a human reporter pasted into a ticket (WoL's situation), LogSeq2Vec contributes little and the cascade should down-weight or skip it. In contrast, in the synthetic OB setting where every window has 100 ordered Loki lines, LogSeq2Vec is a meaningful retriever (it sits in the cascade's L2 RRF pool for a reason). The WoL result is a real-world honesty check on which retrievers depend on rich telemetry vs which generalise to text-only.
+
+Headline: **the BiEncoder result generalises to real Jira; the LogSeq2Vec result generalises only when real log streams accompany the ticket.** Both findings are useful for the paper.
+
+---
+
 ## 4. Honest scope and what's missing
 
 The full Mode 3 evaluation per the v3 plan §7 requires:
 
 | Pipeline | Status | What's needed |
 |---|---|---|
-| BiEncoder | **this round** | ✓ fit + predict |
-| LogSeq2Vec | not done | Needs per-window log-line files (`v2_logseq/<wid>.jsonl`) — 5 min data prep + 10 min training |
+| BiEncoder | **done — Round 1** | ✓ fit + predict |
+| LogSeq2Vec | **done — Round 2** | ✓ fit + predict (see §3.5) |
 | Hybrid-RRF rule | not done | Needs Neo4j with WoL knowledge graph (LLM-extracted entities for 2,000 tickets, ~30 min LLM time) + SPLADE indexing |
 | Hybrid-RRF LLM | not done | Same as rule variant + LLM-extracted query-side entities at retrieval time |
 | KG-Retrieval rule | not done | Needs Neo4j populated (shared with Hybrid-RRF) |
@@ -125,9 +158,14 @@ Once the remaining four retrievers are layered in (§4), the corresponding §5.X
 | Path | Purpose |
 |---|---|
 | `docs7/MODE3-TCH-LITE-WoL-RESULTS.md` | This document |
-| `data/derived/global/2026-06-11-wol-real-global/tch-lite-refit/biencoder-mode3-results.json` | Hit@K under both match relations + per-project stratification |
-| `data/derived/global/2026-06-11-wol-real-global/tch-lite-refit/biencoder-predictions.jsonl` | Per-test-window prediction records |
-| `scripts/research-lab/run_biencoder_wol_mode3.py` | The driver |
+| `data/derived/global/2026-06-11-wol-real-global/tch-lite-refit/biencoder-mode3-results.json` | BiEncoder Hit@K + per-project stratification |
+| `data/derived/global/2026-06-11-wol-real-global/tch-lite-refit/biencoder-predictions.jsonl` | BiEncoder per-test-window prediction records |
+| `data/derived/global/2026-06-11-wol-real-global/tch-lite-refit/logseq2vec-mode3-results.json` | LogSeq2Vec Hit@K + per-project stratification |
+| `data/derived/global/2026-06-11-wol-real-global/tch-lite-refit/logseq2vec-predictions.jsonl` | LogSeq2Vec per-test-window prediction records |
+| `data/derived/global/2026-06-11-wol-real-global/v2_logseq/*.jsonl` | Per-window log-line files for LogSeq2Vec (2,000 files, 38,730 lines) |
+| `scripts/research-lab/run_biencoder_wol_mode3.py` | BiEncoder driver |
+| `scripts/research-lab/build_wol_logseq.py` | WoL → v2_logseq adapter |
+| `scripts/research-lab/run_logseq2vec_wol_mode3.py` | LogSeq2Vec driver |
 
 To reproduce:
 

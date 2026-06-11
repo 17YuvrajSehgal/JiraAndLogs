@@ -230,10 +230,22 @@ class LogSeq2VecRetrievalPipeline(PipelineRunner):
         y_train = np.asarray(
             [1 if w.triage_label == "ticket_worthy" else 0 for w in train_w], dtype=np.int64,
         )
-        clf = LogisticRegression(
-            class_weight="balanced", max_iter=2000, solver="lbfgs",
-        ).fit(train_feats, y_train)
-        if val_w:
+        # Single-class fallback: when every training window is ticket_worthy
+        # (e.g. WoL Mode 3, where every WoL JIRA ticket is by construction
+        # ticket-worthy), sklearn LogisticRegression cannot fit. Skip the
+        # head and emit max_sim as triage_score — retrieval ranking is the
+        # load-bearing output anyway.
+        if len(set(y_train.tolist())) < 2:
+            import sys
+            print(f"[{self.name}] y_train is single-class; skipping logistic "
+                  f"triage head, emitting max_sim as triage_score.",
+                  file=sys.stderr, flush=True)
+            clf = None
+        else:
+            clf = LogisticRegression(
+                class_weight="balanced", max_iter=2000, solver="lbfgs",
+            ).fit(train_feats, y_train)
+        if val_w and clf is not None:
             val_labels = [1 if w.triage_label == "ticket_worthy" else 0 for w in val_w]
             val_scores = [float(p[1]) for p in clf.predict_proba(val_feats)]
             _p, _r, threshold = precision_at_fpr(val_scores, val_labels, target_fpr)
@@ -244,7 +256,11 @@ class LogSeq2VecRetrievalPipeline(PipelineRunner):
 
         # 7) Predict
         t_predict_start = time.time()
-        test_scores = [float(p[1]) for p in clf.predict_proba(test_feats)]
+        if clf is not None:
+            test_scores = [float(p[1]) for p in clf.predict_proba(test_feats)]
+        else:
+            # Fall back to max_sim (column 0 of the feature vector).
+            test_scores = [float(f[0]) for f in test_feats]
         predict_seconds = time.time() - t_predict_start
 
         predictions = []
