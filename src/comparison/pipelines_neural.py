@@ -61,8 +61,7 @@ class BiEncoderHybridPipeline(PipelineRunner):
 
     Production-realism:
       The WINDOW header line is stripped before encoding — that's where
-      lab-only `scenario_id` / `window_id` substring leakage lives. See
-      src/experiments/bi_encoder.py for the original ablation.
+      lab-only `scenario_id` / `window_id` substring leakage lives.
     """
 
     name = "bi_encoder_hybrid"
