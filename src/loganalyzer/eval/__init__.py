@@ -1,4 +1,4 @@
-"""Evaluation metrics + runner for the triage + retrieval product."""
+"""Evaluation metrics for the triage + retrieval product."""
 
 from .metrics import (
     pr_auc,
@@ -12,7 +12,6 @@ from .retrieval_metrics import (
     mean_reciprocal_rank,
     novelty_f1,
 )
-from .runner import run_full_evaluation, EvaluationReport
 
 __all__ = [
     "pr_auc",
@@ -23,6 +22,4 @@ __all__ = [
     "recall_at_k",
     "mean_reciprocal_rank",
     "novelty_f1",
-    "run_full_evaluation",
-    "EvaluationReport",
 ]
