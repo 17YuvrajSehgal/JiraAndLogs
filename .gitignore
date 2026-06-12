@@ -24,8 +24,9 @@ __pycache__/
 # Local downloaded CLI tools
 .tools/
 
-# Generated research datasets
-data/
+# Generated research datasets — track only the layout README; ignore everything else
+data/*
+!data/README.md
 
 # Distribution / packaging
 build/
@@ -53,5 +54,3 @@ microservices-demo-google/
 # OTel Demo fork — vendored as reference only, never edited (per docs5/01 Rule R2).
 # We deploy via published images + the official helm chart; this directory is read-only ref.
 opentelemetry-demo/
-# Phase G — neural training artifacts (large, regenerable)
-/data-otel-demo/

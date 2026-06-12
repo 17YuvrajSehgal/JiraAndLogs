@@ -99,8 +99,8 @@ These have *some* evidence but not enough to be a defensible paper claim. Each n
 
 ### RQ-B1. Does the system trained on synthetic OB transfer zero-shot to a different microservices application of the same kind (OTel Demo)?
 
-- **What we have:** OTel Demo dataset on disk at `data-otel-demo/` — 1,643 windows × 147 memory tickets × full telemetry (logs, traces, metrics, k8s) across 8 scenario classes including Kafka, network partition, payment outage, cart-redis degradation, cascading-Kafka-checkout. **No pipelines have been run on it yet.**
-- **What's needed:** (a) Move into `data/derived/global/`. (b) Generate a proper family-stratified train/val/test split (currently all in train). (c) Run the synthetic-OB-trained pipelines unmodified against the OTel Demo windows, measure zero-shot Hit@K. (d) Optionally retrain only the L1 triage stacker on the OTel Demo train split (the "L1-retrained" claim).
+- **What we have:** OTel Demo dataset on disk under `data/` — derived global at `data/derived/global/2026-06-09-otel-demo-v1-global/` (1,643 windows × 147 memory tickets), raw runs at `data/otel-demo-runs/` (22 runs, full telemetry: logs, traces, metrics, k8s), across 8 scenario classes including Kafka, network partition, payment outage, cart-redis degradation, cascading-Kafka-checkout. **No pipelines have been run on it yet.**
+- **What's needed:** (a) Generate a proper family-stratified train/val/test split (currently all in train). (b) Run the synthetic-OB-trained pipelines unmodified against the OTel Demo windows, measure zero-shot Hit@K. (c) Optionally retrain only the L1 triage stacker on the OTel Demo train split (the "L1-retrained" claim).
 - **Estimated cost:** ~4–8 hours of compute (one BiEncoder fine-tune on OTel Demo train, plus inference). KG extraction on the 147 OTel Demo tickets would add ~30 min more.
 - **Status:** Highest-ROI follow-up. Strongest possible external-validity claim — *"system trained on app A works on app B, same modality."*
 
