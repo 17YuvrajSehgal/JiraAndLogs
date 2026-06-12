@@ -30,11 +30,11 @@ import time
 from pathlib import Path
 from typing import Any
 
-from loganalyzer.data.loaders import load_dataset
-from loganalyzer.data.schema import TriageWindow
-from loganalyzer.data.splits import iter_split
-from loganalyzer.eval.metrics import precision_at_fpr
-from loganalyzer.memory.corpus import MemoryCorpus
+from core.data.loaders import load_dataset
+from core.data.schema import TriageWindow
+from core.data.splits import iter_split
+from core.eval.metrics import precision_at_fpr
+from core.memory.corpus import MemoryCorpus
 
 from comparison.pipelines import PipelineRunner
 from comparison.schema import PipelinePrediction, PipelineResult

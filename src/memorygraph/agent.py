@@ -26,7 +26,7 @@ import time
 from dataclasses import dataclass, field
 from typing import Any
 
-from loganalyzer.data.schema import JiraMemoryIssue, TriageWindow
+from core.data.schema import JiraMemoryIssue, TriageWindow
 
 from .graph import MemoryGraph
 from .skills import (

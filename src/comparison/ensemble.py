@@ -186,7 +186,7 @@ def pick_ensemble_threshold(
     """Pick an operating threshold on the validation predictions if provided,
     otherwise fall back to 0.5 (mean-blend default).
     """
-    from loganalyzer.eval.metrics import precision_at_fpr  # local import
+    from core.eval.metrics import precision_at_fpr  # local import
 
     source = val_blended_predictions or []
     if not source:

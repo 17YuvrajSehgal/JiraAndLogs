@@ -35,7 +35,7 @@ from collections import Counter, defaultdict
 from dataclasses import dataclass, field
 from typing import Iterable
 
-from loganalyzer.data.schema import JiraMemoryIssue, TriageWindow
+from core.data.schema import JiraMemoryIssue, TriageWindow
 
 from .entities import (
     BRIDGEABLE_KINDS,

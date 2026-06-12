@@ -1,7 +1,7 @@
 """Driver — run the existing comparison harness against the v2 (window-
 level) split manifest instead of the v1 (family-level) manifest.
 
-Strategy: monkey-patch `loganalyzer.data.splits.iter_split` at runtime
+Strategy: monkey-patch `core.data.splits.iter_split` at runtime
 so that every pipeline that calls it sees the v2 assignments. This
 leaves the v1 panel completely untouched — the patch is scoped to this
 process, and the v1 CLI still works exactly as before.
@@ -30,10 +30,10 @@ log = get_logger("phase_a.run_v2")
 
 
 def patch_iter_split(v2_manifest: WindowSplitManifest) -> None:
-    """Replace loganalyzer.data.splits.iter_split with a window-level
+    """Replace core.data.splits.iter_split with a window-level
     version. Idempotent within a process.
     """
-    import loganalyzer.data.splits as splits_mod
+    import core.data.splits as splits_mod
 
     if getattr(splits_mod.iter_split, "_v2_patched", False):
         log.info("iter_split already patched; skipping")
@@ -51,7 +51,7 @@ def patch_iter_split(v2_manifest: WindowSplitManifest) -> None:
     splits_mod.iter_split = iter_split_v2
 
     # Also patch the symbols that already imported the v1 binding.
-    # Pipelines do `from loganalyzer.data.splits import iter_split` at
+    # Pipelines do `from core.data.splits import iter_split` at
     # module load time, so we have to rebind those too.
     import sys
     rebound = 0

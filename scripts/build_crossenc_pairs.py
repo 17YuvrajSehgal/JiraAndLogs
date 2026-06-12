@@ -28,11 +28,11 @@ SRC = Path(__file__).resolve().parent.parent / "src"
 if str(SRC) not in sys.path:
     sys.path.insert(0, str(SRC))
 
-from loganalyzer.data.loaders import load_dataset
-from loganalyzer.data.splits import iter_split
-from loganalyzer.features.text import build_memory_doc_text, build_window_query_text
-from loganalyzer.memory.corpus import MemoryCorpus
-from loganalyzer.memory.retrieval import BM25Retriever
+from core.data.loaders import load_dataset
+from core.data.splits import iter_split
+from core.features.text import build_memory_doc_text, build_window_query_text
+from core.memory.corpus import MemoryCorpus
+from core.memory.retrieval import BM25Retriever
 from memorygraph.humanized_loader import load_humanized_corpus
 
 

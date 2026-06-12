@@ -24,7 +24,7 @@ import re
 from dataclasses import dataclass, field
 from typing import Any, Iterable
 
-from loganalyzer.data.schema import JiraMemoryIssue, TriageWindow
+from core.data.schema import JiraMemoryIssue, TriageWindow
 
 
 # ---------------------------------------------------------------------------

@@ -23,9 +23,9 @@ from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import Any, Callable
 
-from loganalyzer.data.loaders import load_dataset as load_loganalyzer_dataset
-from loganalyzer.data.splits import iter_split
-from loganalyzer.eval.metrics import precision_at_fpr
+from core.data.loaders import load_dataset as load_loganalyzer_dataset
+from core.data.splits import iter_split
+from core.eval.metrics import precision_at_fpr
 
 from .schema import PipelinePrediction, PipelineResult
 
@@ -231,8 +231,8 @@ class _NumericClassifierPipeline(PipelineRunner):
             model = self._fit(X_train, y_train)
             scores = [float(p[1]) for p in model.predict_proba(X_holdout)]
 
-            from loganalyzer.eval.metrics import pr_auc as _pr_auc
-            from loganalyzer.eval.metrics import roc_auc as _roc_auc
+            from core.eval.metrics import pr_auc as _pr_auc
+            from core.eval.metrics import roc_auc as _roc_auc
 
             records.append(
                 {

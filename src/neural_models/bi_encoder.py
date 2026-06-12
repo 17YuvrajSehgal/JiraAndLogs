@@ -52,13 +52,13 @@ import numpy as np
 from comparison.pipelines import PipelineRunner
 from comparison.schema import PipelinePrediction, PipelineResult
 from .gpu_monitor import GPUMonitor
-from loganalyzer.data.loaders import load_dataset
-from loganalyzer.data.splits import iter_split
-from loganalyzer.features.text import (
+from core.data.loaders import load_dataset
+from core.data.splits import iter_split
+from core.features.text import (
     build_memory_doc_text,
     build_window_query_text,
 )
-from loganalyzer.memory.corpus import MemoryCorpus
+from core.memory.corpus import MemoryCorpus
 
 
 def _evi(window: Any, max_chars: int) -> str:
@@ -146,7 +146,7 @@ class BiEncoderRetrievalPipeline(PipelineRunner):
           - Otherwise: emit one example per window with a random gold.
         """
         from sentence_transformers import InputExample
-        from loganalyzer.memory.retrieval import BM25Retriever
+        from core.memory.retrieval import BM25Retriever
         import random
 
         rng = random.Random(self.seed)
@@ -298,7 +298,7 @@ class BiEncoderRetrievalPipeline(PipelineRunner):
         del runs_root
         import torch
         from sklearn.linear_model import LogisticRegression
-        from loganalyzer.eval.metrics import precision_at_fpr
+        from core.eval.metrics import precision_at_fpr
         from memorygraph.humanized_loader import load_humanized_corpus
 
         torch.manual_seed(self.seed)

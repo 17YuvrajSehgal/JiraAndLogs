@@ -35,11 +35,11 @@ import numpy as np
 
 from comparison.pipelines import PipelineRunner
 from comparison.schema import PipelinePrediction, PipelineResult
-from loganalyzer.data.loaders import load_dataset
-from loganalyzer.data.splits import iter_split
-from loganalyzer.features.text import build_memory_doc_text, build_window_query_text
-from loganalyzer.memory.corpus import MemoryCorpus
-from loganalyzer.eval.metrics import precision_at_fpr
+from core.data.loaders import load_dataset
+from core.data.splits import iter_split
+from core.features.text import build_memory_doc_text, build_window_query_text
+from core.memory.corpus import MemoryCorpus
+from core.eval.metrics import precision_at_fpr
 from memorygraph.humanized_loader import load_humanized_corpus
 
 from v2_advanced.shared import Neo4jClient, get_logger, log_step

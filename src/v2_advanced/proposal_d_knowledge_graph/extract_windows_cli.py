@@ -48,8 +48,8 @@ def main() -> None:
     args = p.parse_args()
 
     # Load windows + apply v2 split manifest
-    from loganalyzer.data.loaders import load_dataset
-    from loganalyzer.features.text import build_window_query_text
+    from core.data.loaders import load_dataset
+    from core.features.text import build_window_query_text
     from v2_advanced.proposal_a_resplit.window_split import (
         WindowSplitManifest, iter_window_split,
     )

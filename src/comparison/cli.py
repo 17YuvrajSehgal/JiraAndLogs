@@ -15,8 +15,8 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--runs-root", required=True, type=Path)
     parser.add_argument(
         "--pipelines",
-        default="loganalyzer,logsense",
-        help="Comma-separated pipeline names (default: loganalyzer,logsense)",
+        default="hgb,rf,logistic_sklearn",
+        help="Comma-separated pipeline names (default: hgb,rf,logistic_sklearn)",
     )
     parser.add_argument("--no-ensemble", action="store_true", default=False)
     parser.add_argument("--n-bootstrap", type=int, default=1000)
