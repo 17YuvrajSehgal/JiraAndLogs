@@ -1,49 +1,0 @@
-[23:45:40] [INFO ] [v2_advanced.phase_a.run_v2] step=patch_split start  manifest=triage-split-manifest-v2-resplit.json
-[23:45:40] [INFO ] [v2_advanced.phase_a.window_split] loaded v2 manifest  windows=6720 seed=42
-[23:45:40] [INFO ] [v2_advanced.phase_a.run_v2] patched iter_split  rebound_in_modules=1
-[23:45:40] [INFO ] [v2_advanced.phase_a.run_v2] step=patch_split done  elapsed_s=0.0100
-[23:45:43] [INFO ] [v2_advanced.phase_a.run_v2] running v2 comparison  pipelines=['hybrid_rrf_retrieval'] n_bootstrap=1000
-[23:45:43] [INFO ] [v2_advanced.phase_a.run_v2] step=run_comparison start  pipelines=1
-[2026-06-04T03:45:43.649951+00:00] notes: comparison: pipelines=['hybrid_rrf_retrieval']
-[2026-06-04T03:45:43.650021+00:00] training_run open: hybrid_rrf_retrieval__20260604T034543Z__55c6d555
-[2026-06-04T03:45:43.666745+00:00] fit + predict starting for hybrid_rrf_retrieval
-[23:45:45] [INFO ] [v2_advanced.phase_c.hybrid] step=load_dataset_and_memory start
-[23:45:45] [INFO ] [v2_advanced.phase_c.hybrid] loaded  train=4701 val=1011 test=1008 memory=347
-[23:45:45] [INFO ] [v2_advanced.phase_c.hybrid] step=load_dataset_and_memory done  elapsed_s=0.4400
-[23:45:45] [INFO ] [v2_advanced.phase_c.hybrid] step=fit_biencoder start
-[bi_encoder_retrieval] training pairs built: 16338 from 1805 windows (use_all_golds=True, n_hard_negs=3)
-Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
-[comparison] running pipeline: hybrid_rrf_retrieval
-Loading weights:   0%|          | 0/103 [00:00<?, ?it/s]Loading weights: 100%|##########| 103/103 [00:00<00:00, 6102.06it/s]
-[bi_encoder_retrieval] fine-tuning sentence-transformers/all-MiniLM-L6-v2 on 16338 pairs for 3 epochs on cuda
-Computing widget examples:   0%|          | 0/1 [00:00<?, ?example/s]                                                                     [23:56:00] [INFO ] [v2_advanced.phase_c.hybrid] biencoder ready  n_windows=1008
-[23:56:00] [INFO ] [v2_advanced.phase_c.hybrid] step=fit_biencoder done  elapsed_s=614.62
-[23:56:00] [INFO ] [v2_advanced.phase_c.hybrid] step=fit_splade start
-[23:56:00] [INFO ] [v2_advanced.phase_c.splade] step=fit_splade start  n_docs=347
-[23:56:00] [INFO ] [v2_advanced.phase_c.splade] loading SPLADE  model=naver/splade-cocondenser-ensembledistil device=cuda
-{'loss': '3.552', 'grad_norm': '10.32', 'learning_rate': '1.497e-05', 'epoch': '0.9785'}
-{'loss': '2.887', 'grad_norm': '12.83', 'learning_rate': '7.712e-06', 'epoch': '1.957'}
-{'loss': '2.693', 'grad_norm': '13.68', 'learning_rate': '4.503e-07', 'epoch': '2.935'}
-{'train_runtime': '592.9', 'train_samples_per_second': '82.67', 'train_steps_per_second': '2.586', 'train_loss': '3.035', 'epoch': '3'}
-Loading weights:   0%|          | 0/204 [00:00<?, ?it/s]Loading weights: 100%|##########| 204/204 [00:00<00:00, 30659.24it/s]
-[23:56:22] [INFO ] [v2_advanced.phase_c.splade] indexed  n_docs=347 avg_nonzero_per_doc=143.10
-[23:56:22] [INFO ] [v2_advanced.phase_c.splade] step=fit_splade done  elapsed_s=22.4900
-[23:56:22] [INFO ] [v2_advanced.phase_c.hybrid] step=fit_splade done  elapsed_s=22.4900
-[23:56:22] [INFO ] [v2_advanced.neo4j] neo4j connected  uri=neo4j://127.0.0.1:7687 database=neo4j
-[23:56:22] [INFO ] [v2_advanced.phase_c.hybrid] graph ready  n_incidents=347
-[23:56:22] [INFO ] [v2_advanced.phase_c.hybrid] step=score_train start  n=4701
-[23:58:18] [INFO ] [v2_advanced.phase_c.hybrid] step=score_train done  elapsed_s=116.05
-[23:58:18] [INFO ] [v2_advanced.phase_c.hybrid] step=score_val start  n=1011
-[23:58:40] [INFO ] [v2_advanced.phase_c.hybrid] step=score_val done  elapsed_s=21.5100
-[23:58:40] [INFO ] [v2_advanced.phase_c.hybrid] step=score_test start  n=1008
-[23:59:01] [INFO ] [v2_advanced.phase_c.hybrid] step=score_test done  elapsed_s=21.3100
-[23:59:01] [INFO ] [v2_advanced.phase_c.hybrid] step=fit_triage_head start
-[23:59:01] [INFO ] [v2_advanced.phase_c.hybrid] step=fit_triage_head done  elapsed_s=0.0000
-[2026-06-04T03:59:01.596397+00:00] fit + predict done: fit=796.5s predict=0.0s n_predictions=1008
-[2026-06-04T03:59:01.751079+00:00] training_run close: hybrid_rrf_retrieval__20260604T034543Z__55c6d555
-[23:59:04] [INFO ] [v2_advanced.phase_a.run_v2] step=run_comparison done  elapsed_s=800.99
-[23:59:04] [INFO ] [v2_advanced.phase_a.run_v2] v2 comparison done  output_dir=data\derived\global\2026-05-25-dataset-v5-large-global\comparison\v2c-hybrid-llm pipelines=1 report_kb=104.20
-[comparison] computing stratified metrics (strict)
-[comparison] computing stratified metrics (inclusive)
-[comparison] paired bootstrap (1000 resamples) per metric
-[comparison] depth-stratified bootstrap CIs (1000 resamples)

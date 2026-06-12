@@ -43,14 +43,15 @@ post_data_logs.tar.gz
 data_logs.tar.gz
 DOCS/docs2/presentation.md
 
-# Large binary research artifacts (kept in workspace only)
-results/phase-b-finetune/crossenc_ft_v1/model.safetensors
-results/phase-b-finetune/crossenc_ft_v1/training_checkpoints/
-results/phase-b-finetune/triplets.jsonl
+# Experiment outputs (raw artifacts of pipeline runs).
+# All headline numbers are persisted in the paper drafts (RESEARH-PAPER/)
+# and the docs (docs4/, docs6/, docs7/); raw outputs are reproducible
+# from scripts/ and are not tracked.
+results/
+
 microservices-demo-google/
 # OTel Demo fork — vendored as reference only, never edited (per docs5/01 Rule R2).
 # We deploy via published images + the official helm chart; this directory is read-only ref.
 opentelemetry-demo/
 # Phase G — neural training artifacts (large, regenerable)
-results/phase-g-neural/gpu/
 /data-otel-demo/
