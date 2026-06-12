@@ -1,6 +1,6 @@
 # Mode 3 — TCH-Lite × WoL End-to-End Retrieval Results
 
-**Status.** P7+P8 four-retriever slice complete (2026-06-12) — `REAL-DATA-WoL-PLAN.md` v3 §7. **Both coarse and strong Hit@5 land in the "Excellent" band, on different retrievers (BiEncoder for coarse, Hybrid-RRF for strong).** LogSeq2Vec and KG-Retrieval are "Concerning" standalone but contribute in fusion; DiagnosisAgent (~4 h LM Studio) is deferred for the next round.
+**Status.** P7+P8 four-retriever + DiagnosisAgent slice complete (2026-06-12) — `REAL-DATA-WoL-PLAN.md` v3 §7. **Both coarse and strong Hit@5 land in the "Excellent" band, on different retrievers (BiEncoder for coarse, Hybrid-RRF for strong).** LogSeq2Vec and KG-Retrieval are "Concerning" standalone but contribute in fusion. DiagnosisAgent's OB-tuned verify pass actually *degrades* the cascade on WoL — an honest OOD-failure finding (§3.9).
 
 **Scope of this round.** This document covers all four L2 retrievers — **BiEncoder** (§2–§3), **LogSeq2Vec** (§3.5), **Hybrid-RRF** (§3.6), and **KG-Retrieval** (§3.7) — on the WoL Mode 3 self-contained retrieval task. The full TCH-Lite cascade additionally requires the DiagnosisAgent (~4 h LM Studio time, deferred), the L1 stacker refit, the L3 novelty classifier refit, and the L4 composition layer. The four retriever results stand alone as the load-bearing real-data evidence; the cascade composition is bookwork once the four results exist.
 
@@ -189,34 +189,91 @@ KG-Retrieval alone is the weakest retriever in the cascade by a wide margin on W
 
 ---
 
+## 3.9. DiagnosisAgent on WoL Mode 3 (Round 5)
+
+**Setup.** DiagnosisAgent re-ranks the top-10 Hybrid-RRF candidates per test window via `qwen/qwen3.6-35b-a3b` over LM Studio. For each window the agent reads the window's evidence text, the candidate tickets' root_cause + affected_services fields (from LLM extractions), and emits a re-ranked top-5 plus an `is_novel` decision (novelty threshold 0.4). Hybrid-RRF predictions are loaded from cache (`V2_AGENT_HYBRID_PREDICTIONS_PATH`), so the agent never re-fits its own retriever pool. All 450 test windows; ~244 min wall time at ~33 sec/window.
+
+### Headline (DiagnosisAgent)
+
+| Metric | Coarse match | Strong match |
+|---|---:|---:|
+| n test queries with gold | 342 / 450 | 169 / 450 |
+| Hit@1 | 0.5643 | 0.4497 |
+| **Hit@5** | **0.6287** (Acceptable, 0.50–0.70) | **0.5621** (Excellent, ≥ 0.55) |
+| MRR | 0.5945 | 0.5049 |
+
+Novelty flag rate: **70 / 450 = 15.6 %**. For comparison, every WoL window is `ticket_worthy` by construction in Mode 3 (the gold relation always says a memory ticket exists), so the agent's novel calls are all false positives.
+
+### Per-project (coarse)
+
+| Project | n | Hit@1 | Hit@5 | MRR |
+|---|---:|---:|---:|---:|
+| wol-kafka          | 147 | 0.5782 | 0.6531 | 0.6122 |
+| wol-mariadb-server | 195 | 0.5538 | 0.6103 | 0.5812 |
+
+### Per-project (strong)
+
+| Project | n | Hit@1 | Hit@5 | MRR |
+|---|---:|---:|---:|---:|
+| wol-kafka          | 91 | 0.4286 | 0.5165 | 0.4707 |
+| wol-mariadb-server | 78 | 0.4744 | 0.6154 | 0.5449 |
+
+### Interpretation — the agent degrades the cascade on WoL
+
+Comparing DiagnosisAgent's re-ranked output to its own input pool (Hybrid-RRF):
+
+| Metric | Hybrid-RRF (input) | DiagnosisAgent (output) | Δ |
+|---|---:|---:|---:|
+| Coarse Hit@1 | 0.7164 | 0.5643 | **−0.152** |
+| Coarse Hit@5 | 0.9006 | 0.6287 | **−0.272** |
+| Coarse MRR   | 0.7884 | 0.5945 | **−0.194** |
+| Strong Hit@1 | 0.4201 | **0.4497** | **+0.030** |
+| Strong Hit@5 | 0.7870 | 0.5621 | **−0.225** |
+| Strong MRR   | 0.5711 | **0.5049** | −0.066 |
+
+The agent improves strong-match Hit@1 by +0.030 but degrades every other metric, often substantially. Three reasons:
+
+1. **False novelty calls.** 70/450 (15.6 %) of windows are flagged novel. Although the matched_issue_ids list is still populated, the agent's verification step is downweighting candidate matches it doesn't recognise as semantic neighbours. On synthetic OB with engineered scenarios, novelty is a meaningful signal; on real Apache Jira where every window has *some* coarse-match ticket, novelty is structurally a false alarm.
+2. **Out-of-domain re-ranking.** The agent's verify-and-rank prompt was tuned to OB telemetry and OB-style root-cause language ("payment service Redis connection refused after pod restart"). Apache root causes are different in style ("partition rebalance triggered by ZK session expiry", "wsrep group state transfer failed under load"). The LLM's text-similarity judgments are noisier on this distribution and frequently re-order the top-5 in ways that drop true matches.
+3. **Lost rank information.** The agent compresses top-10 → top-5. If the true gold sat at rank 6–10 in the Hybrid-RRF output (which happens often when there are ~25 coarse golds per query), it gets dropped — visible as the −0.272 drop in coarse Hit@5.
+
+**Bottom line.** DiagnosisAgent in its current OB-tuned form is *not* a positive contribution to the cascade on WoL. The +0.030 strong Hit@1 improvement does not pay for the −0.225 strong Hit@5 cost. The right design move for a real-Jira deployment is either (a) skip the agent layer entirely and ship Hybrid-RRF + L2 overlap rerank, or (b) re-tune the agent's verification prompt and novelty threshold for the Apache distribution before using it.
+
+This is an *informative* finding for the paper: it documents a real out-of-distribution failure mode for LLM-as-verifier and bounds when the cascade's agent layer helps vs hurts. It does not invalidate the cascade — Hybrid-RRF and BiEncoder still carry the Excellent-band claims for both relations. It does mean the §3.8 consolidated story is "the cascade's *retrieval* layer (L2) generalises; the *verification* layer (L4 agent) does not, in this form."
+
+---
+
 ## 3.8. Consolidated 4-retriever comparison
 
 All four L2 retrievers from TCH-Lite have now been run on the same family-stratified WoL Mode 3 split. Test set: 450 windows from wol-kafka (147 with coarse gold, 91 with strong gold) and wol-mariadb-server (195 / 78). Memory: 2,000 WoL Apache Jira tickets.
 
 ### Coarse-match Hit@K (n=342 with gold)
 
-| Retriever | Hit@1 | Hit@5 | MRR | Band |
+| Retriever       | Hit@1 | Hit@5 | MRR | Band |
 |---|---:|---:|---:|---|
 | **BiEncoder**   | **0.9240** | **0.9591** | **0.9377** | Excellent |
 | Hybrid-RRF      | 0.7164 | 0.9006 | 0.7884 | Excellent |
+| DiagnosisAgent  | 0.5643 | 0.6287 | 0.5945 | Acceptable |
 | LogSeq2Vec      | 0.0877 | 0.3099 | 0.1625 | Concerning |
 | KG-Retrieval    | 0.0234 | 0.2485 | 0.1015 | Concerning |
 
 ### Strong-match Hit@K (n=169 with gold)
 
-| Retriever | Hit@1 | Hit@5 | MRR | Band |
+| Retriever       | Hit@1 | Hit@5 | MRR | Band |
 |---|---:|---:|---:|---|
-| **Hybrid-RRF**  | **0.4201** | **0.7870** | **0.5711** | Excellent |
+| **Hybrid-RRF**  | 0.4201 | **0.7870** | **0.5711** | Excellent |
 | BiEncoder       | 0.2189 | 0.6627 | 0.3774 | Excellent |
+| DiagnosisAgent  | **0.4497** | 0.5621 | 0.5049 | Excellent (boundary) |
 | LogSeq2Vec      | 0.0296 | 0.1834 | 0.0787 | Concerning |
 | KG-Retrieval    | 0.0059 | 0.1065 | 0.0407 | Concerning |
 
 ### Takeaways
 
-1. **Both bands have a retriever in the Excellent band.** This is the load-bearing real-data claim for the paper: TCH-Lite's core retrieval signal generalises from synthetic OB to real Apache Jira, in both the broad "same project + shared component" relation (Hit@5 0.959) and the narrow "+ shared symptom-token" relation (Hit@5 0.787).
+1. **Both bands have a retriever in the Excellent band.** This is the load-bearing real-data claim for the paper: TCH-Lite's core retrieval signal generalises from synthetic OB to real Apache Jira, in both the broad "same project + shared component" relation (Hit@5 0.959 via BiEncoder) and the narrow "+ shared symptom-token" relation (Hit@5 0.787 via Hybrid-RRF).
 2. **Different retrievers win different relations.** BiEncoder dominates coarse match (semantic similarity is sufficient when 25 acceptable golds exist per query). Hybrid-RRF wins strong match (the SPLADE + graph signal carries the symptom-token discriminating power needed to distinguish a strong-match neighbour from a coarse-match one). The cascade's L2 RRF fusion is doing real work — neither retriever alone gives you both.
 3. **Telemetry-dependent retrievers degrade gracefully.** LogSeq2Vec was designed for ordered Loki streams; on WoL's text-only "log_quotes" pastes it predictably underperforms (§3.5). KG-Retrieval depends on symmetric LLM-extracted entities on both sides; with rule-based window-side extractions (§3.7), it's similarly bottlenecked. Both contribute meaningfully *in fusion*; both look weak standalone.
 4. **The cascade is not redundant.** Each retriever's standalone result tells us *what kind of signal it brings*. The strong-match win by Hybrid-RRF (+0.124 absolute Hit@5 over BiEncoder) is direct evidence that the L2 fusion is more than just the best single retriever.
+5. **LLM-as-verifier (DiagnosisAgent) does not transfer.** The agent's OB-tuned verify-and-rank reduces every metric except strong Hit@1 (+0.030), with a Hit@5 cost of −0.272 coarse / −0.225 strong (§3.9). This is an honest finding, not a contradiction: it documents an OOD failure mode for LLM-based ticket verification and suggests skipping or re-prompting the agent layer when deploying on a new Jira distribution.
 
 ### Files produced (added by Round 3 + Round 4)
 
@@ -232,6 +289,9 @@ All four L2 retrievers from TCH-Lite have now been run on the same family-strati
 | `scripts/research-lab/run_kg_retrieval_wol_mode3.py` | KG-Retrieval driver |
 | `scripts/research-lab/extract_tickets_parallel.py` | Parallel KG extraction driver (failed due to LM Studio not supporting concurrent grammar-constrained requests; kept as a record + safety-net helper) |
 | `scripts/research-lab/consolidate_kg_extractions.py` | Rebuild `all_extractions.jsonl` from per-ticket cache if extraction is interrupted |
+| `data/derived/global/2026-06-11-wol-real-global/tch-lite-refit/diagnosis-agent-mode3-results.json` | DiagnosisAgent Hit@K + per-project + novelty-flag stats |
+| `data/derived/global/2026-06-11-wol-real-global/tch-lite-refit/diagnosis-agent-predictions.jsonl` | DiagnosisAgent per-test-window predictions (with novelty flags) |
+| `scripts/research-lab/run_diagnosis_agent_wol_mode3.py` | DiagnosisAgent driver (reuses cached Hybrid-RRF predictions to skip refit) |
 
 ---
 
@@ -246,7 +306,7 @@ The full Mode 3 evaluation per the v3 plan §7 requires:
 | Hybrid-RRF rule      | **done — Round 3** | ✓ LLM-extracted memory KG + rule-based windows (see §3.6) |
 | KG-Retrieval rule    | **done — Round 4** | ✓ same KG (see §3.7) |
 | Hybrid-RRF LLM       | not done | Same as rule variant + LLM-extracted query-side entities (~6 h LM Studio) |
-| DiagnosisAgent       | not done | ~30 sec/window × 450 ≈ ~4 h LM Studio time |
+| DiagnosisAgent       | **done — Round 5** | ✓ ran on all 450 windows; see §3.9 (out-of-domain failure mode) |
 | TCH-Lite L1 stacker refit | not done | Trivial — concatenate the four retrievers' triage_scores + numeric features → fit logistic |
 | TCH-Lite L3 classifier refit | not done | Trivial once `tch_max_retrieval_conf` is computable from the four retrievers' max sims |
 | Full cascade Hit@K | not done | RRF + overlap-rerank composition step is seconds once the four predictions JSONLs exist |
@@ -262,7 +322,7 @@ Suggested treatment in `ICSE/sections/05-results.tex` as a new §5.X.3 subsectio
 > **§5.X.3 Mode 3 — End-to-end retrieval on real Apache Jira (four-retriever slice).**
 > To test whether TCH-Lite's core retrieval signal generalises beyond the synthetic Online Boutique fault library, we built a self-contained retrieval task from 2,000 real Apache Jira tickets across 7 distributed-systems projects (WoL dataset, MSR 2026). The family-stratified split holds out **wol-kafka** and **wol-mariadb-server** (450 test windows) — projects whose tickets none of the retrievers see during fine-tuning. Gold relations are inferred from same-project + shared-component (coarse, avg 25 golds/query) and additionally shared symptom-token Jaccard > 0.15 (strong, avg 2.66 golds/query).
 >
-> We evaluate the four L2 retrievers of TCH-Lite standalone: a fine-tuned BiEncoder (`sentence-transformers/all-MiniLM-L6-v2`); LogSeq2Vec; Hybrid-RRF (BiEncoder + SPLADE + Cypher overlap over a Neo4j knowledge graph built from `qwen/qwen3.6-35b-a3b` LLM extractions of all 2,000 memory tickets, with rule-based window-side entities); and KG-Retrieval (graph-only). Headline results in Table 5.X.3: **BiEncoder achieves Hit@5 = 0.959 / MRR = 0.938 under coarse match (Excellent band, ≈ 15.7 × random)** and **Hybrid-RRF achieves Hit@5 = 0.787 / MRR = 0.571 under strong match (Excellent band, ≈ 119 × random)**. Both are the best result in their respective relations and both clear the pre-registered Excellent thresholds (≥ 0.70 / ≥ 0.55). The same Hybrid-RRF lifts the harder slice — wol-kafka strong-match Hit@5 — from BiEncoder's 0.571 to 0.791, a +0.220 absolute gain that constitutes direct evidence that the L2 RRF fusion is more than the best single retriever. LogSeq2Vec (Hit@5 coarse 0.310) and KG-Retrieval (0.249) underperform standalone — a methodologically expected outcome that we explain in §3.5 and §3.7 of the supplementary report: both are designed for inputs richer than the unordered log-quote text and rule-extracted query entities WoL provides, and both contribute usefully in the Hybrid-RRF fusion despite weak standalone numbers.
+> We evaluate the four L2 retrievers of TCH-Lite standalone plus the L4 DiagnosisAgent: a fine-tuned BiEncoder (`sentence-transformers/all-MiniLM-L6-v2`); LogSeq2Vec; Hybrid-RRF (BiEncoder + SPLADE + Cypher overlap over a Neo4j knowledge graph built from `qwen/qwen3.6-35b-a3b` LLM extractions of all 2,000 memory tickets, with rule-based window-side entities); KG-Retrieval (graph-only); and DiagnosisAgent (top-10 hybrid candidates re-ranked via `qwen/qwen3.6-35b-a3b` over all 450 test windows). Headline results in Table 5.X.3: **BiEncoder achieves Hit@5 = 0.959 / MRR = 0.938 under coarse match (Excellent band, ≈ 15.7 × random)** and **Hybrid-RRF achieves Hit@5 = 0.787 / MRR = 0.571 under strong match (Excellent band, ≈ 119 × random)**. Both are the best result in their respective relations and both clear the pre-registered Excellent thresholds (≥ 0.70 / ≥ 0.55). The same Hybrid-RRF lifts the harder slice — wol-kafka strong-match Hit@5 — from BiEncoder's 0.571 to 0.791, a +0.220 absolute gain that constitutes direct evidence that the L2 RRF fusion is more than the best single retriever. LogSeq2Vec (Hit@5 coarse 0.310) and KG-Retrieval (0.249) underperform standalone — a methodologically expected outcome that we explain in §3.5 and §3.7 of the supplementary report: both are designed for inputs richer than the unordered log-quote text and rule-extracted query entities WoL provides, and both contribute usefully in the Hybrid-RRF fusion despite weak standalone numbers. **DiagnosisAgent — the L4 LLM verifier tuned on OB telemetry — does not transfer**: re-ranking the top-10 Hybrid-RRF candidates via qwen3.6-35b-a3b reduces coarse Hit@5 from 0.901 to 0.629 (a −0.272 absolute drop) while improving strong Hit@1 by only +0.030. We document this as an OOD-failure finding for LLM-as-verifier in §3.9 and recommend, for real-Jira deployments, either skipping the L4 layer or re-tuning its verification prompt to the target distribution.
 >
 > The headline read for the paper's external-validity claim: TCH-Lite's two strongest retrievers (BiEncoder for the broad relation, Hybrid-RRF for the narrow one) generalise from synthetic Online Boutique to real human-written Apache Jira tickets without dataset-specific re-engineering. The cascade composition (L1 + L3 + L4) is expected to lift Hit@K further; this is recorded as future work in §10.
 
@@ -300,4 +360,4 @@ PYTHONIOENCODING=utf-8 .venv/Scripts/python.exe scripts/research-lab/run_biencod
 
 ---
 
-*Generated 2026-06-11/2026-06-12 as part of P7+P8 (Mode 3 four-retriever slice) per `REAL-DATA-WoL-PLAN.md` v3 §14 phased plan. Total compute: BiEncoder 1,499 s + LogSeq2Vec 4,801 s + KG extraction 29,351 s + Hybrid-RRF 4,494 s + KG-Retrieval 41 s ≈ 11.2 h wall time on a single RTX 3070 + LM Studio (qwen/qwen3.6-35b-a3b). All four retriever predictions written to `data/derived/global/2026-06-11-wol-real-global/tch-lite-refit/`. DiagnosisAgent + cascade composition queued for next round.*
+*Generated 2026-06-11/2026-06-12 as part of P7+P8 (Mode 3 four-retriever + DiagnosisAgent slice) per `REAL-DATA-WoL-PLAN.md` v3 §14 phased plan. Total compute: BiEncoder 1,499 s + LogSeq2Vec 4,801 s + KG extraction 29,351 s + Hybrid-RRF 4,494 s + KG-Retrieval 41 s + DiagnosisAgent 14,614 s ≈ 15.3 h wall time on a single RTX 3070 + LM Studio (qwen/qwen3.6-35b-a3b). All five retriever predictions written to `data/derived/global/2026-06-11-wol-real-global/tch-lite-refit/`. Cascade composition (L1 stacker + L3 novelty + L4 RRF + overlap-rerank) queued for next round.*
