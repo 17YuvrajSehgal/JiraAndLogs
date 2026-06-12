@@ -189,7 +189,7 @@ The 0.9998 strict PR-AUC is **essentially saturated**. The neural alternative (T
 
 ## 10. What the cascade consumes from HGB
 
-The L1 stacker in [`build_cascade.py`](../src/v2_advanced/tch/build_cascade.py) reads HGB's `triage_score` column from `v2a-resplit/per-window-predictions.jsonl` and assigns it the largest coefficient by far:
+The L1 stacker in [`build_cascade.py`](../../src/v2_advanced/tch/build_cascade.py) reads HGB's `triage_score` column from `v2a-resplit/per-window-predictions.jsonl` and assigns it the largest coefficient by far:
 
 $$
 P_{L1}(w) = \sigma\!\Big(\,\underbrace{+8.221}_{\text{HGB}}\,x_{\text{HGB}}(w) + \underbrace{+0.525}_{\text{KG}}\,x_{\text{KG}}(w) + \underbrace{+0.292}_{\text{BiE}}\,x_{\text{BiE}}(w) + \ldots - 4.755\Big)

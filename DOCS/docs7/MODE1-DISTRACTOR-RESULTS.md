@@ -145,7 +145,7 @@ PYTHONPATH=src .venv/Scripts/python.exe -m v2_advanced.tch.distractor_sweep \
 - **Plan §5** — [`docs7/REAL-DATA-WoL-PLAN.md`](REAL-DATA-WoL-PLAN.md) §5 (Mode 1 specification).
 - **Simulation script** — `src/v2_advanced/tch/distractor_sweep.py`.
 - **Locked cascade predictions used as input** — `data/derived/global/2026-05-25-dataset-v5-large-global/comparison/v2g-final-models/final/per-window-predictions.jsonl`.
-- **WoL distractor pool source** — `data/derived/global/2026-06-11-wol-real-global/distractors/timeline.jsonl` (300 records from 6 OFF-topic projects, see [`build_wol_real_corpus.py`](../scripts/research-lab/build_wol_real_corpus.py)).
+- **WoL distractor pool source** — `data/derived/global/2026-06-11-wol-real-global/distractors/timeline.jsonl` (300 records from 6 OFF-topic projects, see [`build_wol_real_corpus.py`](../../scripts/research-lab/build_wol_real_corpus.py)).
 - **Synthetic baseline** — §13.1 of the paper draft (`ICSE/sections/05-results.tex` §5.X.1 robustness sweep).
 - **TCH-Lite + channel ablation** — [`docs7/TCH-Lite.md`](TCH-Lite.md), [`docs7/CHANNEL-ABLATION.md`](CHANNEL-ABLATION.md).
 
