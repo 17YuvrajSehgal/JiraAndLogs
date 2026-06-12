@@ -1,3 +1,11 @@
+# Secrets / credentials — never commit
+Neo4j-*.txt
+*.credentials
+*.secrets
+.env
+.env.*
+!.env.example
+
 # Python virtual environment
 .venv/
 venv/
@@ -45,3 +53,4 @@ microservices-demo-google/
 opentelemetry-demo/
 # Phase G — neural training artifacts (large, regenerable)
 results/phase-g-neural/gpu/
+/data-otel-demo/
