@@ -374,13 +374,26 @@ class BiEncoderRetrievalPipeline(PipelineRunner):
             [1 if w.triage_label == "ticket_worthy" else 0 for w in train_w],
             dtype=np.int64,
         )
-        clf = LogisticRegression(
-            class_weight="balanced", max_iter=2000, solver="lbfgs",
-        ).fit(train_feats, y_train)
+        # WoL Mode 3 (or any dataset where every training window is
+        # ticket_worthy by construction) produces a single-class y_train,
+        # which sklearn LogisticRegression cannot fit. In that case skip
+        # the logistic head — the retrieval ranking (matched_issue_ids)
+        # is the load-bearing output anyway. The triage_score falls back
+        # to max_sim, which still orders windows usefully but is not a
+        # calibrated probability.
+        if len(set(y_train.tolist())) < 2:
+            print(f"[{self.name}] y_train is single-class; skipping logistic "
+                  f"triage head, emitting max_sim as triage_score.",
+                  file=sys.stderr, flush=True)
+            clf = None
+        else:
+            clf = LogisticRegression(
+                class_weight="balanced", max_iter=2000, solver="lbfgs",
+            ).fit(train_feats, y_train)
         fit_seconds = time.time() - t0
 
         # --- 6. Threshold tuning on val ---
-        if val_w:
+        if val_w and clf is not None:
             val_feats, _ = self._build_sim_features(val_emb, memory_emb, val_mask)
             val_labels = [1 if w.triage_label == "ticket_worthy" else 0 for w in val_w]
             val_scores = [float(p[1]) for p in clf.predict_proba(val_feats)]
@@ -390,7 +403,11 @@ class BiEncoderRetrievalPipeline(PipelineRunner):
 
         # --- 7. Predict test ---
         t0 = time.time()
-        test_scores = [float(p[1]) for p in clf.predict_proba(test_feats)]
+        if clf is not None:
+            test_scores = [float(p[1]) for p in clf.predict_proba(test_feats)]
+        else:
+            # Fall back to max_sim (column 0 of the feature vector).
+            test_scores = [float(f[0]) for f in test_feats]
         predict_seconds = time.time() - t0
 
         predictions: list[PipelinePrediction] = []

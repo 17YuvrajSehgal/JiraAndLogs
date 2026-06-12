@@ -1,0 +1,82 @@
+{
+  "generated_at": "2026-06-11",
+  "tch_cascade_hgb_ablation": {
+    "description": "TCH cascade \u2014 HGB ablation (TCH-Combined vs TCH-Lite). All other components identical.",
+    "split": "v2-resplit test (1008 windows)",
+    "configs": [
+      {
+        "name": "tch-combined",
+        "config": "all channels + HGB",
+        "hit_at_1": 0.7221,
+        "hit_at_5": 0.9124,
+        "mrr": 0.7937,
+        "pr_auc_strict": 0.9998,
+        "pr_auc_inclusive": 0.8562,
+        "novel_precision": 0.9405,
+        "novel_recall": 0.7932
+      },
+      {
+        "name": "tch-lite",
+        "config": "all channels minus HGB (log-only deployment)",
+        "hit_at_1": 0.7221,
+        "hit_at_5": 0.9124,
+        "mrr": 0.7937,
+        "pr_auc_strict": 0.3101,
+        "pr_auc_inclusive": 0.6434,
+        "novel_precision": 0.9405,
+        "novel_recall": 0.7932
+      }
+    ]
+  },
+  "single_pipeline_channel_ablation": {
+    "description": "Single-pipeline channel ablation on memorygraph_v2_sota_nw080 (from prior Phase C work)",
+    "split": "phase-c-channels (2940 windows; older split \u2014 predictions cached in archive/)",
+    "configs": [
+      {
+        "name": "all-channels",
+        "pipeline": "memorygraph_v2_sota_nw080",
+        "n_with_gold": 874,
+        "hit_at_1": 0.13386727688787187,
+        "hit_at_5": 0.2048054919908467,
+        "mrr": 0.15663615560640726
+      },
+      {
+        "name": "no-k8s",
+        "pipeline": "memorygraph_v2_sota_nw080_no_k8s",
+        "n_with_gold": 874,
+        "hit_at_1": 0.13386727688787187,
+        "hit_at_5": 0.2048054919908467,
+        "mrr": 0.15663615560640726,
+        "n_top1_changed_vs_full": 0
+      },
+      {
+        "name": "no-traces",
+        "pipeline": "memorygraph_v2_sota_nw080_no_traces",
+        "n_with_gold": 874,
+        "hit_at_1": 0.13386727688787187,
+        "hit_at_5": 0.2048054919908467,
+        "mrr": 0.15663615560640726,
+        "n_top1_changed_vs_full": 0
+      },
+      {
+        "name": "no-logs",
+        "pipeline": "memorygraph_v2_sota_nw080_no_logs",
+        "n_with_gold": 874,
+        "hit_at_1": 0.10869565217391304,
+        "hit_at_5": 0.18878718535469108,
+        "mrr": 0.134534706331045,
+        "n_top1_changed_vs_full": 1285
+      }
+    ]
+  },
+  "interpretation": {
+    "tch_hgb_ablation": "Removing the numeric-feature triage gate (HGB) collapses triage PR-AUC strict from 0.9998 to 0.3101 (-69% rel). All retrieval (Hit@1/Hit@5/MRR) and novelty metrics are bit-identical because the L2 retrieval fusion and L3 novelty layers do not consume HGB output. This is the deployability cost of running without numeric telemetry.",
+    "channel_ablation": "On the memorygraph SOTA retrieval pipeline, masking trace-style and k8s-event lines from memory text produces IDENTICAL predictions to the full-channel baseline (0/2940 windows changed). Only log-line masking changes predictions \u2014 1285/2940 windows (44%) see a different top-1 candidate; Hit@5 drops 7.8% rel and Hit@1 drops 19% rel. This indicates that log lines carry essentially all the retrieval signal on the memory side; trace and k8s lines as text content are noise the retriever does not index against.",
+    "combined_implication": "TCH-Lite (drop HGB + log-only memory) is the deployable-without-tracing configuration. The cascade-level cost is purely on the triage axis (PR-AUC drops ~70% rel); retrieval and novelty channels are preserved because (a) the L2/L3 layers do not depend on HGB and (b) the memory-side text channels other than logs were already contributing nothing to retrieval, so removing them is free."
+  },
+  "limitations": [
+    "Single-pipeline channel ablation is measured on memorygraph SOTA, not on the full TCH cascade. The cascade composes 4 retrievers (BiEncoder, Hybrid-RRF rule, LogSeq2Vec, KG); a full cascade-level channel ablation requires re-running each retriever with masked text on both sides (memory + window). Estimated cost: 2-4 hours of GPU work.",
+    "The Phase C ablation runs on a 2940-window older split that includes more borderline / noise windows than the v2-resplit 1008-window test split. Absolute Hit@K numbers therefore are not directly comparable to the cascade headline; only the relative deltas within the same pipeline are meaningful.",
+    "Window-side text masking is not implemented in build_window_query_text yet. The Phase C masking is memory-side only. A symmetric query-side mask is a future enhancement."
+  ]
+}
