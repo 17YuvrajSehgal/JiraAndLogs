@@ -48,7 +48,7 @@ def main() -> int:
 
     # Defer the heavy import until after the path is set.
     from neural_models.bi_encoder import BiEncoderRetrievalPipeline
-    from loganalyzer.data.loaders import load_dataset
+    from core.data.loaders import load_dataset
 
     args.out_dir.mkdir(parents=True, exist_ok=True)
 

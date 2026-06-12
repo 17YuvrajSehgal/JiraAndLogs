@@ -14,8 +14,8 @@ import random
 from dataclasses import dataclass
 from typing import Callable
 
-from loganalyzer.eval.metrics import pr_auc, roc_auc, precision_at_fpr
-from loganalyzer.eval.retrieval_metrics import recall_at_k, mean_reciprocal_rank
+from core.eval.metrics import pr_auc, roc_auc, precision_at_fpr
+from core.eval.retrieval_metrics import recall_at_k, mean_reciprocal_rank
 
 from .schema import PipelinePrediction, PipelineResult
 

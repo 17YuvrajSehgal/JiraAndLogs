@@ -43,7 +43,7 @@ def main() -> int:
     sys.path.insert(0, "src")
 
     from v2_advanced.proposal_b_logseq2vec.pipeline import LogSeq2VecRetrievalPipeline
-    from loganalyzer.data.loaders import load_dataset
+    from core.data.loaders import load_dataset
 
     args.out_dir.mkdir(parents=True, exist_ok=True)
 

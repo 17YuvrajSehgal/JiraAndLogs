@@ -1,1 +1,0 @@
-"""logsense CLI entrypoints."""

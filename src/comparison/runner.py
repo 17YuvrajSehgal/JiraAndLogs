@@ -18,11 +18,7 @@ from .ensemble import EnsemblePipeline, blend_mean
 from .pipelines import (
     CalibratedRandomForestPipeline,
     GradientBoostingPipeline,
-    JiraOnlyPipeline,
-    LoganalyzerPipeline,
-    LoganalyzerWithJiraPipeline,
     LogisticNumericPipeline,
-    LogsensePipeline,
     PipelineRunner,
     _NumericClassifierPipeline,
 )
@@ -93,14 +89,6 @@ except ImportError as _e:
     _HAS_AGENT = False
     _AGENT_IMPORT_ERROR = _e
 
-# v2_advanced — G2 (2026-06-05): fine-tuned cross-encoder retriever
-try:
-    from v2_advanced.proposal_g_crossencoder.pipeline import CrossEncoderRetrievalPipeline
-    _HAS_CROSSENC = True
-except ImportError as _e:
-    _HAS_CROSSENC = False
-    _CROSSENC_IMPORT_ERROR = _e
-
 # v2_advanced — Phase B (2026-06-03): LogSeq2Vec
 try:
     from v2_advanced.proposal_b_logseq2vec.pipeline import LogSeq2VecRetrievalPipeline
@@ -121,10 +109,6 @@ except ImportError:
 
 
 KNOWN_PIPELINES: dict[str, type[PipelineRunner]] = {
-    "loganalyzer": LoganalyzerPipeline,
-    "loganalyzer_with_jira": LoganalyzerWithJiraPipeline,
-    "jira_only": JiraOnlyPipeline,
-    "logsense": LogsensePipeline,
     # Phase 2 classical-ML baselines (2026-05-26). Numeric-only — no
     # retrieval — but use the same feature-list contract so v5's richer
     # columns flow in without code changes.
@@ -210,10 +194,6 @@ if _HAS_HYBRID:
                 window_extractions_subdir="v2_kg_extractions_windows",
             )
     KNOWN_PIPELINES["hybrid_rrf_retrieval_g3"] = _HybridG3
-
-# v2_advanced G2 — fine-tuned cross-encoder retriever.
-if _HAS_CROSSENC:
-    KNOWN_PIPELINES["cross_encoder_retrieval_g2"] = CrossEncoderRetrievalPipeline
 
 # v2_advanced Phase E — DiagnosisAgent (capstone).
 if _HAS_AGENT:
@@ -693,8 +673,8 @@ def _compute_lofo_macros(
     Only pipelines that inherit _NumericClassifierPipeline are LOFO'd —
     they're fast (HGB/RF/logistic on a 3000-row v4 corpus = a few seconds
     per fold) and they don't need raw run data. Retrieval-based pipelines
-    (loganalyzer, logsense) get per-family stratified metrics from the
-    fixed split instead; full LOFO for those is a future-phase add."""
+    get per-family stratified metrics from the fixed split instead; full
+    LOFO for those is a future-phase add."""
     out: dict[str, dict[str, Any]] = {}
     for name, runner in pipelines:
         if not isinstance(runner, _NumericClassifierPipeline):
@@ -730,7 +710,10 @@ def run_comparison(
     target_fpr: float = 0.05,
     include_lofo: bool = True,
 ) -> ComparisonReport:
-    pipelines = pipelines or ["loganalyzer", "logsense"]
+    # If no pipeline list specified, default to the cheap classical baselines.
+    # Retrieval pipelines (BiEncoder, LogSeq2Vec, etc.) must be explicitly
+    # named because they involve heavy fit time.
+    pipelines = pipelines or ["hgb", "rf", "logistic_sklearn"]
     instantiated: list[tuple[str, PipelineRunner]] = []
     results: list[PipelineResult] = []
     for name in pipelines:
@@ -856,96 +839,6 @@ def run_comparison(
     )
 
 
-def _render_jira_helps_section(report: ComparisonReport) -> list[str]:
-    """Direct pairwise comparison of the with-Jira vs without-Jira variants.
-
-    Answers the central corporate research thesis: 'does adding historical
-    Jira data to triage actually help vs telemetry-only triage?'.
-
-    Compares (when both are present):
-      loganalyzer_hybrid_bm25            vs  loganalyzer_hybrid_with_jira
-      <any numeric/telemetry baseline>   vs  jira_only
-
-    Verdict in plain English based on the strict-PR-AUC delta + bootstrap
-    significance from `report.pairwise_per_metric['pr_auc']`."""
-    lines: list[str] = []
-    by_name = {r.pipeline_name: r for r in report.results}
-    pairs = []
-    if "loganalyzer_hybrid_bm25" in by_name and "loganalyzer_hybrid_with_jira" in by_name:
-        pairs.append(("loganalyzer_hybrid_bm25", "loganalyzer_hybrid_with_jira",
-                      "Same loganalyzer model, with vs without Jira-derived features"))
-    if "jira_only" in by_name:
-        # Compare jira_only to whatever numeric baseline is present
-        for baseline in ("hist_gradient_boosting_numeric", "calibrated_random_forest_numeric",
-                         "loganalyzer_hybrid_bm25"):
-            if baseline in by_name:
-                pairs.append((baseline, "jira_only",
-                              "Telemetry-only baseline vs Jira-memory-only"))
-                break
-    if not pairs:
-        return lines
-
-    lines.append("## Research thesis: does Jira memory help log triage?")
-    lines.append("")
-    lines.append(
-        "Direct head-to-head between pipelines that DO and DO NOT use the "
-        "Jira memory corpus, on the strict triage task. This is the central "
-        "claim the dataset was built to test — whether historical Jira "
-        "tickets carry signal beyond what telemetry features alone can "
-        "extract."
-    )
-    lines.append("")
-    headline = report.headline or {}
-    pair_ci = report.pairwise_per_metric.get("pr_auc", [])
-    lines.append("| Comparison | Without Jira PR-AUC | With Jira PR-AUC | Δ (with − without) | 95% CI | p-value | Significant? | Verdict |")
-    lines.append("| --- | ---: | ---: | ---: | --- | ---: | :---: | --- |")
-    for a, b, description in pairs:
-        pa = headline.get(a, {}).get("triage.pr_auc", 0.0)
-        pb = headline.get(b, {}).get("triage.pr_auc", 0.0)
-        delta = pb - pa
-        # Pull the matching CI from paired bootstrap, if present (the
-        # significance.py rows store both directions sorted by name)
-        ci_row = next((d for d in pair_ci
-                       if (d.pipeline_a == a and d.pipeline_b == b)
-                       or (d.pipeline_a == b and d.pipeline_b == a)), None)
-        if ci_row is None:
-            ci_str, p_str, sig = "n/a", "n/a", "n/a"
-        else:
-            # If the CI row is in the opposite direction, flip
-            if ci_row.pipeline_a == b:
-                lo, hi, d = -ci_row.ci.hi, -ci_row.ci.lo, -ci_row.delta
-            else:
-                lo, hi, d = ci_row.ci.lo, ci_row.ci.hi, ci_row.delta
-            ci_str = f"[{lo:+.4f}, {hi:+.4f}]"
-            p_str = f"{ci_row.p_value:.3f}"
-            sig = "yes" if ci_row.p_value < 0.05 else "no"
-            delta = d
-        # Verdict in plain English
-        if abs(delta) < 0.01:
-            verdict = "Jira makes no measurable difference"
-        elif delta > 0 and sig == "yes":
-            verdict = "**Jira HELPS** (significant)"
-        elif delta > 0:
-            verdict = "Jira helps slightly (not significant)"
-        elif delta < 0 and sig == "yes":
-            verdict = "**Jira HURTS** (significant)"
-        else:
-            verdict = "Jira hurts slightly (not significant)"
-        lines.append(
-            f"| `{a}` vs `{b}` | {pa:.4f} | {pb:.4f} | "
-            f"{delta:+.4f} | {ci_str} | {p_str} | {sig} | {verdict} |"
-        )
-    lines.append("")
-    lines.append(
-        "_Interpretation guide:_ A positive Δ with `Significant=yes` means "
-        "the Jira-aware pipeline beats the non-Jira pipeline beyond what "
-        "bootstrap-resampling could explain by chance. A negative Δ means "
-        "Jira features confused the model more than they helped — usually "
-        "a sign that the Jira memory corpus is too small, too template-y, "
-        "or that the test windows fall in scenario families absent from "
-        "the memory."
-    )
-    return lines
 
 
 def render_report_md(report: ComparisonReport) -> str:
@@ -956,11 +849,6 @@ def render_report_md(report: ComparisonReport) -> str:
             f"- `{r.pipeline_name}` (threshold={r.triage_threshold:.4f}, "
             f"fit={r.fit_seconds:.1f}s, predict={r.predict_seconds:.1f}s)"
         )
-
-    # Corporate thesis section — placed near the top so it answers the
-    # "is the Jira-as-memory idea actually working?" question first.
-    lines.append("")
-    lines.extend(_render_jira_helps_section(report))
 
     # D12.6 headline section — placed near the top so the
      # memorization-vs-detection signal is the first thing a reader sees.

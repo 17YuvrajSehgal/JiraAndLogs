@@ -39,7 +39,7 @@ def main() -> int:
     sys.path.insert(0, "src")
 
     from v2_advanced.proposal_c_hybrid_retrieval.pipeline import HybridRRFRetrievalPipeline
-    from loganalyzer.data.loaders import load_dataset
+    from core.data.loaders import load_dataset
 
     args.out_dir.mkdir(parents=True, exist_ok=True)
 

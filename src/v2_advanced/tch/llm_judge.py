@@ -168,8 +168,8 @@ def main() -> None:
         cascade_rows = cascade_rows[: args.limit]
 
     # Load windows to get evidence text
-    from loganalyzer.data.loaders import load_dataset
-    from loganalyzer.features.text import build_window_query_text
+    from core.data.loaders import load_dataset
+    from core.features.text import build_window_query_text
     ds = load_dataset(args.global_dir)
     window_by_id = {w.window_id: w for w in ds.windows}
 

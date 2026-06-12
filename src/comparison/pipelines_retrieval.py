@@ -25,9 +25,9 @@ import time
 from pathlib import Path
 from typing import Any
 
-from loganalyzer.data.loaders import load_dataset as load_loganalyzer_dataset
-from loganalyzer.data.splits import iter_split
-from loganalyzer.eval.metrics import precision_at_fpr
+from core.data.loaders import load_dataset as load_loganalyzer_dataset
+from core.data.splits import iter_split
+from core.eval.metrics import precision_at_fpr
 
 from .pipelines import PipelineRunner
 from .retrievers import (

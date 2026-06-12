@@ -11,7 +11,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Iterator
 
-from loganalyzer.data.schema import TriageWindow
+from core.data.schema import TriageWindow
 
 from v2_advanced.shared import get_logger
 

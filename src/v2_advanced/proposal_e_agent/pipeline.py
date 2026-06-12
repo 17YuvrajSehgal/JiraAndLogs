@@ -23,9 +23,9 @@ import numpy as np
 
 from comparison.pipelines import PipelineRunner
 from comparison.schema import PipelinePrediction, PipelineResult
-from loganalyzer.data.loaders import load_dataset
-from loganalyzer.data.splits import iter_split
-from loganalyzer.features.text import build_window_query_text
+from core.data.loaders import load_dataset
+from core.data.splits import iter_split
+from core.features.text import build_window_query_text
 from memorygraph.humanized_loader import load_humanized_corpus
 
 from v2_advanced.shared import LMStudioClient, get_logger, log_step

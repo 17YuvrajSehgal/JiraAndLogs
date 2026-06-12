@@ -32,9 +32,9 @@ if str(_SRC_ROOT) not in sys.path:
     sys.path.insert(0, str(_SRC_ROOT))
 from util.device import gpu_status, resolve_device, safe_batch_size  # noqa: E402
 
-from loganalyzer.data.loaders import load_dataset as load_loganalyzer_dataset
-from loganalyzer.data.splits import iter_split
-from loganalyzer.eval.metrics import precision_at_fpr
+from core.data.loaders import load_dataset as load_loganalyzer_dataset
+from core.data.splits import iter_split
+from core.eval.metrics import precision_at_fpr
 
 from .pipelines import PipelineRunner, _build_feature_matrix
 from .schema import PipelinePrediction, PipelineResult
@@ -61,8 +61,7 @@ class BiEncoderHybridPipeline(PipelineRunner):
 
     Production-realism:
       The WINDOW header line is stripped before encoding — that's where
-      lab-only `scenario_id` / `window_id` substring leakage lives. See
-      src/experiments/bi_encoder.py for the original ablation.
+      lab-only `scenario_id` / `window_id` substring leakage lives.
     """
 
     name = "bi_encoder_hybrid"

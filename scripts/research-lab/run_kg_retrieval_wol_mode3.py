@@ -37,7 +37,7 @@ def main() -> int:
     sys.path.insert(0, "src")
 
     from v2_advanced.proposal_d_knowledge_graph.pipeline import KnowledgeGraphRetrievalPipeline
-    from loganalyzer.data.loaders import load_dataset
+    from core.data.loaders import load_dataset
 
     args.out_dir.mkdir(parents=True, exist_ok=True)
 

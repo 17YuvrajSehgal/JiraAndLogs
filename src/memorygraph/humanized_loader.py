@@ -41,7 +41,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from loganalyzer.data.schema import JiraMemoryIssue
+from core.data.schema import JiraMemoryIssue
 
 
 def _read_jsonl(path: Path) -> list[dict]:

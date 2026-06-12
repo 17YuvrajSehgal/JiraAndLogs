@@ -1,6 +1,6 @@
 """Stratified metric breakdowns: per scenario_family / service / window_type.
 
-Reuses loganalyzer.eval.metrics so the numbers match the existing single-
+Reuses core.eval.metrics so the numbers match the existing single-
 pipeline benchmark exactly - this is critical for "we improved X by Y" to
 mean the same thing across reports.
 """
@@ -11,14 +11,14 @@ from collections import defaultdict
 from dataclasses import dataclass
 from typing import Any, Callable
 
-from loganalyzer.eval.metrics import (
+from core.eval.metrics import (
     expected_calibration_error,
     f_beta,
     pr_auc,
     precision_at_fpr,
     roc_auc,
 )
-from loganalyzer.eval.retrieval_metrics import (
+from core.eval.retrieval_metrics import (
     mean_reciprocal_rank,
     novelty_f1,
     recall_at_k,

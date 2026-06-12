@@ -72,11 +72,11 @@ def build_train_pairs(
 ):
     """Yield (anchor_log_lines, positive_doc_text, [neg_doc_text, ...])
     triples for contrastive training."""
-    from loganalyzer.data.loaders import load_dataset
-    from loganalyzer.data.splits import iter_split
-    from loganalyzer.features.text import build_memory_doc_text
-    from loganalyzer.memory.corpus import MemoryCorpus
-    from loganalyzer.memory.retrieval import BM25Retriever
+    from core.data.loaders import load_dataset
+    from core.data.splits import iter_split
+    from core.features.text import build_memory_doc_text
+    from core.memory.corpus import MemoryCorpus
+    from core.memory.retrieval import BM25Retriever
     from memorygraph.humanized_loader import load_humanized_corpus
 
     ds = load_dataset(global_dir)

@@ -1,9 +1,8 @@
-"""comparison - head-to-head evaluator across loganalyzer / logsense /
-ensemble pipelines.
+"""comparison - head-to-head evaluator across pipelines.
 
-Sibling of loganalyzer and logsense. Its job is to:
+Its job is to:
 
-  1. run several Analyzers on the same test split
+  1. run several pipelines on the same test split
   2. produce per-window PipelinePrediction rows in a unified shape
   3. stratify metrics by scenario_family / service / window_type
   4. build score-level ensembles
@@ -13,13 +12,7 @@ The package owns NO modelling code - it only orchestrates and reports.
 """
 
 from .schema import PipelinePrediction, PipelineResult
-from .pipelines import (
-    PipelineRunner,
-    LoganalyzerPipeline,
-    LoganalyzerWithJiraPipeline,
-    JiraOnlyPipeline,
-    LogsensePipeline,
-)
+from .pipelines import PipelineRunner
 from .ensemble import EnsemblePipeline, blend_mean, blend_max, blend_weighted
 from .stratified import stratified_metrics
 from .significance import paired_bootstrap_ci
@@ -28,10 +21,6 @@ __all__ = [
     "PipelinePrediction",
     "PipelineResult",
     "PipelineRunner",
-    "LoganalyzerPipeline",
-    "LoganalyzerWithJiraPipeline",
-    "JiraOnlyPipeline",
-    "LogsensePipeline",
     "EnsemblePipeline",
     "blend_mean",
     "blend_max",
