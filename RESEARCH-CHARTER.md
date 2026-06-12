@@ -144,10 +144,11 @@ A **time-to-diagnose simulation** converts retrieval metrics into engineer-minut
 
 The paper compares exactly these pipelines. Everything else from the 18 registered is excluded from the paper (kept in the codebase for reference).
 
+> **Note (2026-06-12).** The `logsense_hybrid_bm25` baseline previously listed here has been **removed from the panel** and from the codebase. The post-2026-06-06 paper headline is the **TCH cascade** (see [[project-tch-cascade-design]]), and the post-WoL pivot is moving toward an **agentic system** (see `docs7/AGENTIC-SYSTEM.md`, in preparation). The logsense baseline was orthogonal to both — it was a retrieval-only system over a log-template memory, not a Jira-as-memory system — so it has stopped earning its place in the comparison table. The cascade's L2 retrievers (BiEncoder, Hybrid-RRF, LogSeq2Vec, KG-Retrieval) now provide the retrieval-modality comparison contrast that `logsense_hybrid_bm25` originally served. The three sub-claims and metrics remain unchanged; only the pipeline panel shrank.
+
 | Pipeline | Role | Memory? | Status |
 |---|---|---|---|
 | `hist_gradient_boosting_numeric` (HGB) | Detection baseline | None | Existing |
-| `logsense_hybrid_bm25` | Retrieval-only baseline | Logs as memory, no Jira text | Existing |
 | `memorygraph_hybrid_humanized` (V1) | Corpus-quality ablation | V1 CS-voice memory | Existing |
 | `memorygraph_v2_sota_nw080` | **SOTA** | V2 + Move-A + cross-encoder BLEND + nw=0.80 | Existing |
 | `memorygraph_v2_sota_nw080_ft` | **Headline SOTA after fine-tune** | + fine-tuned cross-encoder on (window→gold) pairs | NEW WORK |
