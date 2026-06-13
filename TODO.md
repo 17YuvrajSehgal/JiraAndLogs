@@ -29,12 +29,54 @@ on OB (single stale file from an older pipeline).
 
 ---
 
-## Section 1 — Build the 10 missing scripts (1 day of coding)
+## Section 1 — Build the missing scripts (1 day of coding) — IN PROGRESS
 
 These don't exist on `agent-build` yet. Build + test + commit BEFORE
 starting any data run — otherwise we'd run into them mid-run and stall.
 
-Mark each with the file path + the one-line "what it does".
+**Progress: 4/11 shipped.** Commit log lives on `agent-build` after
+`fb908f2` (the freeze hash).
+
+### Shipped (agent-side, all verified on real data)
+
+- [x] **`scripts/agent/annotate_wol_depth.py`** — d58f868. Adds
+  `n_prior_same_project_tickets` to WoL JSONL. Closes B2 WoL gap.
+
+- [x] **`--order-by-incident-time` flag on smoke_ob/_wol/_otel_demo**
+  + their loaders — d58f868. Sorts by
+  `(service_name, incident_episode_id, start_time)` so suppression
+  sees multi-window incident sequences. Closes C7 non-trivially.
+
+- [x] **`scripts/agent/build_cross_corpus_gold.py`** — b5210fd. Jaccard
+  symptom-token gold relation for Mode 4 (B5).
+
+- [x] **`scripts/agent/run_cross_corpus_retrieval.py`** — b5210fd. TF-IDF
+  retrieval + bootstrap. First real Mode 4 number: Hit@5=0.05 on
+  Kafka×Kafka cross-corpus (B5).
+
+### Remaining (7 scripts; cascade-side, NEEDS USER INPUT)
+
+These all extend the existing `src/v2_advanced/` cascade infrastructure.
+Building them blind risks shipping broken pipelines mid-data-run. They
+need either (a) detailed walk-through of the existing pipeline interfaces
+or (b) acceptance that the corresponding RQs will close partially.
+
+| Script | Closes RQ | What's needed | Risk if shipped blind |
+|---|---|---|---|
+| `v2_advanced/tch/run_cascade_full.py` (or extending `run_all_v2.py`) | A1/A6 retrieval + A9 cost | Wraps existing pipeline runners; adds per-skill wall-time per window | LOW — `run_all_v2.py` already exists; this would add timing logging |
+| `v2_advanced/tch/run_bm25_baseline.py` | C4 | NEW pipeline class in `comparison.pipelines.py` + register in KNOWN_PIPELINES | MED — needs `PipelineRunner` ABC compliance |
+| `v2_advanced/proposal_e_agent/run_on_ood.py` | A5 agent signal | Run DiagnosisAgent on 800 OOD queries; needs Hybrid-RRF candidates from WoL memory | HIGH — couples to multiple existing pipeline outputs |
+| `v2_advanced/tch/build_cascade.py --fit-l3-learned-novelty` flag | A5 learned signal | Fit LogReg over cheap-skill outputs | MED — must match cascade's L1 stacker fitting style |
+| `v2_advanced/tch/build_cascade.py --gold-relation strong` flag | A7 strong | Re-use existing build with strong gold JSONL | LOW — gold path is parameterizable |
+| `scripts/agent/hp_sensitivity.py` | C2 | Coordinates multiple BiEncoder refits | HIGH — needs to call retriever fit code directly |
+| `scripts/agent/reformulation_recovery.py` | B4 | Live BiEncoder inference on reformulated queries | HIGH — needs BiEncoder inference helper |
+| `scripts/agent/distractor_sweep_corpus_mix.py` | A4 Level 2 | Corpus-mixing + BiEncoder refit per ratio | HIGH — same BiEncoder helper |
+
+**Recommended next action** before §2: walk through the cascade's
+`comparison.pipelines.py` + `run_v2_comparison.py` + `proposal_*/pipeline.py`
+interfaces ONCE with the user, then build the remaining scripts in one
+focused session. Otherwise the §3-§5 data runs will hit cascade-side
+errors that cost the iteration budget.
 
 - [ ] **`src/v2_advanced/tch/run_cascade_full.py`** — single end-to-end
   driver. Fits + runs every retriever (BiEncoder, LogSeq2Vec, Hybrid-RRF
