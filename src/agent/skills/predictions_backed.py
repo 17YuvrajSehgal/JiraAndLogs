@@ -94,6 +94,7 @@ class PredictionsBackedSkill(Skill):
         predictions_path: Path | str | None = None,
         *,
         skill_version: str | None = None,
+        predictions_pipeline_name: str | None = None,
     ) -> None:
         if predictions_path is None:
             raise ValueError(
@@ -106,6 +107,14 @@ class PredictionsBackedSkill(Skill):
         # e.g. comparing two BiEncoder fine-tunes).
         if skill_version is not None:
             self.version = skill_version
+
+        # Per-instance pipeline_name override. Datasets sometimes use
+        # different `pipeline_name` strings for the same logical skill
+        # (e.g. OB writes "logseq2vec_retrieval_pretrained" while WoL
+        # writes "logseq2vec_retrieval"). The class-attr default is the
+        # OB convention; loaders supply the right name per dataset.
+        if predictions_pipeline_name is not None:
+            self.predictions_pipeline_name = predictions_pipeline_name
 
         self._predictions: dict[str, dict] = {}
         self._loaded = False

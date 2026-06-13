@@ -449,5 +449,47 @@ class TestRuleControllerNoCapabilities(unittest.TestCase):
         self.assertNotIn("triage_numeric", names)
 
 
+# ---------------------------------------------------------------------------
+# Capability-adaptive end-to-end: OB vs WoL plans diverge from same registry
+# ---------------------------------------------------------------------------
+
+
+class TestCapabilityAdaptivePlanDivergence(unittest.TestCase):
+    """Phase 2.1 — the same RuleController + same registry must produce
+    plans that REFLECT the input bundle's capabilities. OB-shaped bundle
+    keeps everything; WoL-shaped bundle drops the three skills that
+    don't apply. This is the "capability-adaptive" claim in §8."""
+
+    def setUp(self):
+        self.registry = _build_full_registry()
+        self.controller = RuleController(self.registry)
+
+    def test_ob_and_wol_plans_diverge(self):
+        ob_plan = self.controller.plan(_empty_bundle(), _ob_capabilities())
+        wol_plan = self.controller.plan(_empty_bundle(), _wol_capabilities())
+
+        ob_skills = {inv.skill_name for inv in ob_plan.invocations}
+        wol_skills = {inv.skill_name for inv in wol_plan.invocations}
+
+        # Plans must have different plan_ids
+        self.assertNotEqual(ob_plan.plan_id, wol_plan.plan_id)
+
+        # OB keeps the three "telemetry-side" skills; WoL drops them
+        for telemetry_only in (
+            "triage_numeric",          # needs NUMERIC_FEATURES
+            "retrieve_log_sequence",   # needs ORDERED_LOGS
+            "verify_with_llm",         # needs VERIFIER_KNOWN_HELPFUL (calibration)
+        ):
+            self.assertIn(telemetry_only, ob_skills)
+            self.assertNotIn(telemetry_only, wol_skills,
+                             f"{telemetry_only} should NOT be in WoL plan")
+
+        # Both keep the text-retrieval skills
+        for shared in ("retrieve_dense", "retrieve_hybrid_fusion",
+                       "compose_l2", "compose_triage", "compose_novelty"):
+            self.assertIn(shared, ob_skills)
+            self.assertIn(shared, wol_skills)
+
+
 if __name__ == "__main__":
     unittest.main()
