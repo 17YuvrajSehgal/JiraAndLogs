@@ -18,6 +18,7 @@ import argparse
 import json
 from pathlib import Path
 
+from agent.integrity import GraphMetadata, write_graph_metadata
 from v2_advanced.shared import Neo4jClient, get_logger, log_step
 
 from .loader import load_extractions
@@ -74,6 +75,22 @@ def main() -> None:
             batch_size=50,
         )
         log.info("post-load counts", **counts)
+
+        # Phase 1.14: stamp the GraphMetadata fingerprint so the agent's
+        # startup integrity check can verify the right dataset is loaded.
+        # `global-dir` is a Path like
+        # `data/derived/global/<dataset_id>` — the trailing dir name is
+        # the dataset id we fingerprint.
+        dataset_id = args.global_dir.name
+        write_graph_metadata(
+            neo,
+            GraphMetadata(
+                dataset_id=dataset_id,
+                n_incidents=int(counts.get("Incident", len(extractions))),
+                global_dir=str(args.global_dir),
+            ),
+        )
+        log.info("GraphMetadata fingerprint written", dataset_id=dataset_id)
 
 
 if __name__ == "__main__":

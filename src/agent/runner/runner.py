@@ -45,6 +45,7 @@ from pathlib import Path
 from typing import Any
 
 from ..budget import Budget, BudgetExhausted
+from ..integrity import assert_loaded_dataset
 from ..plan import Plan, SkillInvocation
 from ..skills.base import AgentContext, MemoryView, Skill
 from ..skills.cache import NullSkillCache, SkillCache
@@ -111,6 +112,11 @@ class AgentRunner:
             `is_available()`, the constructor checks it and raises
             RunnerError if the provider isn't reachable. This catches
             "12-hour run dies on call 1" upfront.
+        expected_dataset_id: when set together with `neo4j`, the
+            constructor calls `assert_loaded_dataset` and refuses to
+            start if Neo4j has the wrong dataset loaded (Phase 1.14;
+            IMPROVEMENTS §1.1 Option A). Pass the dataset_id from
+            `agent-config.yaml > experiment.dataset_id`.
     """
 
     def __init__(
@@ -123,6 +129,7 @@ class AgentRunner:
         llm: Any | None = None,
         neo4j: Any | None = None,
         health_check: bool = True,
+        expected_dataset_id: str | None = None,
     ) -> None:
         if registry is None:
             raise RunnerError("AgentRunner requires a SkillRegistry (got None).")
@@ -132,9 +139,16 @@ class AgentRunner:
         self.experiment = experiment
         self.llm = llm
         self.neo4j = neo4j
+        self.expected_dataset_id = expected_dataset_id or ""
 
         if health_check and llm is not None:
             self._health_check_llm(llm)
+
+        # Neo4j dataset-isolation safeguard (IMPROVEMENTS §1.1 Option A).
+        # We refuse to start if the loaded graph isn't what the
+        # experiment expects, OR if Option-B tenancy tags are detected.
+        if neo4j is not None and self.expected_dataset_id:
+            assert_loaded_dataset(neo4j, self.expected_dataset_id)
 
     # ------------------------------------------------------------------ health
 
