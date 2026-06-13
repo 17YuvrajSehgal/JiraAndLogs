@@ -209,6 +209,11 @@ class StateLayer:
         self.persistence_path = Path(persistence_path) if persistence_path else None
 
         self._buffers: dict[str, deque[WindowState]] = {}
+        # The ring buffer rolls off old windows (the page-suppression
+        # rule only needs the last 3 anyway), but the eval harness needs
+        # the full count of unique incidents over an entire run for the
+        # pages-per-incident metric. Track them separately here.
+        self._seen_incident_ids: set[str] = set()
         self._lock = threading.RLock()
 
         if self.persistence_path is not None and self.persistence_path.exists():
@@ -251,6 +256,8 @@ class StateLayer:
                 stored = self._with_incident_id(stored, self.generate_incident_id())
             buf = self._buffers.setdefault(state.service_name, deque(maxlen=self.buffer_size))
             buf.append(stored)
+            if stored.incident_id:
+                self._seen_incident_ids.add(stored.incident_id)
             return stored
 
     # ------------------------------------------------------------------ page suppression
@@ -357,12 +364,27 @@ class StateLayer:
         """Drop one service's buffer (or all if `service_name` is None).
 
         Useful between experiments to avoid leakage when reusing the
-        same StateLayer instance."""
+        same StateLayer instance. Clearing all services also resets
+        the all-time `seen_incident_ids` set."""
         with self._lock:
             if service_name is None:
                 self._buffers.clear()
+                self._seen_incident_ids.clear()
             else:
                 self._buffers.pop(service_name, None)
+
+    def seen_incident_ids(self) -> frozenset[str]:
+        """All unique incident_ids generated (or attached via suppression)
+        since construction or the last full `clear()`.
+
+        Survives ring-buffer rollover — used by the eval harness to
+        report accurate pages-per-incident over long runs."""
+        with self._lock:
+            return frozenset(self._seen_incident_ids)
+
+    def n_unique_incidents_seen(self) -> int:
+        with self._lock:
+            return len(self._seen_incident_ids)
 
     # ------------------------------------------------------------------ persistence
 

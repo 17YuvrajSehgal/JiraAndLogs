@@ -483,5 +483,58 @@ class TestIncidentIdGeneration(unittest.TestCase):
             self.assertTrue(i.startswith("inc-"))
 
 
+# ---------------------------------------------------------------------------
+# All-time incident set survives ring-buffer rollover
+# ---------------------------------------------------------------------------
+
+
+class TestSeenIncidentIds(unittest.TestCase):
+    """Phase 1.15 found that `pages_per_incident` over the full OB test
+    split was undercounting because the ring buffer (size 12) rolls off
+    older windows. `seen_incident_ids` is the all-time set, separate
+    from the buffer."""
+
+    def test_unique_count_survives_buffer_eviction(self):
+        sl = StateLayer(buffer_size=3)
+        # Record more than buffer_size ticket_worthy windows for ONE service —
+        # all incident_ids must remain countable.
+        for i in range(10):
+            sl.record(_state(f"w{i}", service="cart", top1=f"PROJ-{i}",
+                              scenario=f"scen-{i}", triage="ticket_worthy"))
+        # Ring buffer only retains the last 3
+        self.assertEqual(sl.n_windows_for("cart"), 3)
+        # But all 10 unique incident_ids remain
+        self.assertEqual(sl.n_unique_incidents_seen(), 10)
+
+    def test_seen_ids_returns_frozenset(self):
+        sl = StateLayer()
+        sl.record(_state("w1", triage="ticket_worthy"))
+        s = sl.seen_incident_ids()
+        self.assertIsInstance(s, frozenset)
+        self.assertEqual(len(s), 1)
+
+    def test_noise_decisions_do_not_create_incidents(self):
+        sl = StateLayer()
+        for i in range(5):
+            sl.record(_state(f"w{i}", triage="noise"))
+        self.assertEqual(sl.n_unique_incidents_seen(), 0)
+
+    def test_clear_all_resets_seen_set(self):
+        sl = StateLayer()
+        sl.record(_state("w1", triage="ticket_worthy"))
+        sl.clear()
+        self.assertEqual(sl.n_unique_incidents_seen(), 0)
+
+    def test_clear_one_service_does_not_reset_global_seen(self):
+        # All-time count is intentionally global (cross-service); a
+        # per-service clear leaves it untouched. This matches the
+        # eval-harness's use: pages-per-incident is a run-level metric.
+        sl = StateLayer()
+        sl.record(_state("w1", service="cart", triage="ticket_worthy"))
+        sl.record(_state("w2", service="checkout", triage="ticket_worthy"))
+        sl.clear("cart")
+        self.assertEqual(sl.n_unique_incidents_seen(), 2)
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -130,7 +130,11 @@ class RetrieveHybridFusionSkill(PredictionsBackedSkill):
     required_flags = frozenset({TEXT_EVIDENCE, MEMORY_TEXT})
     cost_class = "medium"
 
-    predictions_pipeline_name = "hybrid_rrf_retrieval_rule"
+    # Within v2c-hybrid/per-window-predictions.jsonl the JSONL carries
+    # `pipeline_name="hybrid_rrf_retrieval"` (rule-based extraction) and
+    # `hybrid_rrf_no_graph` (rule-extraction with the graph signal
+    # ablated). The rule variant is the canonical Hybrid-RRF retriever.
+    predictions_pipeline_name = "hybrid_rrf_retrieval"
     predictions_subdir = "v2c-hybrid"
 
 
@@ -148,7 +152,10 @@ class RetrieveHybridFusionLLMSkill(PredictionsBackedSkill):
     required_flags = frozenset({TEXT_EVIDENCE, MEMORY_TEXT, KG_GRAPH_MEMORY})
     cost_class = "medium"
 
-    predictions_pipeline_name = "hybrid_rrf_retrieval_llm"
+    # v2c-hybrid-llm reuses the `pipeline_name="hybrid_rrf_retrieval"`
+    # value as v2c-hybrid; the directory disambiguates which extraction
+    # source was used. The subdir is what makes this a different skill.
+    predictions_pipeline_name = "hybrid_rrf_retrieval"
     predictions_subdir = "v2c-hybrid-llm"
 
 

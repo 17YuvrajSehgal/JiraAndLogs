@@ -330,21 +330,24 @@ class EvalHarness:
         )
 
         # Pages per incident.
-        n_pages, n_incidents, p_per_i = pages_per_incident(
-            triage_decisions=(c.decision.triage_decision for c in case_results),
-            incident_ids=(c.suppression_incident_id for c in case_results),
-        )
-        # When the StateLayer auto-generated incident_ids for new tickets,
-        # those don't appear in CaseResult.suppression_incident_id. Recover
-        # them from the StateLayer's full buffer for the same-service cases.
-        if self.state_layer is not None and n_incidents == 0 and n_pages > 0:
-            seen: set[str] = set()
-            for svc in self.state_layer.services():
-                for w in self.state_layer.get_view(svc):
-                    if w.incident_id:
-                        seen.add(w.incident_id)
-            n_incidents = len(seen)
+        # When a state layer is wired, the StateLayer is the authoritative
+        # source of incident_ids — it auto-generates one per new
+        # ticket_worthy window and re-attaches the existing one on
+        # suppression. We pull from there to capture all incidents in
+        # one shot. Without a state layer, fall back to whatever
+        # incident_ids landed in CaseResult.suppression_incident_id.
+        triage_decisions = [c.decision.triage_decision for c in case_results]
+        if self.state_layer is not None:
+            # Use the all-time `seen_incident_ids` (survives ring-buffer
+            # rollover) so the metric is accurate over long runs.
+            n_pages, _, _ = pages_per_incident(triage_decisions, ())
+            n_incidents = self.state_layer.n_unique_incidents_seen()
             p_per_i = n_pages / n_incidents if n_incidents else 0.0
+        else:
+            n_pages, n_incidents, p_per_i = pages_per_incident(
+                triage_decisions=triage_decisions,
+                incident_ids=(c.suppression_incident_id for c in case_results),
+            )
 
         n_suppressions = sum(1 for c in case_results if c.suppression_fired)
 
