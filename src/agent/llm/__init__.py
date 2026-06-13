@@ -35,6 +35,8 @@ from .exceptions import (
     SchemaViolationError,
 )
 from .factory import PROVIDER_REGISTRY, list_supported_providers, make_provider
+from .telemetry import TokenLogger, configure_telemetry, from_env as telemetry_from_env
+from .telemetry_summary import load_records, summarise, write_summary
 
 __all__ = [
     # public dataclasses
@@ -50,6 +52,14 @@ __all__ = [
     # cost
     "lookup_cost",
     "monetary_equivalent_baselines",
+    # telemetry
+    "TokenLogger",
+    "configure_telemetry",
+    "telemetry_from_env",
+    "register_telemetry_hook",
+    "load_records",
+    "summarise",
+    "write_summary",
     # exceptions
     "LLMProviderError",
     "ProviderUnavailable",
@@ -59,6 +69,4 @@ __all__ = [
     "ContextOverflowError",
     "CostBudgetExceeded",
     "SchemaViolationError",
-    # telemetry hook (Phase 1.3 will register one)
-    "register_telemetry_hook",
 ]
