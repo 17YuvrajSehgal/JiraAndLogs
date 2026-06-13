@@ -32,6 +32,12 @@ from .capabilities import (
     UNORDERED_LOGS,
     VERIFIER_KNOWN_HELPFUL,
 )
+from .capabilities_observer import (
+    CapabilitiesObserver,
+    ObservationContext,
+    VerifierCalibration,
+    observe,
+)
 from .plan import Plan, SkillInvocation
 from .trace import Trace, TraceEvent
 from .types import (
@@ -54,6 +60,10 @@ __all__ = [
     "K8sEvent",
     # Capabilities + flag constants
     "Capabilities",
+    "CapabilitiesObserver",
+    "ObservationContext",
+    "VerifierCalibration",
+    "observe",
     "ALL_FLAGS",
     "NUMERIC_FEATURES",
     "TEXT_EVIDENCE",
