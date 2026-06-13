@@ -78,6 +78,7 @@ def load_wol_cases(
     gold_filename: str = _DEFAULT_GOLD_PREDS,
     gold_pipeline: str = _DEFAULT_GOLD_PIPELINE,
     dataset_label: str = "wol",
+    order_by_incident_time: bool = False,
 ) -> list[EvaluationCase]:
     """Load WoL windows of one split and produce `EvaluationCase`s.
 
@@ -128,6 +129,7 @@ def load_wol_cases(
     manifest = load_split_manifest(global_dir)
 
     cases: list[EvaluationCase] = []
+    sort_keys: list[tuple] = []
     n_kept = 0
     n_no_gold = 0
 
@@ -152,10 +154,21 @@ def load_wol_cases(
             gold_triage=_label_to_triage(gold.label),
         )
         cases.append(case)
+        if order_by_incident_time:
+            sort_keys.append((
+                str(window.get("service_name") or ""),
+                str(window.get("incident_episode_id") or ""),
+                str(window.get("start_time") or ""),
+            ))
         n_kept += 1
 
         if limit is not None and n_kept >= limit:
             break
+
+    if order_by_incident_time and sort_keys:
+        idx = sorted(range(len(cases)), key=lambda i: sort_keys[i])
+        cases = [cases[i] for i in idx]
+        log.info("WoL loader: cases re-ordered by (service, episode, start_time)")
 
     log.info(
         "WoL loader: kept %d cases (%s split); %d without gold",

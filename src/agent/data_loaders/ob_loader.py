@@ -51,6 +51,7 @@ def load_ob_cases(
     gold_subdir: str = _DEFAULT_GOLD_SUBDIR,
     gold_pipeline: str = _DEFAULT_GOLD_PIPELINE,
     dataset_label: str = "online_boutique",
+    order_by_incident_time: bool = False,
 ) -> list[EvaluationCase]:
     """Load OB windows of one split and produce `EvaluationCase`s.
 
@@ -94,6 +95,7 @@ def load_ob_cases(
     manifest = load_split_manifest(global_dir)
 
     cases: list[EvaluationCase] = []
+    sort_keys: list[tuple] = []     # parallel; only used when order_by_incident_time
     n_seen = 0
     n_kept = 0
     n_no_gold = 0
@@ -123,10 +125,23 @@ def load_ob_cases(
             gold_triage=_label_to_triage(gold.label),
         )
         cases.append(case)
+        if order_by_incident_time:
+            sort_keys.append((
+                str(window.get("service_name") or ""),
+                str(window.get("incident_episode_id") or ""),
+                str(window.get("start_time") or ""),
+            ))
         n_kept += 1
 
         if limit is not None and n_kept >= limit:
             break
+
+    if order_by_incident_time and sort_keys:
+        # Sort cases by (service, episode_id, start_time) so the StateLayer
+        # sees multi-window same-incident sequences (closes C7).
+        idx = sorted(range(len(cases)), key=lambda i: sort_keys[i])
+        cases = [cases[i] for i in idx]
+        log.info("OB loader: cases re-ordered by (service, episode, start_time)")
 
     log.info(
         "OB loader: scanned %d rows; kept %d (%s split); %d without gold",

@@ -188,6 +188,10 @@ def main() -> None:
     p.add_argument("--skip-skill", action="append", default=[],
                    metavar="NAME",
                    help="drop a skill from the registry; repeatable")
+    p.add_argument("--order-by-incident-time", action="store_true",
+                   help="sort cases by (service, episode, start_time) so "
+                        "the StateLayer sees multi-window incident sequences "
+                        "(closes RQ-C7 page-suppression)")
     p.add_argument("--verbose", action="store_true")
     args = p.parse_args()
 
@@ -199,6 +203,7 @@ def main() -> None:
     print(f"[smoke_ob] loading cases from {args.global_dir} (split={args.split})")
     cases = load_ob_cases(
         args.global_dir, split=args.split, limit=args.limit,
+        order_by_incident_time=args.order_by_incident_time,
     )
     print(f"[smoke_ob] loaded {len(cases)} cases")
 

@@ -57,6 +57,7 @@ def load_otel_demo_cases(
     limit: int | None = None,
     gold_source: str = "auto",      # "auto" | "comparison" | "matchings"
     dataset_label: str = "otel_demo",
+    order_by_incident_time: bool = False,
 ) -> list[EvaluationCase]:
     """Load OTel Demo windows of one split.
 
@@ -94,6 +95,7 @@ def load_otel_demo_cases(
     manifest = load_split_manifest(global_dir)
 
     cases: list[EvaluationCase] = []
+    sort_keys: list[tuple] = []
     n_kept = 0
     n_no_gold = 0
     splits_seen: dict[str, int] = {}
@@ -121,6 +123,12 @@ def load_otel_demo_cases(
             gold_triage=_label_to_triage(gold.label),
         )
         cases.append(case)
+        if order_by_incident_time:
+            sort_keys.append((
+                str(window.get("service_name") or ""),
+                str(window.get("incident_episode_id") or ""),
+                str(window.get("start_time") or ""),
+            ))
         n_kept += 1
 
         if limit is not None and n_kept >= limit:
@@ -132,6 +140,11 @@ def load_otel_demo_cases(
             f"Splits seen in the JSONL: {dict(splits_seen)}. "
             f"If the dataset is mid-collection, try split='train'.",
         )
+
+    if order_by_incident_time and sort_keys:
+        idx = sorted(range(len(cases)), key=lambda i: sort_keys[i])
+        cases = [cases[i] for i in idx]
+        log.info("OTel Demo loader: cases re-ordered by (service, episode, start_time)")
 
     log.info(
         "OTel Demo loader: kept %d cases (%s split); %d without gold",
