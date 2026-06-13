@@ -227,22 +227,20 @@ directories and reproduce the cascade + agent runs that follow.
 **OTel Demo:** missing humanized + memory entities. §2.5.1 + §2.5.2
 generate them.
 
-- [ ] **2.5.1 Humanize OTel Demo memory corpus** (~70 min LM Studio
-  with `qwen2.5-coder-14b` to match OB+WoL protocol; ~147 tickets).
-  Resumable.
+- [x] **2.5.1 Humanize OTel Demo memory corpus** — ✓ COMPLETE 2026-06-13.
+  Used `qwen2.5-coder-14b` @ temp 0.7 (matches OB+WoL protocol).
+  147/147 tickets, 0 failures, 696 LLM calls, 2h 13m wall.
+  Output: `<otel>/jira-shadow-humanized-v2/bulk-20260531/timeline.jsonl`.
+  Schema parity verified against OB v2 (identical keys).
   ```bash
+  # Reproduction:
   PYTHONPATH=src python scripts/research-lab/humanize_v5_large_bulk.py \
       --global-id 2026-06-09-otel-demo-v1-global \
       --runs-root data/otel-demo-runs \
       --output-subdir bulk-20260531 \
       --llm-base-url http://localhost:1234 \
       --llm-model qwen/qwen2.5-coder-14b
-  # Verify:
-  wc -l data/derived/global/2026-06-09-otel-demo-v1-global/jira-shadow-humanized-v2/bulk-20260531/timeline.jsonl
-  # expected: ~147
   ```
-  **STATUS 2026-06-13:** Running in background (after the smoke
-  passed 3/3 with no failures, avg 29s/ticket). Estimated wall: ~70 min.
 
 - [ ] **2.5.2 Memory-side LLM entity extraction on OTel Demo**
   (~1 h LM Studio with `qwen3.6-35b-a3b`; ~147 tickets).
