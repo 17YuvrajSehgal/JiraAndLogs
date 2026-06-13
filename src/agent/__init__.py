@@ -13,7 +13,7 @@ Top-level package for the agent system specified in
     agent.controller    — pluggable controller (Phase 1.9)
     agent.runner        — plan executor (Phase 1.11)
     agent.state         — cross-window state (Phase 1.12)
-    agent.eval          — evaluation harness (Phase 1.13) [pending]
+    agent.eval_harness  — evaluation harness (Phase 1.13)
 """
 
 from .budget import Budget, BudgetExhausted, BudgetSnapshot
