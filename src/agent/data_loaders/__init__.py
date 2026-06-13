@@ -13,6 +13,11 @@ OTel Demo + WoL loaders will land in Phase 2.
 
 from .ob_loader import load_ob_cases
 from .otel_demo_loader import load_otel_demo_cases
+from .window_extractions import (
+    DEFAULT_RELATIVE_PATH as WINDOW_EXTRACTIONS_DEFAULT_PATH,
+    WindowEntities,
+    WindowExtractionsStore,
+)
 from .wol_loader import WOL_PREDICTIONS_PATHS, load_wol_cases
 
 __all__ = [
@@ -20,4 +25,7 @@ __all__ = [
     "load_otel_demo_cases",
     "load_wol_cases",
     "WOL_PREDICTIONS_PATHS",
+    "WindowEntities",
+    "WindowExtractionsStore",
+    "WINDOW_EXTRACTIONS_DEFAULT_PATH",
 ]
