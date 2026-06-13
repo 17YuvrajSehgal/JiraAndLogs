@@ -219,7 +219,15 @@ class SkillCallCost:
 
     @classmethod
     def zero(cls) -> "SkillCallCost":
-        return cls()
+        """Additive identity: all fields zero (including n_calls).
+
+        The dataclass default `n_calls=1` represents "this one skill
+        call" — used when constructing a single SkillCallCost. The
+        accumulator `zero()` is different: it must be a true identity
+        under `+`, so n_calls=0 here. Otherwise aggregating N skill
+        costs would give n_calls=N+1.
+        """
+        return cls(n_calls=0)
 
     def to_dict(self) -> dict[str, Any]:
         return dataclasses.asdict(self)

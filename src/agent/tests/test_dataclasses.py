@@ -171,7 +171,9 @@ class TestSkillCallCost(unittest.TestCase):
         z = SkillCallCost.zero()
         self.assertEqual(z.llm_tokens, 0)
         self.assertEqual(z.usd, 0.0)
-        self.assertEqual(z.n_calls, 1)               # n_calls defaults to 1
+        # zero() is the additive identity — every field is 0, including
+        # n_calls (so accumulating N costs gives n_calls=N, not N+1).
+        self.assertEqual(z.n_calls, 0)
 
     def test_addition(self):
         a = SkillCallCost(llm_tokens=10, usd=0.001, n_calls=1)
