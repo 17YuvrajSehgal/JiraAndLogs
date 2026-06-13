@@ -1,0 +1,453 @@
+"""Offline tests for Phase 1.9: Controller ABC + RuleController.
+
+Covers:
+  - Controller ABC contract (must implement plan()).
+  - RuleController emits a Plan referencing only registered + invokable skills.
+  - Capability-gating: WoL profile drops verify_with_llm (no
+    VERIFIER_KNOWN_HELPFUL); OB profile keeps it.
+  - Escalation gate: cheap-path confidence ⇒ skip expensive; absent ⇒ run.
+  - Ablation: registry pre-pruned ⇒ controller omits the dropped skill
+    and the resulting Plan is plan_id-stable across runs.
+  - plan_id is deterministic + sensitive to the controller's policy.
+
+Run:
+    PYTHONPATH=src python -m unittest agent.tests.test_controller -v
+"""
+
+from __future__ import annotations
+
+import unittest
+
+from agent import (
+    Budget,
+    Capabilities,
+    InputBundle,
+    KG_GRAPH_MEMORY,
+    MEMORY_TEXT,
+    NUMERIC_FEATURES,
+    ORDERED_LOGS,
+    SkillCallCost,
+    SkillOutput,
+    TEXT_EVIDENCE,
+    Trace,
+    TraceEvent,
+    VERIFIER_KNOWN_HELPFUL,
+)
+from agent.controller import Controller, RuleController, make_escalation_gate
+from agent.skills import Skill, SkillRegistry, make_cost
+from agent.skills.composition import (
+    ComposeL2Skill,
+    ComposeNoveltySkill,
+    ComposeTriageSkill,
+)
+from agent.skills.retrievers import (
+    RetrieveDenseSkill,
+    RetrieveHybridFusionSkill,
+    RetrieveKnowledgeGraphSkill,
+    RetrieveLogSequenceSkill,
+    TriageNumericSkill,
+    VerifyWithLLMSkill,
+)
+
+
+# ---------------------------------------------------------------------------
+# Helpers — build a registry without exercising the predictions-loader
+# (PredictionsBackedSkill loads its JSONL lazily on first invoke; the
+# controller only inspects class-level attrs, so no I/O happens here).
+# ---------------------------------------------------------------------------
+
+
+_DUMMY_PREDICTIONS_PATH = "data/__nonexistent__/predictions.jsonl"
+
+
+def _build_full_registry() -> SkillRegistry:
+    """Registry with every predictions-backed retriever + every composition skill."""
+    r = SkillRegistry()
+    r.register(TriageNumericSkill(predictions_path=_DUMMY_PREDICTIONS_PATH))
+    r.register(RetrieveDenseSkill(predictions_path=_DUMMY_PREDICTIONS_PATH))
+    r.register(RetrieveLogSequenceSkill(predictions_path=_DUMMY_PREDICTIONS_PATH))
+    r.register(RetrieveHybridFusionSkill(predictions_path=_DUMMY_PREDICTIONS_PATH))
+    # retrieve_hybrid_fusion_llm + retrieve_knowledge_graph need KG_GRAPH_MEMORY.
+    r.register(RetrieveKnowledgeGraphSkill(predictions_path=_DUMMY_PREDICTIONS_PATH))
+    r.register(VerifyWithLLMSkill(predictions_path=_DUMMY_PREDICTIONS_PATH))
+    r.register(ComposeL2Skill())
+    r.register(ComposeTriageSkill())
+    r.register(ComposeNoveltySkill())
+    return r
+
+
+def _ob_capabilities() -> Capabilities:
+    """OB-shaped capabilities: full telemetry + verifier known-helpful."""
+    return Capabilities(flags=frozenset({
+        NUMERIC_FEATURES,
+        TEXT_EVIDENCE,
+        ORDERED_LOGS,
+        MEMORY_TEXT,
+        KG_GRAPH_MEMORY,
+        VERIFIER_KNOWN_HELPFUL,
+    }))
+
+
+def _wol_capabilities() -> Capabilities:
+    """WoL-shaped: text-only + no verifier flag (calibration knocks it out)."""
+    return Capabilities(flags=frozenset({
+        TEXT_EVIDENCE,
+        MEMORY_TEXT,
+        KG_GRAPH_MEMORY,
+        # explicitly no VERIFIER_KNOWN_HELPFUL
+        # explicitly no NUMERIC_FEATURES, no ORDERED_LOGS
+    }))
+
+
+def _empty_bundle(window_id: str = "w-test") -> InputBundle:
+    return InputBundle(window_id=window_id, dataset="test")
+
+
+# ---------------------------------------------------------------------------
+# Trace fixtures for gate tests
+# ---------------------------------------------------------------------------
+
+
+def _trace_with_skill_output(
+    skill_name: str,
+    *,
+    triage_score: float | None = None,
+    matched_issue_ids: tuple[str, ...] = (),
+) -> Trace:
+    """Build a Trace with one skill_end event for `skill_name`."""
+    t = Trace(bundle_id="w1", plan_id="plan_xxx")
+    t.add(TraceEvent(
+        ts=TraceEvent.now(),
+        kind="skill_end",
+        skill=skill_name,
+        skill_version="1.0.0",
+        output=SkillOutput(
+            skill=skill_name,
+            skill_version="1.0.0",
+            triage_score=triage_score,
+            matched_issue_ids=matched_issue_ids,
+            cost=make_cost(),
+        ),
+    ))
+    return t
+
+
+# ---------------------------------------------------------------------------
+# Controller ABC
+# ---------------------------------------------------------------------------
+
+
+class TestControllerABC(unittest.TestCase):
+    def test_cannot_instantiate_abstract_controller(self):
+        with self.assertRaises(TypeError):
+            Controller()                            # type: ignore[abstract]
+
+    def test_subclass_must_implement_plan(self):
+        class _Incomplete(Controller):
+            name = "incomplete"
+        with self.assertRaises(TypeError):
+            _Incomplete()                           # type: ignore[abstract]
+
+
+# ---------------------------------------------------------------------------
+# RuleController — plan composition under different capability profiles
+# ---------------------------------------------------------------------------
+
+
+class TestRuleControllerOBPlan(unittest.TestCase):
+    def setUp(self):
+        self.registry = _build_full_registry()
+        self.controller = RuleController(self.registry)
+        self.plan = self.controller.plan(_empty_bundle(), _ob_capabilities())
+
+    def test_plan_includes_triage_numeric_first(self):
+        names = [inv.skill_name for inv in self.plan.invocations]
+        self.assertEqual(names[0], "triage_numeric")
+
+    def test_plan_includes_cheap_retriever_second(self):
+        names = [inv.skill_name for inv in self.plan.invocations]
+        self.assertEqual(names[1], "retrieve_dense")
+
+    def test_plan_includes_verifier_on_ob(self):
+        names = {inv.skill_name for inv in self.plan.invocations}
+        self.assertIn("verify_with_llm", names)
+
+    def test_plan_includes_compose_novelty_last(self):
+        names = [inv.skill_name for inv in self.plan.invocations]
+        self.assertEqual(names[-1], "compose_novelty")
+
+    def test_cheap_path_skills_have_no_gate(self):
+        by_name = {inv.skill_name: inv for inv in self.plan.invocations}
+        self.assertIsNone(by_name["triage_numeric"].gate)
+        self.assertIsNone(by_name["retrieve_dense"].gate)
+        self.assertIsNone(by_name["compose_triage"].gate)
+        self.assertIsNone(by_name["compose_novelty"].gate)
+
+    def test_expensive_retrievers_have_escalation_gate(self):
+        by_name = {inv.skill_name: inv for inv in self.plan.invocations}
+        for expensive in (
+            "retrieve_log_sequence",
+            "retrieve_hybrid_fusion",
+            "retrieve_knowledge_graph",
+        ):
+            self.assertIsNotNone(
+                by_name[expensive].gate,
+                f"{expensive} should have an escalation gate",
+            )
+
+    def test_verifier_has_gate(self):
+        by_name = {inv.skill_name: inv for inv in self.plan.invocations}
+        self.assertIsNotNone(by_name["verify_with_llm"].gate)
+
+    def test_plan_id_is_stable(self):
+        # Same inputs → same plan_id (deterministic / idempotent)
+        plan2 = self.controller.plan(_empty_bundle(), _ob_capabilities())
+        self.assertEqual(self.plan.plan_id, plan2.plan_id)
+
+    def test_plan_controller_name(self):
+        self.assertEqual(self.plan.controller_name, "rule")
+
+
+class TestRuleControllerWoLPlan(unittest.TestCase):
+    """WoL — no NUMERIC_FEATURES, no ORDERED_LOGS, no VERIFIER_KNOWN_HELPFUL."""
+
+    def setUp(self):
+        self.registry = _build_full_registry()
+        self.controller = RuleController(self.registry)
+        self.plan = self.controller.plan(_empty_bundle(), _wol_capabilities())
+
+    def test_plan_excludes_verifier(self):
+        names = {inv.skill_name for inv in self.plan.invocations}
+        self.assertNotIn(
+            "verify_with_llm", names,
+            "VERIFIER_KNOWN_HELPFUL absent → verify_with_llm must be dropped",
+        )
+
+    def test_plan_excludes_triage_numeric(self):
+        names = {inv.skill_name for inv in self.plan.invocations}
+        self.assertNotIn(
+            "triage_numeric", names,
+            "NUMERIC_FEATURES absent → triage_numeric must be dropped",
+        )
+
+    def test_plan_excludes_log_sequence(self):
+        names = {inv.skill_name for inv in self.plan.invocations}
+        self.assertNotIn(
+            "retrieve_log_sequence", names,
+            "ORDERED_LOGS absent → retrieve_log_sequence must be dropped",
+        )
+
+    def test_plan_keeps_dense_and_hybrid(self):
+        names = {inv.skill_name for inv in self.plan.invocations}
+        self.assertIn("retrieve_dense", names)
+        self.assertIn("retrieve_hybrid_fusion", names)
+        # KG retrieval requires KG_GRAPH_MEMORY (which WoL has)
+        self.assertIn("retrieve_knowledge_graph", names)
+
+    def test_plan_keeps_composition_layer(self):
+        names = {inv.skill_name for inv in self.plan.invocations}
+        self.assertIn("compose_l2", names)
+        self.assertIn("compose_triage", names)
+        self.assertIn("compose_novelty", names)
+
+
+# ---------------------------------------------------------------------------
+# Escalation gate behaviour
+# ---------------------------------------------------------------------------
+
+
+class TestEscalationGate(unittest.TestCase):
+    def test_cheap_path_confident_skips_expensive(self):
+        gate = make_escalation_gate(threshold=0.9, require_consensus=True)
+        trace = Trace(bundle_id="w1", plan_id="plan_x")
+        # Add high-confidence triage + dense match
+        trace.add(TraceEvent(
+            ts=TraceEvent.now(), kind="skill_end", skill="triage_numeric",
+            output=SkillOutput(skill="triage_numeric", triage_score=0.95),
+        ))
+        trace.add(TraceEvent(
+            ts=TraceEvent.now(), kind="skill_end", skill="retrieve_dense",
+            output=SkillOutput(
+                skill="retrieve_dense", triage_score=0.85,
+                matched_issue_ids=("PROJ-1",),
+            ),
+        ))
+        self.assertFalse(gate(trace, Budget()),
+                         "cheap-path confident ⇒ expensive skill skipped")
+
+    def test_low_triage_score_escalates(self):
+        gate = make_escalation_gate(threshold=0.9)
+        trace = Trace(bundle_id="w1", plan_id="plan_x")
+        trace.add(TraceEvent(
+            ts=TraceEvent.now(), kind="skill_end", skill="triage_numeric",
+            output=SkillOutput(skill="triage_numeric", triage_score=0.50),
+        ))
+        trace.add(TraceEvent(
+            ts=TraceEvent.now(), kind="skill_end", skill="retrieve_dense",
+            output=SkillOutput(
+                skill="retrieve_dense", triage_score=0.85,
+                matched_issue_ids=("PROJ-1",),
+            ),
+        ))
+        self.assertTrue(gate(trace, Budget()),
+                        "triage_score below threshold ⇒ escalate")
+
+    def test_no_triage_output_escalates(self):
+        """WoL path: no triage_numeric ran, so the gate must escalate."""
+        gate = make_escalation_gate(threshold=0.9)
+        trace = Trace(bundle_id="w1", plan_id="plan_x")
+        # Only the dense retriever ran (no triage_numeric)
+        trace.add(TraceEvent(
+            ts=TraceEvent.now(), kind="skill_end", skill="retrieve_dense",
+            output=SkillOutput(
+                skill="retrieve_dense", triage_score=0.85,
+                matched_issue_ids=("PROJ-1",),
+            ),
+        ))
+        self.assertTrue(gate(trace, Budget()),
+                        "no triage signal ⇒ escalate (WoL path)")
+
+    def test_no_consensus_escalates(self):
+        gate = make_escalation_gate(threshold=0.9, require_consensus=True)
+        trace = Trace(bundle_id="w1", plan_id="plan_x")
+        trace.add(TraceEvent(
+            ts=TraceEvent.now(), kind="skill_end", skill="triage_numeric",
+            output=SkillOutput(skill="triage_numeric", triage_score=0.95),
+        ))
+        # retrieve_dense returned NO matches
+        trace.add(TraceEvent(
+            ts=TraceEvent.now(), kind="skill_end", skill="retrieve_dense",
+            output=SkillOutput(
+                skill="retrieve_dense", triage_score=0.0,
+                matched_issue_ids=(),
+            ),
+        ))
+        self.assertTrue(gate(trace, Budget()),
+                        "no BiEncoder consensus ⇒ escalate")
+
+    def test_consensus_disabled_lets_triage_alone_decide(self):
+        gate = make_escalation_gate(threshold=0.9, require_consensus=False)
+        trace = Trace(bundle_id="w1", plan_id="plan_x")
+        trace.add(TraceEvent(
+            ts=TraceEvent.now(), kind="skill_end", skill="triage_numeric",
+            output=SkillOutput(skill="triage_numeric", triage_score=0.95),
+        ))
+        # No retrieve_dense at all
+        self.assertFalse(gate(trace, Budget()),
+                         "require_consensus=False ⇒ high triage alone skips expensive")
+
+
+# ---------------------------------------------------------------------------
+# Ablation: pre-pruned registry → plan omits dropped skills
+# ---------------------------------------------------------------------------
+
+
+class TestAblationViaRegistryPrune(unittest.TestCase):
+    def test_drop_verifier_via_copy_without(self):
+        full = _build_full_registry()
+        pruned = full.copy_without({"verify_with_llm"})
+        controller = RuleController(pruned)
+        plan = controller.plan(_empty_bundle(), _ob_capabilities())
+        names = {inv.skill_name for inv in plan.invocations}
+        self.assertNotIn("verify_with_llm", names)
+        # Other skills still present
+        self.assertIn("retrieve_dense", names)
+        self.assertIn("compose_novelty", names)
+
+    def test_drop_kg_retrieval_via_copy_without(self):
+        full = _build_full_registry()
+        pruned = full.copy_without({"retrieve_knowledge_graph"})
+        controller = RuleController(pruned)
+        plan = controller.plan(_empty_bundle(), _ob_capabilities())
+        names = {inv.skill_name for inv in plan.invocations}
+        self.assertNotIn("retrieve_knowledge_graph", names)
+
+    def test_ablation_changes_plan_id(self):
+        full = _build_full_registry()
+        ctrl_full = RuleController(full)
+        plan_full = ctrl_full.plan(_empty_bundle(), _ob_capabilities())
+
+        ctrl_pruned = RuleController(full.copy_without({"verify_with_llm"}))
+        plan_pruned = ctrl_pruned.plan(_empty_bundle(), _ob_capabilities())
+
+        self.assertNotEqual(
+            plan_full.plan_id, plan_pruned.plan_id,
+            "ablating a skill must change plan_id",
+        )
+
+
+# ---------------------------------------------------------------------------
+# Budget plumbing
+# ---------------------------------------------------------------------------
+
+
+class TestRuleControllerBudget(unittest.TestCase):
+    def test_default_budget_applied(self):
+        controller = RuleController(_build_full_registry())
+        plan = controller.plan(_empty_bundle(), _ob_capabilities())
+        self.assertEqual(plan.global_budget.max_llm_tokens, 100_000)
+        self.assertEqual(plan.global_budget.max_skill_calls, 12)
+
+    def test_budget_caps_override(self):
+        controller = RuleController(
+            _build_full_registry(),
+            budget_caps={"max_llm_tokens": 50_000, "max_usd_equivalent": 0.10},
+        )
+        plan = controller.plan(_empty_bundle(), _ob_capabilities())
+        self.assertEqual(plan.global_budget.max_llm_tokens, 50_000)
+        self.assertAlmostEqual(plan.global_budget.max_usd_equivalent, 0.10)
+
+    def test_per_call_budget_inherits_global_caps(self):
+        controller = RuleController(
+            _build_full_registry(),
+            budget_caps={"max_llm_tokens": 50_000},
+        )
+        plan = controller.plan(_empty_bundle(), _ob_capabilities())
+        for inv in plan.invocations:
+            self.assertEqual(inv.per_call_budget.max_llm_tokens, 50_000)
+            # Fresh counter
+            self.assertEqual(inv.per_call_budget.spent_tokens, 0)
+
+    def test_per_call_config_overrides_threshold(self):
+        controller = RuleController(_build_full_registry())
+        plan = controller.plan(
+            _empty_bundle(), _ob_capabilities(),
+            config={"cheap_path": {"triage_high_confidence": 0.95}},
+        )
+        # Different threshold → different gate closure → plan still functions
+        # (plan_id may or may not change depending on whether the gate's
+        # presence-flag affects the serialised plan signature).
+        self.assertIsNotNone(plan)
+
+
+# ---------------------------------------------------------------------------
+# Empty / degenerate cases
+# ---------------------------------------------------------------------------
+
+
+class TestRuleControllerEmptyRegistry(unittest.TestCase):
+    def test_empty_registry_yields_empty_plan(self):
+        controller = RuleController(SkillRegistry())
+        plan = controller.plan(_empty_bundle(), _ob_capabilities())
+        self.assertEqual(len(plan.invocations), 0)
+
+
+class TestRuleControllerNoCapabilities(unittest.TestCase):
+    def test_no_flags_drops_everything_except_composition(self):
+        """A capability-less bundle keeps only the composition skills
+        (which declare no required flags)."""
+        controller = RuleController(_build_full_registry())
+        plan = controller.plan(_empty_bundle(), Capabilities())
+        names = {inv.skill_name for inv in plan.invocations}
+        # Composition skills declare required_flags=frozenset(), so they
+        # always pass the capability gate.
+        self.assertIn("compose_l2", names)
+        self.assertIn("compose_triage", names)
+        self.assertIn("compose_novelty", names)
+        # Every other skill requires at least one flag
+        self.assertNotIn("retrieve_dense", names)
+        self.assertNotIn("triage_numeric", names)
+
+
+if __name__ == "__main__":
+    unittest.main()

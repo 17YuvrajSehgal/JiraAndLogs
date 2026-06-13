@@ -9,8 +9,8 @@ Top-level package for the agent system specified in
     agent.budget        — Budget + BudgetSnapshot (Phase 1.4)
     agent.plan          — Plan + SkillInvocation (Phase 1.4)
     agent.trace         — Trace + TraceEvent (Phase 1.4)
-    agent.skills        — Skill registry (Phase 1.7) [pending]
-    agent.controller    — pluggable controller (Phase 1.9) [pending]
+    agent.skills        — Skill registry (Phase 1.7)
+    agent.controller    — pluggable controller (Phase 1.9)
     agent.runner        — plan executor (Phase 1.11) [pending]
     agent.state         — cross-window state (Phase 1.12) [pending]
     agent.eval          — evaluation harness (Phase 1.13) [pending]
