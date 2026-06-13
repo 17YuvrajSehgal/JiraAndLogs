@@ -31,6 +31,17 @@ from .ablation import (
     AblationHarness,
     AblationSpec,
 )
+from .distractor_sweep import (
+    DistractorSweepReport,
+    compute_max_similarity_per_window,
+    compute_window_weights,
+    inject_similarity_weighted,
+    inject_uniform,
+    load_distractor_texts,
+    load_window_texts_for_cascade,
+    run_similarity_weighted_sweep,
+    run_uniform_sweep,
+)
 from .exceptions import ApplesToApplesViolation, EvaluationModeMismatch
 from .harness import EvalHarness
 from .metrics import (
@@ -77,6 +88,16 @@ __all__ = [
     "reciprocal_rank",
     "mean_reciprocal_rank",
     "pages_per_incident",
+    # distractor sweep (Phase 3.4 — RQ-A4)
+    "DistractorSweepReport",
+    "run_uniform_sweep",
+    "run_similarity_weighted_sweep",
+    "inject_uniform",
+    "inject_similarity_weighted",
+    "compute_window_weights",
+    "compute_max_similarity_per_window",
+    "load_window_texts_for_cascade",
+    "load_distractor_texts",
     # novelty (Phase 3.3 — RQ-A5)
     "NoveltyQuery",
     "NoveltyReport",
