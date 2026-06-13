@@ -1,0 +1,221 @@
+# ============================================================================
+# Agentic Incident Triage System — Runtime Configuration
+# ----------------------------------------------------------------------------
+# This file is TRACKED. Secrets (API keys, passwords) belong in `.env` only.
+# Copy this file to `agent-config.yaml` and edit per experiment.
+#
+# Spec: DOCS/docs7/AGENTIC-SYSTEM.md
+# ============================================================================
+
+
+# ---------------------------------------------------------------------------
+# Experiment identification
+# ---------------------------------------------------------------------------
+# `name` is threaded through every Trace, LLM telemetry record, and
+# AgentDecision. OVERRIDE per run. The runner refuses to start if the
+# `dataset_id` doesn't match the loaded Neo4j graph (see §1.1 in
+# IMPROVEMENTS.md — research safety rule).
+experiment:
+  name: ob-baseline-2026-06-13
+  description: "First agent baseline on the OB locked dataset"
+  # Must match `data/derived/global/<dataset_id>/` AND the GraphMetadata
+  # fingerprint in Neo4j.
+  dataset_id: 2026-05-25-dataset-v5-large-global
+  global_dir: data/derived/global/2026-05-25-dataset-v5-large-global
+
+
+# ---------------------------------------------------------------------------
+# LLM provider configuration
+# ---------------------------------------------------------------------------
+# Env vars in `.env` (LLM_PROVIDER, LLM_BASE_URL, LLM_MODEL, OPENAI_API_KEY,
+# ANTHROPIC_API_KEY, ...) override the values here. This block is the *default
+# fallback* — keeps the config self-contained when env vars aren't set.
+llm:
+  provider: lm_studio
+  model: qwen/qwen3.6-35b-a3b
+  temperature: 0.0
+  max_tokens_per_call: 1024
+  # When the prompt + max_tokens_per_call would exceed the model's context
+  # window, the agent records a `context_overflow` telemetry event and
+  # invokes the skill's `on_failure` policy (fallback or abort).
+  context_overflow_policy: skip_with_telemetry  # or "truncate" | "abort"
+  retry:
+    max_attempts: 3
+    backoff_s: [1, 4, 16]
+
+
+# ---------------------------------------------------------------------------
+# Per-window Budget (Plan / Runner enforces these)
+# ---------------------------------------------------------------------------
+budget:
+  max_usd_per_window: 0.50
+  max_tokens_per_window: 100000
+  max_seconds_per_window: 90.0
+  max_skill_calls_per_window: 12
+
+
+# ---------------------------------------------------------------------------
+# Controller policy
+# ---------------------------------------------------------------------------
+# v1 ships `rule`; v2 will add `learned`. Swap via type.
+controller:
+  type: rule
+  cheap_path:
+    # Emit a verdict immediately (skipping expensive skills) when
+    # triage_numeric is confident AND retrieve_dense top-1 has consensus.
+    triage_high_confidence: 0.90
+    require_top1_consensus: true
+  escalation:
+    # On L2 disagreement, reformulate the query and retry up to this many
+    # times before falling through to novelty.
+    max_reformulation_retries: 2
+    consensus_voters_required: 2
+  verifier:
+    # Verifier (DiagnosisAgent) is invoked ONLY when the dataset is in
+    # `verifier_calibration.known_helpful_distributions` below.
+    # This structurally closes RQ-A8 (Mode 3 §3.9 OOD failure).
+    require_calibration_flag: VERIFIER_KNOWN_HELPFUL
+
+
+# ---------------------------------------------------------------------------
+# Skill registry — enable/disable per experiment.
+# ---------------------------------------------------------------------------
+# Disabling a skill at this level removes it from the controller's
+# consideration entirely; the runner never invokes it. This is how
+# ablations are expressed (§9 in AGENTIC-SYSTEM.md).
+skills:
+  triage_numeric:
+    enabled: true
+    # Required capability: NUMERIC_FEATURES (94 cols). Auto-skipped when
+    # the bundle lacks them (e.g. WoL).
+
+  retrieve_dense:
+    enabled: true
+    n_hard_negs: 2
+    n_random_negs: 1
+
+  retrieve_log_sequence:
+    enabled: true
+    # Controller down-weights or skips when ORDERED_LOGS richness shows
+    # fewer than this many lines (avoids LogSeq2Vec underperformance on
+    # short or unordered log seqs — see Mode 3 §3.5).
+    min_lines_to_invoke: 8
+
+  retrieve_hybrid_fusion:
+    enabled: true
+    # Falls back gracefully when KG_GRAPH_MEMORY is absent
+    # (becomes BiEncoder + SPLADE only).
+    rrf_k: 60
+    top_k_per_retriever: 20
+    top_k_final: 5
+
+  retrieve_knowledge_graph:
+    enabled: true
+    # KG_GRAPH_WINDOW (LLM-extracted window entities) dramatically improves
+    # the result; without it, falls back to rule-based window entities.
+
+  verify_with_llm:
+    enabled: true
+    top_k_input: 10
+    top_k_output: 5
+    novelty_threshold: 0.4
+
+  extract_entities_llm:
+    # Indexing-time skill — invoked manually before evaluation, not by the
+    # per-window controller. Keep enabled so the CLI works.
+    enabled: true
+
+  reformulate_query:
+    enabled: true
+    # Bounded action space — no free-form generation. Hallucinations are
+    # the documented risk of this skill (XX_AGENTIC_IDEA §6.1).
+    action_space: [drop_token, add_service, substitute_synonym]
+
+
+# ---------------------------------------------------------------------------
+# Verifier calibration — closes RQ-A8 (OOD-failure structural protection)
+# ---------------------------------------------------------------------------
+# Datasets in `known_helpful_distributions` get the verifier; datasets in
+# `known_harmful_distributions` never get it; anything else falls back to
+# `default_policy`. Add new datasets here as evidence accumulates.
+verifier_calibration:
+  known_helpful_distributions:
+    - 2026-05-25-dataset-v5-large-global   # OB (verifier helps; in cascade)
+  known_harmful_distributions:
+    - 2026-06-11-wol-real-global           # WoL — Mode 3 §3.9: -0.272 coarse Hit@5
+  # Not yet calibrated for OTel Demo; we'll move it to one of the two lists
+  # once RQ-B1 is run.
+  default_policy: skip
+
+
+# ---------------------------------------------------------------------------
+# Cross-window state — page-suppression + incident grouping (§7)
+# ---------------------------------------------------------------------------
+state:
+  ring_buffer_size: 12     # ≈ 1 hour at 5-min windows
+  page_suppression:
+    same_top1_window_count: 3
+    require_same_scenario_family: true
+    require_no_recovery_intervened: true
+
+
+# ---------------------------------------------------------------------------
+# Telemetry + caching
+# ---------------------------------------------------------------------------
+telemetry:
+  experiment_root: data/llm_telemetry
+  # Every LLM call (success or failure) is recorded — there are no opt-outs.
+  # Required for the paper's "Compute resources" subsection.
+
+skill_cache:
+  enabled: true
+  root: data/skill_cache
+  # Content-addressed by hash(skill, version, bundle, memory). Invalidate
+  # the cache by bumping a skill's `version` constant.
+
+trace:
+  root: data/agent_traces
+  # Per-decision JSON. Substrate for debugging + future LearnedController
+  # training data.
+
+
+# ---------------------------------------------------------------------------
+# Ablations — declarative list (§9)
+# ---------------------------------------------------------------------------
+# Each entry runs the agent with the specified mask. Cache hits make the
+# second-through-Nth ablation runs near-free for un-ablated skills.
+# Empty by default; uncomment / extend per experiment.
+ablations: []
+
+# Example: full skill ablation grid
+# ablations:
+#   - name: full
+#     # baseline; no mask
+#   - name: no_verifier
+#     disable_skills: [verify_with_llm]
+#   - name: no_kg
+#     disable_skills: [retrieve_knowledge_graph]
+#   - name: no_graph_at_all
+#     disable_skills: [retrieve_knowledge_graph, retrieve_hybrid_fusion]
+#   - name: no_telemetry_features
+#     mask_capabilities: [NUMERIC_FEATURES, TRACE_SUMMARY, K8S_EVENTS]
+#   - name: no_logs
+#     mask_capabilities: [ORDERED_LOGS, UNORDERED_LOGS]
+#   - name: dense_only
+#     enable_skills_exact: [retrieve_dense, compose_l2, compose_triage, compose_novelty]
+
+
+# ---------------------------------------------------------------------------
+# Evaluation harness — enforces the six apples-to-apples rules (§12)
+# ---------------------------------------------------------------------------
+evaluation:
+  # The eval harness refuses to draw a cross-dataset row without an
+  # explicit `evaluation_mode` annotation. WoL bundles are tagged
+  # `text_retrieval_generalisation`; OB / OTel Demo are
+  # `telemetry_diagnosis`.
+  gold_relation: coarse           # or `strong`
+  bootstrap:
+    n_resamples: 1000
+    seed: 42
+  # Memory pool composition is read from the dataset's split-manifest; the
+  # harness asserts pool size + signature match across compared rows.

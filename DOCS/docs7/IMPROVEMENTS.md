@@ -55,29 +55,91 @@ Move to **Neo4j Aura**, the cloud-hosted managed Neo4j service. Credentials supp
 - Will the cluster have predictable outbound network? (If not — self-host Neo4j on the cluster node, possibly via docker.)
 - Do we want the cascade artifacts to depend on a *live* Aura instance, or should we keep an exported `*.dump` we can reload into a fresh instance for reproducibility?
 
-### 1.1 Database layout for the 3 datasets
+### 1.1 Database layout for the 3 datasets — **LOCKED 2026-06-12**
 
-We need to decide how OB / OTel Demo / WoL extractions coexist on Aura.
+The locked decision after a credibility review: **Option A — one instance, one database, reload between experiments, with a startup integrity check.** Dataset mixing in a single Neo4j instance is **forbidden** during research evaluation runs.
 
-| Approach | Pros | Cons | When right |
+#### Why mixing is unsafe for research
+
+| Dataset pair | Lexical overlap risk | Cross-contamination probability |
+|---|---|---|
+| OB ↔ OTel Demo | **HIGH** — both have `cartservice`, `checkoutservice`, `paymentservice`, `redis`, `kafka` (OTel Demo is based on OB) | KG queries on OTel Demo windows can silently match OB tickets via shared `Service` + `Symptom` nodes |
+| OB ↔ WoL | LOW — Mode 2 measured max cosine = 0.47 across 277,600 pairs | Structurally separable |
+| OTel Demo ↔ WoL | LOW — different vocabulary domains | Structurally separable |
+
+The OB ↔ OTel Demo case is the load-bearing risk. Tagged-node filtering (option B) requires every Cypher query to carry a `WHERE n.dataset = $ds` clause; **one missing clause** silently contaminates the result. That risk is acceptable for production multi-tenancy but unacceptable for research where a single slip invalidates a published claim.
+
+#### The four options (re-evaluated for research credibility)
+
+| Approach | Research-grade isolation? | Free tier? | Verdict |
 |---|---|---|---|
-| **A. 1 instance, 1 DB, reload between experiments** *(current behavior)* | Free tier fine; zero code change; matches existing pipeline | Only one dataset in-graph at a time; ~1 min reload to switch | Sequential research workflow — what we actually do |
-| **B. 1 instance, 1 DB, dataset-tagged nodes** | Free tier fine; all datasets co-resident; supports cross-dataset agent queries; supports multi-tenant deployment story | Loader must write a `dataset` property on every node; every retrieval Cypher needs a `WHERE n.dataset = $ds` filter; partial drops slightly fiddly | Future-proofs for production / industry multi-tenancy |
-| **C. 1 instance, N databases** (`wol-db`, `otel-db`, `ob-db`) | Clean per-dataset isolation; cheap per-DB drops | Requires Aura Professional (~$65/mo+) | Production-style isolation |
-| **D. N separate Aura instances** | Maximum isolation | N sets of credentials; Aura Free is 1 instance / account | Avoid unless A-C don't work |
+| **A. 1 instance, 1 DB, reload between experiments** | ✓ (graph only ever holds one dataset) | ✓ | **LOCKED — this is what we use for all research runs** |
+| B. 1 instance, 1 DB, dataset-tagged nodes | ✗ (one missing WHERE clause = contamination) | ✓ | **Rejected for research.** Acceptable only for production multi-tenancy (deferred). |
+| C. 1 instance, N databases | ✓ | ✗ (needs Aura Professional, ~$65/mo) | Optional upgrade for the final camera-ready paper run if budget allows |
+| D. N separate Aura instances | ✓ | partial (one instance per free account) | Operationally clunky; skip |
 
-**Recommendation: Option A for the next ~month of research, with a planned refactor to Option B before the industry-surface deliverable.**
+#### Safety mechanisms (mandatory in v1)
 
-Rationale:
-- Current pipelines are sequential; we never need three datasets co-resident for *evaluation*.
-- Each cluster SLURM job runs one dataset; a job-prologue step calls `reload_neo4j --global-dir <X>` before pipelines start.
-- Option B is the natural future-proofing for the agent's "cross-dataset retrieval" capability and for any multi-tenant production framing (each company is a `dataset` tag). Defer until the agent design needs it.
+1. **Fingerprint node.** `reload_neo4j.py` writes a `GraphMetadata` node on every load:
+   ```cypher
+   MERGE (m:GraphMetadata {key: 'loaded_dataset'})
+   SET m.dataset = $dataset_id,
+       m.loaded_at = datetime(),
+       m.n_incidents = $n_incidents,
+       m.global_dir = $global_dir
+   ```
+2. **Startup integrity check.** Before any KG-using skill runs, the agent queries `(m:GraphMetadata {key: 'loaded_dataset'})` and **refuses to start** if `m.dataset` doesn't match the dataset being evaluated. No silent fallback.
+3. **Per-experiment reload prologue.** Every experiment script begins with a `reload_neo4j --global-dir <X>` call before any retrieval. This is wired into the agent's startup, not left to the operator.
+4. **No B-mode coexistence.** The `NEO4J_DATASET_TAG` env var (originally reserved for option B) is **kept reserved** for future production multi-tenancy but is **explicitly forbidden during research runs**. The agent refuses to start if both Option A (single dataset loaded) and Option B (tagged nodes present) signals are detected in the same instance.
 
-**Trap to avoid.** Don't mix A and B in the same Neo4j instance — some loads writing `dataset:"wol"` and others writing nothing means filter-clauses silently miss the un-tagged nodes. Pick one convention.
+#### When to upgrade
+
+- **Camera-ready paper run (post-acceptance):** consider Aura Professional + Option C for maximum isolation. ~$65/mo for the one month of camera-ready work.
+- **Multi-tenant production deployment (out of v1 scope):** Option B becomes the obvious choice — each customer is a `dataset` tag.
 
 ### 1.2 Action items (additions to §1 list)
-- [ ] Document the chosen layout convention in `docs/RUNBOOK-neo4j.md`.
-- [ ] When refactoring `reload_neo4j` (item below), accept a `--dataset-tag <wol|otel|ob>` flag and write that tag onto every node — preparing for option B migration without committing to it yet.
+- [ ] Add `GraphMetadata` fingerprint writes to `proposal_d_knowledge_graph.reload_neo4j.py`.
+- [ ] Add the startup integrity check to `src/agent/runner.py` (and the existing pipelines that read Neo4j).
+- [ ] Document the locked decision in `DOCS/RUNBOOK-neo4j.md` (new).
+- [ ] CI / smoke-test: a script that loads two datasets, verifies the second wipes the first cleanly, and asserts the fingerprint matches.
+- [ ] *(Optional optimisation)* Wire `neo4j-admin database dump|load` as a shortcut for ~5 sec graph snapshots / restores (see §1.3).
+
+### 1.3 Persistence and switch-back — three layers of caching
+
+The expensive part of building the KG (LLM extraction) **runs once per dataset, forever**. Switching between datasets is cheap because of the layered persistence:
+
+| Layer | Lives at | Built by | Cost to rebuild | Survives `reload_neo4j`? |
+|---|---|---|---|---|
+| **L1 LLM extractions** | `data/derived/global/<dataset>/v2_kg_extractions/all_extractions.jsonl` | `extract_tickets_cli` (~hours) | hours (WoL ≈ 8 h; OB ≈ 2 h; OTel ≈ 1 h) — only re-run if the prompt or model changes | YES — JSONL on disk, untouched by Neo4j operations |
+| **L2 Neo4j graph** | Live Neo4j instance | `reload_neo4j --global-dir <X>` reads L1 and writes nodes/edges | ~20 sec — read jsonl, write MERGE statements | NO — wiped + rebuilt per switch |
+| **L3 SkillCache** | `data/skill_cache/` (gitignored) | Agent runs; content-addressed by `(skill, version, bundle_hash, memory_hash)` | Free on cache hit | YES — independent of Neo4j |
+
+**Switch-back workflow.** After working on Dataset B, returning to Dataset A is **one `reload_neo4j` call (~20 sec)** plus a re-run of the agent (cache hits make this seconds-to-minutes for previously-run experiments).
+
+```bash
+# One-time per dataset (slow, only once unless prompt/model changes):
+extract_tickets_cli --global-dir data/derived/global/<dataset_id>     # hours
+
+# Every dataset switch (fast):
+reload_neo4j --global-dir data/derived/global/<dataset_id>            # ~20 sec
+# GraphMetadata fingerprint check on agent startup verifies the right
+# dataset is loaded — refuses to run otherwise.
+```
+
+**Optional faster path — Neo4j database dump/load (~5 sec each way).** For frequent switching (or when on Aura where MERGE round-trips are network-bound), snapshot a loaded graph once and restore from the binary dump:
+
+```bash
+# Snapshot a loaded dataset (Neo4j must be stopped briefly OR use online backup):
+neo4j-admin database dump neo4j --to-path=data/neo4j-snapshots/wol.dump
+neo4j-admin database dump neo4j --to-path=data/neo4j-snapshots/ob.dump
+
+# Restore in ~5 sec (binary restore, no MERGE parsing):
+neo4j-admin database load neo4j --from-path=data/neo4j-snapshots/wol.dump
+```
+
+4× speedup over `reload_neo4j.py` for our scale (~10K nodes/dataset). Not critical at current sizes; valuable when the graph grows or when on Aura. The dump file also serves as a **reproducibility artifact** — share the dump = share the exact graph state.
+
+**Net effect.** The LLM cost (the only thing that's actually expensive) is paid once per dataset, captured in JSONL, and never repeated. Everything below it (graph, skill outputs, traces) rebuilds in seconds.
 
 ---
 
