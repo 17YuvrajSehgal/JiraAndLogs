@@ -27,6 +27,7 @@ from typing import Any, Iterator
 from ..eval_harness import EvaluationCase
 from ..skills.base import MemoryView
 from ..types import InputBundle
+from .split_manifest import load_split_manifest, resolve_split
 
 
 log = logging.getLogger(__name__)
@@ -89,6 +90,9 @@ def load_ob_cases(
     log.info("OB loader: gold loaded for %d windows from %s",
              len(gold_by_window), gold_path)
 
+    # Honor the v2-resplit manifest when present (overrides JSONL's split).
+    manifest = load_split_manifest(global_dir)
+
     cases: list[EvaluationCase] = []
     n_seen = 0
     n_kept = 0
@@ -96,7 +100,7 @@ def load_ob_cases(
 
     for window in _iter_jsonl(examples_path):
         n_seen += 1
-        if window.get("split") != split:
+        if resolve_split(window, manifest) != split:
             continue
         window_id = window.get("window_id")
         if not window_id:

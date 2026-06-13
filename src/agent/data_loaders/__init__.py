@@ -12,10 +12,12 @@ OTel Demo + WoL loaders will land in Phase 2.
 """
 
 from .ob_loader import load_ob_cases
+from .otel_demo_loader import load_otel_demo_cases
 from .wol_loader import WOL_PREDICTIONS_PATHS, load_wol_cases
 
 __all__ = [
     "load_ob_cases",
+    "load_otel_demo_cases",
     "load_wol_cases",
     "WOL_PREDICTIONS_PATHS",
 ]
