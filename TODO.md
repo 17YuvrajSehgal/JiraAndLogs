@@ -14,56 +14,18 @@ dataset) which can run overnight.
 
 ---
 
-## Section 0 — Pre-flight checks (10 minutes)
+## Section 0 — Pre-flight checks (10 minutes) — ✓ COMPLETE 2026-06-13
 
-Verify these before starting. Stops the run from dying 10 hours in
-because something was missing.
+All checks passed. Code freeze recorded in [`CODE-FREEZE.md`](CODE-FREEZE.md)
+at commit `fb908f2`. Also cleaned up leftover `v2_kg_extractions/window/`
+on OB (single stale file from an older pipeline).
 
-- [ ] **Cleanup verified.** Re-run the inventory; confirm everything in
-  [`RQ-ANSWERS.md` §Run Plan](DOCS/docs7/RQ-ANSWERS.md) "Things to delete"
-  is gone and "Things to keep" is intact.
-  ```bash
-  ls data/derived/global/2026-05-25-dataset-v5-large-global/
-  ls data/derived/global/2026-06-09-otel-demo-v1-global/
-  ls data/derived/global/2026-06-11-wol-real-global/
-  # Expected: NO comparison/, training_runs/, v2_logseq/, embeddings/,
-  # v2_kg_extractions_rules/, v2_kg_extractions_windows/, tch-lite-refit/,
-  # mode2_*.{json,jsonl}, distractor_curve_*.json.
-  ```
-
-- [ ] **Neo4j reachable + empty.** New instance, same credentials.
-  ```bash
-  PYTHONPATH=src python -c "
-  from v2_advanced.shared import Neo4jClient
-  with Neo4jClient() as n:
-      rows = n.run('MATCH (m) RETURN count(m) AS c')
-      print('node count:', rows[0]['c'])
-  "
-  # Expected: 0
-  ```
-
-- [ ] **LM Studio reachable on `http://localhost:1234`** with
-  `qwen/qwen3.6-35b-a3b` loaded (grammar-constrained inference required).
-
-- [ ] **Memory-side LLM extractions intact.** These are EXPENSIVE
-  to regenerate; verify they survived the cleanup.
-  ```bash
-  wc -l data/derived/global/2026-05-25-dataset-v5-large-global/v2_kg_extractions/all_extractions.jsonl
-  wc -l data/derived/global/2026-06-11-wol-real-global/v2_kg_extractions/all_extractions.jsonl
-  # OB expected: ~347 lines. WoL expected: ~2000 lines.
-  ls data/derived/global/2026-06-09-otel-demo-v1-global/v2_kg_extractions/ 2>&1
-  # OTel Demo expected: file MISSING — we'll generate it in Phase 3.1.
-  ```
-
-- [ ] **GitHub `agent-build` branch checked out + clean working tree.**
-  ```bash
-  git status
-  git rev-parse HEAD     # note this hash; it's the "research code freeze" commit
-  ```
-
-- [ ] **Disk space.** Expected new artifacts: ~5 GB total
-  (BiEncoder weights ×3 + embedding caches ×3 + trace logs + predictions).
-  Verify ~10 GB free under `data/`.
+- [x] **Cleanup verified.** Inventory matches Appendix A.
+- [x] **Neo4j reachable + empty.** 0 nodes, no GraphMetadata.
+- [x] **LM Studio reachable** with `qwen/qwen3.6-35b-a3b` loaded.
+- [x] **Memory-side LLM extractions intact.** OB 347 / WoL 2000 / OTel missing-as-expected.
+- [x] **`agent-build` branch + clean tree** at `fb908f2`.
+- [x] **Disk space.** 104 GB free; ~5 GB budgeted.
 
 ---
 
