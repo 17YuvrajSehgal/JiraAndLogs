@@ -759,6 +759,16 @@ def run_comparison(
                 pred.n_prior_family_tickets = len(
                     pred.gold_matched_issue_ids or []
                 )
+            # RQ-A9 / B3: per-window predict cost. We don't time each
+            # predict() call individually, so use the mean (total
+            # predict_seconds / n_predictions) — good enough for the
+            # paper's "agent gating saves X seconds/window" claim.
+            n_preds = len(result.predictions)
+            mean_pred_sec = (
+                result.predict_seconds / n_preds if n_preds else 0.0
+            )
+            for pred in result.predictions:
+                pred.pipeline_predict_seconds_per_window = mean_pred_sec
             for pred in result.predictions:
                 tr.append_prediction(pred.as_dict())
             tr.write_metrics({
