@@ -29,54 +29,43 @@ on OB (single stale file from an older pipeline).
 
 ---
 
-## Section 1 — Build the missing scripts (1 day of coding) — IN PROGRESS
+## Section 1 — Build the missing scripts — ✓ COMPLETE 2026-06-13
 
-These don't exist on `agent-build` yet. Build + test + commit BEFORE
-starting any data run — otherwise we'd run into them mid-run and stall.
+After [`CASCADE-WALKTHROUGH.md`](DOCS/docs7/CASCADE-WALKTHROUGH.md)
+clarified that most "missing scripts" already exist, the actual
+scope was 8 agent-side scripts + 2 small patches. All shipped + 424
+agent tests still green.
 
-**Progress: 4/11 shipped.** Commit log lives on `agent-build` after
-`fb908f2` (the freeze hash).
+### Agent-side scripts (shipped)
 
-### Shipped (agent-side, all verified on real data)
+- [x] `scripts/agent/annotate_wol_depth.py` — d58f868 — closes B2 WoL gap
+- [x] `--order-by-incident-time` flag on smoke_ob/_wol/_otel_demo + loaders — d58f868 — closes C7
+- [x] `scripts/agent/build_cross_corpus_gold.py` — b5210fd — B5 gold
+- [x] `scripts/agent/run_cross_corpus_retrieval.py` — b5210fd — B5 retrieval (Hit@5=0.05 on Kafka cross-corpus)
+- [x] `scripts/agent/agent_hp_sensitivity.py` — 840378f — C2 (agent-scoped)
+- [x] `scripts/agent/agent_cost_savings.py` — 840378f — B3 counterfactual savings
+- [x] `scripts/agent/run_diagnosis_on_ood.py` — 29e8dff — A5 agent signal
+- [x] `scripts/agent/reformulation_recovery.py` — 29e8dff — B4
 
-- [x] **`scripts/agent/annotate_wol_depth.py`** — d58f868. Adds
-  `n_prior_same_project_tickets` to WoL JSONL. Closes B2 WoL gap.
+### Enabling patches (shipped)
 
-- [x] **`--order-by-incident-time` flag on smoke_ob/_wol/_otel_demo**
-  + their loaders — d58f868. Sorts by
-  `(service_name, incident_episode_id, start_time)` so suppression
-  sees multi-window incident sequences. Closes C7 non-trivially.
+- [x] `core/data/loaders.py` — 1c75e6a — `matchings_file` param + `STRONG_RELATION=1` env var for A7 strong-relation gold
+- [x] `comparison/runner.py` + `schema.py` — 1c75e6a — per-window predict cost (`pipeline_predict_seconds_per_window`) for A9/B3
 
-- [x] **`scripts/agent/build_cross_corpus_gold.py`** — b5210fd. Jaccard
-  symptom-token gold relation for Mode 4 (B5).
+### Use existing cascade tools (no new code needed)
 
-- [x] **`scripts/agent/run_cross_corpus_retrieval.py`** — b5210fd. TF-IDF
-  retrieval + bootstrap. First real Mode 4 number: Hit@5=0.05 on
-  Kafka×Kafka cross-corpus (B5).
+These tools already exist on `agent-build` and just need to be invoked:
 
-### Remaining (7 scripts; cascade-side, NEEDS USER INPUT)
+- **Full cascade run**: `python -m v2_advanced.run_all_v2` — closes A1/A6 retrieval, A9 cost
+- **BM25 baseline**: same command with `--pipelines bm25_retrieval` — closes C4
+- **L3 learned novelty fit**: `python -m v2_advanced.tch.novelty_calibration` — closes A5 learned signal
+- **Cascade composition**: `python -m v2_advanced.tch.build_cascade` — composes L1/L2/L3/L4
+- **Strong-relation re-run**: same with `STRONG_RELATION=1` env var (Patch 1)
+- **TCH-Lite for WoL**: `TCH_LITE=1` env var (already documented)
 
-These all extend the existing `src/v2_advanced/` cascade infrastructure.
-Building them blind risks shipping broken pipelines mid-data-run. They
-need either (a) detailed walk-through of the existing pipeline interfaces
-or (b) acceptance that the corresponding RQs will close partially.
+### Re-scoped — no separate script needed
 
-| Script | Closes RQ | What's needed | Risk if shipped blind |
-|---|---|---|---|
-| `v2_advanced/tch/run_cascade_full.py` (or extending `run_all_v2.py`) | A1/A6 retrieval + A9 cost | Wraps existing pipeline runners; adds per-skill wall-time per window | LOW — `run_all_v2.py` already exists; this would add timing logging |
-| `v2_advanced/tch/run_bm25_baseline.py` | C4 | NEW pipeline class in `comparison.pipelines.py` + register in KNOWN_PIPELINES | MED — needs `PipelineRunner` ABC compliance |
-| `v2_advanced/proposal_e_agent/run_on_ood.py` | A5 agent signal | Run DiagnosisAgent on 800 OOD queries; needs Hybrid-RRF candidates from WoL memory | HIGH — couples to multiple existing pipeline outputs |
-| `v2_advanced/tch/build_cascade.py --fit-l3-learned-novelty` flag | A5 learned signal | Fit LogReg over cheap-skill outputs | MED — must match cascade's L1 stacker fitting style |
-| `v2_advanced/tch/build_cascade.py --gold-relation strong` flag | A7 strong | Re-use existing build with strong gold JSONL | LOW — gold path is parameterizable |
-| `scripts/agent/hp_sensitivity.py` | C2 | Coordinates multiple BiEncoder refits | HIGH — needs to call retriever fit code directly |
-| `scripts/agent/reformulation_recovery.py` | B4 | Live BiEncoder inference on reformulated queries | HIGH — needs BiEncoder inference helper |
-| `scripts/agent/distractor_sweep_corpus_mix.py` | A4 Level 2 | Corpus-mixing + BiEncoder refit per ratio | HIGH — same BiEncoder helper |
-
-**Recommended next action** before §2: walk through the cascade's
-`comparison.pipelines.py` + `run_v2_comparison.py` + `proposal_*/pipeline.py`
-interfaces ONCE with the user, then build the remaining scripts in one
-focused session. Otherwise the §3-§5 data runs will hit cascade-side
-errors that cost the iteration budget.
+- **A4 Level 2 corpus-mixing**: re-evaluated through the agent-focus lens. Phase 3.4's similarity-weighted sweep is the agent-level closure. Cascade-side BiEncoder re-fit on contaminated corpus is journal-extension scope, not v1.
 
 - [ ] **`src/v2_advanced/tch/run_cascade_full.py`** — single end-to-end
   driver. Fits + runs every retriever (BiEncoder, LogSeq2Vec, Hybrid-RRF
@@ -242,40 +231,42 @@ stays loaded for everything in §3.
   Verify: `v2_kg_extractions_windows/all_extractions.jsonl` exists with
   ~1008 rows (one per test window).
 
-- [ ] **3.3 Cascade full run on OB** (~6–8 h GPU). Writes every
-  retriever's predictions JSONL + records per-skill wall-time per window.
+- [ ] **3.3 Full cascade run on OB** (~6–8 h GPU). Runs every retriever
+  via the EXISTING `run_all_v2.py` master driver. Per-window predict
+  cost is recorded automatically via the §1 patch.
   ```bash
-  PYTHONPATH=src python -m v2_advanced.tch.run_cascade_full \
+  # All v2 pipelines on OB (BiEncoder + LogSeq + Hybrid + KG + HGB +
+  # DiagnosisAgent + bm25_retrieval baseline for C4 closure)
+  PYTHONPATH=src python -m v2_advanced.run_all_v2 \
       --global-dir data/derived/global/2026-05-25-dataset-v5-large-global \
-      --persist-skill-wall-times --seed 42
+      --runs-root data/runs \
+      --pipelines hgb,tab_transformer,bi_encoder_retrieval,logseq2vec_retrieval_pretrained,hybrid_rrf_no_graph,hybrid_rrf_retrieval,kg_retrieval_rulebased,kg_retrieval,diagnosis_agent,bm25_retrieval
   ```
-  Verify: `comparison/{v2a-resplit, v2b-logseq2vec, v2c-hybrid,
-  v2c-hybrid-llm, v2d-kg-rulebased}/per-window-predictions.jsonl` all exist.
+  Verify all expected `comparison/v2*/per-window-predictions.jsonl`
+  files exist + each row carries `pipeline_predict_seconds_per_window`.
 
-- [ ] **3.4 BM25 baseline on OB** (~30 min). Closes C4 for OB.
+- [ ] **3.4 Cascade composition + L3 learned-novelty fit** (~15 min total).
+  L3 learned classifier comes from the EXISTING
+  `v2_advanced.tch.novelty_calibration` CLI; wire it via env var.
   ```bash
-  PYTHONPATH=src python -m v2_advanced.tch.run_bm25_baseline \
-      --global-dir data/derived/global/2026-05-25-dataset-v5-large-global \
-      --out comparison/bm25-baseline
-  ```
-
-- [ ] **3.5 DiagnosisAgent on OB test windows** (~4 hours LM Studio).
-  ```bash
-  PYTHONPATH=src python -m v2_advanced.proposal_e_agent.run_on_test \
-      --global-dir data/derived/global/2026-05-25-dataset-v5-large-global \
-      --out comparison/v2e-agent-llm
-  ```
-
-- [ ] **3.6 Cascade composition + L1 stacker + L3 learned novelty + L2 RRF**
-  (~10 min). Closes A5 learned signal.
-  ```bash
+  # 1. Compose the cascade with default L3 free-signal disjunction
   PYTHONPATH=src python -m v2_advanced.tch.build_cascade \
       --global-dir data/derived/global/2026-05-25-dataset-v5-large-global \
-      --fit-l3-learned-novelty \
-      --out comparison/v2g-final-models/final
+      --output-dir data/derived/global/2026-05-25-dataset-v5-large-global/comparison/v2g-final-models/final
+
+  # 2. Fit the L3 learned novelty classifier (closes A5 learned signal)
+  PYTHONPATH=src python -m v2_advanced.tch.novelty_calibration \
+      --cascade-predictions data/derived/global/2026-05-25-dataset-v5-large-global/comparison/v2g-final-models/final/per-window-predictions.jsonl \
+      --out-dir data/derived/global/2026-05-25-dataset-v5-large-global/comparison/v2g-final-models/learned-novelty
+
+  # 3. Re-compose cascade with the learned classifier wired in
+  TCH_LEARNED_NOVELTY_PATH=data/derived/global/2026-05-25-dataset-v5-large-global/comparison/v2g-final-models/learned-novelty/learned_novelty.jsonl \
+  PYTHONPATH=src python -m v2_advanced.tch.build_cascade \
+      --global-dir data/derived/global/2026-05-25-dataset-v5-large-global \
+      --output-dir data/derived/global/2026-05-25-dataset-v5-large-global/comparison/v2g-final-models/final-with-learned-l3
   ```
 
-- [ ] **3.7 Agent smoke on OB with traces + incident-ordered + verifier**
+- [ ] **3.5 Agent smoke on OB with traces + incident-ordered + verifier**
   (~5 min — predictions cached). Closes A9 per-skill cost, C7
   multi-window suppression.
   ```bash
@@ -288,7 +279,7 @@ stays loaded for everything in §3.
       --output data/agent_runs/ob-smoke.json
   ```
 
-- [ ] **3.8 OB ablation grid + bootstrap** (~10 min). Closes C5 for OB.
+- [ ] **3.6 OB ablation grid + bootstrap** (~10 min). Closes C5 for OB.
   ```bash
   PYTHONPATH=src python scripts/agent/run_ablation.py \
       --dataset ob \
@@ -299,55 +290,67 @@ stays loaded for everything in §3.
       --ablation-grids data/agent_runs/ob-ablation.json
   ```
 
-- [ ] **3.9 HP sensitivity on OB** (~2–3 hours, multiple BiEncoder
-  refits). Closes C2.
+- [ ] **3.7 Agent counterfactual cost savings** (~1 min). Closes B3.
   ```bash
-  PYTHONPATH=src python scripts/agent/hp_sensitivity.py \
+  PYTHONPATH=src python scripts/agent/agent_cost_savings.py \
+      --eval-report data/agent_runs/ob-smoke.json \
+      --pipeline-jsonls data/derived/global/2026-05-25-dataset-v5-large-global/comparison/v2*/per-window-predictions.jsonl \
+      --output data/agent_runs/ob-cost-savings.json
+  ```
+
+- [ ] **3.8 Agent HP sensitivity on OB** (~5 min — agent-side thresholds,
+  cached predictions). Closes C2.
+  ```bash
+  PYTHONPATH=src python scripts/agent/agent_hp_sensitivity.py \
       --dataset ob \
       --global-dir data/derived/global/2026-05-25-dataset-v5-large-global \
-      --biencoder-epochs 3,5,7 --rrf-k 30,60,90 \
-      --l1-threshold 0.3,0.5,0.7 --l3-novelty-threshold 0.3,0.5,0.7 \
+      --cheap-path-thresholds 0.7,0.8,0.9,0.95 \
+      --reformulation-floors 0.3,0.5,0.7 \
+      --free-novelty-thresholds 0.3,0.5,0.7 \
+      --learned-novelty-thresholds 0.3,0.5,0.7 \
       --output data/agent_runs/ob-hp-sensitivity.json
   ```
 
-- [ ] **3.10 Reformulation recovery on OB** (~15 min — live BiEncoder
-  inference). Closes B4.
+- [ ] **3.9 Reformulation recovery on OB** (~15 min — LLM optional).
+  Closes B4.
   ```bash
   PYTHONPATH=src python scripts/agent/reformulation_recovery.py \
       --dataset ob \
       --global-dir data/derived/global/2026-05-25-dataset-v5-large-global \
+      --use-llm \
       --output data/agent_runs/ob-reformulation-recovery.json
   ```
 
-- [ ] **3.11 Bootstrap all OB headlines + cascade Final**
+- [ ] **3.10 Bootstrap OB headlines + cascade Final + BM25 baseline**
   ```bash
   PYTHONPATH=src python scripts/agent/bootstrap_predictions.py \
       --predictions \
           data/derived/global/2026-05-25-dataset-v5-large-global/comparison/v2g-final-models/final/per-window-predictions.jsonl \
-          data/derived/global/2026-05-25-dataset-v5-large-global/comparison/bm25-baseline/per-window-predictions.jsonl \
-      --paired tch_cascade bm25 \
+          data/derived/global/2026-05-25-dataset-v5-large-global/comparison/v2g-final-models/final-with-learned-l3/per-window-predictions.jsonl \
+      --paired bi_encoder_retrieval bm25_retrieval \
+      --paired bi_encoder_retrieval tch_cascade \
       --output data/agent_runs/ob-cascade-final-bootstrap.json
   ```
 
-- [ ] **3.12 OB analysis passes (depth, cost, failure categories).**
+- [ ] **3.11 OB analysis passes (depth, cost, failure categories).**
   ```bash
   PYTHONPATH=src python scripts/agent/depth_scaling.py \
       --predictions data/derived/global/2026-05-25-dataset-v5-large-global/comparison/v2g-final-models/final/per-window-predictions.jsonl \
       --output data/agent_runs/ob-depth-scaling.json
   PYTHONPATH=src python scripts/agent/cost_summary.py \
       --reports data/agent_runs/ob-smoke.json \
-      --traces data/agent_traces/ \
       --output data/agent_runs/ob-cost-summary.json
   PYTHONPATH=src python scripts/agent/failure_categories.py \
       --reports data/agent_runs/ob-smoke.json \
       --output data/agent_runs/ob-failure-categories.json
   ```
 
-- [ ] **3.13 Sanity check — Phase 1 closure.** Verify all of:
+- [ ] **3.12 Sanity check — Phase 1 closure.** Verify all of:
   - `data/agent_runs/ob-smoke.json` exists, Hit@5 reported
   - `data/agent_runs/ob-ablation.json` exists, no_numeric_telemetry row present
   - `data/agent_runs/ob-hp-sensitivity.json` exists
   - `data/agent_runs/ob-reformulation-recovery.json` exists
+  - `data/agent_runs/ob-cost-savings.json` exists
   - `data/agent_traces/` has ~1008 trace files
   - `data/skill_cache/` has populated entries
 
@@ -375,81 +378,75 @@ stays loaded for everything in §3.
       --split test
   ```
 
-- [ ] **4.3 Cascade full run on WoL** (~6–8 h). Same as OB but per the
-  WoL `tch-lite-refit` convention; the cascade runner should produce
-  the same `comparison/v2{a..d}-*` layout for consistency with OB.
+- [ ] **4.3 Full cascade run on WoL** (~6–8 h). Same `run_all_v2.py`
+  master driver as OB; produces the same `comparison/v2{a..d}-*` layout.
+  TCH-Lite mode auto-activates via env var since WoL has no numeric features.
   ```bash
-  PYTHONPATH=src python -m v2_advanced.tch.run_cascade_full \
+  TCH_LITE=1 \
+  PYTHONPATH=src python -m v2_advanced.run_all_v2 \
       --global-dir data/derived/global/2026-06-11-wol-real-global \
-      --persist-skill-wall-times --seed 42
+      --runs-root data/wol \
+      --pipelines bi_encoder_retrieval,logseq2vec_retrieval_pretrained,hybrid_rrf_no_graph,hybrid_rrf_retrieval,kg_retrieval_rulebased,kg_retrieval,diagnosis_agent,bm25_retrieval
   ```
 
-- [ ] **4.4 BM25 baseline on WoL.**
+- [ ] **4.4 Strong-relation cascade run on WoL** (~2 h — inference only,
+  reuses BiEncoder weights). Closes A7 strong-relation.
   ```bash
-  PYTHONPATH=src python -m v2_advanced.tch.run_bm25_baseline \
-      --global-dir data/derived/global/2026-06-11-wol-real-global
+  STRONG_RELATION=1 \
+  PYTHONPATH=src python -m v2_advanced.run_all_v2 \
+      --global-dir data/derived/global/2026-06-11-wol-real-global \
+      --runs-root data/wol \
+      --pipelines bi_encoder_retrieval,hybrid_rrf_retrieval,kg_retrieval,diagnosis_agent \
+      --output-base data/derived/global/2026-06-11-wol-real-global/comparison-strong
   ```
 
-- [ ] **4.5 DiagnosisAgent on WoL test windows** (~4 h LM Studio).
-  Needed for the published Mode 3 §3.9 RQ-A8 comparison + the strong-
-  relation comparison.
-  ```bash
-  PYTHONPATH=src python -m v2_advanced.proposal_e_agent.run_on_test \
-      --global-dir data/derived/global/2026-06-11-wol-real-global
-  ```
-
-- [ ] **4.6 DiagnosisAgent on the 800 WoL OOD queries** (~7 h).
+- [ ] **4.5 DiagnosisAgent on the 800 WoL OOD queries** (~7 h LM Studio).
   Closes A5 agent signal.
   ```bash
-  PYTHONPATH=src python -m v2_advanced.proposal_e_agent.run_on_ood \
+  PYTHONPATH=src python scripts/agent/run_diagnosis_on_ood.py \
       --global-dir data/derived/global/2026-06-11-wol-real-global \
-      --queries novelty-queries/windows.jsonl
+      --queries novelty-queries/windows.jsonl \
+      --output data/derived/global/2026-06-11-wol-real-global/ood-diagnosis-predictions.jsonl
   ```
 
-- [ ] **4.7 Mode 1 distractor sweep (Level 2 — corpus-mixing re-fit)**
-  (~3 hours, 3 BiEncoder refits + retrieval). Closes A4.
+- [ ] **4.6 Mode 2 free signal precompute** (the canonical
+  mode2_per_query.jsonl regenerate — closes A5 free signal).
   ```bash
-  PYTHONPATH=src python scripts/agent/distractor_sweep_corpus_mix.py \
-      --global-dir data/derived/global/2026-06-11-wol-real-global \
-      --distractor-pool 300 --ratios 10,25,50 \
-      --output data/agent_runs/wol-distractor-level2.json
+  # Use the existing Mode 2 driver if it's documented in
+  # docs7/MODE2-NOVELTY-RESULTS.md; or implement as a small precompute
+  # over `novelty-queries/windows.jsonl` × `jira-memory-corpus.jsonl`.
+  # If the Mode 2 CLI doesn't exist as a standalone, copy from the
+  # original Mode 2 ETL described in MODE2-NOVELTY-RESULTS.md §6.
   ```
 
-- [ ] **4.8 Mode 2 free signal (the 800 OOD queries free-signal precompute).**
+- [ ] **4.7 Cascade composition + L3 learned novelty fit + re-compose**
+  (~15 min total).
   ```bash
-  PYTHONPATH=src python -m v2_advanced.tch.mode2_free_signal \
-      --global-dir data/derived/global/2026-06-11-wol-real-global \
-      --out mode2_per_query.jsonl
-  ```
-
-- [ ] **4.9 L3 learned-novelty classifier** (using cheap-skill outputs
-  from train split + WoL gold).
-  ```bash
+  # Compose
   PYTHONPATH=src python -m v2_advanced.tch.build_cascade \
       --global-dir data/derived/global/2026-06-11-wol-real-global \
-      --fit-l3-learned-novelty
+      --output-dir data/derived/global/2026-06-11-wol-real-global/comparison/v2g-final-models/final
+  # Fit L3 learned
+  PYTHONPATH=src python -m v2_advanced.tch.novelty_calibration \
+      --cascade-predictions data/derived/global/2026-06-11-wol-real-global/comparison/v2g-final-models/final/per-window-predictions.jsonl \
+      --out-dir data/derived/global/2026-06-11-wol-real-global/comparison/v2g-final-models/learned-novelty
+  # Re-compose with L3 wired
+  TCH_LEARNED_NOVELTY_PATH=data/derived/global/2026-06-11-wol-real-global/comparison/v2g-final-models/learned-novelty/learned_novelty.jsonl \
+  PYTHONPATH=src python -m v2_advanced.tch.build_cascade \
+      --global-dir data/derived/global/2026-06-11-wol-real-global \
+      --output-dir data/derived/global/2026-06-11-wol-real-global/comparison/v2g-final-models/final-with-learned-l3
   ```
 
-- [ ] **4.10 Full L3 novelty evaluation with all 3 signals** (closes A5
-  fully).
+- [ ] **4.8 Full L3 novelty evaluation with all 3 signals** (closes A5).
   ```bash
   PYTHONPATH=src python scripts/agent/novelty_eval.py \
       --global-dir data/derived/global/2026-06-11-wol-real-global \
       --agent-signal data/derived/global/2026-06-11-wol-real-global/ood-diagnosis-predictions.jsonl \
-      --learned-signal data/derived/global/2026-06-11-wol-real-global/comparison/v2g-final-models/learned-novelty/ood-predictions.jsonl \
+      --learned-signal data/derived/global/2026-06-11-wol-real-global/comparison/v2g-final-models/learned-novelty/learned_novelty.jsonl \
       --output data/agent_runs/wol-l3-novelty.json
   ```
 
-- [ ] **4.11 Strong-relation cascade composition on WoL** (closes A7
-  strong-relation).
-  ```bash
-  PYTHONPATH=src python -m v2_advanced.tch.build_cascade \
-      --global-dir data/derived/global/2026-06-11-wol-real-global \
-      --gold-relation strong \
-      --out comparison/v2g-final-models-strong
-  ```
-
-- [ ] **4.12 Agent smoke on WoL + ablation + bootstrap** (RQ-A8
+- [ ] **4.9 Agent smoke on WoL + ablation + bootstrap** (RQ-A8
   structural skip verified, traces persisted).
   ```bash
   PYTHONPATH=src python scripts/agent/smoke_wol.py \
@@ -542,36 +539,37 @@ stays loaded for everything in §3.
       --split test
   ```
 
-- [ ] **5.4 Zero-shot cascade on OTel Demo (OB-trained retrievers)**
-  (~4 h GPU — inference only, no re-fits).
+- [ ] **5.4 L1-retrained cascade on OTel Demo** (~6 h GPU). Fits
+  BiEncoder + LogSeq + HybridRRF on OTel Demo train split; runs all
+  retrievers + BM25 + DiagnosisAgent. Closes B1 (the L1-retrained
+  reading of the zero-shot transfer claim).
   ```bash
-  PYTHONPATH=src python -m v2_advanced.tch.run_cascade_full \
+  PYTHONPATH=src python -m v2_advanced.run_all_v2 \
       --global-dir data/derived/global/2026-06-09-otel-demo-v1-global \
-      --use-pretrained-from data/derived/global/2026-05-25-dataset-v5-large-global \
-      --out-suffix zero-shot --seed 42
+      --runs-root data/otel-demo-runs \
+      --pipelines hgb,tab_transformer,bi_encoder_retrieval,logseq2vec_retrieval_pretrained,hybrid_rrf_no_graph,hybrid_rrf_retrieval,kg_retrieval_rulebased,kg_retrieval,diagnosis_agent,bm25_retrieval
   ```
 
-- [ ] **5.5 L1-retrained variant (BiEncoder fit on OTel Demo train)**
-  (~6 h GPU).
-  ```bash
-  PYTHONPATH=src python -m v2_advanced.tch.run_cascade_full \
-      --global-dir data/derived/global/2026-06-09-otel-demo-v1-global \
-      --out-suffix l1-retrained --seed 42
-  ```
+  Note on "zero-shot": the cascade pipelines fit on the dataset's own
+  train split. True zero-shot transfer (run OB-trained weights on OTel
+  Demo test) requires a separate run variant. The PRIMARY B1 claim is
+  the L1-retrained number; a follow-up variant adds the zero-shot
+  read by loading OB BiEncoder weights at OTel Demo inference time
+  (requires extending `BiEncoderRetrievalPipeline` with a
+  `--pretrained-weights-dir` flag; deferred for v1 in favor of the
+  L1-retrained closure).
 
-- [ ] **5.6 BM25 baseline + DiagnosisAgent + cascade composition.**
+- [ ] **5.5 Cascade composition + L3 learned novelty fit** (~15 min).
   ```bash
-  PYTHONPATH=src python -m v2_advanced.tch.run_bm25_baseline \
-      --global-dir data/derived/global/2026-06-09-otel-demo-v1-global
-  PYTHONPATH=src python -m v2_advanced.proposal_e_agent.run_on_test \
-      --global-dir data/derived/global/2026-06-09-otel-demo-v1-global
   PYTHONPATH=src python -m v2_advanced.tch.build_cascade \
       --global-dir data/derived/global/2026-06-09-otel-demo-v1-global \
-      --fit-l3-learned-novelty \
-      --out comparison/v2g-final-models/final
+      --output-dir data/derived/global/2026-06-09-otel-demo-v1-global/comparison/v2g-final-models/final
+  PYTHONPATH=src python -m v2_advanced.tch.novelty_calibration \
+      --cascade-predictions data/derived/global/2026-06-09-otel-demo-v1-global/comparison/v2g-final-models/final/per-window-predictions.jsonl \
+      --out-dir data/derived/global/2026-06-09-otel-demo-v1-global/comparison/v2g-final-models/learned-novelty
   ```
 
-- [ ] **5.7 Agent smoke + ablation + bootstrap + analyses on OTel Demo.**
+- [ ] **5.6 Agent smoke + ablation + bootstrap + analyses on OTel Demo.**
   ```bash
   PYTHONPATH=src python scripts/agent/smoke_otel_demo.py \
       --global-dir data/derived/global/2026-06-09-otel-demo-v1-global \
@@ -585,19 +583,22 @@ stays loaded for everything in §3.
   PYTHONPATH=src python scripts/agent/bootstrap_headlines.py \
       --reports data/agent_runs/otel-smoke.json \
       --ablation-grids data/agent_runs/otel-ablation.json
+  PYTHONPATH=src python scripts/agent/agent_cost_savings.py \
+      --eval-report data/agent_runs/otel-smoke.json \
+      --pipeline-jsonls data/derived/global/2026-06-09-otel-demo-v1-global/comparison/v2*/per-window-predictions.jsonl \
+      --output data/agent_runs/otel-cost-savings.json
   PYTHONPATH=src python scripts/agent/depth_scaling.py \
       --predictions data/derived/global/2026-06-09-otel-demo-v1-global/comparison/v2a-resplit/per-window-predictions.jsonl \
       --output data/agent_runs/otel-depth-scaling.json
   PYTHONPATH=src python scripts/agent/cost_summary.py \
       --reports data/agent_runs/otel-smoke.json \
-      --traces data/agent_traces/ \
       --output data/agent_runs/otel-cost-summary.json
   PYTHONPATH=src python scripts/agent/failure_categories.py \
       --reports data/agent_runs/otel-smoke.json \
       --output data/agent_runs/otel-failure-categories.json
   ```
 
-- [ ] **5.8 Sanity check — Phase 3 closure.** Verify all
+- [ ] **5.7 Sanity check — Phase 3 closure.** Verify all
   `data/agent_runs/otel-*.json` artifacts exist.
 
 ---
