@@ -211,6 +211,87 @@ These tools already exist on `agent-build` and just need to be invoked:
 
 ---
 
+## Section 2.5 — Dataset Finalization (freeze point) (~2–3 hours)
+
+After this section the **publishable dataset** is complete. Any
+researcher can download the three `data/derived/global/<id>/`
+directories and reproduce the cascade + agent runs that follow.
+
+**OB:** already finalized at code-freeze (`v2_kg_extractions/`,
+`jira-shadow-humanized-v2/`, all kept). V1 humanized deleted
+(commit `794efb1`).
+
+**WoL:** already finalized (`v2_kg_extractions/`,
+`jira-shadow-humanized-v2/`, kept).
+
+**OTel Demo:** missing humanized + memory entities. §2.5.1 + §2.5.2
+generate them.
+
+- [ ] **2.5.1 Humanize OTel Demo memory corpus** (~70 min LM Studio
+  with `qwen2.5-coder-14b` to match OB+WoL protocol; ~147 tickets).
+  Resumable.
+  ```bash
+  PYTHONPATH=src python scripts/research-lab/humanize_v5_large_bulk.py \
+      --global-id 2026-06-09-otel-demo-v1-global \
+      --runs-root data/otel-demo-runs \
+      --output-subdir bulk-20260531 \
+      --llm-base-url http://localhost:1234 \
+      --llm-model qwen/qwen2.5-coder-14b
+  # Verify:
+  wc -l data/derived/global/2026-06-09-otel-demo-v1-global/jira-shadow-humanized-v2/bulk-20260531/timeline.jsonl
+  # expected: ~147
+  ```
+  **STATUS 2026-06-13:** Running in background (after the smoke
+  passed 3/3 with no failures, avg 29s/ticket). Estimated wall: ~70 min.
+
+- [ ] **2.5.2 Memory-side LLM entity extraction on OTel Demo**
+  (~1 h LM Studio with `qwen3.6-35b-a3b`; ~147 tickets).
+  ```bash
+  PYTHONPATH=src python -m v2_advanced.proposal_d_knowledge_graph.extract_tickets_cli \
+      --global-dir data/derived/global/2026-06-09-otel-demo-v1-global
+  # Verify:
+  wc -l data/derived/global/2026-06-09-otel-demo-v1-global/v2_kg_extractions/all_extractions.jsonl
+  # expected: ~147
+  ```
+
+- [ ] **2.5.3 Freeze-point checkpoint.** After §2.5.1 + §2.5.2
+  complete, the publishable dataset is finalized. Verify all three
+  datasets have the same artifact set:
+  ```bash
+  for d in 2026-05-25-dataset-v5-large-global \
+           2026-06-09-otel-demo-v1-global \
+           2026-06-11-wol-real-global; do
+      echo "=== $d ==="
+      base=data/derived/global/$d
+      ls $base/jira-shadow-humanized-v2/ 2>/dev/null && echo "  ✓ humanized-v2"
+      [ -f $base/v2_kg_extractions/all_extractions.jsonl ] && \
+          echo "  ✓ v2_kg_extractions ($(wc -l < $base/v2_kg_extractions/all_extractions.jsonl) tickets)"
+      [ -f $base/triage-split-manifest-v2-resplit.json ] && \
+          echo "  ✓ v2-resplit manifest"
+  done
+  ```
+
+**Publishable artifact set** (per dataset, post-§2.5):
+
+| Path | Purpose | Origin |
+|---|---|---|
+| `global-triage-examples.jsonl` | Window features + text | data-gen |
+| `jira-memory-corpus.jsonl` | Memory tickets | data-gen |
+| `jira-shadow-humanized-v2/bulk-20260531/timeline.jsonl` | Humanized memory | humanizer |
+| `v2_kg_extractions/all_extractions.jsonl` | LLM entity extractions (memory) | extract_tickets_cli |
+| `window-memory-matchings{,-strong}.jsonl` | Gold relation(s) | data-gen |
+| `triage-split-manifest-v2-resplit.json` | 70/15/15 stratified split | make_resplit |
+| `triage-feature-columns.json` | Numeric feature list | data-gen |
+| `distractors/` (WoL only) | 300 off-topic tickets | RQ-A4 ETL |
+| `novelty-queries/` (WoL only) | 800 OOD queries | RQ-A5 ETL |
+
+The window-side `v2_kg_extractions_windows/` is generated PER TEST
+SPLIT in the cascade phases (§3.2, §4.2, §5.3) since it costs hours
+and is only needed for RQ-A6 symmetric closure. Whether to include
+it in the published dataset is up to the publisher.
+
+---
+
 ## Section 3 — Phase 1: OB end-to-end (~12–15 hours)
 
 Order matters within this phase: Neo4j is loaded with OB entities and
@@ -521,52 +602,12 @@ stays loaded for everything in §3.
 
 ---
 
-## Section 5 — Phase 3: OTel Demo end-to-end (~11–13 hours) — closes B1
+## Section 5 — Phase 3: OTel Demo end-to-end (~10–12 hours) — closes B1
 
-**OTel Demo is the only dataset that doesn't ship humanized memory** —
-OB has `jira-shadow-humanized-v1/v2/v2-distractors` (all kept), WoL
-has `jira-shadow-humanized-v2/` (kept), OTel Demo has neither. The
-HybridRRF + MemoryGraph cascade pipelines REQUIRE humanized memory
-at fit time, so §5.0 below must run before §5.4 (cascade).
+Prerequisite: §2.5 Dataset Finalization complete (humanized memory +
+v2_kg_extractions present for OTel Demo).
 
-- [ ] **5.0 Generate humanized memory for OTel Demo** (~1 h LM Studio
-  with `qwen2.5-coder-14b`; ~147 memory tickets). The humanizer reads
-  `jira-memory-corpus.jsonl` + `data/otel-demo-runs/<id>/raw/loki/*.json`
-  READ-ONLY, writes to
-  `<global_dir>/jira-shadow-humanized-v2/<output-subdir>/timeline.jsonl`.
-  Resumable.
-  ```bash
-  PYTHONPATH=src python scripts/research-lab/humanize_v5_large_bulk.py \
-      --global-id 2026-06-09-otel-demo-v1-global \
-      --runs-root data/otel-demo-runs \
-      --output-subdir bulk-20260531 \
-      --llm-base-url http://localhost:1234 \
-      --llm-model qwen/qwen2.5-coder-14b
-  ```
-  Verify:
-  ```bash
-  ls data/derived/global/2026-06-09-otel-demo-v1-global/jira-shadow-humanized-v2/bulk-20260531/
-  # expect: timeline.jsonl + generation-manifest.json
-  wc -l data/derived/global/2026-06-09-otel-demo-v1-global/jira-shadow-humanized-v2/bulk-20260531/timeline.jsonl
-  # expect: ~147 (one row per memory ticket)
-  ```
-
-  **Subdir naming:** we use `bulk-20260531` to match the cascade
-  pipelines' default `humanized_subdir="bulk-20260531"` (OB's date).
-  This avoids needing a CLI override on the cascade run. If you'd
-  prefer a date-honest subdir like `bulk-20260613`, also create a
-  symlink: `cd <global_dir>/jira-shadow-humanized-v2 &&
-  ln -s bulk-20260613 bulk-20260531`. Either approach works.
-
-- [ ] **5.1 Memory-side LLM extraction on OTel Demo** (~1 h —
-  smaller corpus, ~147 tickets).
-  ```bash
-  PYTHONPATH=src python -m v2_advanced.proposal_d_knowledge_graph.extract_tickets_cli \
-      --global-dir data/derived/global/2026-06-09-otel-demo-v1-global
-  ```
-  Verify: `v2_kg_extractions/all_extractions.jsonl` written.
-
-- [ ] **5.2 Wipe Neo4j + reload with OTel Demo entities.**
+- [ ] **5.1 Wipe Neo4j + reload with OTel Demo entities.**
   ```bash
   PYTHONPATH=src python -c "from v2_advanced.shared import Neo4jClient
   with Neo4jClient() as n: n.clear_database()
@@ -576,14 +617,14 @@ at fit time, so §5.0 below must run before §5.4 (cascade).
       --source llm
   ```
 
-- [ ] **5.3 Symmetric window extraction on OTel Demo** (~3 hours).
+- [ ] **5.2 Symmetric window extraction on OTel Demo** (~3 hours).
   ```bash
   PYTHONPATH=src python scripts/agent/extract_window_entities.py \
       --global-dir data/derived/global/2026-06-09-otel-demo-v1-global \
       --split test
   ```
 
-- [ ] **5.4 L1-retrained cascade on OTel Demo** (~6 h GPU). Fits
+- [ ] **5.3 L1-retrained cascade on OTel Demo** (~6 h GPU). Fits
   BiEncoder + LogSeq + HybridRRF on OTel Demo train split; runs all
   retrievers + BM25 + DiagnosisAgent. Closes B1 (the L1-retrained
   reading of the zero-shot transfer claim).
@@ -603,7 +644,7 @@ at fit time, so §5.0 below must run before §5.4 (cascade).
   `--pretrained-weights-dir` flag; deferred for v1 in favor of the
   L1-retrained closure).
 
-- [ ] **5.5 Cascade composition + L3 learned novelty fit** (~15 min).
+- [ ] **5.4 Cascade composition + L3 learned novelty fit** (~15 min).
   ```bash
   PYTHONPATH=src python -m v2_advanced.tch.build_cascade \
       --global-dir data/derived/global/2026-06-09-otel-demo-v1-global \
@@ -613,7 +654,7 @@ at fit time, so §5.0 below must run before §5.4 (cascade).
       --out-dir data/derived/global/2026-06-09-otel-demo-v1-global/comparison/v2g-final-models/learned-novelty
   ```
 
-- [ ] **5.6 Agent smoke + ablation + bootstrap + analyses on OTel Demo.**
+- [ ] **5.5 Agent smoke + ablation + bootstrap + analyses on OTel Demo.**
   ```bash
   PYTHONPATH=src python scripts/agent/smoke_otel_demo.py \
       --global-dir data/derived/global/2026-06-09-otel-demo-v1-global \
@@ -642,7 +683,7 @@ at fit time, so §5.0 below must run before §5.4 (cascade).
       --output data/agent_runs/otel-failure-categories.json
   ```
 
-- [ ] **5.7 Sanity check — Phase 3 closure.** Verify all
+- [ ] **5.6 Sanity check — Phase 3 closure.** Verify all
   `data/agent_runs/otel-*.json` artifacts exist.
 
 ---
