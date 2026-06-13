@@ -1,0 +1,42 @@
+# LLM cost table — USD per million tokens.
+# Looked up by (provider, model). Used by the Budget to project per-call cost
+# and by the telemetry summariser to compute monetary equivalents.
+#
+# Self-hosted providers (lm_studio, ollama on local hw, vllm on local hw)
+# get input/output = 0.0 with a note. The amortised GPU-hour cost belongs
+# in the paper appendix, not the per-call telemetry.
+#
+# Update prices when providers change them. Use `*` for the model field to
+# match any model under that provider.
+
+entries:
+  # ---------- OpenAI -----------------------------------------------------
+  - { provider: openai, model: gpt-4o,                    input_per_M_usd: 2.50,  output_per_M_usd: 10.00 }
+  - { provider: openai, model: gpt-4o-mini,               input_per_M_usd: 0.15,  output_per_M_usd: 0.60  }
+  - { provider: openai, model: gpt-4-turbo,               input_per_M_usd: 10.00, output_per_M_usd: 30.00 }
+  - { provider: openai, model: gpt-3.5-turbo,             input_per_M_usd: 0.50,  output_per_M_usd: 1.50  }
+  - { provider: openai, model: o1,                        input_per_M_usd: 15.00, output_per_M_usd: 60.00 }
+  - { provider: openai, model: o1-mini,                   input_per_M_usd: 1.10,  output_per_M_usd: 4.40  }
+
+  # ---------- Anthropic --------------------------------------------------
+  - { provider: anthropic, model: claude-opus-4-7,          input_per_M_usd: 15.00, output_per_M_usd: 75.00 }
+  - { provider: anthropic, model: claude-sonnet-4-6,        input_per_M_usd: 3.00,  output_per_M_usd: 15.00 }
+  - { provider: anthropic, model: claude-haiku-4-5-20251001, input_per_M_usd: 0.80, output_per_M_usd: 4.00  }
+  - { provider: anthropic, model: claude-3-5-haiku-latest,   input_per_M_usd: 0.80, output_per_M_usd: 4.00  }
+  - { provider: anthropic, model: claude-3-5-sonnet-latest,  input_per_M_usd: 3.00, output_per_M_usd: 15.00 }
+  - { provider: anthropic, model: claude-3-opus-latest,      input_per_M_usd: 15.00, output_per_M_usd: 75.00 }
+
+  # ---------- Self-hosted (no per-token cost) ----------------------------
+  # Amortised GPU-hour cost is reported separately in the paper appendix.
+  - { provider: lm_studio, model: '*',  input_per_M_usd: 0.0, output_per_M_usd: 0.0, note: "self-hosted; GPU-hour amortised separately" }
+  - { provider: ollama,    model: '*',  input_per_M_usd: 0.0, output_per_M_usd: 0.0, note: "self-hosted; GPU-hour amortised separately" }
+  - { provider: vllm,      model: '*',  input_per_M_usd: 0.0, output_per_M_usd: 0.0, note: "self-hosted; GPU-hour amortised separately" }
+  - { provider: generic_openai, model: '*', input_per_M_usd: 0.0, output_per_M_usd: 0.0, note: "self-hosted default; override per model if metered" }
+
+# Default monetary-equivalent table used when summarising self-hosted token totals
+# as 'what this would cost on a hosted provider'. The paper's compute-resources
+# subsection reports the run's tokens × each of these.
+equivalent_baselines:
+  - openai:gpt-4o
+  - openai:gpt-4o-mini
+  - anthropic:claude-haiku-4-5-20251001
