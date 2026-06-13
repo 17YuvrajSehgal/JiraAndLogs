@@ -25,6 +25,12 @@ Public API:
 Spec: `DOCS/docs7/AGENTIC-SYSTEM.md` §12, §14.
 """
 
+from .ablation import (
+    AblationConfig,
+    AblationGridResult,
+    AblationHarness,
+    AblationSpec,
+)
 from .exceptions import ApplesToApplesViolation, EvaluationModeMismatch
 from .harness import EvalHarness
 from .metrics import (
@@ -49,6 +55,11 @@ __all__ = [
     "EvaluationReport",
     # harness
     "EvalHarness",
+    # ablation
+    "AblationSpec",
+    "AblationConfig",
+    "AblationGridResult",
+    "AblationHarness",
     # metrics
     "hit_at_k",
     "mean_hit_at_k",
