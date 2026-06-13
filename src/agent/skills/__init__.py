@@ -27,11 +27,29 @@ from .base import (
     make_cost,
 )
 from .cache import DEFAULT_CACHE_ROOT, NullSkillCache, SkillCache
+from .composition import (
+    ComposeL2Skill,
+    ComposeNoveltySkill,
+    ComposeTriageSkill,
+)
+from .predictions_backed import (
+    PredictionsBackedSkill,
+    PredictionsNotFoundError,
+)
 from .registry import (
     SkillRegistry,
     get_default_registry,
     register_skill,
     reset_default_registry,
+)
+from .retrievers import (
+    RetrieveDenseSkill,
+    RetrieveHybridFusionLLMSkill,
+    RetrieveHybridFusionSkill,
+    RetrieveKnowledgeGraphSkill,
+    RetrieveLogSequenceSkill,
+    TriageNumericSkill,
+    VerifyWithLLMSkill,
 )
 
 __all__ = [
@@ -51,4 +69,19 @@ __all__ = [
     "register_skill",
     "get_default_registry",
     "reset_default_registry",
+    # predictions-backed base
+    "PredictionsBackedSkill",
+    "PredictionsNotFoundError",
+    # concrete retrieval / triage / verifier skills
+    "TriageNumericSkill",
+    "RetrieveDenseSkill",
+    "RetrieveLogSequenceSkill",
+    "RetrieveHybridFusionSkill",
+    "RetrieveHybridFusionLLMSkill",
+    "RetrieveKnowledgeGraphSkill",
+    "VerifyWithLLMSkill",
+    # composition
+    "ComposeL2Skill",
+    "ComposeTriageSkill",
+    "ComposeNoveltySkill",
 ]

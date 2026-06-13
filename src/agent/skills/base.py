@@ -216,15 +216,26 @@ class Skill(ABC):
 
     # ------------------------------------------------------------------ identity
 
+    #: Set to True on intermediate base classes (e.g. PredictionsBackedSkill)
+    #: that aren't directly instantiated and don't need a `name`. Concrete
+    #: subclasses set this back to False (default) and must declare a `name`.
+    __intermediate_base__: bool = False
+
     def __init_subclass__(cls, **kwargs):
         super().__init_subclass__(**kwargs)
-        # Light hygiene — non-abstract subclasses must declare a name.
-        # (Skipped for ABC chain members that are themselves abstract.)
-        if not getattr(cls, "__abstractmethods__", None):
-            if not cls.name:
-                raise TypeError(
-                    f"Skill subclass {cls.__name__} must set a non-empty `name`",
-                )
+        # Skip the check for intermediate bases (they're not instantiated
+        # directly; their concrete subclasses get checked instead). Also
+        # skip for any class that's still abstract by Python's ABC rules.
+        if cls.__intermediate_base__:
+            return
+        if getattr(cls, "__abstractmethods__", None):
+            return
+        if not cls.name:
+            raise TypeError(
+                f"Skill subclass {cls.__name__} must set a non-empty `name` "
+                "(or set __intermediate_base__ = True if not directly "
+                "instantiated).",
+            )
 
     # ------------------------------------------------------------------ gating
 
