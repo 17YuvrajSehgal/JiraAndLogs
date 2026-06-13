@@ -40,6 +40,17 @@ from .metrics import (
     pages_per_incident,
     reciprocal_rank,
 )
+from .novelty import (
+    DEFAULT_FREE_THRESHOLD,
+    DEFAULT_LEARNED_THRESHOLD,
+    NoveltyQuery,
+    NoveltyReport,
+    evaluate_l3_novelty,
+    load_agent_signal,
+    load_free_signal,
+    load_learned_signal,
+    load_wol_ood_queries,
+)
 from .types import (
     ApplesToApplesContract,
     CaseResult,
@@ -66,6 +77,16 @@ __all__ = [
     "reciprocal_rank",
     "mean_reciprocal_rank",
     "pages_per_incident",
+    # novelty (Phase 3.3 — RQ-A5)
+    "NoveltyQuery",
+    "NoveltyReport",
+    "evaluate_l3_novelty",
+    "load_wol_ood_queries",
+    "load_free_signal",
+    "load_agent_signal",
+    "load_learned_signal",
+    "DEFAULT_FREE_THRESHOLD",
+    "DEFAULT_LEARNED_THRESHOLD",
     # exceptions
     "EvaluationModeMismatch",
     "ApplesToApplesViolation",
