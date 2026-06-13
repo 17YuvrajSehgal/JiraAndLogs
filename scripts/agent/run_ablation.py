@@ -226,7 +226,11 @@ def main() -> None:
         observation_ctx=obs_ctx,
         state_layer_factory=lambda: StateLayer(),
     )
-    result = harness.run_grid(cases, config, contract=contract)
+    # keep_case_details=True so downstream bootstrap CIs (Phase 3.5)
+    # can read per-case results from the JSON.
+    result = harness.run_grid(
+        cases, config, contract=contract, keep_case_details=True,
+    )
 
     # ------------------------------------------------------------------ output
     rows = result.to_summary_rows()
@@ -253,7 +257,8 @@ def main() -> None:
     print("=" * 88)
 
     if args.output is not None:
-        result.write_to(args.output, include_case_results=False)
+        # include_case_results=True so the bootstrap CLI can post-process.
+        result.write_to(args.output, include_case_results=True)
         print(f"[run_ablation] wrote -> {args.output}")
 
 
