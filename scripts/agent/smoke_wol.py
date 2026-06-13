@@ -124,11 +124,21 @@ def _build_harness(
         known_harmful_distributions=frozenset({dataset_id}),
         default_policy="skip",
     )
+    # Phase 3.1 — auto-detect window-side LLM extractions (closes RQ-A6
+    # when present). `extract_window_entities.py` writes the JSONL at
+    # this location; if it exists we surface KG_GRAPH_WINDOW.
+    window_ext_path = (
+        global_dir / "v2_kg_extractions_windows" / "all_extractions.jsonl"
+    )
+    has_kg_graph_window = window_ext_path.exists()
+    if has_kg_graph_window:
+        logging.info("KG_GRAPH_WINDOW: window extractions found at %s",
+                     window_ext_path)
     obs_ctx = ObservationContext(
         dataset_id=dataset_id,
         has_memory_text=True,
         has_kg_graph_memory=False,
-        has_kg_graph_window=False,
+        has_kg_graph_window=has_kg_graph_window,
         verifier_calibration=calibration,
     )
 

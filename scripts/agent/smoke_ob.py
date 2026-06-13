@@ -132,14 +132,23 @@ def _build_harness(
     controller = RuleController(registry)
 
     # ObservationContext: tell the observer that the OB memory side
-    # has memory_text + (optionally) KG_GRAPH_MEMORY. The smoke test
-    # leaves KG flags off — predictions-backed skills don't actually
-    # query Neo4j, so capabilities about KG presence are moot here.
+    # has memory_text + (optionally) KG_GRAPH_WINDOW. The smoke test
+    # leaves KG_GRAPH_MEMORY off — predictions-backed skills don't
+    # actually query Neo4j, so the memory-side KG flag is moot here.
+    # KG_GRAPH_WINDOW is auto-detected: when window extractions exist,
+    # we surface the capability (Phase 3.1 — RQ-A6 closure path).
+    window_ext_path = (
+        global_dir / "v2_kg_extractions_windows" / "all_extractions.jsonl"
+    )
+    has_kg_graph_window = window_ext_path.exists()
+    if has_kg_graph_window:
+        logging.info("KG_GRAPH_WINDOW: window extractions found at %s",
+                     window_ext_path)
     obs_ctx = ObservationContext(
         dataset_id=dataset_id,
         has_memory_text=True,
         has_kg_graph_memory=False,
-        has_kg_graph_window=False,
+        has_kg_graph_window=has_kg_graph_window,
     )
 
     harness = EvalHarness(

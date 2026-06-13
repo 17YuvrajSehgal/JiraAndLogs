@@ -36,6 +36,7 @@ from .predictions_backed import (
     PredictionsBackedSkill,
     PredictionsNotFoundError,
 )
+from .extract_entities_llm import ExtractEntitiesLLMSkill
 from .reformulate_query import (
     REFORMULATION_ACTIONS,
     ReformulateQuerySkill,
@@ -79,6 +80,8 @@ __all__ = [
     # reformulation
     "ReformulateQuerySkill",
     "REFORMULATION_ACTIONS",
+    # indexing-time entity extractor
+    "ExtractEntitiesLLMSkill",
     # concrete retrieval / triage / verifier skills
     "TriageNumericSkill",
     "RetrieveDenseSkill",
