@@ -33,8 +33,18 @@ from agent import (
     TraceEvent,
     VERIFIER_KNOWN_HELPFUL,
 )
-from agent.controller import Controller, RuleController, make_escalation_gate
-from agent.skills import Skill, SkillRegistry, make_cost
+from agent.controller import (
+    Controller,
+    RuleController,
+    make_escalation_gate,
+    make_reformulation_gate,
+)
+from agent.skills import (
+    ReformulateQuerySkill,
+    Skill,
+    SkillRegistry,
+    make_cost,
+)
 from agent.skills.composition import (
     ComposeL2Skill,
     ComposeNoveltySkill,
@@ -489,6 +499,142 @@ class TestCapabilityAdaptivePlanDivergence(unittest.TestCase):
                        "compose_l2", "compose_triage", "compose_novelty"):
             self.assertIn(shared, ob_skills)
             self.assertIn(shared, wol_skills)
+
+
+# ---------------------------------------------------------------------------
+# Reformulation gate (Phase 2.3)
+# ---------------------------------------------------------------------------
+
+
+def _trace_with_compose_l2(
+    *,
+    retriever_scores: dict[str, float],
+    matched: tuple[str, ...] = ("FUSED-1",),
+) -> Trace:
+    """Build a Trace populated with one compose_l2 + several retriever outputs."""
+    t = Trace(bundle_id="w1", plan_id="plan_x")
+    # Each retriever's skill_end event carries a triage_score
+    for skill_name, score in retriever_scores.items():
+        t.add(TraceEvent(
+            ts=TraceEvent.now(), kind="skill_end",
+            skill=skill_name, skill_version="1.0.0",
+            output=SkillOutput(
+                skill=skill_name, skill_version="1.0.0",
+                triage_score=score,
+                matched_issue_ids=("X",),
+            ),
+        ))
+    # compose_l2 fused them
+    t.add(TraceEvent(
+        ts=TraceEvent.now(), kind="skill_end",
+        skill="compose_l2", skill_version="1.0.0",
+        output=SkillOutput(
+            skill="compose_l2", skill_version="1.0.0",
+            matched_issue_ids=matched,
+            confidence=1.0,
+        ),
+    ))
+    return t
+
+
+class TestReformulationGate(unittest.TestCase):
+    def test_gate_closes_when_max_conf_above_floor(self):
+        gate = make_reformulation_gate(confidence_floor=0.5)
+        trace = _trace_with_compose_l2(
+            retriever_scores={"retrieve_dense": 0.85},
+        )
+        self.assertFalse(gate(trace, Budget()))
+
+    def test_gate_opens_when_all_retrievers_below_floor(self):
+        gate = make_reformulation_gate(confidence_floor=0.5)
+        trace = _trace_with_compose_l2(
+            retriever_scores={
+                "retrieve_dense": 0.3,
+                "retrieve_hybrid_fusion": 0.4,
+            },
+        )
+        self.assertTrue(gate(trace, Budget()))
+
+    def test_gate_closed_before_compose_l2_runs(self):
+        """Cold start — no compose_l2 yet → don't reformulate."""
+        gate = make_reformulation_gate(confidence_floor=0.5)
+        empty_trace = Trace(bundle_id="w1", plan_id="plan_x")
+        self.assertFalse(gate(empty_trace, Budget()))
+
+    def test_at_floor_is_closed(self):
+        """Boundary: max_conf == floor → closed (strict less-than)."""
+        gate = make_reformulation_gate(confidence_floor=0.5)
+        trace = _trace_with_compose_l2(
+            retriever_scores={"retrieve_dense": 0.5},
+        )
+        self.assertFalse(gate(trace, Budget()))
+
+
+class TestRuleControllerReformulationWiring(unittest.TestCase):
+    """Phase 2.3 — when max_reformulation_retries > 0 AND the skill is
+    registered, the Plan includes reformulate_query as a gated step
+    AFTER compose_l2."""
+
+    def _build_registry_with_reformulator(self) -> SkillRegistry:
+        r = _build_full_registry()
+        # Stub mode — no LLM required for offline tests
+        r.register(ReformulateQuerySkill(use_llm=False))
+        return r
+
+    def test_reformulation_off_by_default(self):
+        """Default max_reformulation_retries=0 → no reformulate_query
+        even if registered."""
+        registry = self._build_registry_with_reformulator()
+        controller = RuleController(registry)
+        plan = controller.plan(_empty_bundle(), _ob_capabilities())
+        names = {inv.skill_name for inv in plan.invocations}
+        self.assertNotIn("reformulate_query", names)
+
+    def test_reformulation_when_enabled(self):
+        registry = self._build_registry_with_reformulator()
+        controller = RuleController(registry, max_reformulation_retries=2)
+        plan = controller.plan(_empty_bundle(), _ob_capabilities())
+
+        skill_order = [inv.skill_name for inv in plan.invocations]
+        self.assertIn("reformulate_query", skill_order)
+        # Placed AFTER compose_l2 (so the gate can read compose_l2's output)
+        i_l2 = skill_order.index("compose_l2")
+        i_rf = skill_order.index("reformulate_query")
+        self.assertLess(i_l2, i_rf)
+        # ...and BEFORE compose_triage (so a reformulated query could
+        # influence the final triage in a v2 live-retrieval mode)
+        i_triage = skill_order.index("compose_triage")
+        self.assertLess(i_rf, i_triage)
+
+    def test_reformulation_has_gate(self):
+        registry = self._build_registry_with_reformulator()
+        controller = RuleController(registry, max_reformulation_retries=2)
+        plan = controller.plan(_empty_bundle(), _ob_capabilities())
+        rf_inv = next(
+            inv for inv in plan.invocations
+            if inv.skill_name == "reformulate_query"
+        )
+        self.assertIsNotNone(rf_inv.gate)
+
+    def test_reformulation_dropped_when_skill_missing(self):
+        """If reformulate_query isn't registered, the controller silently
+        skips it — even with max_reformulation_retries > 0."""
+        registry = _build_full_registry()                  # no reformulator
+        controller = RuleController(registry, max_reformulation_retries=2)
+        plan = controller.plan(_empty_bundle(), _ob_capabilities())
+        names = {inv.skill_name for inv in plan.invocations}
+        self.assertNotIn("reformulate_query", names)
+
+    def test_reformulation_capability_gated_to_text_evidence(self):
+        """Reformulator needs TEXT_EVIDENCE. A bundle without it must
+        not get the reformulate_query step."""
+        registry = self._build_registry_with_reformulator()
+        controller = RuleController(registry, max_reformulation_retries=2)
+        # Capabilities without TEXT_EVIDENCE
+        caps = _ob_capabilities().without_flags("TEXT_EVIDENCE")
+        plan = controller.plan(_empty_bundle(), caps)
+        names = {inv.skill_name for inv in plan.invocations}
+        self.assertNotIn("reformulate_query", names)
 
 
 if __name__ == "__main__":

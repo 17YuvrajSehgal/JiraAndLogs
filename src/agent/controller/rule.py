@@ -68,6 +68,12 @@ COMPOSE_L2 = "compose_l2"
 COMPOSE_TRIAGE = "compose_triage"
 COMPOSE_NOVELTY = "compose_novelty"
 
+REFORMULATE_QUERY = "reformulate_query"
+
+#: Max retriever-confidence below which compose_l2 is treated as
+#: "consensus failed" — triggers reformulation when enabled.
+DEFAULT_REFORMULATION_CONFIDENCE_FLOOR = 0.5
+
 
 # ---------------------------------------------------------------------------
 # RuleController
@@ -101,11 +107,35 @@ class RuleController(Controller):
         cheap_path_threshold: float = DEFAULT_TRIAGE_HIGH_CONFIDENCE,
         require_top1_consensus: bool = True,
         budget_caps: dict[str, Any] | None = None,
+        max_reformulation_retries: int = 0,
+        reformulation_confidence_floor: float = DEFAULT_REFORMULATION_CONFIDENCE_FLOOR,
     ) -> None:
+        """
+        Reformulation knobs (Phase 2.3, off by default):
+
+            max_reformulation_retries: when > 0 AND reformulate_query is
+                registered, the Plan includes a reformulate_query step
+                gated on "compose_l2 emitted a low-confidence result".
+                Default 0 — reformulation is opt-in.
+            reformulation_confidence_floor: max retriever triage_score
+                below which compose_l2 is treated as "consensus failed"
+                — the gate then opens. Default 0.5, matching
+                XX_AGENTIC_IDEA §4.2's "no consensus AND max_conf < 0.5".
+
+        The current Plan model is static (controller emits one Plan
+        per bundle), so the v1 reformulation hook produces ONE
+        reformulated query — recorded in the trace as
+        SkillOutput.extra["reformulated_query"]. Re-running retrievers
+        on it requires a live-retrieval mode (Phase 3); for now this
+        is an instrumentation hook + a measurement of how often the
+        reformulation gate would fire.
+        """
         self.registry = registry
         self.cheap_path_threshold = cheap_path_threshold
         self.require_top1_consensus = require_top1_consensus
         self._budget_caps = {**DEFAULT_BUDGET_CAPS, **(budget_caps or {})}
+        self.max_reformulation_retries = max_reformulation_retries
+        self.reformulation_confidence_floor = reformulation_confidence_floor
 
     # ------------------------------------------------------------------ plan
 
@@ -166,6 +196,24 @@ class RuleController(Controller):
             invocations.append(self._inv(
                 COMPOSE_L2, budget,
                 gate=_any_retriever_ran,
+            ))
+
+        # ------------------------------------------------------------------ reformulation (opt-in)
+        # Phase 2.3 — when max_reformulation_retries > 0 AND the
+        # reformulate_query skill is registered, emit it AFTER compose_l2
+        # with a gate that opens iff compose_l2 produced a low-confidence
+        # ranking (the agentic "L2 disagreed; try a reformulated query"
+        # signal from XX_AGENTIC_IDEA §4.2).
+        if (
+            self.max_reformulation_retries > 0
+            and self._skill_runnable(REFORMULATE_QUERY, capabilities)
+        ):
+            reform_gate = make_reformulation_gate(
+                confidence_floor=self.reformulation_confidence_floor,
+            )
+            invocations.append(self._inv(
+                REFORMULATE_QUERY, budget,
+                gate=reform_gate,
             ))
 
         # compose_triage always runs — falls back to score=0 when no
@@ -287,3 +335,44 @@ def _any_retriever_ran(trace: Trace, budget) -> bool:
         if out is not None and out.matched_issue_ids:
             return True
     return False
+
+
+# ---------------------------------------------------------------------------
+# Reformulation gate (Phase 2.3)
+# ---------------------------------------------------------------------------
+
+
+def make_reformulation_gate(
+    *,
+    confidence_floor: float = DEFAULT_REFORMULATION_CONFIDENCE_FLOOR,
+) -> GateFn:
+    """Return a gate that opens when L2 consensus failed.
+
+    Definition of "consensus failed" (XX_AGENTIC_IDEA §4.2):
+      - compose_l2 ran AND
+      - max retriever triage_score over the L2 set < `confidence_floor`.
+
+    When the floor is met, the gate stays closed (no point reformulating
+    if retrieval was already confident). When compose_l2 didn't run at
+    all, the gate also stays closed — reformulation only fires after a
+    failed first-pass retrieval, never as a cold start.
+    """
+    def _gate(trace: Trace, budget) -> bool:                       # noqa: ARG001
+        del budget
+        # Cold start — no compose_l2 output yet → don't reformulate.
+        if trace.latest_output(COMPOSE_L2) is None:
+            return False
+
+        # Inspect the L2 retriever set's max confidence.
+        max_conf = 0.0
+        for r in (CHEAP_RETRIEVER, *EXPENSIVE_RETRIEVERS):
+            out = trace.latest_output(r)
+            if out is None or out.triage_score is None:
+                continue
+            max_conf = max(max_conf, float(out.triage_score))
+
+        # Below the floor → consensus failed → open the gate.
+        return max_conf < confidence_floor
+
+    _gate.__name__ = "reformulation_gate"
+    return _gate

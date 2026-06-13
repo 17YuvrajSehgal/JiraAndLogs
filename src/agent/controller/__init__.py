@@ -8,10 +8,15 @@ Public API:
 """
 
 from .base import Controller
-from .rule import RuleController, make_escalation_gate
+from .rule import (
+    RuleController,
+    make_escalation_gate,
+    make_reformulation_gate,
+)
 
 __all__ = [
     "Controller",
     "RuleController",
     "make_escalation_gate",
+    "make_reformulation_gate",
 ]

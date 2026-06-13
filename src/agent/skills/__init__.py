@@ -36,6 +36,10 @@ from .predictions_backed import (
     PredictionsBackedSkill,
     PredictionsNotFoundError,
 )
+from .reformulate_query import (
+    REFORMULATION_ACTIONS,
+    ReformulateQuerySkill,
+)
 from .registry import (
     SkillRegistry,
     get_default_registry,
@@ -72,6 +76,9 @@ __all__ = [
     # predictions-backed base
     "PredictionsBackedSkill",
     "PredictionsNotFoundError",
+    # reformulation
+    "ReformulateQuerySkill",
+    "REFORMULATION_ACTIONS",
     # concrete retrieval / triage / verifier skills
     "TriageNumericSkill",
     "RetrieveDenseSkill",
