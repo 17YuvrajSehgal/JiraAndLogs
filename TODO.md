@@ -242,19 +242,35 @@ generate them.
       --llm-model qwen/qwen2.5-coder-14b
   ```
 
-- [ ] **2.5.2 Memory-side LLM entity extraction on OTel Demo**
-  (~1 h LM Studio with `qwen3.6-35b-a3b`; ~147 tickets).
+- [x] **2.5.2 Memory-side LLM entity extraction on OTel Demo** — ✓ COMPLETE 2026-06-13.
+  `qwen3.6-35b-a3b` @ enable_thinking=False, ~11 s/ticket, 25 min wall.
+  147/147 extracted, 0 failures. 144 have services, 23 have errors,
+  147 have root_cause + symptoms. Initial run hit a transient LM Studio
+  stall at 14/147; resumed cleanly from cache.
   ```bash
   PYTHONPATH=src python -m v2_advanced.proposal_d_knowledge_graph.extract_tickets_cli \
-      --global-dir data/derived/global/2026-06-09-otel-demo-v1-global
-  # Verify:
-  wc -l data/derived/global/2026-06-09-otel-demo-v1-global/v2_kg_extractions/all_extractions.jsonl
-  # expected: ~147
+      --global-dir data/derived/global/2026-06-09-otel-demo-v1-global \
+      --humanized-subdir bulk-20260531 \
+      --model qwen/qwen3.6-35b-a3b
   ```
+  Output: `<otel>/v2_kg_extractions/all_extractions.jsonl` (147 lines).
 
-- [ ] **2.5.3 Freeze-point checkpoint.** After §2.5.1 + §2.5.2
-  complete, the publishable dataset is finalized. Verify all three
-  datasets have the same artifact set:
+- [x] **2.5.3 Freeze-point checkpoint** — ✓ COMPLETE 2026-06-13.
+  Parity verified across all 3 datasets. OB was missing the v2-resplit
+  manifest; regenerated via `make_resplit` (6720 windows: 4701 train /
+  1011 val / 1008 test).
+
+  | Dataset | corpus | examples | gold | resplit | humanized | KG |
+  |---|---|---|---|---|---|---|
+  | OB | 48 MB | 45 MB | 4.7 MB | ✓ NEW | 347 | 347 |
+  | OTel Demo | 6.9 MB | 9.8 MB | 2.2 MB | ✓ | 147 | 147 |
+  | WoL | 8.9 MB | 16 MB | 2.0+0.8 strong | n/a* | n/a† | 2000 |
+
+  \* WoL has no failure families to stratify on. † WoL is real Apache
+  Jira text, no synthetic humanization needed.
+
+**Original verification recipe (kept for reference):** Verify all three
+datasets have the same artifact set:
   ```bash
   for d in 2026-05-25-dataset-v5-large-global \
            2026-06-09-otel-demo-v1-global \
@@ -283,6 +299,39 @@ generate them.
 | `distractors/` (WoL only) | 300 off-topic tickets | RQ-A4 ETL |
 | `novelty-queries/` (WoL only) | 800 OOD queries | RQ-A5 ETL |
 
+- [x] **2.5.5 v2_kg_extractions_windows on all 3 datasets** — ✓ COMPLETE 2026-06-13.
+  Originally scheduled per-dataset (§3.2, §4.2, §5.3); pulled forward
+  for publishability + extractor robustness fixes:
+
+  | Dataset | windows | services | components | errors | symptoms | wall |
+  |---|---|---|---|---|---|---|
+  | OB | 1008 | 720 | 0 | 399 | 1008 | 2h 25min |
+  | OTel Demo | 247 | 182 | 27 | 0 | 247 | ~40 min |
+  | WoL | 304 | 1 | 99 | 17 | 304 | ~45 min |
+
+  Extraction characteristics correctly mirror each domain:
+  microservice systems (OB, OTel) score on services; real Apache
+  projects (WoL) score on components.
+
+  **Two extractor robustness improvements shipped:**
+  1. `src/v2_advanced/proposal_d_knowledge_graph/extractor.py` —
+     `extract_from_window` now optionally passes `SCENARIO FAMILY` +
+     `WINDOW TYPE` to the LLM prompt as soft context (helps thin OTel
+     evidence; gained 27 new component labels vs zero before).
+  2. Cache key now includes family + severity so future backfills
+     invalidate properly (legacy cache fallback kept for already-
+     extracted windows).
+
+  **OTel-specific data backfill** (also shipped):
+  `scripts/agent/backfill_otel_scenario_family.py` derives
+  `scenario_family` from `scenario_id` (52 distinct families) across
+  global-triage-examples (1643), jira-memory-corpus (147), window-
+  memory-matchings (1338). Fixes the upstream `unknown`-family bug.
+
+  **Per-window metadata patcher** (kept for future use):
+  `scripts/agent/patch_window_extraction_metadata.py` refreshes
+  family + severity on existing cache JSONs without LLM cost.
+
 The window-side `v2_kg_extractions_windows/` is generated PER TEST
 SPLIT in the cascade phases (§3.2, §4.2, §5.3) since it costs hours
 and is only needed for RQ-A6 symmetric closure. Whether to include
@@ -310,7 +359,12 @@ stays loaded for everything in §3.
   "
   ```
 
-- [ ] **3.2 Symmetric window extraction on OB** (~2 hours LM Studio).
+- [x] **3.2 Symmetric window extraction on OB** — ✓ COMPLETE 2026-06-13.
+  1008/1008, 0 failures, 8.65 s/window, 2h 25min wall. 720 with services,
+  399 with error_classes, 1008 with symptoms. Output:
+  `v2_kg_extractions_windows/all_extractions.jsonl`.
+
+  (Original command:)
   ```bash
   PYTHONPATH=src python scripts/agent/extract_window_entities.py \
       --global-dir data/derived/global/2026-05-25-dataset-v5-large-global \

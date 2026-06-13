@@ -1,47 +1,130 @@
 # Data layout
 
-This directory holds **three datasets** used across the research. Everything under `data/` is gitignored — the raw bytes live only on disk, not in git.
+This directory holds **three publishable datasets** plus their source / raw-collection roots. Everything under `data/` is gitignored — the raw bytes live only on disk, not in git.
 
 ```
 data/
-├── derived/                         # processed / featurised outputs (all datasets share this root)
-│   ├── 2026-05-25-dataset-v5-large-<scenario>-r<NN>/      # per-run derivations (Online Boutique, ~80 runs)
+├── derived/                         # processed / featurised outputs
+│   ├── 2026-05-25-dataset-v5-large-<scenario>-r<NN>/      # per-run derivations (OB, ~80 runs)
 │   ├── 2026-06-09-otel-demo-v1-<scenario>-r<NN>/          # per-run derivations (OTel Demo, 22 runs)
-│   ├── corpora/
-│   │   ├── 2026-05-25-dataset-v5-large/                   # OB humanized corpora
-│   │   └── 2026-06-09-otel-demo-v1/                       # OTel Demo humanized corpora
-│   ├── otel-demo-gcp-pilot-001/                           # one-off GCP OTel Demo pilot
+│   ├── corpora/                                            # humanizer working dirs
 │   └── global/
-│       ├── 2026-05-25-dataset-v5-large-global/            # **Online Boutique** locked global dataset
-│       ├── 2026-06-09-otel-demo-v1-global/                # **OTel Demo** global (1,643 windows × 147 memory)
-│       ├── 2026-06-11-wol-real-global/                    # **WoL** Mode 3 derived global (2,000 Apache Jira)
-│       └── smoke-otel-pilot-global/                       # OB smoke-test global
+│       ├── 2026-05-25-dataset-v5-large-global/            # **Online Boutique** locked global dataset ← publishable
+│       ├── 2026-06-09-otel-demo-v1-global/                # **OTel Demo** global ← publishable
+│       └── 2026-06-11-wol-real-global/                    # **WoL** Mode 1+2+3 global ← publishable
 │
-├── runs/                            # **Online Boutique** raw collection runs (~80 GB)
-│   └── 2026-05-25-dataset-v5-large-<scenario>-r<NN>/      # Loki + Tempo + Prometheus + k8s dumps per run
-│
-├── otel-demo-runs/                  # **OTel Demo** raw collection runs (~19 GB, 22 runs)
-│   └── 2026-06-09-otel-demo-v1-<scenario>-r<NN>/
-│
-└── wol/                             # **WoL** source archive (~18 GB)
-    ├── README.md
-    ├── TERMS_OF_USE.md
-    ├── WoL_v1-2025-11-10.archive
-    ├── WoL_v1-2025-11-10.archive.gz
-    └── Xiaohui_MSR_2026.pdf          # original WoL paper (MSR 2026)
+├── runs/                            # **OB** raw collection runs (~80 GB) — optional reference
+├── otel-demo-runs/                  # **OTel Demo** raw collection runs (~19 GB) — optional reference
+└── wol/                             # **WoL** source archive (~18 GB) + license / paper
 ```
 
-## The three datasets in one paragraph
+The three `data/derived/global/<id>/` directories are the **publishable artifact sets**. Each is self-describing via its own README.
 
-- **Online Boutique (OB).** Synthetic microservices benchmark. Locked global at `data/derived/global/2026-05-25-dataset-v5-large-global/` — 2,796 train / 984 val / 2,940 test windows + 347 V2-humanized Jira tickets. Full telemetry (Loki logs + Tempo traces + Prometheus metrics + k8s events). The headline cascade was developed and evaluated on this dataset.
+## The three datasets — headline figures
 
-- **OTel Demo.** Synthetic but realistic deployment of the OpenTelemetry demo application. Global at `data/derived/global/2026-06-09-otel-demo-v1-global/` — 1,643 windows × 147 memory tickets across 8 scenario classes (Kafka outage, network partition, payment outage, cart-redis degradation, cascading-Kafka-checkout, multi-fault, network-latency, l1-compact). Full telemetry. Used as a cross-application generalization test: does the OB-trained system transfer to a different microservices app with the same telemetry modality?
+| Dataset | Windows | Memory tickets | Families | Telemetry | Split (v2-resplit) |
+|---|---|---|---|---|---|
+| **Online Boutique** (`2026-05-25-dataset-v5-large-global/`) | 6,720 | 347 | 27 | Loki + Tempo + Prometheus + k8s | 4701 / 1011 / 1008 |
+| **OTel Demo** (`2026-06-09-otel-demo-v1-global/`) | 1,643 | 147 | 52 | Loki + Tempo + Prometheus + k8s | 1150 / 246 / 247 |
+| **WoL** (`2026-06-11-wol-real-global/`) | 2,000 | 2,000 | 7 | none (real Apache Jira text) | by-family: 1398 / 298 / 304 |
 
-- **WoL (World of Logs).** Real Apache Jira data (MSR 2026 dataset). Source archive at `data/wol/`, derived global at `data/derived/global/2026-06-11-wol-real-global/` — 2,000 real Jira tickets from 7 Apache projects (Spark, Cassandra, HBase, Flink, Ambari, Kafka, MariaDB-Server). **No telemetry** — only log lines that engineers pasted into the Jira ticket. Used for the WoL Mode 1 (distractor), Mode 2 (novelty), Mode 3 (self-contained retrieval) evaluations. See [`DOCS/docs7/REAL-DATA-WoL-PLAN.md`](../DOCS/docs7/REAL-DATA-WoL-PLAN.md).
+**One paragraph each:**
+
+- **Online Boutique (OB).** Synthetic microservices benchmark, locked global at `data/derived/global/2026-05-25-dataset-v5-large-global/` — 6,720 telemetry windows (4,701 train / 1,011 val / 1,008 test under the locked v2-resplit) × 347 V2-humanized Jira tickets across 27 scenario families. Full telemetry (Loki logs + Tempo traces + Prometheus metrics + k8s events). The headline cascade was developed and evaluated on this dataset.
+
+- **OTel Demo.** Synthetic but realistic deployment of the OpenTelemetry demo application, global at `data/derived/global/2026-06-09-otel-demo-v1-global/` — 1,643 windows × 147 memory tickets across 52 scenario families (Kafka outage, network partition, payment outage, cart-redis degradation, cascading-Kafka-checkout, multi-fault, network-latency, l1-compact-*, etc.). Full telemetry. Used as a cross-application generalization test: does the OB-trained system transfer to a different microservices app with the same telemetry modality?
+
+- **WoL (World of Logs).** Real Apache Jira data (MSR 2026 dataset). Source archive at `data/wol/`; derived global at `data/derived/global/2026-06-11-wol-real-global/` — 2,000 real Jira tickets from 7 Apache projects (Spark, Cassandra, HBase, Flink, Ambari, Kafka, MariaDB-Server). **No telemetry** — only log lines that engineers pasted into the Jira ticket. Used for the WoL Mode 1 (distractor), Mode 2 (novelty), Mode 3 (self-contained retrieval) evaluations. See [`DOCS/docs7/REAL-DATA-WoL-PLAN.md`](../DOCS/docs7/REAL-DATA-WoL-PLAN.md).
+
+## Publishable artifact set (per dataset)
+
+Every `data/derived/global/<id>/` directory ships with the same core file set:
+
+| File | Purpose |
+|---|---|
+| `global-triage-examples.jsonl` | Window-level rows: feature columns + `triage_evidence_text` + ground-truth labels |
+| `jira-memory-corpus.jsonl` | Memory tickets used as the retrieval target |
+| `jira-shadow-humanized-v2/bulk-*/timeline.jsonl` | Engineer-voice humanized memory tickets (OB + OTel synthesized; WoL is real text reformatted) |
+| `v2_kg_extractions/all_extractions.jsonl` | LLM-extracted entities (services / components / errors / symptoms) per **memory ticket** |
+| `v2_kg_extractions_windows/all_extractions.jsonl` | LLM-extracted entities per **test window** (symmetric-KG retrieval) |
+| `window-memory-matchings.jsonl` | Coarse-relation gold mapping window → matched memory ticket ids |
+| `window-memory-matchings-strong.jsonl` (WoL only) | Strong-relation gold for the strong-match paper claim |
+| `triage-split-manifest.json` | Original split |
+| `triage-split-manifest-v2-resplit.json` (OB + OTel) | 70/15/15 stratified resplit — recommended for cross-pipeline comparison |
+| `triage-feature-columns.json` | Numeric feature-list contract for the classical-ML baselines |
+| `global-triage-build-manifest.json` (OB + OTel) | Build provenance (seed, git SHA, run counts) |
+| `README.md` | Per-dataset card with field schemas, ID linkage, citation |
+
+WoL also has:
+
+| File / dir | Purpose |
+|---|---|
+| `distractors/` | 300 off-topic tickets (Qt, Minecraft, etc.) for the RQ-A4 distractor sweep |
+| `novelty-queries/` | 800 out-of-distribution queries for the RQ-A5 novelty layer |
+| `self-contained/` | Mode-3 memory + queries + gold relations |
+| `wol-priority-mapping.json` | Normalization of 50+ Jira priority strings to `{critical, major, minor}` |
+| `wol-extraction-manifest.json` | Per-mode extraction provenance |
+
+## ID linkage between files
+
+- **OB + OTel humanized ↔ memory:** humanized `source_episode_id` == memory `incident_episode_id` (1:1)
+- **WoL humanized ↔ memory:** humanized `ticket_id` == memory `jira_shadow_issue_id` (1:1)
+- **Window ↔ memory matchings:** matchings `window_id` keys into both examples and matchings; `matched_memory_issue_ids` values are memory `jira_shadow_issue_id`s
+- **Window-side KG ↔ memory-side KG:** both keyed by id (`window_id` / memory `jira_shadow_issue_id`); fields are identical schema (`affected_services`, `components`, `error_classes`, `symptoms`)
+
+## How to load (Python)
+
+```python
+from core.data.loaders import load_dataset
+from core.memory.corpus import MemoryCorpus
+
+# coarse-relation gold (default)
+ds = load_dataset("data/derived/global/2026-06-11-wol-real-global")
+corpus = MemoryCorpus(issues=ds.memory_corpus)
+
+# strong-relation gold (WoL only)
+ds = load_dataset(
+    "data/derived/global/2026-06-11-wol-real-global",
+    matchings_file="window-memory-matchings-strong.jsonl",
+)
+```
+
+The cascade scripts use these loaders via `--global-dir <path>` on every CLI; see `DOCS/docs7/REPRODUCE.md` for the full pipeline-by-pipeline reproduction recipe.
+
+## Distribution packages
+
+The publishable artifact is `data/published/` — see its [README](published/README.md) for the full layout. Each dataset is in its own subdirectory with a `simple_dataset.zip` (derived features only) and a `full_dataset.zip` (raw telemetry + derived + global):
+
+```
+data/published/
+├── README.md                                  # landing page — start here
+├── online-boutique/                           # Online Boutique (Google demo, full telemetry)
+│   ├── README.md
+│   ├── simple_dataset.zip   ~28 MB
+│   └── full_dataset.zip      ~4.4 GB
+├── otel-demo/                                 # OpenTelemetry Demo (cross-app generalization)
+│   ├── README.md
+│   ├── simple_dataset.zip   ~4 MB
+│   └── full_dataset.zip      ~1.0 GB
+└── world-of-logs/                             # Real Apache Jira (no telemetry)
+    ├── README.md
+    ├── simple_dataset.zip   ~7 MB
+    └── full_dataset.zip      ~2.3 GB
+```
+
+Each zip is **self-contained** — it ships with a complete `README.md` (field schemas, ID linkage rules, example rows, splits, reproducibility provenance, citation) plus a `MANIFEST.sha256.json` for integrity verification. No external document references.
+
+## What's NOT in the bundles
+
+- Pilots / smoke runs (`data/otel-demo-runs/otel-demo-gcp-pilot-001/`, etc.) — one-off engineering tests, not part of the dataset.
+- Working / scratch dirs (`data/derived/corpora/`, `data/derived/wol/extraction-cache/`) — humanizer / extractor intermediate state, regenerable.
+- Tier-3 cascade outputs inside OB (`comparison/`, `training_runs/`, `text-leakage-report/`, `jira-shadow-humanized-v2-distractors/`) — these are pipeline results, not data, and are reproducible from the dataset + pipeline code.
+- Pre-extracted agent results (`data/agent_runs/`) — also reproducible.
+- The uncompressed `data/wol/WoL_v1-2025-11-10.archive` — bit-identical content to the included `.archive.gz` (just `gunzip` it).
 
 ## Cross-references
 
 - **Locked OB charter:** [`RESEARCH-CHARTER.md`](../RESEARCH-CHARTER.md) §7 (datasets), §8 (pipelines).
 - **WoL plan:** [`DOCS/docs7/REAL-DATA-WoL-PLAN.md`](../DOCS/docs7/REAL-DATA-WoL-PLAN.md).
-- **OTel Demo cross-app evaluation:** scheduled per [`DOCS/docs7/RESEARCH-QUESTIONS.md`](../DOCS/docs7/RESEARCH-QUESTIONS.md) RQ-B1.
+- **OTel Demo cross-app evaluation:** [`DOCS/docs7/RESEARCH-QUESTIONS.md`](../DOCS/docs7/RESEARCH-QUESTIONS.md) RQ-B1.
 - **WoL source URL + license:** [`data/wol/TERMS_OF_USE.md`](wol/TERMS_OF_USE.md).
