@@ -8,9 +8,18 @@ caveats. Cross-references:
 [`DOCS/docs7/AGENTIC-SYSTEM.md`](DOCS/docs7/AGENTIC-SYSTEM.md),
 [`DOCS/docs7/IMPROVEMENTS.md`](DOCS/docs7/IMPROVEMENTS.md).
 
-**Compute budget.** ~45–55 hours wall-clock (LM Studio + GPU). Most of
-that is the three ~3–8h LM-Studio window-extraction passes (one per
-dataset) which can run overnight.
+**Compute budget.** ~46–56 hours wall-clock (LM Studio + GPU). Most of
+that is the LM-Studio passes:
+  - Window-side extraction (~2h OB + ~6h WoL + ~3h OTel)
+  - Memory-side extraction on OTel (~1h — OB+WoL kept theirs)
+  - **Humanized-memory generation on OTel (~1h)** — OTel is the only
+    dataset without pre-existing `jira-shadow-humanized-v2/`
+  - DiagnosisAgent on test windows (~4h OB + ~4h WoL + ~4h OTel)
+  - DiagnosisAgent on 800 WoL OOD queries (~7h)
+  - BiEncoder/LogSeq fits (~6h per dataset, GPU)
+
+LM-Studio jobs serialize (one model in VRAM at a time); GPU
+retrieval fits can run while LM Studio is busy on something else.
 
 ---
 
@@ -512,7 +521,42 @@ stays loaded for everything in §3.
 
 ---
 
-## Section 5 — Phase 3: OTel Demo end-to-end (~10–12 hours) — closes B1
+## Section 5 — Phase 3: OTel Demo end-to-end (~11–13 hours) — closes B1
+
+**OTel Demo is the only dataset that doesn't ship humanized memory** —
+OB has `jira-shadow-humanized-v1/v2/v2-distractors` (all kept), WoL
+has `jira-shadow-humanized-v2/` (kept), OTel Demo has neither. The
+HybridRRF + MemoryGraph cascade pipelines REQUIRE humanized memory
+at fit time, so §5.0 below must run before §5.4 (cascade).
+
+- [ ] **5.0 Generate humanized memory for OTel Demo** (~1 h LM Studio
+  with `qwen2.5-coder-14b`; ~147 memory tickets). The humanizer reads
+  `jira-memory-corpus.jsonl` + `data/otel-demo-runs/<id>/raw/loki/*.json`
+  READ-ONLY, writes to
+  `<global_dir>/jira-shadow-humanized-v2/<output-subdir>/timeline.jsonl`.
+  Resumable.
+  ```bash
+  PYTHONPATH=src python scripts/research-lab/humanize_v5_large_bulk.py \
+      --global-id 2026-06-09-otel-demo-v1-global \
+      --runs-root data/otel-demo-runs \
+      --output-subdir bulk-20260531 \
+      --llm-base-url http://localhost:1234 \
+      --llm-model qwen/qwen2.5-coder-14b
+  ```
+  Verify:
+  ```bash
+  ls data/derived/global/2026-06-09-otel-demo-v1-global/jira-shadow-humanized-v2/bulk-20260531/
+  # expect: timeline.jsonl + generation-manifest.json
+  wc -l data/derived/global/2026-06-09-otel-demo-v1-global/jira-shadow-humanized-v2/bulk-20260531/timeline.jsonl
+  # expect: ~147 (one row per memory ticket)
+  ```
+
+  **Subdir naming:** we use `bulk-20260531` to match the cascade
+  pipelines' default `humanized_subdir="bulk-20260531"` (OB's date).
+  This avoids needing a CLI override on the cascade run. If you'd
+  prefer a date-honest subdir like `bulk-20260613`, also create a
+  symlink: `cd <global_dir>/jira-shadow-humanized-v2 &&
+  ln -s bulk-20260613 bulk-20260531`. Either approach works.
 
 - [ ] **5.1 Memory-side LLM extraction on OTel Demo** (~1 h —
   smaller corpus, ~147 tickets).
