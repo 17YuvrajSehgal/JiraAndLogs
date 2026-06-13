@@ -259,57 +259,15 @@ if _HAS_MEMORYGRAPH:
 
     KNOWN_PIPELINES["memorygraph_full"] = _MemoryGraphFull
 
-    # Phase 5.3 cross-train pair: identical to memorygraph_hybrid and
-    # memorygraph_full but with the Jira memory corpus swapped from the
-    # known-leaky legacy jira-memory-corpus.jsonl (100% contamination
-    # per the text-leakage canary, commit b704cb8) to the sanitizer-
-    # verified humanized corpus at jira-shadow-humanized-v1/bulk-20260529/.
-    # Running a comparison harness with both legacy and humanized
-    # variants side-by-side quantifies the leakage premium the legacy
-    # corpus was paying.
-    class _MemoryGraphHybridHumanized(MemoryGraphPipeline):
-        name = "memorygraph_hybrid_humanized"
+    # V1 humanized variants (jira-shadow-humanized-v1/bulk-20260529)
+    # were removed 2026-06-13. The V2 humanizer (TAWOS-realistic engineer
+    # voice) supersedes the V1 CS-voice humanization and is the canonical
+    # corpus for this paper. The published V2-lifts-V1 number lives in
+    # `docs7/MODE3-TCH-LITE-WoL-RESULTS.md` + `CHANNEL-ABLATION.md` and
+    # doesn't need to be re-derived; researchers re-running the cascade
+    # use V2 only.
 
-        def __init__(self) -> None:
-            super().__init__(
-                with_numeric=True, humanized_subdir="bulk-20260529",
-            )
-
-    KNOWN_PIPELINES["memorygraph_hybrid_humanized"] = _MemoryGraphHybridHumanized
-
-    class _MemoryGraphFullHumanized(MemoryGraphPipeline):
-        name = "memorygraph_full_humanized"
-
-        def __init__(self) -> None:
-            super().__init__(
-                with_numeric=True, with_embeddings=True,
-                humanized_subdir="bulk-20260529",
-            )
-
-    KNOWN_PIPELINES["memorygraph_full_humanized"] = _MemoryGraphFullHumanized
-
-    # Move A from ML-NEW-IDEAS.MD: swap the trace-aggregate
-    # evidence_text query for a characteristic-log-lines query
-    # extracted from raw/loki/<window>.json. E5+E6 showed both BM25
-    # and Nomic dense embeddings cap at Recall@5 ≈ 0.07 on the clean
-    # humanized corpus when the source-side is evidence_text. This
-    # variant tests whether engineer-vocabulary on the source side
-    # unlocks meaningful retrieval. BM25-only (no Nomic) so the
-    # comparison stays fast and isolates the log-signature effect.
-    class _MemoryGraphHybridHumanizedLogs(MemoryGraphPipeline):
-        name = "memorygraph_hybrid_humanized_logs"
-
-        def __init__(self) -> None:
-            super().__init__(
-                with_numeric=True,
-                with_log_signatures=True,
-                humanized_subdir="bulk-20260529",
-            )
-
-    KNOWN_PIPELINES["memorygraph_hybrid_humanized_logs"] = _MemoryGraphHybridHumanizedLogs
-
-    # V2 pipeline variants (2026-06-01). Identical structure to the V1
-    # humanized variants but read the multi-channel V2 corpus at
+    # V2 pipeline variants — read the multi-channel V2 corpus at
     # jira-shadow-humanized-v2/bulk-20260531/. memory_text in V2 leads
     # with description_code (engineer-vocabulary log lines per §13.12)
     # so BM25 / embedding retrieval has rich engineer-vocab to match
