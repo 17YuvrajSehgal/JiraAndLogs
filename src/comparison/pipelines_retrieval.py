@@ -21,9 +21,13 @@ unified leaderboard but not the primary use of these pipelines.
 
 from __future__ import annotations
 
+import logging
 import time
 from pathlib import Path
 from typing import Any
+
+
+log = logging.getLogger(__name__)
 
 from core.data.loaders import load_dataset as load_loganalyzer_dataset
 from core.data.splits import iter_split
@@ -89,10 +93,15 @@ class _RetrievalPipelineBase(PipelineRunner):
 
         memory_ids = [m.jira_shadow_issue_id for m in ds.memory_corpus]
         memory_texts = [_memory_text(m) for m in ds.memory_corpus]
+        log.info("[%s] dataset loaded: train=%d val=%d test=%d memory=%d",
+                 self.name, len(train), len(val), len(test), len(memory_texts))
 
         t0 = time.time()
+        log.info("[%s] building retriever index over %d memory docs ...",
+                 self.name, len(memory_texts))
         self.retriever = self._build_retriever(memory_texts)
         fit_seconds = time.time() - t0
+        log.info("[%s] retriever built in %.2fs", self.name, fit_seconds)
 
         def _score_window(window: Any) -> tuple[float, list[str]]:
             """Returns (proxy_triage_score, top-k memory_ids ordered by relevance)."""
@@ -110,15 +119,22 @@ class _RetrievalPipelineBase(PipelineRunner):
 
         # Validation threshold tuning at target FPR
         if val:
+            log.info("[%s] tuning threshold on val (n=%d) ...", self.name, len(val))
             val_scores = [_score_window(w)[0] for w in val]
             val_labels = [1 if w.triage_label == "ticket_worthy" else 0 for w in val]
             _p, _r, threshold = precision_at_fpr(val_scores, val_labels, target_fpr)
+            log.info("[%s] val threshold tuned to %.4f", self.name, threshold)
         else:
             threshold = 0.5
 
         t0 = time.time()
+        log.info("[%s] predicting on test split (n=%d) ...", self.name, len(test))
         predictions: list[PipelinePrediction] = []
-        for w in test:
+        log_every = max(1, len(test) // 10)
+        for i, w in enumerate(test):
+            if i % log_every == 0 and i > 0:
+                log.info("[%s]   predict progress: %d/%d windows (%.1f%%)",
+                         self.name, i, len(test), 100.0 * i / len(test))
             score, ranked_ids = _score_window(w)
             decision = "ticket_worthy" if score >= threshold else "noise"
             predictions.append(
@@ -141,6 +157,9 @@ class _RetrievalPipelineBase(PipelineRunner):
                 )
             )
         predict_seconds = time.time() - t0
+        log.info("[%s] predict complete: %d predictions in %.2fs (%.1f windows/s)",
+                 self.name, len(predictions), predict_seconds,
+                 len(predictions) / max(predict_seconds, 1e-9))
 
         return PipelineResult(
             pipeline_name=self.name,

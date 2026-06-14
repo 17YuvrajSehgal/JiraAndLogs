@@ -38,6 +38,82 @@ fingerprint:
 
 ---
 
+## Section: CRITICAL framing reminders for the paper draft
+
+Three pre-draft framing notes to avoid reviewer-rejection traps:
+
+### A. Cascade Hit@5 (0.912) ≠ Agent Hit@5 (0.7583) — they measure
+different systems on the same OB dataset
+
+| System | Hit@5 OB | What it is |
+|---|---|---|
+| **TCH cascade end-state** (docs6/X_FINAL_TCH_CASCADE.md §12) | **0.912** | Full L1 stacker + L2 RRF + L3 disjunction + verifier composition on cached predictions. The CASCADE is internal-only per `docs7/AGENTIC-SYSTEM.md` §1; it does NOT appear in this paper's tables. |
+| **This paper's agent** | **0.7583** | `BiEncoder + compose_l2 + compose_triage + compose_novelty`. The agent does NOT run the L1 numeric stacker over triage scores; it uses `triage_numeric` for triage_decision only. |
+
+Don't ever put 0.912 in this paper's results. The 0.7583 is the
+agent's headline; the 0.912 is the predecessor TCH-cascade
+benchmark we draw skill predictions from, not a competing system.
+
+### B. Hit@K relation labels — Hybrid-RRF behavior differs
+
+The Hybrid-RRF fusion claim "+0.124 Hit@5 over BiEncoder alone"
+is **WoL strong-match only**. On WoL coarse-match the same fusion
+LOSES (BiEncoder 0.959 vs Hybrid-RRF 0.901, −0.058 absolute).
+
+Every Hit@K table row in the paper MUST label its `gold_relation`
+column (coarse / strong). Cite `MODE3-TCH-LITE-WoL-RESULTS.md` §3.8.
+
+### C. Pages-per-incident = 1.000 on smoke splits — disclose the caveat
+
+The 3-dataset universal 1.000 pages/incident IS measured, but the
+test splits are window-grain (one window per test row). Multi-
+window outages are clustered into ONE incident only when the
+`incident_episode_id` field is set + the StateLayer ring buffer
+fires the suppression rule. The 20 suppressions on OB and 18 on
+WoL show the mechanism IS exercising, but the per-dataset
+suppression rate is small relative to the test split:
+- OB: 20 / 1008 = 2.0%
+- WoL: 18 / 304 = 5.9%
+- OTel: 1 / 247 = 0.4%
+
+Paper claim: "page suppression is operational and produces
+pages-per-incident = 1.000 on test splits where multi-window
+sequences appear; the test splits don't oversample multi-window
+outages." Don't claim "page suppression generalises broadly" —
+the test sample isn't designed to stress this rule heavily.
+
+---
+
+## Section: BM25 baseline (RQ-E3) — naive-baseline comparison
+
+Apples-to-apples comparison on agent-evaluable windows
+(`results/baselines/bm25_vs_agent.json`):
+
+| Dataset | n_eval | BM25 Hit@1 | BM25 Hit@5 | Agent Hit@1 | Agent Hit@5 | Hit@5 lift |
+|---|---:|---:|---:|---:|---:|---:|
+| OB | 331 | **0.0514** | **0.0876** | 0.6888 | 0.7583 | **8.7× BM25** |
+| OTel | 119 | 0.3866 | 0.5630 | 0.6471 | 0.7563 | 1.34× BM25 |
+| WoL | 55 | 0.0000 | 0.6000 | 0.7818 | 0.8364 | 1.39× BM25 |
+
+**Paper claim:** "The agent's Hit@5 dominates a naive BM25-only
+baseline by 1.3× (OTel + WoL) to 8.7× (OB). On real Apache Jira
+data (WoL), BM25's Hit@1 collapses to 0 — keyword overlap alone
+is insufficient — while the agent retains 78%."
+
+**Honest caveat:** the WoL BM25 Hit@5 = 0.60 indicates that for
+this dataset, much of the agent's lift is from BiEncoder-quality
+ranking, not from the agentic features. The agent is +0.236
+absolute over BM25 Hit@5; of that, the BiEncoder Mode-3 fine-tune
+contributes most (the §3.5–§3.8 ReAct lift is NS).
+
+→ Code: BM25 driver scripts at
+  - OB: `data/derived/global/2026-05-25-.../comparison/v2f-bm25/per-window-predictions.jsonl`
+  - OTel: `data/derived/global/2026-06-09-.../comparison/v2f-bm25/per-window-predictions.jsonl`
+  - WoL: `data/derived/global/2026-06-11-.../tch-lite-refit/bm25-predictions.jsonl`
+  - Master table: `results/baselines/bm25_vs_agent.json`
+
+---
+
 ## Section: Headline tables (one per dataset)
 
 ### Online Boutique (OB) — synthetic microservices telemetry
@@ -359,6 +435,55 @@ ReAct loop that v1's deterministic controller doesn't trigger.
 | A3 (reformulation lift) | gate fires 17.8% on OB; Hit@K not measurable | Need live-retrieval mode (predictions-backed retrievers can't re-query) |
 | D1 (distractor robustness on agent) | cascade-level only | Live distractor injection + cascade re-train |
 | D4 (Phase-2 HP sensitivity) | only cascade HPs swept | Sweep rerank.alpha, peers.top_k, etc. |
+
+---
+
+## Appendix A: Per-skill cost assumptions (for §4.5 / §4.10 / §4.11 reproducibility)
+
+The cost numbers in §4.5, §4.10, §4.11 use a fixed `PER_SKILL_COST`
+table in `scripts/agent/cost_vs_cascade.py` and
+`scripts/agent/pareto_sweep.py`. The values draw from Mode 3
+telemetry (where applicable) + conservative LLM token-rate
+estimates at gpt-4o-mini pricing.
+
+| Skill | mean_wall_ms | mean_tokens | usd/call | Source |
+|---|---:|---:|---:|---|
+| `triage_numeric` (HGB) | 1.0 | 0 | 0.0 | predictions-backed (no LLM) |
+| `retrieve_dense` (BiEncoder) | 1.0 | 0 | 0.0 | predictions-backed (no LLM) |
+| `retrieve_log_sequence` | 1.0 | 0 | 0.0 | predictions-backed |
+| `retrieve_hybrid_fusion` | 1.0 | 0 | 0.0 | predictions-backed |
+| `retrieve_hybrid_fusion_llm` | 1.0 | 0 | 0.0 | predictions-backed |
+| `retrieve_knowledge_graph` | 1.0 | 0 | 0.0 | predictions-backed |
+| `compose_l2` / `compose_triage` / `compose_novelty` | 0.5 | 0 | 0.0 | pure trace-readers |
+| **`verify_with_llm`** | **15400.0** | **1969** | **$0.00050** | **`MODE3-TCH-LITE-WoL-RESULTS.md` §3.9** |
+| `reformulate_query` | 300.0 | 400 | $0.00010 | estimated LLM stub |
+| `extract_entities_llm` | 8000.0 | 1500 | $0.00040 | KG extractor estimate |
+| `request_pod_events` / `pod_metrics` | 5.0 | 0 | 0.0 | data lake JSON read |
+| `request_extended_trace_window` | 10.0 | 0 | 0.0 | data lake JSON read |
+| `request_similar_incident_window` | 3.0 | 0 | 0.0 | in-memory corpus read |
+| `rerank_with_evidence` | 1.0 | 0 | 0.0 | pure trace-reader |
+
+**The dollar cost is dominated by `verify_with_llm`** (=$0.0005/call,
+~15.4 sec wall, ~1969 tokens). At 1008 OB test windows × always-on
+cascade × $0.0005 = $0.504 verifier-only cost. The 64.1% USD
+savings in §4.10 are mostly verifier-skip savings.
+
+**Token rates are model-dependent:**
+- gpt-4o-mini: $0.15/M input, $0.60/M output → ~$0.0005/1969-token call
+- gpt-4o (full): ~$0.005/1969-token call (10× more)
+- claude-3-5-haiku: ~$0.001/1969-token call
+- self-hosted (LM Studio / Ollama / vLLM): $0/call + amortized GPU-hour cost
+
+The §4.10 number ($0.0654 actual / $0.1824 cascade) IS in gpt-4o-mini
+units. Switching models proportionally scales the dollar axis but
+NOT the % savings — the savings percentage is invariant to LLM
+unit cost because cascade-counterfactual and agent-actual scale
+together.
+
+**Reproducibility:** the PER_SKILL_COST tuple is the single
+source of truth; any future model-pricing change just edits the
+table. The current values represent self-hosted-equivalent
+research costs.
 
 ---
 

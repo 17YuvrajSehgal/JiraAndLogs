@@ -75,8 +75,17 @@ output is cacheable; every decision is bit-replayable from the
 saved trace.
 
 The contribution is the **capability-adaptive, cost-aware,
-replayable, tool-augmenting** policy over heterogeneous diagnostic
-skills.
+replayable** policy over heterogeneous diagnostic skills, with a
+**tool-use framework** in place. **Honest note on tool-use lift
+(measured Phase 3 §4.12–§4.14):** the ReAct loop's Hit@1
+contribution is statistically NOT significant on any of 3 datasets
+(OB +0.0151 paired p=0.18; OTel exactly 0; WoL exactly 0).
+The single statistically-significant ReAct finding is a NEGATIVE
+one: `request_extended_trace_window` is net-harmful on OB
+(Δ=−0.018, p=0.002, §4.13). The framework supports active
+evidence gathering; the *value* of tool-use on the measured data
+is below the noise floor at α=0.05. This is disclosed up-front
+to set reviewer expectations correctly.
 
 ---
 
