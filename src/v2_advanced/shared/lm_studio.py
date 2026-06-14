@@ -60,6 +60,10 @@ class LMStudioConfig:
     timeout_s: float = 120.0
     max_retries: int = 3
     retry_backoff_s: float = 2.0
+    # Optional bearer token. Set to use the same /v1/chat/completions
+    # endpoint against a remote OpenAI-compatible service (OpenAI, Together,
+    # Groq, etc.). When None, no Authorization header is sent (local LM Studio).
+    api_key: str | None = None
 
 
 class LMStudioError(RuntimeError):
@@ -94,10 +98,14 @@ class LMStudioClient:
 
     def is_available(self) -> bool:
         """Quick health-check (GET /v1/models). Returns True if the
-        local server is up."""
+        server is up. Includes auth header when api_key is set so
+        remote OpenAI-compatible APIs don't 401."""
         try:
+            headers = {}
+            if self.config.api_key:
+                headers["Authorization"] = f"Bearer {self.config.api_key}"
             req = urllib.request.Request(
-                f"{self.config.base_url}/v1/models", method="GET"
+                f"{self.config.base_url}/v1/models", method="GET", headers=headers,
             )
             with urllib.request.urlopen(req, timeout=5.0) as resp:
                 return resp.status == 200
@@ -154,10 +162,12 @@ class LMStudioClient:
         elif json_mode:
             payload["response_format"] = _GENERIC_JSON_RF
 
-        if enable_thinking is not None:
+        if enable_thinking is not None and not self.config.api_key:
             # Qwen3 / instruct-template convention. LM Studio forwards
             # these kwargs into the model's chat template, which honors
-            # the `enable_thinking` flag.
+            # the `enable_thinking` flag. Remote OpenAI-compatible APIs
+            # (gated by api_key) reject this field with 400, so we skip
+            # it there — those models don't have a thinking mode anyway.
             payload["chat_template_kwargs"] = {"enable_thinking": bool(enable_thinking)}
 
         if stop:
@@ -169,9 +179,12 @@ class LMStudioClient:
         last_err: Exception | None = None
         for attempt in range(1, self.config.max_retries + 1):
             try:
+                headers = {"Content-Type": "application/json"}
+                if self.config.api_key:
+                    headers["Authorization"] = f"Bearer {self.config.api_key}"
                 req = urllib.request.Request(
                     url, data=body,
-                    headers={"Content-Type": "application/json"},
+                    headers=headers,
                     method="POST",
                 )
                 with urllib.request.urlopen(req, timeout=self.config.timeout_s) as resp:

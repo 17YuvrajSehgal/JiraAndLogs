@@ -373,53 +373,60 @@ stays loaded for everything in §3.
   Verify: `v2_kg_extractions_windows/all_extractions.jsonl` exists with
   ~1008 rows (one per test window).
 
-- [ ] **3.3 Full cascade run on OB** (~6–8 h GPU). Runs every retriever
-  via the EXISTING `run_all_v2.py` master driver. Per-window predict
-  cost is recorded automatically via the §1 patch.
-  ```bash
-  # All v2 pipelines on OB (BiEncoder + LogSeq + Hybrid + KG + HGB +
-  # DiagnosisAgent + bm25_retrieval baseline for C4 closure)
-  PYTHONPATH=src python -m v2_advanced.run_all_v2 \
-      --global-dir data/derived/global/2026-05-25-dataset-v5-large-global \
-      --runs-root data/runs \
-      --pipelines hgb,tab_transformer,bi_encoder_retrieval,logseq2vec_retrieval_pretrained,hybrid_rrf_no_graph,hybrid_rrf_retrieval,kg_retrieval_rulebased,kg_retrieval,diagnosis_agent,bm25_retrieval
-  ```
-  Verify all expected `comparison/v2*/per-window-predictions.jsonl`
-  files exist + each row carries `pipeline_predict_seconds_per_window`.
+- [x] **3.3 Full cascade run on OB** — ✓ COMPLETE 2026-06-13/14.
+  All 10 pipelines completed across 6 sub-runs (split because of
+  bugs encountered live):
 
-- [ ] **3.4 Cascade composition + L3 learned-novelty fit** (~15 min total).
-  L3 learned classifier comes from the EXISTING
-  `v2_advanced.tch.novelty_calibration` CLI; wire it via env var.
-  ```bash
-  # 1. Compose the cascade with default L3 free-signal disjunction
-  PYTHONPATH=src python -m v2_advanced.tch.build_cascade \
-      --global-dir data/derived/global/2026-05-25-dataset-v5-large-global \
-      --output-dir data/derived/global/2026-05-25-dataset-v5-large-global/comparison/v2g-final-models/final
+  | Pipeline | Wall | Notes |
+  |---|---|---|
+  | hgb | 5s | sklearn |
+  | tab_transformer | 15s | PyTorch GPU, no OOM with 35B loaded |
+  | bi_encoder_retrieval | 40 min | sentence-transformers fine-tune |
+  | kg_retrieval_rulebased | 38s | Neo4j only |
+  | hybrid_rrf_no_graph | 39 min | re-fits its own bi-encoder + SPLADE |
+  | hybrid_rrf_retrieval_g3 | 12 min | replaces broken `kg_retrieval` (live LLM); uses cached `v2_kg_extractions_windows/` |
+  | kg_retrieval_g3 | 25s | replaces broken `kg_retrieval`; cached extractions |
+  | logseq2vec_retrieval_pretrained | 27 min | trained from scratch; required `proposal_b_logseq2vec.data_prep` first |
+  | bm25_retrieval | 1s | sklearn |
+  | diagnosis_agent | 51 min | **GPT-4o-mini via OpenAI** (local 35B/14B too slow + 8GB GPU OOM with retrieval + LLM); 200-window subsample, 0 errors |
 
-  # 2. Fit the L3 learned novelty classifier (closes A5 learned signal)
-  PYTHONPATH=src python -m v2_advanced.tch.novelty_calibration \
-      --cascade-predictions data/derived/global/2026-05-25-dataset-v5-large-global/comparison/v2g-final-models/final/per-window-predictions.jsonl \
-      --out-dir data/derived/global/2026-05-25-dataset-v5-large-global/comparison/v2g-final-models/learned-novelty
+  **Three bugs surfaced and fixed during the run:**
+  1. Stale `core.memory.retrieval` import (BM25Retriever) → restored adapter in `src/core/memory/retrieval.py`.
+  2. `kg_retrieval` and `hybrid_rrf_retrieval` defaults do **live LLM
+     window extraction** on all 6720 windows, which hangs LM Studio.
+     The `_g3` variants (cached extractions from §3.2) are the right
+     choice for our setup — `kg_retrieval_g3`, `hybrid_rrf_retrieval_g3`.
+  3. `VERIFY_SCHEMA` missing `novel` in `required` → OpenAI strict mode
+     400d every verify call. Added to `required`; smoke-tested OK.
 
-  # 3. Re-compose cascade with the learned classifier wired in
-  TCH_LEARNED_NOVELTY_PATH=data/derived/global/2026-05-25-dataset-v5-large-global/comparison/v2g-final-models/learned-novelty/learned_novelty.jsonl \
-  PYTHONPATH=src python -m v2_advanced.tch.build_cascade \
-      --global-dir data/derived/global/2026-05-25-dataset-v5-large-global \
-      --output-dir data/derived/global/2026-05-25-dataset-v5-large-global/comparison/v2g-final-models/final-with-learned-l3
-  ```
+  **Two extractor improvements shipped (commit applied):**
+  - `LMStudioClient` now supports `api_key` (Bearer header) — same OpenAI-compatible `/v1/chat/completions` spec lets us route to OpenAI without code changes.
+  - `DiagnosisAgentPipeline.train_and_predict` reads `AGENT_LLM_BASE_URL` / `AGENT_LLM_MODEL` / `AGENT_LLM_API_KEY` (or `OPENAI_API_KEY`) env vars to override the LLM endpoint at runtime.
+  - `bi_encoder._finetune` now enables `show_progress_bar=True` + prints expected total step count + per-fine-tune wall time (the silent training step looked hung otherwise).
+  - `agent.py` Stage 3 verify now uses `enable_thinking=False` (the local 35B-thinking model hit the 120s timeout on every call; OpenAI doesn't have a thinking mode anyway).
 
-- [ ] **3.5 Agent smoke on OB with traces + incident-ordered + verifier**
-  (~5 min — predictions cached). Closes A9 per-skill cost, C7
-  multi-window suppression.
-  ```bash
-  PYTHONPATH=src python scripts/agent/smoke_ob.py \
-      --global-dir data/derived/global/2026-05-25-dataset-v5-large-global \
-      --include-verifier \
-      --cache-dir data/skill_cache \
-      --trace-root data/agent_traces \
-      --order-by-incident-time \
-      --output data/agent_runs/ob-smoke.json
-  ```
+  Per-pipeline predictions saved under `training_runs/<pipeline>__<ts>__ea5748c7/predictions.jsonl`. Master reports under `comparison/v2-final-pt{1..8}/`.
+
+- [x] **3.4 Cascade composition + L3 learned-novelty fit** — ✓ COMPLETE 2026-06-13.
+  Headline numbers (cascade with learned L3, full 1008 windows):
+  Hit@1 = **0.680**, Hit@5 = **0.828**, novel_recall = **0.917** (vs 0.582 with free-signal L3 — that's the load-bearing lift for RQ-A5).
+  L1 stacker: HGB dominates (+8.22); bi_encoder +0.33, kg_rulebased +0.28, logseq2vec +0.22.
+  L3 learned classifier: best threshold 0.30, F1 = 0.891. Top features = `window_type` × `scenario_family` interactions.
+
+  Required a consolidation step (`scripts/agent/consolidate_pipeline_predictions.py`) to map per-pipeline `training_runs/.../predictions.jsonl` into the legacy `comparison/v2{a..f}-*` layout `build_cascade` expects. Also discovered: `TCH_LEARNED_NOVELTY_PATH` must be **relative** to `<global_dir>/comparison/`, not absolute — absolute paths silently fail.
+
+  Full write-up + commands in `results/ob/3.4-cascade-composition/SUMMARY.md`.
+
+- [x] **3.5 Agent smoke on OB with traces + incident-ordered + verifier** — ✓ COMPLETE 2026-06-13.
+  Hit@1 0.677, **Hit@5 0.758** on 331 gold-bearing windows. Triage acc 0.737. 39 suppressions fired (C7 evidence), pages-per-incident = 1.0. 1008 traces persisted, 5807 cache entries, 1.18s wall. Distinct plan IDs = 1 (RuleController uniform plan — the agent's selective-dispatch story).
+
+  **Two harness bugs fixed during the run** (apply forward before §4.9 WoL + §5.5 OTel):
+  - `smoke_ob.py` was missing `--trace-root` CLI flag — added + threaded through to `AgentRunner`. Same patch needed in `smoke_wol.py` + `smoke_otel_demo.py`.
+  - Experiment name used `:` separator which fails on Windows (`NotADirectoryError`). Changed to `-` separator. Same fix needed in the other two smoke scripts.
+
+  Note: agent Hit@5 (0.758) ≠ cascade Hit@5 (0.828) — agent is selectively dispatching (only 3/6 retrieval skills invoked), which is the agent's value prop. The 0.828 is the always-everything cascade oracle; 0.758 is the agent's smart-planner number.
+
+  Full write-up in `results/ob/3.5-agent-smoke/SUMMARY.md`.
 
 - [ ] **3.6 OB ablation grid + bootstrap** (~10 min). Closes C5 for OB.
   ```bash
@@ -562,18 +569,24 @@ stays loaded for everything in §3.
   ```
 
 - [ ] **4.7 Cascade composition + L3 learned novelty fit + re-compose**
-  (~15 min total).
+  (~15 min total). Same 4-step recipe as OB §3.4.
   ```bash
-  # Compose
+  # 0. Consolidate per-pipeline training_runs/ into the v2X-*/ layout
+  #    build_cascade expects. Mirrors to results/wol/4.3-cascade/consolidated/.
+  PYTHONPATH=src python scripts/agent/consolidate_pipeline_predictions.py \
+      --global-dir data/derived/global/2026-06-11-wol-real-global \
+      --mirror-to results/wol/4.3-cascade/consolidated
+  # 1. Compose with default L3
   PYTHONPATH=src python -m v2_advanced.tch.build_cascade \
       --global-dir data/derived/global/2026-06-11-wol-real-global \
       --output-dir data/derived/global/2026-06-11-wol-real-global/comparison/v2g-final-models/final
-  # Fit L3 learned
+  # 2. Fit L3 learned
   PYTHONPATH=src python -m v2_advanced.tch.novelty_calibration \
       --cascade-predictions data/derived/global/2026-06-11-wol-real-global/comparison/v2g-final-models/final/per-window-predictions.jsonl \
       --out-dir data/derived/global/2026-06-11-wol-real-global/comparison/v2g-final-models/learned-novelty
-  # Re-compose with L3 wired
-  TCH_LEARNED_NOVELTY_PATH=data/derived/global/2026-06-11-wol-real-global/comparison/v2g-final-models/learned-novelty/learned_novelty.jsonl \
+  # 3. Re-compose with L3 wired (path can be relative or absolute; the
+  #    build_cascade fix in commit-after-ea5748c7 accepts both)
+  TCH_LEARNED_NOVELTY_PATH=v2g-final-models/learned-novelty/learned_novelty.jsonl \
   PYTHONPATH=src python -m v2_advanced.tch.build_cascade \
       --global-dir data/derived/global/2026-06-11-wol-real-global \
       --output-dir data/derived/global/2026-06-11-wol-real-global/comparison/v2g-final-models/final-with-learned-l3
@@ -697,13 +710,25 @@ v2_kg_extractions present for OTel Demo).
   L1-retrained closure).
 
 - [ ] **5.4 Cascade composition + L3 learned novelty fit** (~15 min).
+  Same 4-step recipe as OB §3.4 (consolidate → compose → fit L3 → re-compose).
   ```bash
+  # 0. Consolidate per-pipeline training_runs/ into the v2X-*/ layout
+  PYTHONPATH=src python scripts/agent/consolidate_pipeline_predictions.py \
+      --global-dir data/derived/global/2026-06-09-otel-demo-v1-global \
+      --mirror-to results/otel-demo/5.3-cascade/consolidated
+  # 1. Compose with default L3
   PYTHONPATH=src python -m v2_advanced.tch.build_cascade \
       --global-dir data/derived/global/2026-06-09-otel-demo-v1-global \
       --output-dir data/derived/global/2026-06-09-otel-demo-v1-global/comparison/v2g-final-models/final
+  # 2. Fit L3 learned
   PYTHONPATH=src python -m v2_advanced.tch.novelty_calibration \
       --cascade-predictions data/derived/global/2026-06-09-otel-demo-v1-global/comparison/v2g-final-models/final/per-window-predictions.jsonl \
       --out-dir data/derived/global/2026-06-09-otel-demo-v1-global/comparison/v2g-final-models/learned-novelty
+  # 3. Re-compose with L3 wired
+  TCH_LEARNED_NOVELTY_PATH=v2g-final-models/learned-novelty/learned_novelty.jsonl \
+  PYTHONPATH=src python -m v2_advanced.tch.build_cascade \
+      --global-dir data/derived/global/2026-06-09-otel-demo-v1-global \
+      --output-dir data/derived/global/2026-06-09-otel-demo-v1-global/comparison/v2g-final-models/final-with-learned-l3
   ```
 
 - [ ] **5.5 Agent smoke + ablation + bootstrap + analyses on OTel Demo.**

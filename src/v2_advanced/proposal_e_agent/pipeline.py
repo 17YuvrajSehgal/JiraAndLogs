@@ -159,7 +159,17 @@ class DiagnosisAgentPipeline(PipelineRunner):
             log.info("extractions", n=len(extractions_map))
 
         # 3) LM Studio — fall back to rule-based agent if not available.
-        lm_cfg = LMStudioConfig(base_url=self.lm_studio_url, model=self.lm_studio_model)
+        # Env overrides let the harness redirect at runtime (e.g. OpenAI).
+        import os as _os
+        base_url = _os.environ.get("AGENT_LLM_BASE_URL", self.lm_studio_url)
+        model    = _os.environ.get("AGENT_LLM_MODEL", self.lm_studio_model)
+        api_key  = _os.environ.get("AGENT_LLM_API_KEY") or _os.environ.get("OPENAI_API_KEY")
+        lm_cfg = LMStudioConfig(
+            base_url=base_url,
+            model=model,
+            api_key=api_key,
+            timeout_s=60.0,   # remote APIs are fast; 60s is plenty
+        )
         lm_client = LMStudioClient(lm_cfg)
         if lm_client.is_available():
             agent = DiagnosisAgent(

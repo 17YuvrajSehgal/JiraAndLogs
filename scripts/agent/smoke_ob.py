@@ -114,6 +114,7 @@ def _build_harness(
     global_dir: Path,
     *,
     cache_dir: Path | None,
+    trace_root: Path | None,
     skip: set[str],
     include_verifier: bool,
     use_state_layer: bool,
@@ -127,7 +128,10 @@ def _build_harness(
     runner = AgentRunner(
         registry,
         cache=cache,
-        experiment=f"smoke:{dataset_id}",
+        trace_root=trace_root,
+        # `-` not `:` — Windows can't have colons in directory names and
+        # trace_root creates a subdir per experiment.
+        experiment=f"smoke-{dataset_id}",
     )
     controller = RuleController(registry)
 
@@ -176,6 +180,10 @@ def main() -> None:
     p.add_argument("--split", default="test", choices=["train", "validation", "test"])
     p.add_argument("--limit", type=int, default=None,
                    help="cap number of cases (smoke convenience)")
+    p.add_argument("--trace-root", type=Path, default=None,
+                   help="Persist per-window traces to "
+                        "<trace-root>/<experiment>/<window_id>.json. "
+                        "Needed for C7 multi-window suppression analysis.")
     p.add_argument("--cache-dir", type=Path, default=None,
                    help="SkillCache root (default: no cache, every skill runs)")
     p.add_argument("--output", type=Path, default=None,
@@ -210,6 +218,7 @@ def main() -> None:
     harness, contract = _build_harness(
         args.global_dir,
         cache_dir=args.cache_dir,
+        trace_root=args.trace_root,
         skip=set(args.skip_skill),
         include_verifier=args.include_verifier,
         use_state_layer=not args.no_state,

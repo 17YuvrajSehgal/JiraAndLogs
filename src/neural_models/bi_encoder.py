@@ -233,18 +233,32 @@ class BiEncoderRetrievalPipeline(PipelineRunner):
         # warmup_steps = 10% of total updates
         steps_per_epoch = max(1, len(pairs) // self.finetune_batch_size)
         warmup = int(0.1 * self.finetune_epochs * steps_per_epoch)
+        import time
+        n_batches = max(1, len(train_dl))
+        total_steps = n_batches * self.finetune_epochs
         print(
             f"[{self.name}] fine-tuning {self.backbone} on {len(pairs)} pairs "
-            f"for {self.finetune_epochs} epochs on {device}",
+            f"for {self.finetune_epochs} epochs (~{total_steps} steps) on {device}",
             file=sys.stderr,
             flush=True,
         )
+        t_train_start = time.time()
+
+        # Per-epoch heartbeat via an in-line callback. We can't easily
+        # hook step-level events through sentence-transformers' fit_mixin,
+        # but enabling the progress bar at least gives us tqdm output
+        # streaming to stderr so a long run doesn't look hung.
         model.fit(
             train_objectives=[(train_dl, loss)],
             epochs=self.finetune_epochs,
             warmup_steps=warmup,
             optimizer_params={"lr": self.finetune_lr},
-            show_progress_bar=False,
+            show_progress_bar=True,
+        )
+        print(
+            f"[{self.name}] fine-tune complete in {time.time()-t_train_start:.0f}s",
+            file=sys.stderr,
+            flush=True,
         )
         return model
 

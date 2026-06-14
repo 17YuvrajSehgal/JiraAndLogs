@@ -252,10 +252,13 @@ class DiagnosisAgent:
             f"CANDIDATES:\n{cand_text}\n\n"
             "Rank them; return JSON."
         )
-        # Stage 3 IS the actual reasoning step — judging consistency of
-        # 10 candidates against the hypothesis. Thinking ON gives us a
-        # meaningfully better consistency check. Increase max_tokens to
-        # accommodate the <think>...</think> block.
+        # Stage 3: rank candidates against the hypothesis. Originally used
+        # enable_thinking=True for explicit chain-of-thought, but on a 35B
+        # thinking model that pushes verify past the LM Studio 120s timeout
+        # on every window — the fallback {"ranked":[],"novel":true} gets
+        # used unconditionally. Setting enable_thinking=False trades
+        # explicit reasoning for actual outputs; the JSON grammar still
+        # constrains the ranking structure.
         try:
             v_dict = self.client.chat_json(
                 system=_VERIFY_SYSTEM,
@@ -263,7 +266,7 @@ class DiagnosisAgent:
                 temperature=0.0,
                 max_tokens=max(self.max_tokens_per_call, 1500),
                 response_format=VERIFY_RF,
-                enable_thinking=True,
+                enable_thinking=False,
             )
         except LMStudioError as e:
             log.warning("stage3 verify failed", window=window_id, err=str(e)[:120])

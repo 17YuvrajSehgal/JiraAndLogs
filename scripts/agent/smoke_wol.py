@@ -104,6 +104,7 @@ def _build_harness(
     global_dir: Path,
     *,
     cache_dir: Path | None,
+    trace_root: Path | None,
     skip: set[str],
     use_state_layer: bool,
 ) -> tuple[EvalHarness, ApplesToApplesContract]:
@@ -112,7 +113,12 @@ def _build_harness(
 
     cache = SkillCache(root=cache_dir) if cache_dir else None
     runner = AgentRunner(
-        registry, cache=cache, experiment=f"smoke:{dataset_id}",
+        registry,
+        cache=cache,
+        trace_root=trace_root,
+        # `-` not `:` — Windows can't have colons in dir names; trace_root
+        # creates a subdir per experiment.
+        experiment=f"smoke-{dataset_id}",
     )
     controller = RuleController(registry)
 
@@ -178,6 +184,9 @@ def main() -> None:
     p.add_argument("--global-dir", type=Path, required=True)
     p.add_argument("--split", default="test", choices=["train", "validation", "test"])
     p.add_argument("--limit", type=int, default=None)
+    p.add_argument("--trace-root", type=Path, default=None,
+                   help="Persist per-window traces to "
+                        "<trace-root>/<experiment>/<window_id>.json.")
     p.add_argument("--cache-dir", type=Path, default=None)
     p.add_argument("--output", type=Path, default=None)
     p.add_argument("--no-state", action="store_true")
@@ -204,6 +213,7 @@ def main() -> None:
     harness, contract = _build_harness(
         args.global_dir,
         cache_dir=args.cache_dir,
+        trace_root=args.trace_root,
         skip=set(args.skip_skill),
         use_state_layer=not args.no_state,
     )

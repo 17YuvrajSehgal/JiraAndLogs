@@ -37,6 +37,7 @@ from agent.skills import (
     ComposeTriageSkill,
     RetrieveDenseSkill,
     RetrieveHybridFusionSkill,
+    SkillCache,
     SkillRegistry,
     TriageNumericSkill,
 )
@@ -75,6 +76,10 @@ def main() -> None:
     p.add_argument("--global-dir", type=Path, required=True)
     p.add_argument("--split", default="test", choices=["train", "validation", "test"])
     p.add_argument("--limit", type=int, default=None)
+    p.add_argument("--cache-dir", type=Path, default=None,
+                   help="SkillCache root.")
+    p.add_argument("--trace-root", type=Path, default=None,
+                   help="Persist per-window traces.")
     p.add_argument("--output", type=Path, default=None)
     p.add_argument("--order-by-incident-time", action="store_true",
                    help="sort cases by (service, episode, start_time) so "
@@ -97,7 +102,14 @@ def main() -> None:
 
     dataset_id = args.global_dir.name
     registry = _build_registry(args.global_dir)
-    runner = AgentRunner(registry, experiment=f"smoke:{dataset_id}")
+    cache = SkillCache(root=args.cache_dir) if args.cache_dir else None
+    runner = AgentRunner(
+        registry,
+        cache=cache,
+        trace_root=args.trace_root,
+        # `-` not `:` — Windows path-safety.
+        experiment=f"smoke-{dataset_id}",
+    )
     controller = RuleController(registry)
 
     harness = EvalHarness(
