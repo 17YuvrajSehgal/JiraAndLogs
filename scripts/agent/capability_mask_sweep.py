@@ -179,8 +179,13 @@ def run_cell(
     cell: MaskCell,
     *,
     use_state: bool,
+    per_cell_report_dir: Path | None = None,
 ) -> dict:
-    """Run one mask cell. Wraps the harness's observer."""
+    """Run one mask cell. Wraps the harness's observer.
+
+    When `per_cell_report_dir` is set, also writes the per-cell
+    EvaluationReport for paired-delta-bootstrap (RQ-B3) analysis.
+    """
     harness, contract = build_harness_for_dataset(
         dataset_label=DATASET_TO_LABEL[dataset],
         global_dir=global_dir,
@@ -202,6 +207,14 @@ def run_cell(
         experiment_name=f"caps-mask-{cell.label}-{global_dir.name}",
     )
     wall_sec = time.monotonic() - t0
+
+    if per_cell_report_dir is not None:
+        per_cell_report_dir.mkdir(parents=True, exist_ok=True)
+        report.write_to(
+            per_cell_report_dir / f"{cell.label}-report.json",
+            include_case_results=True,
+        )
+
     return {
         "cell": cell.label,
         "drop_flags": sorted(cell.drop_flags),
@@ -248,6 +261,9 @@ def main() -> None:
     p.add_argument("--limit", type=int, default=None)
     p.add_argument("--use-state", action="store_true")
     p.add_argument("--output", type=Path, default=None)
+    p.add_argument("--per-cell-report-dir", type=Path, default=None,
+                   help="if set, write per-cell EvaluationReport JSONs "
+                        "for paired-delta-bootstrap (RQ-B3)")
     p.add_argument("--verbose", action="store_true")
     args = p.parse_args()
 
@@ -271,7 +287,8 @@ def main() -> None:
         print(f"\n[caps_mask] {i:>2}/{len(grid)}  mask={cell.label} "
               f"({sorted(cell.drop_flags) if cell.drop_flags else 'none'}) ...")
         row = run_cell(args.dataset, args.global_dir, cases, cell,
-                       use_state=args.use_state)
+                       use_state=args.use_state,
+                       per_cell_report_dir=args.per_cell_report_dir)
         rows.append(row)
         print(
             f"            Hit@1={row['hit_at_1']:.4f}  "

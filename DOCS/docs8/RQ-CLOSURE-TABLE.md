@@ -40,7 +40,7 @@ numbers and the WoL row will be replaced when its analyses land.
 | **C1** synthetic→real Apache Jira | n/a | n/a | ⏳ pending | WoL is the test |
 | **C2** zero-shot transfer to OTel | n/a | Hit@1 0.6471, Hit@5 0.7563 | n/a | partial (no L1-retrained variant yet) |
 | **C3** cross-corpus (Mode 4) | n/a | n/a | ⏳ pending | exotic; deferred |
-| **C4** capability-mask robustness | graceful; text_only ≡ best subset | same flatness | ⏳ pending | ✓ closed on 2 datasets |
+| **C4** capability-mask robustness | graceful; text_only ≡ best subset; paired-delta (§4.14): strip-TRACE_SUMMARY +0.0030 (NS p=0.65), strip-NUMERIC triage Δ=−0.117 (p<0.0001) | same flatness | ⏳ pending | ✓ closed on 2 datasets |
 
 ## Bucket D — robustness & honest framing
 
