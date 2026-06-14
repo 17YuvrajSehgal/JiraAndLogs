@@ -120,7 +120,40 @@ OB_GRID: tuple[MaskCell, ...] = (
 )
 
 
-GRIDS = {"ob": OB_GRID}            # WoL/OTel grids when their data lands
+OTEL_GRID: tuple[MaskCell, ...] = (
+    MaskCell(label="baseline", drop_flags=frozenset(),
+             description="full capabilities — reference point"),
+    MaskCell(label="no_numeric",
+             drop_flags=frozenset({"NUMERIC_FEATURES"}),
+             description="no Prometheus features"),
+    MaskCell(label="no_trace_summary",
+             drop_flags=frozenset({"TRACE_SUMMARY"}),
+             description="no Tempo"),
+    MaskCell(label="no_k8s",
+             drop_flags=frozenset({"K8S_EVENTS"}),
+             description="no k8s events"),
+    MaskCell(label="text_only",
+             drop_flags=frozenset({
+                 "NUMERIC_FEATURES", "ORDERED_LOGS", "TRACE_SUMMARY",
+                 "K8S_EVENTS", "METRIC_SNAPSHOTS",
+             }),
+             description="all telemetry stripped"),
+)
+
+
+WOL_GRID: tuple[MaskCell, ...] = (
+    MaskCell(label="baseline", drop_flags=frozenset(),
+             description="full capabilities — already text-only"),
+    MaskCell(label="no_memory_text",
+             drop_flags=frozenset({"MEMORY_TEXT"}),
+             description="strip MEMORY_TEXT — kills BiEncoder + similar_incident"),
+    MaskCell(label="no_text_evidence",
+             drop_flags=frozenset({"TEXT_EVIDENCE"}),
+             description="strip TEXT_EVIDENCE — kills retrieve_dense"),
+)
+
+
+GRIDS = {"ob": OB_GRID, "otel_demo": OTEL_GRID, "wol": WOL_GRID}
 
 DATASET_TO_LABEL = {
     "ob": "online_boutique",

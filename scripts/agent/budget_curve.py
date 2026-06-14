@@ -29,8 +29,17 @@ from pathlib import Path
 # Allow `python scripts/agent/budget_curve.py` (no PYTHONPATH).
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "src"))
 
-from agent.data_loaders import load_ob_cases
+from agent.data_loaders import (
+    load_ob_cases, load_otel_demo_cases, load_wol_cases,
+)
 from agent.harness_builder import build_harness_for_dataset
+
+
+_DATASET_LOADERS = {
+    "ob": ("online_boutique", load_ob_cases),
+    "otel_demo": ("otel_demo", load_otel_demo_cases),
+    "wol": ("wol", load_wol_cases),
+}
 
 
 log = logging.getLogger(__name__)
@@ -41,6 +50,7 @@ def _parse_budgets(arg: str) -> list[int]:
 
 
 def run_one_budget(
+    dataset: str,
     global_dir: Path,
     cases,
     budget: int,
@@ -49,8 +59,9 @@ def run_one_budget(
 ) -> dict:
     """Run the harness on `cases` with `max_tool_calls = budget`,
     return a per-budget summary dict."""
+    dataset_label, _ = _DATASET_LOADERS[dataset]
     harness, contract = build_harness_for_dataset(
-        dataset_label="online_boutique",
+        dataset_label=dataset_label,
         global_dir=global_dir,
         cache_dir=None,                  # don't pollute cache across sweeps
         trace_root=None,                 # don't dump traces; just need the report
@@ -102,6 +113,7 @@ def format_curve(rows: list[dict]) -> str:
 
 def main() -> None:
     p = argparse.ArgumentParser(description=__doc__)
+    p.add_argument("--dataset", choices=list(_DATASET_LOADERS), default="ob")
     p.add_argument("--global-dir", type=Path, required=True)
     p.add_argument("--budgets", type=_parse_budgets, default=[0, 1, 2, 3, 4],
                    help="Comma-separated list of max_tool_calls values "
@@ -124,18 +136,16 @@ def main() -> None:
         format="%(asctime)s %(levelname)s: %(message)s",
     )
 
-    # Load cases ONCE — re-used across all budget points.
-    print(f"[budget_curve] loading OB cases from {args.global_dir} (split={args.split})")
-    cases = load_ob_cases(
-        args.global_dir, split=args.split, limit=args.limit,
-    )
+    _, loader = _DATASET_LOADERS[args.dataset]
+    print(f"[budget_curve] loading {args.dataset} cases from {args.global_dir} (split={args.split})")
+    cases = loader(args.global_dir, split=args.split, limit=args.limit)
     print(f"[budget_curve] loaded {len(cases)} cases")
 
     rows: list[dict] = []
     for budget in args.budgets:
         print(f"\n[budget_curve] running max_tool_calls = {budget} ...")
         row = run_one_budget(
-            args.global_dir, cases, budget, use_state=args.use_state,
+            args.dataset, args.global_dir, cases, budget, use_state=args.use_state,
         )
         rows.append(row)
         print(

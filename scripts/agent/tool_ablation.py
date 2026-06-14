@@ -31,8 +31,17 @@ from pathlib import Path
 # Allow `python scripts/agent/tool_ablation.py` (no PYTHONPATH).
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "src"))
 
-from agent.data_loaders import load_ob_cases
+from agent.data_loaders import (
+    load_ob_cases, load_otel_demo_cases, load_wol_cases,
+)
 from agent.harness_builder import build_harness_for_dataset
+
+
+_DATASET_LOADERS = {
+    "ob": ("online_boutique", load_ob_cases),
+    "otel_demo": ("otel_demo", load_otel_demo_cases),
+    "wol": ("wol", load_wol_cases),
+}
 
 
 log = logging.getLogger(__name__)
@@ -60,6 +69,7 @@ def _tool_short(name: str) -> str:
 
 
 def run_one_subset(
+    dataset: str,
     global_dir: Path,
     cases,
     subset: tuple[str, ...],
@@ -68,8 +78,9 @@ def run_one_subset(
 ) -> dict:
     """Run the harness with only `subset` of the 4 evidence skills active."""
     skip = set(ALL_TOOLS) - set(subset)
+    dataset_label, _ = _DATASET_LOADERS[dataset]
     harness, contract = build_harness_for_dataset(
-        dataset_label="online_boutique",
+        dataset_label=dataset_label,
         global_dir=global_dir,
         cache_dir=None,
         trace_root=None,
@@ -100,6 +111,7 @@ def run_one_subset(
 
 def main() -> None:
     p = argparse.ArgumentParser(description=__doc__)
+    p.add_argument("--dataset", choices=list(_DATASET_LOADERS), default="ob")
     p.add_argument("--global-dir", type=Path, required=True)
     p.add_argument("--split", default="test")
     p.add_argument("--limit", type=int, default=None)
@@ -115,11 +127,14 @@ def main() -> None:
         level=logging.DEBUG if args.verbose else logging.WARNING,
         format="%(asctime)s %(levelname)s: %(message)s",
     )
+    try:
+        sys.stdout.reconfigure(encoding="utf-8")
+    except Exception:
+        pass
 
-    print(f"[tool_ablation] loading OB cases from {args.global_dir} (split={args.split})")
-    cases = load_ob_cases(
-        args.global_dir, split=args.split, limit=args.limit,
-    )
+    _, loader = _DATASET_LOADERS[args.dataset]
+    print(f"[tool_ablation] loading {args.dataset} cases from {args.global_dir} (split={args.split})")
+    cases = loader(args.global_dir, split=args.split, limit=args.limit)
     print(f"[tool_ablation] loaded {len(cases)} cases")
 
     # Enumerate all 2^4 subsets, in lex order on (size, names).
@@ -133,7 +148,7 @@ def main() -> None:
         label = "+".join(_tool_short(t) for t in subset) or "none"
         print(f"[tool_ablation] {i:>2}/{len(all_subsets)}  subset={label} ...")
         row = run_one_subset(
-            args.global_dir, cases, subset, use_state=args.use_state,
+            args.dataset, args.global_dir, cases, subset, use_state=args.use_state,
         )
         rows.append(row)
         print(
