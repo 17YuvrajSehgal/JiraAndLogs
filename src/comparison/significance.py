@@ -177,12 +177,16 @@ def paired_bootstrap_ci(
         s = sorted(deltas)
         observed = point_estimates[b] - point_estimates[a]
         # two-sided p-value: fraction of resampled deltas with the opposite
-        # sign of the observed delta (or zero), doubled.
-        if observed >= 0:
+        # sign of the observed delta (or zero), doubled. When n_resamples=0
+        # the deltas list is empty — emit NaN p-value instead of crashing.
+        if not deltas:
+            p_value = float("nan")
+        elif observed >= 0:
             tail = sum(1 for d in deltas if d <= 0) / len(deltas)
+            p_value = min(1.0, 2.0 * tail)
         else:
             tail = sum(1 for d in deltas if d >= 0) / len(deltas)
-        p_value = min(1.0, 2.0 * tail)
+            p_value = min(1.0, 2.0 * tail)
         pairwise.append(
             PairwiseDelta(
                 metric=metric,
