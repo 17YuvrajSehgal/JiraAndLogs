@@ -225,9 +225,24 @@ def _load_gold(path: Path, pipeline_name: str) -> dict[str, _GoldRow]:
 def _build_bundle(window: dict[str, Any], *, dataset_label: str) -> InputBundle:
     """Build a WoL bundle — deliberately TEXT-only.
 
-    We do NOT thread numeric_features (the columns are all-zero on WoL
-    and would falsely unlock NUMERIC_FEATURES) or log_lines (unordered
-    fragments would need a UNORDERED_LOGS path, deferred to v2).
+    We do NOT thread:
+      - `numeric_features`: WoL has no Prometheus/k8s telemetry, the
+        columns are all-zero, and surfacing them would falsely unlock
+        `NUMERIC_FEATURES` → `triage_numeric` would fire on garbage.
+      - `log_lines`: WoL `log_quotes` are unordered fragments; the
+        UNORDERED_LOGS path isn't wired yet (v2).
+      - **Phase 2 fetchable markers** (`k8s_events_fetchable`,
+        `trace_summary_fetchable`, `metric_snapshots_fetchable`):
+        WoL has no on-disk telemetry capture, so the 3 telemetry
+        ReAct tools (`request_pod_events`,
+        `request_extended_trace_window`, `request_pod_metrics`)
+        must NOT fire. Their capability gates (`K8S_EVENTS`,
+        `TRACE_SUMMARY`, `METRIC_SNAPSHOTS` respectively) stay
+        absent without the markers, so the runner's `can_invoke`
+        check structurally auto-drops them. The 4th tool
+        (`request_similar_incident_window`) has no required_flags
+        and reads `<global_dir>/jira-memory-corpus.jsonl` — that
+        IS available on WoL, so peers-only ReAct fires.
     """
     return InputBundle(
         window_id=window["window_id"],
@@ -238,6 +253,7 @@ def _build_bundle(window: dict[str, Any], *, dataset_label: str) -> InputBundle:
         scenario_family=window.get("scenario_family"),
         service_name=window.get("service_name"),
         window_type=window.get("window_type"),
+        extra={},                               # explicit: NO fetchable markers
     )
 
 

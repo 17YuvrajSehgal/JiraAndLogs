@@ -1,16 +1,10 @@
 """Smoke test: run the agent end-to-end on Online Boutique.
 
-Loads OB test windows, builds the full agent (RuleController +
-AgentRunner + EvalHarness + StateLayer + predictions-backed skills),
-runs evaluate(), and prints the first real Hit@K / MRR /
-pages-per-incident numbers the agent produces.
-
-This is **Phase 1.15** in the build plan — the first time we observe
-the agent's behaviour on real data rather than stubs. Numbers should
-roughly track the locked cascade (TCH Final: Hit@5 0.912) because the
-agent consumes the same per-window predictions and applies the same
-composition math; the agent contribution is the *adaptive
-invocation* layer, not new model fits.
+Loads OB test windows and dispatches to the shared
+`agent.harness_builder.build_harness_for_dataset` factory — this
+script's role is now CLI + dataset-loader-glue only. All wiring
+lives in `src/agent/harness_builder.py` so OB / WoL / OTel Demo
+smokes share one source of truth (Phase 3 task #101).
 
 Usage:
     PYTHONPATH=src python scripts/agent/smoke_ob.py \\
@@ -24,6 +18,7 @@ Skip flags:
     --no-verifier        don't even register verify_with_llm (cheap smoke)
     --no-state           run without page-suppression
     --skip-skill <name>  drop a skill from the registry (repeatable)
+    --max-tool-calls N   cap per-window ReAct tool budget (RQ-A7)
 """
 
 from __future__ import annotations
@@ -33,214 +28,11 @@ import logging
 import sys
 from pathlib import Path
 
-# Allow `python scripts/agent/smoke_ob.py` (no PYTHONPATH) to work locally.
+# Allow `python scripts/agent/smoke_ob.py` (no PYTHONPATH).
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "src"))
 
-from agent.capabilities_observer import CapabilitiesObserver, ObservationContext
-from agent.controller import CapabilityAwareRuleController, RuleController
 from agent.data_loaders import load_ob_cases
-from agent.eval_harness import ApplesToApplesContract, EvalHarness
-from agent.runner import AgentRunner
-from agent.skills import (
-    ComposeL2Skill,
-    ComposeNoveltySkill,
-    ComposeTriageSkill,
-    RetrieveDenseSkill,
-    RetrieveHybridFusionLLMSkill,
-    RetrieveHybridFusionSkill,
-    RetrieveKnowledgeGraphSkill,
-    RetrieveLogSequenceSkill,
-    SkillCache,
-    SkillRegistry,
-    TriageNumericSkill,
-)
-from agent.state import StateLayer
-
-
-_PREDICTIONS_BACKED = [
-    (TriageNumericSkill, "v2a-resplit"),
-    (RetrieveDenseSkill, "v2a-resplit"),
-    (RetrieveLogSequenceSkill, "v2b-logseq2vec"),
-    (RetrieveHybridFusionSkill, "v2c-hybrid"),
-    (RetrieveHybridFusionLLMSkill, "v2c-hybrid-llm"),
-    (RetrieveKnowledgeGraphSkill, "v2d-kg-rulebased"),
-]
-
-
-def _build_registry(
-    global_dir: Path,
-    *,
-    skip: set[str],
-    include_verifier: bool,
-    max_tool_calls: int | None = None,
-) -> SkillRegistry:
-    """Construct a registry pointing at the OB comparison dir."""
-    reg = SkillRegistry()
-
-    for cls, subdir in _PREDICTIONS_BACKED:
-        if cls.name in skip:
-            continue
-        preds_path = global_dir / "comparison" / subdir / "per-window-predictions.jsonl"
-        if not preds_path.exists():
-            logging.warning(
-                "skipping %s — predictions JSONL not found at %s",
-                cls.name, preds_path,
-            )
-            continue
-        reg.register(cls(predictions_path=preds_path))
-
-    # The verifier needs VERIFIER_KNOWN_HELPFUL in the observation
-    # context. We register it conditionally so the smoke test stays
-    # cheap by default.
-    if include_verifier:
-        from agent.skills import VerifyWithLLMSkill                        # noqa: WPS433
-        if VerifyWithLLMSkill.name not in skip:
-            preds_path = (
-                global_dir / "comparison" / "v2e-agent-llm"
-                / "per-window-predictions.jsonl"
-            )
-            if preds_path.exists():
-                reg.register(VerifyWithLLMSkill(predictions_path=preds_path))
-
-    # Composition skills — no JSONL backing; pure trace-readers.
-    for compose_cls in (ComposeL2Skill, ComposeTriageSkill, ComposeNoveltySkill):
-        if compose_cls.name in skip:
-            continue
-        reg.register(compose_cls())
-
-    # Reformulation skill — gated by the controller's active_fault
-    # branch on low-consensus retrieval. Deterministic stub by default
-    # (use_llm=False) so the smoke stays sub-second; an LLM-backed
-    # version is the path RQ-A3 measures.
-    from agent.skills.reformulate_query import ReformulateQuerySkill   # noqa: WPS433
-    if ReformulateQuerySkill.name not in skip:
-        reg.register(ReformulateQuerySkill(use_llm=False))
-
-    # Phase 2 ReAct: 4 EvidenceRequestSkills + one data-lake instance
-    # shared across them. Each tool fetches a different modality from
-    # disk (k8s events, Tempo traces, Prometheus snapshots, peer
-    # Jira-corpus rows) and contributes a ToolResult to ctx.extra so
-    # the rerank skill can read all four. Controller gates each tool
-    # on the active_fault branch with the low-consensus condition.
-    from agent.data_lake import RawRunDataLake                          # noqa: WPS433
-    from agent.skills.evidence_request import (                          # noqa: WPS433
-        RequestExtendedTraceWindowSkill,
-        RequestPodEventsSkill,
-        RequestPodMetricsSkill,
-        RequestSimilarIncidentWindowSkill,
-    )
-    runs_root = Path("data/runs")
-    if runs_root.is_dir():
-        lake = RawRunDataLake(
-            runs_root=runs_root,
-            cache_root=Path("data/tool_cache"),
-        )
-        evidence_skills: list = []
-        if RequestPodEventsSkill.name not in skip:
-            evidence_skills.append(RequestPodEventsSkill(data_lake=lake))
-        if RequestExtendedTraceWindowSkill.name not in skip:
-            evidence_skills.append(RequestExtendedTraceWindowSkill(data_lake=lake))
-        if RequestPodMetricsSkill.name not in skip:
-            evidence_skills.append(RequestPodMetricsSkill(data_lake=lake))
-        if RequestSimilarIncidentWindowSkill.name not in skip:
-            evidence_skills.append(RequestSimilarIncidentWindowSkill(
-                data_lake=lake, global_dir=global_dir, top_k=3,
-            ))
-        # RQ-A7: stamp the per-window tool-call cap on each evidence
-        # skill instance. Setting None (default) keeps the class
-        # default (DEFAULT_MAX_TOOL_CALLS=6).
-        if max_tool_calls is not None:
-            for s in evidence_skills:
-                s.max_tool_calls = int(max_tool_calls)
-        for s in evidence_skills:
-            reg.register(s)
-    else:
-        logging.warning(
-            "skipping all 4 evidence_request skills: runs root %s not found",
-            runs_root,
-        )
-
-    # Phase 2 ReAct closure: RerankWithEvidenceSkill — consumes tool
-    # results from ctx.extra and re-ranks compose_l2's top-K. Wired
-    # after request_pod_events in the controller's active_fault branch.
-    from agent.skills.rerank_with_evidence import RerankWithEvidenceSkill  # noqa: WPS433
-    if RerankWithEvidenceSkill.name not in skip:
-        reg.register(RerankWithEvidenceSkill(alpha=0.4, rerank_top_k=5))
-
-    return reg
-
-
-def _build_harness(
-    global_dir: Path,
-    *,
-    cache_dir: Path | None,
-    trace_root: Path | None,
-    skip: set[str],
-    include_verifier: bool,
-    use_state_layer: bool,
-    max_tool_calls: int | None = None,
-) -> tuple[EvalHarness, ApplesToApplesContract]:
-    dataset_id = global_dir.name
-    registry = _build_registry(
-        global_dir, skip=skip, include_verifier=include_verifier,
-        max_tool_calls=max_tool_calls,
-    )
-
-    cache = SkillCache(root=cache_dir) if cache_dir else None
-    runner = AgentRunner(
-        registry,
-        cache=cache,
-        trace_root=trace_root,
-        # `-` not `:` — Windows can't have colons in directory names and
-        # trace_root creates a subdir per experiment.
-        experiment=f"smoke-{dataset_id}",
-    )
-    # CapabilityAwareRuleController emits per-window distinct plans
-    # (state_suppress / pre_fault_baseline / recovery_window /
-    # observation_window / active_fault / default), addressing RQ-A1's
-    # "1 plan ID across 1008 windows" finding. Falls back to the base
-    # RuleController behavior when enable_branching=False or on the
-    # default branch.
-    controller = CapabilityAwareRuleController(
-        registry, max_reformulation_retries=1,
-    )
-
-    # ObservationContext: tell the observer that the OB memory side
-    # has memory_text + (optionally) KG_GRAPH_WINDOW. The smoke test
-    # leaves KG_GRAPH_MEMORY off — predictions-backed skills don't
-    # actually query Neo4j, so the memory-side KG flag is moot here.
-    # KG_GRAPH_WINDOW is auto-detected: when window extractions exist,
-    # we surface the capability (Phase 3.1 — RQ-A6 closure path).
-    window_ext_path = (
-        global_dir / "v2_kg_extractions_windows" / "all_extractions.jsonl"
-    )
-    has_kg_graph_window = window_ext_path.exists()
-    if has_kg_graph_window:
-        logging.info("KG_GRAPH_WINDOW: window extractions found at %s",
-                     window_ext_path)
-    obs_ctx = ObservationContext(
-        dataset_id=dataset_id,
-        has_memory_text=True,
-        has_kg_graph_memory=False,
-        has_kg_graph_window=has_kg_graph_window,
-    )
-
-    harness = EvalHarness(
-        controller=controller,
-        runner=runner,
-        observer=CapabilitiesObserver(),
-        observation_ctx=obs_ctx,
-        state_layer=StateLayer() if use_state_layer else None,
-    )
-
-    contract = ApplesToApplesContract(
-        dataset_id=dataset_id,
-        split="test",
-        gold_relation="coarse",
-        memory_pool_size=0,                  # populated by the v2 loader; smoke = 0
-        evaluation_mode="telemetry_diagnosis",
-    )
-    return harness, contract
+from agent.harness_builder import build_harness_for_dataset
 
 
 def main() -> None:
@@ -290,14 +82,16 @@ def main() -> None:
     )
     print(f"[smoke_ob] loaded {len(cases)} cases")
 
-    harness, contract = _build_harness(
-        args.global_dir,
+    harness, contract = build_harness_for_dataset(
+        dataset_label="online_boutique",
+        global_dir=args.global_dir,
         cache_dir=args.cache_dir,
         trace_root=args.trace_root,
         skip=set(args.skip_skill),
         include_verifier=args.include_verifier,
         use_state_layer=not args.no_state,
         max_tool_calls=args.max_tool_calls,
+        experiment_prefix="smoke",
     )
 
     print(f"[smoke_ob] running agent over {len(cases)} cases...")
@@ -310,7 +104,7 @@ def main() -> None:
     # ------------------------------------------------------------------ output
     print()
     print("=" * 70)
-    print(f"  Agent smoke test — {args.global_dir.name}")
+    print(f"  Agent smoke test - {args.global_dir.name}")
     print("=" * 70)
     print(f"  n_cases (total):                {report.n_cases}")
     print(f"  n_cases (with retrieval gold):  {report.n_evaluable_retrieval_cases}")

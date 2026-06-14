@@ -1,17 +1,27 @@
 """Smoke test: run the agent end-to-end on World of Logs.
 
-WoL is the **text-retrieval generalisation** dataset. The point of this
-smoke test is to demonstrate the agent's **capability-adaptive** design:
-the SAME RuleController, given the same skill registry, emits a
-different Plan on WoL because:
+WoL is the **text-retrieval generalisation** dataset
+(`evaluation_mode = "text_retrieval_generalisation"`). The point of
+this smoke is to demonstrate the agent's **capability-adaptive**
+design: the SAME `CapabilityAwareRuleController`, given the same
+skill registry, emits a different Plan on WoL because:
 
-  - `NUMERIC_FEATURES` flag is absent (WoL has no telemetry features)
-    → triage_numeric is dropped from the plan.
-  - `ORDERED_LOGS` is absent (WoL log_quotes are unordered)
-    → retrieve_log_sequence is dropped.
+  - `NUMERIC_FEATURES` flag is absent → `triage_numeric` is dropped.
+  - `ORDERED_LOGS` is absent → `retrieve_log_sequence` is dropped.
   - `VERIFIER_KNOWN_HELPFUL` is absent (WoL is in
-    VerifierCalibration.known_harmful_distributions per Mode 3 §3.9)
-    → verify_with_llm is structurally skipped — RQ-A8 closed.
+    `VerifierCalibration.known_harmful_distributions` per Mode 3
+    §3.9) → `verify_with_llm` is structurally skipped (RQ-A8).
+  - The 3 telemetry ReAct tools (`request_pod_events`,
+    `request_extended_trace_window`, `request_pod_metrics`) are
+    dropped because their capability flags (`K8S_EVENTS`,
+    `TRACE_SUMMARY`, `METRIC_SNAPSHOTS`) aren't surfaced — the
+    loader deliberately omits the corresponding fetchable markers.
+  - `request_similar_incident_window` IS available (no required
+    flags; reads the in-memory corpus) — so peers-only ReAct fires.
+
+This smoke uses `agent.harness_builder.build_harness_for_dataset`
+with `dataset_label="wol"` — same source of truth as `smoke_ob.py`
+and `smoke_otel_demo.py`, per Phase 3 task #101.
 
 Usage:
     PYTHONPATH=src python scripts/agent/smoke_wol.py \\
@@ -19,9 +29,8 @@ Usage:
         [--limit 100] [--split test] [--cache-dir data/skill_cache] \\
         [--output data/agent_runs/wol-smoke.json]
 
-The smoke also asserts the structural-skip property after the run:
-verify_with_llm should be absent from `report.plan_ids_seen`-derived
-skill set. Failure means RQ-A8 closure regressed.
+The smoke asserts the RQ-A8 structural-skip property after the run:
+`verify_with_llm` must NOT appear in any case's invocations.
 """
 
 from __future__ import annotations
@@ -33,140 +42,14 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "src"))
 
-from agent.capabilities_observer import (
-    CapabilitiesObserver,
-    ObservationContext,
-    VerifierCalibration,
-)
-from agent.controller import RuleController
-from agent.data_loaders import WOL_PREDICTIONS_PATHS, load_wol_cases
-from agent.eval_harness import ApplesToApplesContract, EvalHarness
-from agent.runner import AgentRunner
-from agent.skills import (
-    ComposeL2Skill,
-    ComposeNoveltySkill,
-    ComposeTriageSkill,
-    RetrieveDenseSkill,
-    RetrieveHybridFusionSkill,
-    RetrieveKnowledgeGraphSkill,
-    RetrieveLogSequenceSkill,
-    SkillCache,
-    SkillRegistry,
-    VerifyWithLLMSkill,
-)
-from agent.state import StateLayer
-
-
-# Map agent-skill-class → WoL-side (filename, pipeline_name)
-# Sourced from WOL_PREDICTIONS_PATHS for the actual values.
-_WOL_REGISTRY_PLAN: list[tuple[type, str]] = [
-    (RetrieveDenseSkill,          "retrieve_dense"),
-    (RetrieveLogSequenceSkill,    "retrieve_log_sequence"),
-    (RetrieveHybridFusionSkill,   "retrieve_hybrid_fusion"),
-    (RetrieveKnowledgeGraphSkill, "retrieve_knowledge_graph"),
-    (VerifyWithLLMSkill,          "verify_with_llm"),
-]
-
-
-def _build_registry(
-    global_dir: Path,
-    *,
-    skip: set[str],
-) -> SkillRegistry:
-    reg = SkillRegistry()
-    tch_dir = global_dir / "tch-lite-refit"
-
-    for cls, name in _WOL_REGISTRY_PLAN:
-        if name in skip:
-            continue
-        if name not in WOL_PREDICTIONS_PATHS:
-            continue
-        filename, pipeline_name = WOL_PREDICTIONS_PATHS[name]
-        preds_path = tch_dir / filename
-        if not preds_path.exists():
-            logging.warning("skipping %s — missing %s", name, preds_path)
-            continue
-        reg.register(cls(
-            predictions_path=preds_path,
-            predictions_pipeline_name=pipeline_name,
-        ))
-
-    # Composition skills run on top of the trace; no JSONL needed.
-    for compose_cls in (ComposeL2Skill, ComposeTriageSkill, ComposeNoveltySkill):
-        if compose_cls.name in skip:
-            continue
-        reg.register(compose_cls())
-
-    return reg
-
-
-def _build_harness(
-    global_dir: Path,
-    *,
-    cache_dir: Path | None,
-    trace_root: Path | None,
-    skip: set[str],
-    use_state_layer: bool,
-) -> tuple[EvalHarness, ApplesToApplesContract]:
-    dataset_id = global_dir.name
-    registry = _build_registry(global_dir, skip=skip)
-
-    cache = SkillCache(root=cache_dir) if cache_dir else None
-    runner = AgentRunner(
-        registry,
-        cache=cache,
-        trace_root=trace_root,
-        # `-` not `:` — Windows can't have colons in dir names; trace_root
-        # creates a subdir per experiment.
-        experiment=f"smoke-{dataset_id}",
-    )
-    controller = RuleController(registry)
-
-    # The crux of RQ-A8 closure: WoL is in known_harmful → the observer
-    # never sets VERIFIER_KNOWN_HELPFUL → verify_with_llm.can_invoke
-    # returns False → it never enters the plan. Verified below.
-    calibration = VerifierCalibration(
-        known_helpful_distributions=frozenset(),
-        known_harmful_distributions=frozenset({dataset_id}),
-        default_policy="skip",
-    )
-    # Phase 3.1 — auto-detect window-side LLM extractions (closes RQ-A6
-    # when present). `extract_window_entities.py` writes the JSONL at
-    # this location; if it exists we surface KG_GRAPH_WINDOW.
-    window_ext_path = (
-        global_dir / "v2_kg_extractions_windows" / "all_extractions.jsonl"
-    )
-    has_kg_graph_window = window_ext_path.exists()
-    if has_kg_graph_window:
-        logging.info("KG_GRAPH_WINDOW: window extractions found at %s",
-                     window_ext_path)
-    obs_ctx = ObservationContext(
-        dataset_id=dataset_id,
-        has_memory_text=True,
-        has_kg_graph_memory=False,
-        has_kg_graph_window=has_kg_graph_window,
-        verifier_calibration=calibration,
-    )
-
-    harness = EvalHarness(
-        controller=controller, runner=runner,
-        observer=CapabilitiesObserver(),
-        observation_ctx=obs_ctx,
-        state_layer=StateLayer() if use_state_layer else None,
-    )
-    contract = ApplesToApplesContract(
-        dataset_id=dataset_id,
-        split="test",
-        gold_relation="coarse",
-        evaluation_mode="text_retrieval_generalisation",
-    )
-    return harness, contract
+from agent.data_loaders import load_wol_cases
+from agent.harness_builder import build_harness_for_dataset
 
 
 def _assert_verifier_structurally_skipped(report) -> None:
-    """Fail loudly if verify_with_llm shows up in any case's invocations.
-
-    This is RQ-A8 closure: WoL must never invoke the verifier."""
+    """Fail loudly if `verify_with_llm` shows up in any case's
+    invocations. This is the RQ-A8 closure check: WoL must never
+    invoke the verifier."""
     bad = []
     for c in report.case_results:
         if "verify_with_llm" in c.decision.skills_invoked:
@@ -182,19 +65,26 @@ def _assert_verifier_structurally_skipped(report) -> None:
 def main() -> None:
     p = argparse.ArgumentParser(description=__doc__)
     p.add_argument("--global-dir", type=Path, required=True)
-    p.add_argument("--split", default="test", choices=["train", "validation", "test"])
+    p.add_argument("--split", default="test",
+                   choices=["train", "validation", "test"])
     p.add_argument("--limit", type=int, default=None)
     p.add_argument("--trace-root", type=Path, default=None,
                    help="Persist per-window traces to "
                         "<trace-root>/<experiment>/<window_id>.json.")
     p.add_argument("--cache-dir", type=Path, default=None)
     p.add_argument("--output", type=Path, default=None)
+    p.add_argument("--include-verifier", action="store_true",
+                   help="register verify_with_llm (still capability-gated so "
+                        "it cannot actually run on WoL — useful for asserting "
+                        "the structural skip on a fully-registered controller)")
     p.add_argument("--no-state", action="store_true")
     p.add_argument("--skip-skill", action="append", default=[], metavar="NAME")
     p.add_argument("--order-by-incident-time", action="store_true",
                    help="sort cases by (service, episode, start_time) so "
                         "the StateLayer sees multi-window incident sequences "
                         "(closes RQ-C7 page-suppression)")
+    p.add_argument("--max-tool-calls", type=int, default=None,
+                   help="RQ-A7: cap per-window ReAct tool invocations.")
     p.add_argument("--verbose", action="store_true")
     args = p.parse_args()
 
@@ -210,12 +100,16 @@ def main() -> None:
     )
     print(f"[smoke_wol] loaded {len(cases)} cases")
 
-    harness, contract = _build_harness(
-        args.global_dir,
+    harness, contract = build_harness_for_dataset(
+        dataset_label="wol",
+        global_dir=args.global_dir,
         cache_dir=args.cache_dir,
         trace_root=args.trace_root,
         skip=set(args.skip_skill),
+        include_verifier=args.include_verifier,
         use_state_layer=not args.no_state,
+        max_tool_calls=args.max_tool_calls,
+        experiment_prefix="smoke",
     )
 
     print(f"[smoke_wol] running agent over {len(cases)} cases...")
@@ -224,7 +118,6 @@ def main() -> None:
         experiment_name=f"wol-smoke-{args.global_dir.name}",
     )
 
-    # ------------------------------------------------------------------ output
     print()
     print("=" * 70)
     print(f"  Agent smoke test (WoL) - {args.global_dir.name}")

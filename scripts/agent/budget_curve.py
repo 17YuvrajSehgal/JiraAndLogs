@@ -30,11 +30,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "src"))
 
 from agent.data_loaders import load_ob_cases
-
-# Reuse the smoke script's harness builder so we get the same
-# registry + controller + observer wiring as production.
-sys.path.insert(0, str(Path(__file__).resolve().parent))
-from smoke_ob import _build_harness  # noqa: E402
+from agent.harness_builder import build_harness_for_dataset
 
 
 log = logging.getLogger(__name__)
@@ -53,14 +49,16 @@ def run_one_budget(
 ) -> dict:
     """Run the harness on `cases` with `max_tool_calls = budget`,
     return a per-budget summary dict."""
-    harness, contract = _build_harness(
-        global_dir,
+    harness, contract = build_harness_for_dataset(
+        dataset_label="online_boutique",
+        global_dir=global_dir,
         cache_dir=None,                  # don't pollute cache across sweeps
         trace_root=None,                 # don't dump traces; just need the report
         skip=set(),
         include_verifier=False,
         use_state_layer=use_state,
         max_tool_calls=budget,
+        experiment_prefix="budget",
     )
     t0 = time.monotonic()
     report = harness.evaluate(

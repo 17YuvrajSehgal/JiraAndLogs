@@ -32,9 +32,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "src"))
 
 from agent.data_loaders import load_ob_cases
-
-sys.path.insert(0, str(Path(__file__).resolve().parent))
-from smoke_ob import _build_harness  # noqa: E402
+from agent.harness_builder import build_harness_for_dataset
 
 
 log = logging.getLogger(__name__)
@@ -70,13 +68,15 @@ def run_one_subset(
 ) -> dict:
     """Run the harness with only `subset` of the 4 evidence skills active."""
     skip = set(ALL_TOOLS) - set(subset)
-    harness, contract = _build_harness(
-        global_dir,
+    harness, contract = build_harness_for_dataset(
+        dataset_label="online_boutique",
+        global_dir=global_dir,
         cache_dir=None,
         trace_root=None,
         skip=skip,
         include_verifier=False,
         use_state_layer=use_state,
+        experiment_prefix="ablation",
     )
     t0 = time.monotonic()
     report = harness.evaluate(
