@@ -75,10 +75,17 @@ def run_one_subset(
     subset: tuple[str, ...],
     *,
     use_state: bool,
+    per_cell_report_dir: Path | None = None,
 ) -> dict:
-    """Run the harness with only `subset` of the 4 evidence skills active."""
+    """Run the harness with only `subset` of the 4 evidence skills active.
+
+    When `per_cell_report_dir` is set, also writes the per-cell
+    EvaluationReport (with case_results) for paired-delta-bootstrap
+    analysis (RQ-B3 strengthening).
+    """
     skip = set(ALL_TOOLS) - set(subset)
     dataset_label, _ = _DATASET_LOADERS[dataset]
+    label = "+".join(_tool_short(t) for t in subset) or "none"
     harness, contract = build_harness_for_dataset(
         dataset_label=dataset_label,
         global_dir=global_dir,
@@ -93,12 +100,20 @@ def run_one_subset(
     report = harness.evaluate(
         cases,
         contract=contract,
-        experiment_name=f"ablation-{'+'.join(_tool_short(t) for t in subset) or 'none'}-{global_dir.name}",
+        experiment_name=f"ablation-{label}-{global_dir.name}",
     )
     wall_sec = time.monotonic() - t0
+
+    if per_cell_report_dir is not None:
+        per_cell_report_dir.mkdir(parents=True, exist_ok=True)
+        report.write_to(
+            per_cell_report_dir / f"{label}-report.json",
+            include_case_results=True,
+        )
+
     return {
         "subset": list(subset),
-        "subset_label": "+".join(_tool_short(t) for t in subset) or "none",
+        "subset_label": label,
         "n_tools": len(subset),
         "hit_at_1": float(report.hit_at_1),
         "hit_at_5": float(report.hit_at_5),
@@ -120,6 +135,9 @@ def main() -> None:
                         "state layer affects only triage decision, not "
                         "Hit@K, so disabling keeps Hit@K runs clean)")
     p.add_argument("--output", type=Path, default=None)
+    p.add_argument("--per-cell-report-dir", type=Path, default=None,
+                   help="if set, write per-cell EvaluationReport JSONs "
+                        "for paired-delta-bootstrap (RQ-B3)")
     p.add_argument("--verbose", action="store_true")
     args = p.parse_args()
 
@@ -148,7 +166,9 @@ def main() -> None:
         label = "+".join(_tool_short(t) for t in subset) or "none"
         print(f"[tool_ablation] {i:>2}/{len(all_subsets)}  subset={label} ...")
         row = run_one_subset(
-            args.dataset, args.global_dir, cases, subset, use_state=args.use_state,
+            args.dataset, args.global_dir, cases, subset,
+            use_state=args.use_state,
+            per_cell_report_dir=args.per_cell_report_dir,
         )
         rows.append(row)
         print(

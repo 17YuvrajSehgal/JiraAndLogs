@@ -21,7 +21,7 @@ numbers and the WoL row will be replaced when its analyses land.
 | **A3** reformulation lift | gate fires 17.8%; v1 not measurable | TBD | ⏳ pending | v1 framework-only deferral |
 | **A4** page suppression | pages/incident = 1.000 | **1.000** | ⏳ pending | ✓ generalises |
 | **A5** skill ablation | only `no_react` (Δ−0.0121) + `no_triage_numeric` (triage Δ−0.117) | **same pattern** | ⏳ pending | ✓ generalises |
-| **A6** ReAct lift | +0.0151 (peers-only, §3.8) | **0.0000** (flat) | ⏳ pending | dataset-specific |
+| **A6** ReAct lift | point: +0.0151 (peers); paired p=0.18 (NS). **`trace` tool significantly HARMFUL: Δ=−0.018, p=0.002 (§4.13)** | point: 0.0000 (flat) | ⏳ pending | OB has 1 sig. negative finding |
 | **A7** budget-bounded Hit@K curve | non-monotone (0.6767→0.6798→0.6647→0.6647→0.6888) | **flat** (0.6471 across all N) | ⏳ pending | ✓ closed on 2 datasets |
 
 ## Bucket B — cost & performance
