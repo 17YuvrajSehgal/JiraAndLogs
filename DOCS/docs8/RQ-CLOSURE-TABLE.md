@@ -17,7 +17,7 @@ numbers and the WoL row will be replaced when its analyses land.
 | RQ | OB | OTel Demo | WoL | Status |
 |---|---|---|---|---|
 | **A1** plan diversity | 4 plans / 1008 windows | 4 plans / 247 windows | ⏳ pending | partial (need WoL window_types) |
-| **A2** adaptive selection cuts cost | **41% saved** wall/tokens/USD | **65% saved** | ⏳ pending | ✓ closed on 2 datasets |
+| **A2** adaptive selection cuts cost | **64.1% saved** with verifier-ON (§4.10); 41% no-verifier (§4.5) | **65% saved** | ⏳ pending | ✓ closed on 2 datasets |
 | **A3** reformulation lift | gate fires 17.8%; v1 not measurable | TBD | ⏳ pending | v1 framework-only deferral |
 | **A4** page suppression | pages/incident = 1.000 | **1.000** | ⏳ pending | ✓ generalises |
 | **A5** skill ablation | only `no_react` (Δ−0.0121) + `no_triage_numeric` (triage Δ−0.117) | **same pattern** | ⏳ pending | ✓ generalises |
@@ -29,7 +29,7 @@ numbers and the WoL row will be replaced when its analyses land.
 | RQ | OB | OTel Demo | WoL | Status |
 |---|---|---|---|---|
 | **B1** per-window cost breakdown | mean 60.7 ms actual / 101.1 ms cascade | mean 35.7 ms / 97.4 ms | ⏳ pending | ✓ closed on 2 datasets |
-| **B2** Hit@K vs $cost Pareto | partial (gate-skip rate ~41%) | partial (~65%) | ⏳ pending | threshold sweep deferred |
+| **B2** Hit@K vs $cost Pareto | ✓ **Pareto-dominant**: flat Hit@K across thresholds {0.50..0.95}; cost varies $0.059–$0.068 (savings 66.5–72.3%) | partial (~65% at default) | ⏳ pending | OB ✓; cross-dataset partial |
 | **B3** bootstrap CIs | Hit@1 [0.6385, 0.7405] width 0.102 | Hit@1 [0.5641, 0.7411] width 0.177 | ⏳ pending | ✓ closed on 2 datasets |
 | **B4** per-tool marginal cost | peers dominates lift; others noise/negative | peers also flat on OTel | ⏳ pending | dataset-specific |
 

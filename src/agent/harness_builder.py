@@ -423,6 +423,7 @@ def build_harness_for_dataset(
     max_tool_calls: int | None = None,
     runs_root_override: Path | None = None,
     max_reformulation_retries: int = 1,
+    cheap_path_threshold: float | None = None,
     experiment_prefix: str = "smoke",
 ) -> tuple[EvalHarness, ApplesToApplesContract]:
     """Build an EvalHarness for OB / WoL / OTel Demo from one entry point.
@@ -485,9 +486,13 @@ def build_harness_for_dataset(
         experiment=f"{experiment_prefix}-{dataset_id}",
     )
 
+    controller_kwargs: dict[str, Any] = {
+        "max_reformulation_retries": max_reformulation_retries,
+    }
+    if cheap_path_threshold is not None:
+        controller_kwargs["cheap_path_threshold"] = float(cheap_path_threshold)
     controller = CapabilityAwareRuleController(
-        registry,
-        max_reformulation_retries=max_reformulation_retries,
+        registry, **controller_kwargs,
     )
 
     obs_ctx = ObservationContext(
