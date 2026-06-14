@@ -30,7 +30,7 @@ numbers and the WoL row will be replaced when its analyses land.
 |---|---|---|---|---|
 | **B1** per-window cost breakdown | mean 60.7 ms actual / 101.1 ms cascade | mean 35.7 ms / 97.4 ms | ⏳ pending | ✓ closed on 2 datasets |
 | **B2** Hit@K vs $cost Pareto | ✓ **Pareto-dominant**: flat Hit@K across thresholds {0.50..0.95}; cost varies $0.059–$0.068 (savings 66.5–72.3%) | partial (~65% at default) | ⏳ pending | OB ✓; cross-dataset partial |
-| **B3** bootstrap CIs (single-report + paired-delta) | Hit@1 [0.6385, 0.7405]; **paired Δ Hit@1 ReAct = −0.0121 [−0.030, +0.006] p=0.262 (NS)**; triage Δ p<0.0001 | analogous (NS for ReAct; p<0.0001 for triage) | n=55 evaluable (narrowest CIs); TBD paired-delta | ✓ closed on 3 datasets |
+| **B3** bootstrap CIs (single-report + paired-delta) | paired Δ ReAct = −0.0121 [−0.030, +0.006] p=0.262 (NS); triage Δ p<0.0001; trace tool harm p=0.002 (§4.13) | analogous on skill ablation (triage p<0.0001) | n=55: 21/23 cells produce exactly 0 delta. `MEMORY_TEXT` removal: −0.78 p<0.0001 (sanity) | **✓ 3-dataset closed; 6 sig findings across all** |
 | **B4** per-tool marginal cost | peers dominates lift; others noise/negative | peers also flat on OTel | ⏳ pending | dataset-specific |
 
 ## Bucket C — generalisation & external validity
