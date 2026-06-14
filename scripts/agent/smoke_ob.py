@@ -136,6 +136,13 @@ def _build_registry(
                 runs_root,
             )
 
+    # Phase 2 ReAct closure: RerankWithEvidenceSkill — consumes tool
+    # results from ctx.extra and re-ranks compose_l2's top-K. Wired
+    # after request_pod_events in the controller's active_fault branch.
+    from agent.skills.rerank_with_evidence import RerankWithEvidenceSkill  # noqa: WPS433
+    if RerankWithEvidenceSkill.name not in skip:
+        reg.register(RerankWithEvidenceSkill(alpha=0.4, rerank_top_k=5))
+
     return reg
 
 

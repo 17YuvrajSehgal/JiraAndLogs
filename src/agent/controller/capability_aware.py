@@ -70,8 +70,9 @@ BRANCH_ACTIVE_FAULT      = "active_fault"
 BRANCH_DEFAULT           = "default"
 
 
-# Phase 2 ReAct skill name
+# Phase 2 ReAct skill names
 REQUEST_POD_EVENTS = "request_pod_events"
+RERANK_WITH_EVIDENCE = "rerank_with_evidence"
 
 
 # Tunable thresholds (overridable via config). The "look back N
@@ -375,6 +376,21 @@ class CapabilityAwareRuleController(RuleController):
         if self._skill_runnable(REQUEST_POD_EVENTS, capabilities):
             invs.append(self._inv(
                 REQUEST_POD_EVENTS, budget,
+                gate=make_reformulation_gate(
+                    confidence_floor=self.reformulation_confidence_floor,
+                ),
+            ))
+
+        # Phase 2 ReAct closure: consume the tool result. Re-ranks
+        # compose_l2's top-K by token overlap with the WARNING-type
+        # pod events. Gated on the same low-consensus condition so the
+        # skill only fires when tool evidence was actually gathered;
+        # without it the re-rank is a no-op pass-through that wastes
+        # a SkillCache lookup. The decision builder picks up this
+        # skill's matched_issue_ids over compose_l2's when both ran.
+        if self._skill_runnable(RERANK_WITH_EVIDENCE, capabilities):
+            invs.append(self._inv(
+                RERANK_WITH_EVIDENCE, budget,
                 gate=make_reformulation_gate(
                     confidence_floor=self.reformulation_confidence_floor,
                 ),

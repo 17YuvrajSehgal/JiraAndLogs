@@ -80,6 +80,9 @@ _COMPOSE_TRIAGE = "compose_triage"
 _COMPOSE_L2 = "compose_l2"
 _COMPOSE_NOVELTY = "compose_novelty"
 _RETRIEVE_DENSE = "retrieve_dense"
+#: Phase 2 ReAct: when the rerank-with-evidence skill fires, its
+#: matched_issue_ids supersede compose_l2's for the final decision.
+_RERANK_WITH_EVIDENCE = "rerank_with_evidence"
 
 
 # ---------------------------------------------------------------------------
@@ -501,8 +504,13 @@ class AgentRunner:
             triage_decision = "needs_review"
             confidence = 0.0
 
-        if l2_out is not None and l2_out.matched_issue_ids:
-            matched: tuple[str, ...] = l2_out.matched_issue_ids
+        # ReAct: prefer the evidence-aware re-ranked list if it ran.
+        # Falls through to compose_l2, then retrieve_dense.
+        rerank_out = trace.latest_output(_RERANK_WITH_EVIDENCE)
+        if rerank_out is not None and rerank_out.matched_issue_ids:
+            matched: tuple[str, ...] = rerank_out.matched_issue_ids
+        elif l2_out is not None and l2_out.matched_issue_ids:
+            matched = l2_out.matched_issue_ids
         else:
             dense_out = trace.latest_output(_RETRIEVE_DENSE)
             matched = dense_out.matched_issue_ids if dense_out else ()

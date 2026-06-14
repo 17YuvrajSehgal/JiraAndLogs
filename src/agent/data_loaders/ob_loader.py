@@ -91,6 +91,29 @@ def load_ob_cases(
     log.info("OB loader: gold loaded for %d windows from %s",
              len(gold_by_window), gold_path)
 
+    # Load the full memory corpus once and share a single MemoryView
+    # across all cases. Phase 2 ReAct re-rank skills consume memory_text
+    # for token-overlap scoring; without a populated view they're no-ops.
+    # The visibility filter (time-ordered + own-run-excluded) is handled
+    # by upstream predictions, so the per-case MemoryView can carry the
+    # full corpus here without breaking the apples-to-apples contract.
+    memory_corpus_path = global_dir / "jira-memory-corpus.jsonl"
+    if memory_corpus_path.is_file():
+        from core.data.schema import JiraMemoryIssue
+        memory_issues = []
+        for row in _iter_jsonl(memory_corpus_path):
+            try:
+                memory_issues.append(JiraMemoryIssue.from_row(row))
+            except (KeyError, TypeError, ValueError):
+                continue
+        shared_memory_view = MemoryView(memory_issues)
+        log.info("OB loader: memory corpus loaded n=%d from %s",
+                 len(memory_issues), memory_corpus_path)
+    else:
+        shared_memory_view = MemoryView([])
+        log.warning("OB loader: jira-memory-corpus.jsonl missing at %s — "
+                    "rerank_with_evidence will be a no-op", memory_corpus_path)
+
     # Honor the v2-resplit manifest when present (overrides JSONL's split).
     manifest = load_split_manifest(global_dir)
 
@@ -119,7 +142,7 @@ def load_ob_cases(
         bundle = _build_bundle(window, dataset_label=dataset_label)
         case = EvaluationCase(
             bundle=bundle,
-            memory=MemoryView([]),
+            memory=shared_memory_view,
             gold_matched_issue_ids=gold.matched_issue_ids,
             gold_is_novel=gold.is_novel,
             gold_triage=_label_to_triage(gold.label),
