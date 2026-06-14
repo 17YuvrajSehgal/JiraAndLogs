@@ -72,6 +72,7 @@ def _build_registry(
     *,
     skip: set[str],
     include_verifier: bool,
+    max_tool_calls: int | None = None,
 ) -> SkillRegistry:
     """Construct a registry pointing at the OB comparison dir."""
     reg = SkillRegistry()
@@ -134,16 +135,25 @@ def _build_registry(
             runs_root=runs_root,
             cache_root=Path("data/tool_cache"),
         )
+        evidence_skills: list = []
         if RequestPodEventsSkill.name not in skip:
-            reg.register(RequestPodEventsSkill(data_lake=lake))
+            evidence_skills.append(RequestPodEventsSkill(data_lake=lake))
         if RequestExtendedTraceWindowSkill.name not in skip:
-            reg.register(RequestExtendedTraceWindowSkill(data_lake=lake))
+            evidence_skills.append(RequestExtendedTraceWindowSkill(data_lake=lake))
         if RequestPodMetricsSkill.name not in skip:
-            reg.register(RequestPodMetricsSkill(data_lake=lake))
+            evidence_skills.append(RequestPodMetricsSkill(data_lake=lake))
         if RequestSimilarIncidentWindowSkill.name not in skip:
-            reg.register(RequestSimilarIncidentWindowSkill(
+            evidence_skills.append(RequestSimilarIncidentWindowSkill(
                 data_lake=lake, global_dir=global_dir, top_k=3,
             ))
+        # RQ-A7: stamp the per-window tool-call cap on each evidence
+        # skill instance. Setting None (default) keeps the class
+        # default (DEFAULT_MAX_TOOL_CALLS=6).
+        if max_tool_calls is not None:
+            for s in evidence_skills:
+                s.max_tool_calls = int(max_tool_calls)
+        for s in evidence_skills:
+            reg.register(s)
     else:
         logging.warning(
             "skipping all 4 evidence_request skills: runs root %s not found",
@@ -168,10 +178,12 @@ def _build_harness(
     skip: set[str],
     include_verifier: bool,
     use_state_layer: bool,
+    max_tool_calls: int | None = None,
 ) -> tuple[EvalHarness, ApplesToApplesContract]:
     dataset_id = global_dir.name
     registry = _build_registry(
         global_dir, skip=skip, include_verifier=include_verifier,
+        max_tool_calls=max_tool_calls,
     )
 
     cache = SkillCache(root=cache_dir) if cache_dir else None
@@ -258,6 +270,11 @@ def main() -> None:
                    help="sort cases by (service, episode, start_time) so "
                         "the StateLayer sees multi-window incident sequences "
                         "(closes RQ-C7 page-suppression)")
+    p.add_argument("--max-tool-calls", type=int, default=None,
+                   help="RQ-A7: cap per-window ReAct tool invocations. "
+                        "When set to 0, all tool calls are refused with "
+                        "BUDGET_EXHAUSTED (effectively disables ReAct). "
+                        "Default: skill class default (6 — never hit on OB).")
     p.add_argument("--verbose", action="store_true")
     args = p.parse_args()
 
@@ -280,6 +297,7 @@ def main() -> None:
         skip=set(args.skip_skill),
         include_verifier=args.include_verifier,
         use_state_layer=not args.no_state,
+        max_tool_calls=args.max_tool_calls,
     )
 
     print(f"[smoke_ob] running agent over {len(cases)} cases...")
