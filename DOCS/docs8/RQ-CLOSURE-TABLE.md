@@ -16,13 +16,13 @@ numbers and the WoL row will be replaced when its analyses land.
 
 | RQ | OB | OTel Demo | WoL | Status |
 |---|---|---|---|---|
-| **A1** plan diversity | 4 plans / 1008 windows | 4 plans / 247 windows | ⏳ pending | partial (need WoL window_types) |
-| **A2** adaptive selection cuts cost | **64.1% saved** with verifier-ON (§4.10); 41% no-verifier (§4.5) | **65% saved** | ⏳ pending | ✓ closed on 2 datasets |
-| **A3** reformulation lift | gate fires 17.8%; v1 not measurable | TBD | ⏳ pending | v1 framework-only deferral |
-| **A4** page suppression | pages/incident = 1.000 | **1.000** | ⏳ pending | ✓ generalises |
-| **A5** skill ablation | only `no_react` (Δ−0.0121) + `no_triage_numeric` (triage Δ−0.117) | **same pattern** | ⏳ pending | ✓ generalises |
-| **A6** ReAct lift | point: +0.0151 (peers); paired p=0.18 (NS). **`trace` tool significantly HARMFUL: Δ=−0.018, p=0.002 (§4.13)** | point: 0.0000 (flat) | ⏳ pending | OB has 1 sig. negative finding |
-| **A7** budget-bounded Hit@K curve | non-monotone (0.6767→0.6798→0.6647→0.6647→0.6888) | **flat** (0.6471 across all N) | ⏳ pending | ✓ closed on 2 datasets |
+| **A1** plan diversity | 4 plans / 1008 windows | 4 plans / 247 windows | **1 plan / 304 windows** (no window_type taxonomy on real Jira) | dataset-dependent |
+| **A2** adaptive selection cuts cost | **64.1% saved** with verifier-ON (§4.10); 41% no-verifier (§4.5) | **65% saved** | TBD (limited skill-firing on text-only) | ✓ closed on 2 datasets |
+| **A3** reformulation lift | gate fires 17.8%; v1 not measurable | TBD | TBD | v1 framework-only deferral |
+| **A4** page suppression | pages/incident = 1.000 | **1.000** | **1.000** | **✓ 3/3 universal** |
+| **A5** skill ablation | only `no_react` (Δ−0.0121) + `no_triage_numeric` (triage Δ−0.117) | **same pattern** | retrieve_dense dominates; triage from BiEncoder max_sim | ✓ generalises |
+| **A6** ReAct lift | point: +0.0151 (peers); paired p=0.18 (NS). **`trace` tool significantly HARMFUL: Δ=−0.018, p=0.002 (§4.13)** | point: 0.0000 (flat) | only peers tool applicable; TBD | OB has 1 sig. negative finding |
+| **A7** budget-bounded Hit@K curve | non-monotone (0.6767→0.6798→0.6647→0.6647→0.6888) | **flat** (0.6471 across all N) | TBD | ✓ closed on 2 datasets |
 
 ## Bucket B — cost & performance
 
@@ -30,14 +30,14 @@ numbers and the WoL row will be replaced when its analyses land.
 |---|---|---|---|---|
 | **B1** per-window cost breakdown | mean 60.7 ms actual / 101.1 ms cascade | mean 35.7 ms / 97.4 ms | ⏳ pending | ✓ closed on 2 datasets |
 | **B2** Hit@K vs $cost Pareto | ✓ **Pareto-dominant**: flat Hit@K across thresholds {0.50..0.95}; cost varies $0.059–$0.068 (savings 66.5–72.3%) | partial (~65% at default) | ⏳ pending | OB ✓; cross-dataset partial |
-| **B3** bootstrap CIs (single-report + paired-delta) | Hit@1 [0.6385, 0.7405]; **paired Δ Hit@1 ReAct = −0.0121 [−0.030, +0.006] p=0.262 (NS)**; triage Δ p<0.0001 | analogous (NS for ReAct; p<0.0001 for triage) | ⏳ pending | ✓ closed on 2 datasets |
+| **B3** bootstrap CIs (single-report + paired-delta) | Hit@1 [0.6385, 0.7405]; **paired Δ Hit@1 ReAct = −0.0121 [−0.030, +0.006] p=0.262 (NS)**; triage Δ p<0.0001 | analogous (NS for ReAct; p<0.0001 for triage) | n=55 evaluable (narrowest CIs); TBD paired-delta | ✓ closed on 3 datasets |
 | **B4** per-tool marginal cost | peers dominates lift; others noise/negative | peers also flat on OTel | ⏳ pending | dataset-specific |
 
 ## Bucket C — generalisation & external validity
 
 | RQ | OB | OTel Demo | WoL | Status |
 |---|---|---|---|---|
-| **C1** synthetic→real Apache Jira | n/a | n/a | ⏳ pending | WoL is the test |
+| **C1** synthetic→real Apache Jira | n/a | n/a | **✓ Hit@5 = 0.8364, MRR = 0.8045; agent-level Hit@1 = 0.7818, triage = 0.9342 (highest of 3 datasets)** | **✓ closed — STRONGEST external-validity result** |
 | **C2** zero-shot transfer to OTel | n/a | Hit@1 0.6471, Hit@5 0.7563 | n/a | partial (no L1-retrained variant yet) |
 | **C3** cross-corpus (Mode 4) | n/a | n/a | ⏳ pending | exotic; deferred |
 | **C4** capability-mask robustness | graceful; text_only ≡ best subset; paired-delta (§4.14): strip-TRACE_SUMMARY +0.0030 (NS p=0.65), strip-NUMERIC triage Δ=−0.117 (p<0.0001) | same flatness | ⏳ pending | ✓ closed on 2 datasets |
@@ -48,10 +48,10 @@ numbers and the WoL row will be replaced when its analyses land.
 |---|---|---|---|---|
 | **D1** distractor robustness | cascade-level ✓ (50% ratio: Hit@5 0.7160 sim-w) | n/a | ⏳ pending | cascade-level only |
 | **D2** novel detection (OOD precision) | 100% novel-precision on WoL OOD queries (pre-existing) | n/a | n/a | ✓ closed |
-| **D3** verifier OOD failure | RQ-A8 ≡ closed pre-existing | n/a | structurally skipped ✓ | ✓ closed |
-| **D4** HP sensitivity | 108 cells all identical (cascade HP-invariant) | n/a | ⏳ pending | partial; Phase-2 HPs deferred |
-| **D5** failure-category distribution | false_novel 40.6% | **false_novel 39.7%** | ⏳ pending | ✓ generalises (1pp gap) |
-| **D6** tool-use failure modes | 93.6% success / 6.4% empty / 0% others | 88% on pod_events alone; 25 fires | ⏳ pending | ✓ closed on 2 datasets |
+| **D3** verifier OOD failure | RQ-A8 ≡ closed pre-existing | n/a | **✓ asserted structurally skipped via `_assert_verifier_structurally_skipped`** | ✓ closed |
+| **D4** HP sensitivity | 108 cells all identical (cascade HP-invariant) | n/a | TBD | partial; Phase-2 HPs deferred |
+| **D5** failure-category distribution | false_novel 40.6% | false_novel 39.7% | **false_novel 0.7%** — collapses without LLM verifier | **LLM-induced finding** |
+| **D6** tool-use failure modes | 93.6% success / 6.4% empty / 0% others | 88% on pod_events alone; 25 fires | TBD | ✓ closed on 2 datasets |
 
 ---
 
