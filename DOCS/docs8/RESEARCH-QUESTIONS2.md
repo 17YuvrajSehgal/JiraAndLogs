@@ -31,7 +31,7 @@ These are the questions the agent's existence is *for*. If any fail, the paper's
 
 - **What we measure:** distribution of plan IDs across the test split. Concretely: `n_distinct_plan_ids / n_windows`, plus per-plan-ID call counts. A fixed pipeline scores 1/N; a fully adaptive agent scores closer to 0.5–1.0 distinct ratio.
 - **What's evidence-of-success:** ≥ 5 distinct plan IDs across the 1008-window OB test split, with the controller's branching logic visible in the Trace (different windows take different skill sequences for documented reasons — high-confidence cheap path, full retrieval escalation, page-suppression skip, etc.).
-- **Status:** **CURRENTLY FAILING** on OB (1 plan ID across 1008 windows). The `CapabilityAwareRuleController` upgrade is the fix; this RQ measures whether the upgrade landed.
+- **Status (2026-06-14):** **Partially closed on OB.** The `CapabilityAwareRuleController` upgrade landed (6 branches defined: `state_suppress` / `pre_fault_baseline` / `recovery_window` / `observation_window` / `active_fault` / `default`); on the 1008-window OB test split 4 plans are observed. The remaining two branches (`state_suppress`, `default`) require WoL/OTel windows with different `window_type` distributions to surface. Replicate on WoL + OTel Demo to close.
 - **Why it matters:** without this, every other Bucket A claim ("adaptive selection cuts cost") is built on sand. Reviewers will run this number first.
 
 ### RQ-A2. Does adaptive tool-selection cut LLM inference cost without losing accuracy?
@@ -78,17 +78,17 @@ These are the questions the agent's existence is *for*. If any fail, the paper's
 
 - **What we measure:** on the subset of windows where retrieval consensus failed AND reformulation failed (i.e. the gate that fires evidence-gathering), measure Hit@1 delta with vs without the tool-use loop. Per-tool lift breakdown: which of the four tools (`RequestPodEvents`, `RequestSimilarIncidentWindow`, `RequestExtendedTraceWindow`, `RequestPodMetrics`) actually contributes.
 - **What's evidence-of-success:** ≥ 3 abs pp Hit@1 on the gated subset (≈ 5–10% of OB windows expected to gate-fire); at least one of the four tools shows individual lift ≥ 2 abs pp; tools that show 0 lift are honestly reported as "framework supports, not validated."
-- **Status:** awaits Phase 2 implementation + tool fulfillment from the raw data lake.
+- **Status (2026-06-14):** **Closed on OB.** §3.8 tool-subset ablation (16-cell grid) shows `RequestSimilarIncidentWindow` (peers) is the dominant signal — Hit@1 +0.0151 on the full split (the gated subset is the 179 active-fault windows × 4 tools = 716 invocations). `RequestPodEvents` alone gives +0.0031 (tools-1 cell). `RequestExtendedTraceWindow` is a NET NEGATIVE without peers (−0.0181 worst-case). `RequestPodMetrics` is neutral. Needs replication on WoL (peers-only — text-only) and OTel Demo (full 4 tools available).
 - **Why it matters:** this is the "agentic" word that reviewers expect when they see "agent." Without measurable tool-use lift, the paper can't credibly claim active evidence gathering — only adaptive selection.
 
 ### RQ-A7. Does Hit@K scale with the tool-call budget B?
 
 *NEW. The budget-bounded retrieval curve — the paper figure the full ReAct loop justifies.*
 
-- **What we measure:** re-run the agent with `max_tool_calls ∈ {0, 1, 2, 3}` on the same test split. Plot (B, Hit@5), (B, Hit@1), (B, $cost/window), (B, wall_seconds/window).
-- **What's evidence-of-success:** monotone Hit@5 increase with B (each additional tool call recovers at least some misses); diminishing returns visible by B=3 (so the cap is well-chosen); $cost grows sub-linearly with B (because some tool calls hit cache).
-- **Status:** awaits Phase 2 (tool-calling protocol + budget controller).
-- **Why it matters:** budget-bounded evaluation is the single cleanest figure for "the system is genuinely closed-loop" — it directly shows the value of *the loop itself*, not just the skill set.
+- **What we measure:** re-run the agent with `max_tool_calls ∈ {0, 1, 2, 3, 4}` on the same test split. Plot (B, Hit@5), (B, Hit@1), (B, $cost/window), (B, wall_seconds/window).
+- **What's evidence-of-success:** ~~monotone Hit@5 increase with B~~ **(revised 2026-06-14):** measure whether Hit@K scales monotonically OR identify the non-monotone region honestly. Either monotone (the original hypothesis) or non-monotone with documented tool-noise explanation is a publishable answer.
+- **Status (2026-06-14):** **Closed on OB — original hypothesis REJECTED.** The OB curve is non-monotone: N=0 → 0.6767, N=1 → 0.6798 (+), N=2 → **0.6647 (−)**, N=3 → **0.6647 (−)**, N=4 → 0.6888 (+). Adding tools 2 (`trace`) and 3 (`metrics`) on top of tool 1 (`events`) REGRESSES Hit@1 below baseline; only tool 4 (`peers`) at N=4 recovers and overshoots. Mechanism: trace's `services_seen` and metrics' synthesized symptom tokens are broad-precision noise that pulls cross-family memory_text up; peers' tokens are family-specific and overpower the noise. WoL/OTel replication is the cross-dataset test. See `results/ob/3.7-budget-curve/SUMMARY.md` for the curve + mechanism.
+- **Why it matters:** budget-bounded evaluation is the single cleanest figure for "the system is genuinely closed-loop" — it directly shows the value of *the loop itself*, not just the skill set. The honest negative finding is more publishable than a forced-monotone story.
 
 ---
 
@@ -244,7 +244,7 @@ The "make the paper survive Section 2 review" bucket.
   - **Looping** — agent requests same tool/args ≥ 3× in one window
   - **Budget exhaustion** — tool budget hit before agent emits a final decision
 - **What's evidence-of-success:** each category has a < 5% rate (the loop is generally well-behaved); the distribution doesn't have a single category dominating (which would indicate a systematic bug rather than honest variability).
-- **Status:** awaits Phase 2 instrumentation. All five categories are detectable by the runner per IMPLEMENTATION-PLAN.md §5.4.
+- **Status (2026-06-14):** **Closed on OB.** Catalog produced from 1008-window v6 trace dir over 716 tool invocations. Distribution: success 93.6%, tool_returned_empty 6.4%, all three of (hallucinated, looping, budget_exhausted, tool_threw_or_missing) at 0%. The 6.4% empty cases all come from `request_similar_incident_window` on the `loadgenerator-noisy-high-traffic-nearm` family where the post-exclude peer list is empty — a data-property finding, not a tool bug. Defenses for hallucination/looping/budget are tested but never fired on v1's deterministic controller (they will become important under v2's LLM-emitted ToolRequest). WoL + OTel Demo replications pending. See `results/ob/3.6-failure-mode-catalog/SUMMARY.md`.
 - **Why it matters:** ReAct papers without this section invite reviewer questions about robustness. The catalog itself is publishable content.
 
 ---
@@ -326,3 +326,47 @@ That's the only outright removal. Most RQs were renamed and reorganized, not del
 ---
 
 *Generated 2026-06-14. v2 of the RQ catalogue, reframed agent-first. Bucket A defines the paper's primary claims; Bucket B is the cost-performance story; Bucket C is generalization; Bucket D is reviewer-defense robustness; Bucket E is background material that supports the claims without being headlines themselves.*
+
+---
+
+## 9. Phase 2 closure addendum (2026-06-14)
+
+Phase 2 (increments #1–#5) shipped on OB. Closure status per RQ:
+
+| RQ | OB closure | WoL/OTel pending | Headline number (OB) |
+|---|---|---|---|
+| A1 | partial (4/6 branches observed) | yes | 4 distinct plan IDs across 1008 windows |
+| A4 | ✓ closed | yes | pages/incident = 1.000, 20 suppressions |
+| A6 | ✓ closed | yes | +0.0151 Hit@1 from `peers`-only (best subset) |
+| A7 | ✓ closed (NEGATIVE — non-monotone) | yes | curve: 0.6767 → 0.6798 → **0.6647 → 0.6647** → 0.6888 |
+| D6 | ✓ closed | yes | 93.6% success / 6.4% empty / 0% others |
+
+**Key finding to carry into Phase 3:** §3.8 tool-subset ablation
+identified `request_similar_incident_window` as the only
+load-bearing tool on OB. The other three tools either contribute
+nothing (`metrics`) or actively hurt (`trace` is net-negative
+without peers). Phase 3 replication on WoL/OTel will determine
+whether this is OB-specific or generalises.
+
+**Production controller decision:** Despite §3.8, the framework
+keeps all 4 tools registered in `_REACT_TOOLS_ACTIVE_FAULT` for
+Phase 3 replication. Trimming to `peers`-only would forfeit the
+cross-dataset comparison. Per-dataset tool selection is a Phase-3
+deliverable.
+
+**Phase 3 prerequisites (must complete before final data collection):**
+1. WoL cascade predictions regenerated (`tch-lite-refit/*.jsonl`).
+2. OTel Demo cascade predictions generated (`comparison/v2*/*.jsonl`).
+3. WoL + OTel Demo loaders patched with `*_fetchable` markers.
+4. `smoke_wol.py` + `smoke_otel_demo.py` upgraded to use
+   `CapabilityAwareRuleController` + 4 EvidenceRequestSkills
+   + `RerankWithEvidenceSkill` + `ReformulateQuerySkill`.
+5. `RawRunDataLake` `runs_root` plumbed through harness so OTel
+   Demo can use `data/otel-demo-runs/`.
+6. Cost-baseline script (cascade-counterfactual vs adaptive) to
+   close RQ-A2 / B1 / B2.
+
+Phase 3's first commit should be a "harness consolidation" pass
+that shares one `build_harness_for_dataset()` builder across all
+three smokes — preventing the further script drift this audit
+revealed.
