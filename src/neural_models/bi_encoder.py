@@ -41,6 +41,7 @@ out of the box.
 """
 from __future__ import annotations
 
+import logging
 import math
 import sys
 import time
@@ -48,6 +49,9 @@ from pathlib import Path
 from typing import Any
 
 import numpy as np
+
+
+log = logging.getLogger(__name__)
 
 from comparison.pipelines import PipelineRunner
 from comparison.schema import PipelinePrediction, PipelineResult
@@ -262,15 +266,27 @@ class BiEncoderRetrievalPipeline(PipelineRunner):
         )
         return model
 
-    def _encode(self, model, texts: list[str]) -> np.ndarray:
+    def _encode(self, model, texts: list[str], *, label: str = "encode") -> np.ndarray:
+        """Encode a list of texts with the BiEncoder.
+
+        Logs an INFO message before + after so long encode passes
+        (memory corpus, test split) are visible during training runs
+        instead of producing silent multi-minute gaps in the log.
+        """
+        t0 = time.time()
+        log.info("[%s] encoding %d texts (batch_size=64, device=%s) ...",
+                 label, len(texts), self._device())
         emb = model.encode(
             texts,
             batch_size=64,
-            show_progress_bar=False,
+            show_progress_bar=True,                # tqdm to stderr for live progress
             convert_to_numpy=True,
             device=self._device(),
             normalize_embeddings=True,
         )
+        dt = time.time() - t0
+        log.info("[%s] encoded %d texts in %.1fs (%.1f texts/s)",
+                 label, len(texts), dt, len(texts) / max(dt, 1e-9))
         return np.asarray(emb, dtype=np.float32)
 
     def _build_sim_features(
@@ -356,7 +372,9 @@ class BiEncoderRetrievalPipeline(PipelineRunner):
             model = SentenceTransformer(self.backbone, device=self._device())
 
         # --- 3. Embed memory once ---
-        memory_emb = self._encode(model, memory_texts)  # (M, d)
+        log.info("[bi_encoder] embedding memory corpus (M=%d) ...",
+                 len(memory_texts))
+        memory_emb = self._encode(model, memory_texts, label="memory")  # (M, d)
 
         # --- 4. Build visibility masks ---
         def _vis(windows):
@@ -373,9 +391,14 @@ class BiEncoderRetrievalPipeline(PipelineRunner):
         train_texts = [_evi(w, self.max_chars) for w in train_w]
         val_texts = [_evi(w, self.max_chars) for w in val_w]
         test_texts = [_evi(w, self.max_chars) for w in test_w]
-        train_emb = self._encode(model, train_texts)
-        val_emb = self._encode(model, val_texts) if val_w else None
-        test_emb = self._encode(model, test_texts)
+        log.info("[bi_encoder] embedding split windows: "
+                 "train=%d val=%d test=%d",
+                 len(train_texts), len(val_texts), len(test_texts))
+        train_emb = self._encode(model, train_texts, label="train_q")
+        val_emb = self._encode(model, val_texts, label="val_q") if val_w else None
+        test_emb = self._encode(model, test_texts, label="test_q")
+        log.info("[bi_encoder] building visibility masks (memory=%d × splits) ...",
+                 len(memory_issues))
         train_mask = _vis(train_w)
         val_mask = _vis(val_w) if val_w else None
         test_mask = _vis(test_w)
@@ -416,6 +439,7 @@ class BiEncoderRetrievalPipeline(PipelineRunner):
             threshold = 0.5
 
         # --- 7. Predict test ---
+        log.info("[bi_encoder] predicting on test split (n=%d) ...", len(test_w))
         t0 = time.time()
         if clf is not None:
             test_scores = [float(p[1]) for p in clf.predict_proba(test_feats)]
