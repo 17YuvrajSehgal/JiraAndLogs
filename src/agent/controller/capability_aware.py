@@ -72,7 +72,21 @@ BRANCH_DEFAULT           = "default"
 
 # Phase 2 ReAct skill names
 REQUEST_POD_EVENTS = "request_pod_events"
+REQUEST_EXTENDED_TRACE_WINDOW = "request_extended_trace_window"
+REQUEST_POD_METRICS = "request_pod_metrics"
+REQUEST_SIMILAR_INCIDENT_WINDOW = "request_similar_incident_window"
 RERANK_WITH_EVIDENCE = "rerank_with_evidence"
+
+# All four evidence-request skills fire on the same low-consensus
+# gate, in this order. Order doesn't affect correctness (each runs
+# independently and appends to ctx.extra["tool_results"]) but it
+# affects which evidence appears first in the trace.
+_REACT_TOOLS_ACTIVE_FAULT: tuple[str, ...] = (
+    REQUEST_POD_EVENTS,
+    REQUEST_EXTENDED_TRACE_WINDOW,
+    REQUEST_POD_METRICS,
+    REQUEST_SIMILAR_INCIDENT_WINDOW,
+)
 
 
 # Tunable thresholds (overridable via config). The "look back N
@@ -368,18 +382,24 @@ class CapabilityAwareRuleController(RuleController):
                 ),
             ))
 
-        # Phase 2 ReAct: evidence-gathering tool, gated by the same
-        # low-consensus condition as reformulation. Fetches k8s pod
-        # events from the data lake when retrieval is uncertain — the
-        # warnings (OOMKilled, CrashLoopBackOff, FailedScheduling) are
-        # often dispositive for ambiguous active-fault windows.
-        if self._skill_runnable(REQUEST_POD_EVENTS, capabilities):
-            invs.append(self._inv(
-                REQUEST_POD_EVENTS, budget,
-                gate=make_reformulation_gate(
-                    confidence_floor=self.reformulation_confidence_floor,
-                ),
-            ))
+        # Phase 2 ReAct: 4 evidence-gathering tools, all gated by the
+        # same low-consensus condition as reformulation. Each appends a
+        # ToolResult to ctx.extra["tool_results"]; the rerank skill
+        # below consumes all of them.
+        #   - request_pod_events: k8s warnings (OOMKilled, CrashLoopBackOff)
+        #   - request_extended_trace_window: services_seen + error_spans
+        #   - request_pod_metrics: restart_delta, CPU, mem, n_alerts_firing
+        #   - request_similar_incident_window: peer Jira memory_text heads
+        # Each skill has its own required_flags so an unavailable
+        # modality (e.g. WoL has no k8s) naturally drops the tool.
+        for tool_name in _REACT_TOOLS_ACTIVE_FAULT:
+            if self._skill_runnable(tool_name, capabilities):
+                invs.append(self._inv(
+                    tool_name, budget,
+                    gate=make_reformulation_gate(
+                        confidence_floor=self.reformulation_confidence_floor,
+                    ),
+                ))
 
         # Phase 2 ReAct closure: consume the tool result. Re-ranks
         # compose_l2's top-K by token overlap with the WARNING-type

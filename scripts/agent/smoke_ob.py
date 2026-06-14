@@ -115,26 +115,40 @@ def _build_registry(
     if ReformulateQuerySkill.name not in skip:
         reg.register(ReformulateQuerySkill(use_llm=False))
 
-    # Phase 2 ReAct: RequestPodEventsSkill — fetches k8s events from
-    # data/runs/<run_id>/raw/kubernetes/<window_id>.json on demand.
-    # Gated by the controller's active_fault branch on low retrieval
-    # consensus. K8S_EVENTS capability is surfaced by the OB loader
-    # via bundle.extra["k8s_events_fetchable"].
+    # Phase 2 ReAct: 4 EvidenceRequestSkills + one data-lake instance
+    # shared across them. Each tool fetches a different modality from
+    # disk (k8s events, Tempo traces, Prometheus snapshots, peer
+    # Jira-corpus rows) and contributes a ToolResult to ctx.extra so
+    # the rerank skill can read all four. Controller gates each tool
+    # on the active_fault branch with the low-consensus condition.
     from agent.data_lake import RawRunDataLake                          # noqa: WPS433
-    from agent.skills.evidence_request import RequestPodEventsSkill    # noqa: WPS433
-    if RequestPodEventsSkill.name not in skip:
-        runs_root = Path("data/runs")
-        if runs_root.is_dir():
-            lake = RawRunDataLake(
-                runs_root=runs_root,
-                cache_root=Path("data/tool_cache"),
-            )
+    from agent.skills.evidence_request import (                          # noqa: WPS433
+        RequestExtendedTraceWindowSkill,
+        RequestPodEventsSkill,
+        RequestPodMetricsSkill,
+        RequestSimilarIncidentWindowSkill,
+    )
+    runs_root = Path("data/runs")
+    if runs_root.is_dir():
+        lake = RawRunDataLake(
+            runs_root=runs_root,
+            cache_root=Path("data/tool_cache"),
+        )
+        if RequestPodEventsSkill.name not in skip:
             reg.register(RequestPodEventsSkill(data_lake=lake))
-        else:
-            logging.warning(
-                "skipping request_pod_events: runs root %s not found",
-                runs_root,
-            )
+        if RequestExtendedTraceWindowSkill.name not in skip:
+            reg.register(RequestExtendedTraceWindowSkill(data_lake=lake))
+        if RequestPodMetricsSkill.name not in skip:
+            reg.register(RequestPodMetricsSkill(data_lake=lake))
+        if RequestSimilarIncidentWindowSkill.name not in skip:
+            reg.register(RequestSimilarIncidentWindowSkill(
+                data_lake=lake, global_dir=global_dir, top_k=3,
+            ))
+    else:
+        logging.warning(
+            "skipping all 4 evidence_request skills: runs root %s not found",
+            runs_root,
+        )
 
     # Phase 2 ReAct closure: RerankWithEvidenceSkill — consumes tool
     # results from ctx.extra and re-ranks compose_l2's top-K. Wired

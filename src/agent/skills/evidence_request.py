@@ -27,11 +27,17 @@ ReAct loop status:
 
 from __future__ import annotations
 
+import re
 import time
 from abc import abstractmethod
+from pathlib import Path
 from typing import Any
 
-from ..capabilities import K8S_EVENTS
+from ..capabilities import (
+    K8S_EVENTS,
+    METRIC_SNAPSHOTS,
+    TRACE_SUMMARY,
+)
 from ..tool_protocol import (
     TOOL_RESULTS_KEY,
     ToolResult,
@@ -210,3 +216,184 @@ class RequestPodEventsSkill(EvidenceRequestSkill):
         if result.get("error"):
             return False
         return int(result.get("warning_count", 0)) > 0
+
+
+# -----------------------------------------------------------------------------
+# RequestExtendedTraceWindowSkill — Tempo evidence tool
+# -----------------------------------------------------------------------------
+
+
+class RequestExtendedTraceWindowSkill(EvidenceRequestSkill):
+    """Fetch a summarized Tempo trace dump for the window from the data lake.
+
+    Useful when retrieval is ambiguous because text-evidence already names
+    the right service but the same service appears in multiple ticket
+    families (cart-redis vs cart-restart vs cart-saturation). The set
+    of `services_seen` plus any `error_span_names` adds a coarse but
+    independent disambiguation signal.
+
+    Required flags: `TRACE_SUMMARY` — set by the OB loader when a Tempo
+    capture exists on disk for the window.
+    """
+
+    name = "request_extended_trace_window"
+    version = "1.0.0"
+    tool_name = "request_extended_trace_window"
+    required_flags = frozenset({TRACE_SUMMARY})
+    cost_class = "medium"
+
+    def __init__(self, data_lake: Any) -> None:
+        self.data_lake = data_lake
+
+    def _fetch_evidence(
+        self,
+        bundle: InputBundle,
+        ctx: AgentContext,
+    ) -> dict[str, Any]:
+        return self.data_lake.get_extended_trace_window(bundle.window_id)
+
+    def _is_evidence_useful(self, result: dict[str, Any]) -> bool:
+        """Useful when at least one trace was captured. Even with zero
+        error_span_names, services_seen is still a usable rerank signal."""
+        if result.get("error"):
+            return False
+        return int(result.get("n_traces", 0)) > 0
+
+
+# -----------------------------------------------------------------------------
+# RequestPodMetricsSkill — Prometheus evidence tool
+# -----------------------------------------------------------------------------
+
+
+class RequestPodMetricsSkill(EvidenceRequestSkill):
+    """Fetch Prometheus snapshot summary (restarts/CPU/memory/alerts).
+
+    Useful for disambiguating between scenarios that share the same
+    service surface but differ in resource profile (e.g. "restart
+    storm" vs "slow memory leak" vs "alert flood without restarts").
+
+    Required flags: `METRIC_SNAPSHOTS` — set by the OB loader when a
+    Prometheus capture exists on disk for the window.
+    """
+
+    name = "request_pod_metrics"
+    version = "1.0.0"
+    tool_name = "request_pod_metrics"
+    required_flags = frozenset({METRIC_SNAPSHOTS})
+    cost_class = "medium"
+
+    def __init__(self, data_lake: Any) -> None:
+        self.data_lake = data_lake
+
+    def _fetch_evidence(
+        self,
+        bundle: InputBundle,
+        ctx: AgentContext,
+    ) -> dict[str, Any]:
+        return self.data_lake.get_pod_metrics(bundle.window_id)
+
+    def _is_evidence_useful(self, result: dict[str, Any]) -> bool:
+        """Useful if at least one of (restarts changed, alerts firing,
+        cpu/mem readings exist)."""
+        if result.get("error"):
+            return False
+        if (result.get("restart_delta") or 0) > 0:
+            return True
+        if (result.get("n_alerts_firing") or 0) > 0:
+            return True
+        # Any non-null metric reading counts as usable
+        return any(
+            result.get(k) is not None
+            for k in ("cpu_max", "cpu_mean", "mem_max", "mem_mean")
+        )
+
+
+# -----------------------------------------------------------------------------
+# RequestSimilarIncidentWindowSkill — peer-incident lookup tool
+# -----------------------------------------------------------------------------
+
+
+class RequestSimilarIncidentWindowSkill(EvidenceRequestSkill):
+    """Fetch peer Jira tickets that share scenario_family.
+
+    Useful because peers in the same family typically share canonical
+    components and resolution language; their `memory_text` heads
+    provide a high-precision token bag that helps the reranker
+    disambiguate when the L2 top-K is mixed across families.
+
+    Unlike the other three tools, this skill is *always* applicable —
+    every OB window has a `scenario_family` and the corpus always has
+    peers. We still register it with no required_flags so the
+    controller can include/exclude it via plan rules.
+    """
+
+    name = "request_similar_incident_window"
+    version = "1.0.0"
+    tool_name = "request_similar_incident_window"
+    required_flags = frozenset()
+    cost_class = "low"
+
+    def __init__(self, data_lake: Any, global_dir: Path | str, *, top_k: int = 3) -> None:
+        self.data_lake = data_lake
+        self.global_dir = str(Path(global_dir))
+        self.top_k = top_k
+
+    def _build_args(self, bundle: InputBundle) -> dict[str, Any]:
+        return {
+            "scenario_family": bundle.scenario_family or "",
+            "exclude_episode_id": _episode_from_window(bundle.window_id),
+            "global_dir": self.global_dir,
+            "top_k": self.top_k,
+        }
+
+    def _fetch_evidence(
+        self,
+        bundle: InputBundle,
+        ctx: AgentContext,
+    ) -> dict[str, Any]:
+        family = bundle.scenario_family
+        if not family:
+            return {"peers": [], "n_peers": 0, "error": "no_scenario_family"}
+        return self.data_lake.get_similar_incidents(
+            scenario_family=family,
+            global_dir=self.global_dir,
+            exclude_episode_id=_episode_from_window(bundle.window_id),
+            top_k=self.top_k,
+        )
+
+    def _is_evidence_useful(self, result: dict[str, Any]) -> bool:
+        if result.get("error"):
+            return False
+        return int(result.get("n_peers", 0)) > 0
+
+
+# -----------------------------------------------------------------------------
+# Helpers
+# -----------------------------------------------------------------------------
+
+
+# window_id format: <run_id>-<window_type>-<service> where <run_id> is
+# the prefix up to and including "-rNN". `_episode_from_window` peels
+# the trailing `-<window_type>-<service>` so the same fault gets
+# exclude-deduplicated against the corpus episode_id.
+_RUN_ID_PATTERN = "^(.*?-r\\d+)-"
+
+
+def _episode_from_window(window_id: str) -> str:
+    """Return the episode_id slice of a window_id (everything up to
+    `-<window_type>-<service>`)."""
+    m = re.match(_RUN_ID_PATTERN, window_id)
+    if not m:
+        return window_id
+    run_prefix = m.group(1)
+    # Episode = run_prefix + the scenario-id segment.
+    # e.g. window_id=
+    #   2026-...-r01-cart-redis-degradation-critical-20260525T134155Z-active_fault-cartservice
+    # episode_id should be:
+    #   2026-...-r01-cart-redis-degradation-critical-20260525T134155Z
+    # i.e. strip the trailing "-<window_type>-<service>".
+    remainder = window_id[len(run_prefix):]
+    parts = remainder.rsplit("-", 2)
+    if len(parts) < 3:
+        return window_id
+    return run_prefix + parts[0]

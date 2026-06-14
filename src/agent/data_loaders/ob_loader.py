@@ -228,10 +228,11 @@ def _build_bundle(window: dict[str, Any], *, dataset_label: str) -> InputBundle:
         if k.startswith(_NUMERIC_FEATURE_PREFIX) and isinstance(v, (int, float)):
             numeric[k] = float(v)
 
-    # Phase 2 ReAct: surface K8S_EVENTS capability via an extra marker
-    # so `request_pod_events` can fire. The skill itself fetches the
-    # actual events from disk via the data lake; the marker just tells
-    # the CapabilitiesObserver "this window has a k8s capture available."
+    # Phase 2 ReAct: surface K8S_EVENTS / TRACE_SUMMARY / METRIC_SNAPSHOTS
+    # capabilities via extra markers so the four EvidenceRequestSkills
+    # can fire. The skills themselves fetch the raw data from disk via
+    # the data lake; the markers just tell the CapabilitiesObserver
+    # "this window has a <modality> capture available on disk."
     return InputBundle(
         window_id=window["window_id"],
         dataset=dataset_label,
@@ -243,7 +244,11 @@ def _build_bundle(window: dict[str, Any], *, dataset_label: str) -> InputBundle:
         scenario_family=window.get("scenario_family"),
         service_name=window.get("service_name"),
         window_type=window.get("window_type"),
-        extra={"k8s_events_fetchable": True},
+        extra={
+            "k8s_events_fetchable": True,
+            "trace_summary_fetchable": True,
+            "metric_snapshots_fetchable": True,
+        },
     )
 
 

@@ -170,8 +170,61 @@ def _evidence_tokens_from_tool_results(
                 # 3. Message — tokenise with light stem.
                 msg = str(ev.get("message") or "")[:k_top_msg_chars]
                 tokens |= _tokenize(msg)
-        # Future tools (RequestExtendedTraceWindow, RequestPodMetrics,
-        # RequestSimilarIncidentWindow) get their own elif branches here.
+
+        elif tr.tool_name == "request_extended_trace_window":
+            # Services_seen contributes the strongest signal: each
+            # service name is a high-precision rerank token. Error span
+            # names (e.g. "GET /api/cart") are more variable so we just
+            # tokenise them.
+            result = tr.result or {}
+            for svc in (result.get("services_seen") or []):
+                svc_lower = str(svc).lower()
+                tokens.add(svc_lower)
+                # Add `cart` from `cartservice`, `payment` from `paymentservice`...
+                if svc_lower.endswith("service") and len(svc_lower) > len("service") + 2:
+                    tokens.add(svc_lower[: -len("service")])
+                for sub in svc_lower.split("-"):
+                    if len(sub) >= 3:
+                        tokens.add(sub)
+            for span in (result.get("error_span_names") or []):
+                tokens |= _tokenize(str(span))
+
+        elif tr.tool_name == "request_pod_metrics":
+            # Metrics are numbers, but their EXISTENCE maps to symptom
+            # tokens that often appear in memory_text. For example,
+            # restart_delta > 0 → memory_text typically has "restart"
+            # / "crash" / "pod". Synthesizing these symptom tokens
+            # bridges the modality gap between Prometheus numbers and
+            # the prose of Jira tickets.
+            result = tr.result or {}
+            if (result.get("restart_delta") or 0) > 0:
+                tokens.update({"restart", "crash", "pod", "loop", "back", "off"})
+            if (result.get("n_alerts_firing") or 0) > 0:
+                tokens.update({"alert", "fire", "firing", "alarm"})
+            # Memory-pressure hint when peak memory > 200MB (OB pods
+            # are typically 50-100MB at baseline; 200+ is OOM-territory)
+            mem_max = result.get("mem_max")
+            if mem_max is not None and float(mem_max) > 2.0e8:
+                tokens.update({"memory", "oom", "kill", "killed"})
+
+        elif tr.tool_name == "request_similar_incident_window":
+            # Peer Jira tickets in the same scenario_family are the
+            # highest-precision signal available — their memory_text
+            # heads use the same canonical phrasing the target ticket
+            # uses. We cap to the first 200 chars per peer to keep
+            # the token bag bounded.
+            result = tr.result or {}
+            for peer in (result.get("peers") or []):
+                if not isinstance(peer, dict):
+                    continue
+                head = str(peer.get("memory_text_head") or "")[:k_top_msg_chars * 2]
+                tokens |= _tokenize(head)
+                # Also pull components if exposed in the head
+                components = peer.get("components") or []
+                if isinstance(components, list):
+                    for c in components:
+                        tokens |= _tokenize(str(c))
+
     return tokens
 
 

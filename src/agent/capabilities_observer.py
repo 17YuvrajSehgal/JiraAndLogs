@@ -269,6 +269,12 @@ class CapabilitiesObserver:
                 richness[UNORDERED_LOGS] = block
 
         # TRACE_SUMMARY -------------------------------------------------------
+        # Surface in two cases:
+        #   1. bundle carries an in-memory trace_summary (legacy path).
+        #   2. bundle marks "Tempo capture fetchable from disk" via
+        #      extra["trace_summary_fetchable"] — set by the loader when
+        #      the raw Tempo file exists for the window.
+        # The ReAct `request_extended_trace_window` skill consumes the latter.
         if bundle.trace_summary is not None and bundle.trace_summary.n_spans > 0:
             flags.add(TRACE_SUMMARY)
             richness[TRACE_SUMMARY] = {
@@ -276,6 +282,9 @@ class CapabilitiesObserver:
                 "error_spans": bundle.trace_summary.error_spans,
                 "n_affected_services": len(bundle.trace_summary.affected_services),
             }
+        elif (bundle.extra or {}).get("trace_summary_fetchable"):
+            flags.add(TRACE_SUMMARY)
+            richness[TRACE_SUMMARY] = {"source": "data_lake_disk"}
 
         # K8S_EVENTS ----------------------------------------------------------
         # Surface the flag in two cases:
@@ -293,11 +302,19 @@ class CapabilitiesObserver:
             richness[K8S_EVENTS] = {"source": "data_lake_disk"}
 
         # METRIC_SNAPSHOTS ----------------------------------------------------
+        # Surface in two cases:
+        #   1. bundle carries in-memory metric_snapshots (legacy).
+        #   2. bundle marks "Prometheus capture fetchable from disk" via
+        #      extra["metric_snapshots_fetchable"] — set by the loader.
+        # ReAct `request_pod_metrics` consumes the latter.
         if bundle.metric_snapshots:
             flags.add(METRIC_SNAPSHOTS)
             richness[METRIC_SNAPSHOTS] = {
                 "n_series": len(bundle.metric_snapshots),
             }
+        elif (bundle.extra or {}).get("metric_snapshots_fetchable"):
+            flags.add(METRIC_SNAPSHOTS)
+            richness[METRIC_SNAPSHOTS] = {"source": "data_lake_disk"}
 
         # MEMORY_TEXT / KG_GRAPH_MEMORY / KG_GRAPH_WINDOW ---------------------
         # These describe the OPPOSITE side of retrieval (the memory + KG),
