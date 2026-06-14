@@ -39,9 +39,17 @@ from ..capabilities import (
     TRACE_SUMMARY,
 )
 from ..tool_protocol import (
+    DEFAULT_MAX_TOOL_CALLS,
+    FAILURE_BUDGET_EXHAUSTED,
+    FAILURE_EMPTY,
+    FAILURE_LOOPING,
+    FAILURE_LOOPING_THRESHOLD,
+    FAILURE_TOOL_ERROR,
     TOOL_RESULTS_KEY,
     ToolResult,
     add_tool_result,
+    count_tool_call_repeats,
+    record_tool_call,
 )
 from ..types import InputBundle, SkillCallCost, SkillOutput
 from .base import AgentContext, MemoryView, Skill
@@ -95,6 +103,9 @@ class EvidenceRequestSkill(Skill):
                 return True
         return False
 
+    #: Per-window tool-call cap; overridable per subclass or via constructor.
+    max_tool_calls: int = DEFAULT_MAX_TOOL_CALLS
+
     # ------------------------------------------------------------------ invoke
 
     def invoke(
@@ -104,6 +115,37 @@ class EvidenceRequestSkill(Skill):
         ctx: AgentContext,
     ) -> SkillOutput:
         args = self._build_args(bundle)
+
+        # ---------------------------------------------------------- failure-mode pre-flight checks
+        # (1) Looping — same (tool_name, args_hash) called >= threshold times.
+        n_prior = count_tool_call_repeats(ctx.extra or {}, self.tool_name, args)
+        if n_prior >= FAILURE_LOOPING_THRESHOLD:
+            return self._refuse(
+                args=args,
+                failure_mode=FAILURE_LOOPING,
+                error=f"refused: {self.tool_name} called {n_prior}× in this window",
+                ctx=ctx,
+            )
+
+        # (2) Budget exhaustion — total tool calls in window >= cap.
+        history = (ctx.extra or {}).get("tool_call_history") or []
+        if len(history) >= int(self.max_tool_calls):
+            return self._refuse(
+                args=args,
+                failure_mode=FAILURE_BUDGET_EXHAUSTED,
+                error=(
+                    f"refused: tool budget exhausted "
+                    f"({len(history)}/{self.max_tool_calls} calls used)"
+                ),
+                ctx=ctx,
+            )
+
+        # Record the call now (before invoking) so a concurrent
+        # re-entry sees the increment and the loop counter is accurate
+        # for the next skill.
+        ctx.extra = record_tool_call(ctx.extra or {}, self.tool_name, args)
+
+        # ---------------------------------------------------------- the actual fetch
         start_ms = time.monotonic()
         try:
             raw_result = self._fetch_evidence(bundle, ctx)
@@ -116,6 +158,14 @@ class EvidenceRequestSkill(Skill):
         # Cache-hit flag comes from the data lake's payload; default False.
         cache_hit = bool(raw_result.pop("cache_hit", False)) if isinstance(raw_result, dict) else False
 
+        # ---------------------------------------------------------- failure-mode classification
+        is_useful = (error is None) and self._is_evidence_useful(raw_result)
+        failure_mode: str | None = None
+        if error is not None:
+            failure_mode = FAILURE_TOOL_ERROR
+        elif not is_useful:
+            failure_mode = FAILURE_EMPTY
+
         tool_result = ToolResult(
             tool_name=self.tool_name,
             args=args,
@@ -124,6 +174,7 @@ class EvidenceRequestSkill(Skill):
             bytes_returned=len(str(raw_result)) if raw_result else 0,
             cache_hit=cache_hit,
             error=error,
+            failure_mode=failure_mode,
         )
 
         # Propagate to subsequent skills in the same Plan via ctx.extra.
@@ -137,7 +188,6 @@ class EvidenceRequestSkill(Skill):
             usd=0.0,
         )
 
-        is_useful = (error is None) and self._is_evidence_useful(raw_result)
         return SkillOutput(
             skill=self.name,
             skill_version=self.version,
@@ -151,6 +201,50 @@ class EvidenceRequestSkill(Skill):
             extra={
                 "tool_result": tool_result.to_dict(),
                 "is_useful": is_useful,
+                "failure_mode": failure_mode,
+            },
+        )
+
+    # ------------------------------------------------------------------ refusal helper
+
+    def _refuse(
+        self,
+        *,
+        args: dict[str, Any],
+        failure_mode: str,
+        error: str,
+        ctx: AgentContext,
+    ) -> SkillOutput:
+        """Emit a refusal ToolResult (no _fetch_evidence call) for
+        looping / budget-exhausted cases. Still appends to
+        ctx.extra["tool_results"] so the rerank skill — and the
+        failure-mode catalog — see the refusal event."""
+        tool_result = ToolResult(
+            tool_name=self.tool_name,
+            args=args,
+            result={},
+            cost_actual_ms=0.0,
+            bytes_returned=0,
+            cache_hit=False,
+            error=error,
+            failure_mode=failure_mode,
+        )
+        ctx.extra = add_tool_result(ctx.extra or {}, tool_result)
+        return SkillOutput(
+            skill=self.name,
+            skill_version=self.version,
+            triage_score=None,
+            triage_decision=None,
+            matched_issue_ids=[],
+            is_novel=None,
+            confidence=0.0,
+            evidence_used=[self.tool_name],
+            cost=SkillCallCost(wall_seconds=0.0, n_calls=0, llm_tokens=0, usd=0.0),
+            extra={
+                "tool_result": tool_result.to_dict(),
+                "is_useful": False,
+                "failure_mode": failure_mode,
+                "refused": True,
             },
         )
 
