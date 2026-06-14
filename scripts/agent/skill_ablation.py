@@ -223,8 +223,10 @@ def run_cell(
     *,
     use_state: bool,
     include_verifier: bool,
+    per_cell_report_dir: Path | None = None,
 ) -> dict:
-    """Run one ablation cell."""
+    """Run one ablation cell. Optionally persist per-cell EvaluationReport
+    with case_results so paired-delta-bootstrap can compute Δ CIs (RQ-B3)."""
     harness, contract = build_harness_for_dataset(
         dataset_label=DATASET_TO_LABEL[dataset],
         global_dir=global_dir,
@@ -241,6 +243,14 @@ def run_cell(
         experiment_name=f"ablation-{cell.label}-{global_dir.name}",
     )
     wall_sec = time.monotonic() - t0
+
+    if per_cell_report_dir is not None:
+        per_cell_report_dir.mkdir(parents=True, exist_ok=True)
+        report.write_to(
+            per_cell_report_dir / f"{cell.label}-report.json",
+            include_case_results=True,
+        )
+
     return {
         "cell": cell.label,
         "skip": sorted(cell.skip),
@@ -297,6 +307,9 @@ def main() -> None:
                    help="register verify_with_llm (off by default)")
     p.add_argument("--output", type=Path, default=None,
                    help="write JSON results here")
+    p.add_argument("--per-cell-report-dir", type=Path, default=None,
+                   help="if set, write per-cell EvaluationReport JSONs here "
+                        "for paired-delta-bootstrap (RQ-B3) analysis")
     p.add_argument("--verbose", action="store_true")
     args = p.parse_args()
 
@@ -324,6 +337,7 @@ def main() -> None:
         row = run_cell(
             args.dataset, args.global_dir, cases, cell,
             use_state=args.use_state, include_verifier=args.include_verifier,
+            per_cell_report_dir=args.per_cell_report_dir,
         )
         rows.append(row)
         print(
