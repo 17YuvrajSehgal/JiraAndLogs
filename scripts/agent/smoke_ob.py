@@ -37,7 +37,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "src"))
 
 from agent.capabilities_observer import CapabilitiesObserver, ObservationContext
-from agent.controller import RuleController
+from agent.controller import CapabilityAwareRuleController, RuleController
 from agent.data_loaders import load_ob_cases
 from agent.eval_harness import ApplesToApplesContract, EvalHarness
 from agent.runner import AgentRunner
@@ -107,6 +107,14 @@ def _build_registry(
             continue
         reg.register(compose_cls())
 
+    # Reformulation skill — gated by the controller's active_fault
+    # branch on low-consensus retrieval. Deterministic stub by default
+    # (use_llm=False) so the smoke stays sub-second; an LLM-backed
+    # version is the path RQ-A3 measures.
+    from agent.skills.reformulate_query import ReformulateQuerySkill   # noqa: WPS433
+    if ReformulateQuerySkill.name not in skip:
+        reg.register(ReformulateQuerySkill(use_llm=False))
+
     return reg
 
 
@@ -133,7 +141,15 @@ def _build_harness(
         # trace_root creates a subdir per experiment.
         experiment=f"smoke-{dataset_id}",
     )
-    controller = RuleController(registry)
+    # CapabilityAwareRuleController emits per-window distinct plans
+    # (state_suppress / pre_fault_baseline / recovery_window /
+    # observation_window / active_fault / default), addressing RQ-A1's
+    # "1 plan ID across 1008 windows" finding. Falls back to the base
+    # RuleController behavior when enable_branching=False or on the
+    # default branch.
+    controller = CapabilityAwareRuleController(
+        registry, max_reformulation_retries=1,
+    )
 
     # ObservationContext: tell the observer that the OB memory side
     # has memory_text + (optionally) KG_GRAPH_WINDOW. The smoke test

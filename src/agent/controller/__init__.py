@@ -8,6 +8,7 @@ Public API:
 """
 
 from .base import Controller
+from .capability_aware import CapabilityAwareRuleController
 from .rule import (
     RuleController,
     make_escalation_gate,
@@ -17,6 +18,7 @@ from .rule import (
 __all__ = [
     "Controller",
     "RuleController",
+    "CapabilityAwareRuleController",
     "make_escalation_gate",
     "make_reformulation_gate",
 ]
