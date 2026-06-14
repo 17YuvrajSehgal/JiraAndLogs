@@ -70,6 +70,10 @@ BRANCH_ACTIVE_FAULT      = "active_fault"
 BRANCH_DEFAULT           = "default"
 
 
+# Phase 2 ReAct skill name
+REQUEST_POD_EVENTS = "request_pod_events"
+
+
 # Tunable thresholds (overridable via config). The "look back N
 # windows" depth — at 1 we suppress when the immediately prior window
 # for the same service was ticket-worthy + same scenario_family.
@@ -358,6 +362,19 @@ class CapabilityAwareRuleController(RuleController):
         ):
             invs.append(self._inv(
                 REFORMULATE_QUERY, budget,
+                gate=make_reformulation_gate(
+                    confidence_floor=self.reformulation_confidence_floor,
+                ),
+            ))
+
+        # Phase 2 ReAct: evidence-gathering tool, gated by the same
+        # low-consensus condition as reformulation. Fetches k8s pod
+        # events from the data lake when retrieval is uncertain — the
+        # warnings (OOMKilled, CrashLoopBackOff, FailedScheduling) are
+        # often dispositive for ambiguous active-fault windows.
+        if self._skill_runnable(REQUEST_POD_EVENTS, capabilities):
+            invs.append(self._inv(
+                REQUEST_POD_EVENTS, budget,
                 gate=make_reformulation_gate(
                     confidence_floor=self.reformulation_confidence_floor,
                 ),

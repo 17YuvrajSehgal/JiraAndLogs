@@ -205,20 +205,22 @@ def _build_bundle(window: dict[str, Any], *, dataset_label: str) -> InputBundle:
         if k.startswith(_NUMERIC_FEATURE_PREFIX) and isinstance(v, (int, float)):
             numeric[k] = float(v)
 
+    # Phase 2 ReAct: surface K8S_EVENTS capability via an extra marker
+    # so `request_pod_events` can fire. The skill itself fetches the
+    # actual events from disk via the data lake; the marker just tells
+    # the CapabilitiesObserver "this window has a k8s capture available."
     return InputBundle(
         window_id=window["window_id"],
         dataset=dataset_label,
         text_evidence=window.get("triage_evidence_text"),
         numeric_features=numeric or None,
-        # OB telemetry isn't surfaced into the bundle for the smoke test —
-        # the predictions-backed skills already consumed it upstream.
-        # Setting log_lines/trace_summary/k8s_events here would unlock
-        # capability flags that the agent then can't act on (no
-        # corresponding skills wired). Phase 2 (live retrieval) plugs
-        # those in.
+        # log_lines/trace_summary/k8s_events left None on purpose: the
+        # cascade predictions already consumed them upstream. Phase 2
+        # ReAct fetches the raw data on-demand instead.
         scenario_family=window.get("scenario_family"),
         service_name=window.get("service_name"),
         window_type=window.get("window_type"),
+        extra={"k8s_events_fetchable": True},
     )
 
 

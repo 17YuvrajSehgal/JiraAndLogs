@@ -278,9 +278,19 @@ class CapabilitiesObserver:
             }
 
         # K8S_EVENTS ----------------------------------------------------------
+        # Surface the flag in two cases:
+        #   1. bundle already carries k8s_events in-memory.
+        #   2. bundle marks "k8s events fetchable from disk for this
+        #      window" via extra["k8s_events_fetchable"] — the loader
+        #      sets this when the raw k8s file exists at
+        #      data/runs/<run_id>/raw/kubernetes/<window_id>.json.
+        # The ReAct `request_pod_events` skill consumes either path.
         if bundle.k8s_events:
             flags.add(K8S_EVENTS)
             richness[K8S_EVENTS] = {"n_events": len(bundle.k8s_events)}
+        elif (bundle.extra or {}).get("k8s_events_fetchable"):
+            flags.add(K8S_EVENTS)
+            richness[K8S_EVENTS] = {"source": "data_lake_disk"}
 
         # METRIC_SNAPSHOTS ----------------------------------------------------
         if bundle.metric_snapshots:
