@@ -6,14 +6,10 @@ the current Capabilities.
 
 Adding a new evidence modality:
     1. Add the constant below (with a brief comment about what populates it).
-    2. Extend `InputBundle` with the matching optional field
-       (in `agent.types`).
-    3. Wire the modality observer (Phase 1.5) to set the flag when the
-       field is non-empty.
-
-Phase 1.5 will add the observer; this module is Phase 1.4 scope.
-
-Spec: `DOCS/docs7/AGENTIC-SYSTEM.md` §8.
+    2. Extend `InputBundle` with the matching optional field (`agent.types`).
+    3. Wire the modality into `CapabilitiesObserver` (`capabilities_observer.py`)
+       so the flag fires when the field is non-empty or when the bundle
+       carries an `*_fetchable` marker on `extra`.
 """
 
 from __future__ import annotations

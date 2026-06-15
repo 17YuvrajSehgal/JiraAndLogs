@@ -1,4 +1,9 @@
-"""LLM provider abstraction (Phase 1.2).
+"""LLM provider abstraction.
+
+Six providers ship: LM Studio (default, local), OpenAI, Anthropic,
+Ollama, vLLM, and a generic OpenAI-compatible adapter. Selection is
+driven by the `LLM_PROVIDER` env var; the factory reads `.env` and
+the `llm:` block of `agent-config.yaml`.
 
 Public API:
 
@@ -12,8 +17,6 @@ Public API:
     ... )
     >>> response.content      # parsed dict
     >>> response.prompt_tokens, response.completion_tokens, response.latency_ms
-
-Spec: DOCS/docs7/AGENTIC-SYSTEM.md §10.
 """
 
 from .base import (

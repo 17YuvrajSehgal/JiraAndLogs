@@ -80,7 +80,7 @@ _COMPOSE_TRIAGE = "compose_triage"
 _COMPOSE_L2 = "compose_l2"
 _COMPOSE_NOVELTY = "compose_novelty"
 _RETRIEVE_DENSE = "retrieve_dense"
-#: Phase 2 ReAct: when the rerank-with-evidence skill fires, its
+#: ReAct loop closure: when rerank-with-evidence fires, its
 #: matched_issue_ids supersede compose_l2's for the final decision.
 _RERANK_WITH_EVIDENCE = "rerank_with_evidence"
 
@@ -117,8 +117,9 @@ class AgentRunner:
             "12-hour run dies on call 1" upfront.
         expected_dataset_id: when set together with `neo4j`, the
             constructor calls `assert_loaded_dataset` and refuses to
-            start if Neo4j has the wrong dataset loaded (Phase 1.14;
-            IMPROVEMENTS §1.1 Option A). Pass the dataset_id from
+            start if Neo4j has the wrong dataset loaded (the
+            `GraphMetadata` fingerprint safeguard from
+            `integrity/graph_metadata.py`). Pass the dataset_id from
             `agent-config.yaml > experiment.dataset_id`.
     """
 

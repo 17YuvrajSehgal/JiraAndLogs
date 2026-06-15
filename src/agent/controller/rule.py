@@ -111,7 +111,7 @@ class RuleController(Controller):
         reformulation_confidence_floor: float = DEFAULT_REFORMULATION_CONFIDENCE_FLOOR,
     ) -> None:
         """
-        Reformulation knobs (Phase 2.3, off by default):
+        Reformulation knobs (opt-in, off by default):
 
             max_reformulation_retries: when > 0 AND reformulate_query is
                 registered, the Plan includes a reformulate_query step
@@ -119,16 +119,15 @@ class RuleController(Controller):
                 Default 0 — reformulation is opt-in.
             reformulation_confidence_floor: max retriever triage_score
                 below which compose_l2 is treated as "consensus failed"
-                — the gate then opens. Default 0.5, matching
-                XX_AGENTIC_IDEA §4.2's "no consensus AND max_conf < 0.5".
+                — the gate then opens. Default 0.5.
 
-        The current Plan model is static (controller emits one Plan
-        per bundle), so the v1 reformulation hook produces ONE
-        reformulated query — recorded in the trace as
+        Because the Plan model is static (controller emits one Plan
+        per bundle), the reformulation hook produces ONE reformulated
+        query — recorded in the trace as
         SkillOutput.extra["reformulated_query"]. Re-running retrievers
-        on it requires a live-retrieval mode (Phase 3); for now this
-        is an instrumentation hook + a measurement of how often the
-        reformulation gate would fire.
+        on it would require a live-retrieval mode; for now this is an
+        instrumentation hook + a measurement of how often the
+        reformulation gate fires.
         """
         self.registry = registry
         self.cheap_path_threshold = cheap_path_threshold
@@ -147,7 +146,7 @@ class RuleController(Controller):
         state: Any | None = None,
         config: dict[str, Any] | None = None,
     ) -> Plan:
-        del state, bundle    # v1 doesn't read either (Phase 1.12 will)
+        del state, bundle    # RuleController ignores; CapabilityAwareRuleController reads them
 
         # Apply per-call config overrides (don't mutate self).
         cfg = (config or {}).get("cheap_path", {})
@@ -199,11 +198,10 @@ class RuleController(Controller):
             ))
 
         # ------------------------------------------------------------------ reformulation (opt-in)
-        # Phase 2.3 — when max_reformulation_retries > 0 AND the
-        # reformulate_query skill is registered, emit it AFTER compose_l2
-        # with a gate that opens iff compose_l2 produced a low-confidence
-        # ranking (the agentic "L2 disagreed; try a reformulated query"
-        # signal from XX_AGENTIC_IDEA §4.2).
+        # When max_reformulation_retries > 0 AND the reformulate_query
+        # skill is registered, emit it AFTER compose_l2 with a gate that
+        # opens iff compose_l2 produced a low-confidence ranking — the
+        # "L2 disagreed; try a reformulated query" signal.
         if (
             self.max_reformulation_retries > 0
             and self._skill_runnable(REFORMULATE_QUERY, capabilities)
@@ -338,7 +336,7 @@ def _any_retriever_ran(trace: Trace, budget) -> bool:
 
 
 # ---------------------------------------------------------------------------
-# Reformulation gate (Phase 2.3)
+# Reformulation gate
 # ---------------------------------------------------------------------------
 
 

@@ -1,14 +1,13 @@
 """Plan + SkillInvocation — what the Controller emits, what the Runner executes.
 
-The controller policy lives in `agent.controller` (Phase 1.9). It
-inspects the bundle + capabilities + state and returns a `Plan`. The
-Runner (Phase 1.11) executes the Plan deterministically, populating
-the Trace as it goes.
+The controller policy lives in `agent.controller`. It inspects the
+bundle + capabilities + state and returns a `Plan`. The Runner
+(`agent.runner`) executes the Plan deterministically, populating the
+Trace as it goes.
 
 Plans are inspectable, hashable (via `plan_id`), and serialisable —
-they can be saved to disk for ablation re-runs or replay.
-
-Spec: `DOCS/docs7/AGENTIC-SYSTEM.md` §4.6.
+they can be saved to disk for ablation re-runs or replay. The
+`controller_name` field records which Controller produced the Plan.
 """
 
 from __future__ import annotations
@@ -106,7 +105,8 @@ class Plan:
     global_budget: Budget = field(default_factory=Budget)
     fallback_chains: dict[str, tuple[str, ...]] = field(default_factory=dict)
     # `controller_name` records which Controller produced the Plan —
-    # useful when we ablate over RuleController vs LearnedController later.
+    # used by ablations comparing RuleController, CapabilityAwareRuleController,
+    # and (future) LearnedController.
     controller_name: str = "rule"
     plan_id: str = ""
 

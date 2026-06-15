@@ -1,15 +1,11 @@
 """Shared harness builder — single source of truth for OB / WoL / OTel.
 
-Phase 3 prerequisite (task #101). Before this module, every smoke
-script (smoke_ob.py, smoke_wol.py, smoke_otel_demo.py) carried its
-own copy of `_build_registry()` + `_build_harness()`. They drifted
-during Phase 2 — the WoL and OTel smokes were stuck on the base
-RuleController while smoke_ob.py moved to CapabilityAwareRuleController
-+ 4 ReAct tools + RerankWithEvidenceSkill + ReformulateQuerySkill.
-
-This module collapses all three builders into one. The per-dataset
-differences are captured in `DatasetProfile` instances, picked by
-the `dataset_label` argument. Adding a new dataset = add one
+The single construction path used by every smoke script
+(`smoke_ob.py`, `smoke_wol.py`, `smoke_otel_demo.py`) and every
+Phase-3 analysis runner (`tool_ablation.py`, `budget_curve.py`,
+`pareto_sweep.py`, `skill_ablation.py`, `capability_mask_sweep.py`).
+Per-dataset differences live in `DatasetProfile` instances picked
+by the `dataset_label` argument. Adding a new dataset = add one
 `DatasetProfile` constant. No new code path elsewhere.
 
 Public API:

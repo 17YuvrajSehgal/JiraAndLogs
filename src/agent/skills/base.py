@@ -97,8 +97,9 @@ class MemoryView:
     Used as part of SkillCache keys so the cache stays correct when the
     memory composition changes (distractor injection, additions, etc.).
 
-    v1 implements this as a thin wrapper around a list of memory
-    issues; v2 may swap in a streaming reader for very large memories.
+    The current implementation is a thin wrapper around a list of memory
+    issues; a streaming reader could replace it for very large corpora
+    without changing the Skill ABC.
     """
 
     def __init__(
@@ -194,9 +195,9 @@ class Skill(ABC):
     The runner consults `can_invoke()` before `invoke()` — if False,
     the skill is silently skipped and the trace records why.
 
-    Skills must be **stateless and thread-safe** in v1. State across
-    bundles lives in the agent's StateLayer (Phase 1.12), not in skill
-    instances.
+    Skills must be **stateless and thread-safe**. State across
+    bundles lives in the agent's StateLayer (`state/state_layer.py`),
+    not in skill instances.
     """
 
     #: Registry key. Must be unique across all registered skills.

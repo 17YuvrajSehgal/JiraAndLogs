@@ -1,19 +1,25 @@
 """Agentic Incident Triage System.
 
-Top-level package for the agent system specified in
-`DOCS/docs7/AGENTIC-SYSTEM.md`. The package is organised by layer:
+Top-level package. Current architecture reference:
+`DOCS/docs8/AGENTIC-SYSTEM-V3.md`. The package is organised by layer:
 
-    agent.llm           — LLM provider abstraction (Phase 1.2)
-    agent.capabilities  — Capabilities + flag constants (Phase 1.4)
-    agent.types         — InputBundle, SkillOutput, AgentDecision, ... (Phase 1.4)
-    agent.budget        — Budget + BudgetSnapshot (Phase 1.4)
-    agent.plan          — Plan + SkillInvocation (Phase 1.4)
-    agent.trace         — Trace + TraceEvent (Phase 1.4)
-    agent.skills        — Skill registry (Phase 1.7)
-    agent.controller    — pluggable controller (Phase 1.9)
-    agent.runner        — plan executor (Phase 1.11)
-    agent.state         — cross-window state (Phase 1.12)
-    agent.eval_harness  — evaluation harness (Phase 1.13)
+    agent.types               — InputBundle, SkillOutput, AgentDecision
+    agent.budget              — Budget + BudgetSnapshot
+    agent.plan                — Plan + SkillInvocation
+    agent.trace               — Trace + TraceEvent
+    agent.capabilities        — Capabilities + flag constants
+    agent.capabilities_observer — observer that maps bundles to Capabilities
+    agent.tool_protocol       — ReAct ToolRequest / ToolResult contract
+    agent.skills              — Skill ABC + registry + concrete skills
+    agent.controller          — Controller ABC + RuleController + CapabilityAwareRuleController
+    agent.runner              — AgentRunner (plan executor)
+    agent.state               — StateLayer + WindowState + page suppression
+    agent.eval_harness        — six-rule apples-to-apples harness + metrics + ablation
+    agent.data_loaders        — per-dataset case loaders (OB / OTel Demo / WoL)
+    agent.data_lake           — RawRunDataLake (read-only telemetry fetcher for ReAct tools)
+    agent.llm                 — LLM provider abstraction (six providers)
+    agent.integrity           — GraphMetadata fingerprint / dataset-isolation safeguard
+    agent.harness_builder     — single source of truth for building a harness per dataset
 """
 
 from .budget import Budget, BudgetExhausted, BudgetSnapshot

@@ -1,28 +1,32 @@
-"""EvidenceRequestSkill — the v1 ReAct hook (per AGENTIC-SYSTEM.md §15.1).
+"""EvidenceRequestSkill — the ReAct evidence-fetcher base class.
 
 These skills are "tools" — they fetch evidence the agent didn't have
 at window-decoration time and inject it into the in-flight execution
 context so subsequent skills in the same Plan can read it.
 
-v1 design (per `DOCS/docs8/IMPLEMENTATION-PLAN.md` §5):
+Design:
   - Skill's `invoke()` calls `_fetch_evidence(bundle, ctx)` (concrete
     subclasses implement) to ask the DataLake for something.
   - Result is recorded as a `ToolResult` and appended to
     `ctx.extra[TOOL_RESULTS_KEY]`. Downstream skills read it from there.
   - SkillOutput.extra["tool_result"] also carries the result so the
     Trace captures it permanently.
+  - The base class handles failure-mode tagging (LOOPING / BUDGET_EXHAUSTED
+    / EMPTY / TOOL_ERROR), per-window loop budget enforcement, and trace
+    propagation uniformly — subclasses implement only `_fetch_evidence()`.
 
-Concrete v1 subclass shipped:
-  - `RequestPodEventsSkill` — fetches the k8s event list for the
-    bundle's `window_id` from `data/runs/<run_id>/raw/kubernetes/`.
+Concrete subclasses registered in the agent:
+  - `RequestPodEventsSkill` — k8s event list for the window's service.
+  - `RequestExtendedTraceWindowSkill` — extended Tempo trace summary.
+  - `RequestPodMetricsSkill` — Prometheus snapshot (CPU / mem / restart_delta).
+  - `RequestSimilarIncidentWindowSkill` — peer Jira tickets in the same
+    scenario_family.
 
-Future tools (Phase 2 follow-ups, same ABC):
-  - RequestExtendedTraceWindow, RequestPodMetrics,
-    RequestSimilarIncidentWindow.
-
-ReAct loop status:
-  v1 = controller decides when to invoke the tool (deterministic gate)
-  v2 = LLM decides via a separate "decide_next_tool" skill (deferred)
+Tool selection is controller-driven today: `CapabilityAwareRuleController`
+opens the gates for all four when retrieval consensus is low. A future
+LLM-emitted variant would replace static gating with a learned
+`decide_next_tool` policy; the protocol in `tool_protocol.py` already
+supports that extension without changes to this base class.
 """
 
 from __future__ import annotations

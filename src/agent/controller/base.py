@@ -5,13 +5,16 @@ the current cross-window state, it returns a `Plan` (an ordered list
 of `SkillInvocation`s + budget caps + fallback chains). The Runner
 takes that Plan and executes it deterministically.
 
-Two implementations are planned:
-  - `RuleController` (Phase 1.9) — hand-tuned threshold rule.
-  - `LearnedController` (v2) — small LogReg/MLP over the cheap-skill
-    outputs. Same Plan-shape output; the Runner doesn't know the
-    difference.
+Shipped subclasses:
+  - `RuleController` — hand-tuned cheap-first / escalate-on-uncertainty
+    policy emitting a single Plan with runtime gates.
+  - `CapabilityAwareRuleController` — subclass of RuleController that
+    branches on `(window_type, scenario_family, state, capabilities)`
+    to emit structurally distinct Plans per window-type.
 
-Spec: `DOCS/docs7/AGENTIC-SYSTEM.md` §6.
+Future hook: a `LearnedController` (small LogReg/MLP over cheap-skill
+outputs) would emit the same Plan-shape output; the Runner does not
+need to know the difference.
 """
 
 from __future__ import annotations
@@ -37,7 +40,7 @@ class Controller(ABC):
         bundle: InputBundle,
         capabilities: Capabilities,
         *,
-        state: Any | None = None,        # WindowState; Any to avoid Phase 1.12 dep
+        state: Any | None = None,        # ServiceStateView; Any to avoid state-layer import here
         config: dict[str, Any] | None = None,
     ) -> Plan:
         """Produce a Plan for one bundle.
@@ -46,7 +49,11 @@ class Controller(ABC):
             bundle: the InputBundle being processed.
             capabilities: output of the CapabilitiesObserver — what
                 evidence is available + verifier-helpfulness flag.
-            state: optional cross-window state (Phase 1.12); v1 ignores.
+            state: optional cross-window state (`ServiceStateView`).
+                `RuleController` ignores it; `CapabilityAwareRuleController`
+                consults it to detect page-suppression and to short-circuit
+                the plan when the same incident has been retrieved for
+                several consecutive windows.
             config: optional runtime config dict — typically the
                 `controller:` block from agent-config.yaml.
 

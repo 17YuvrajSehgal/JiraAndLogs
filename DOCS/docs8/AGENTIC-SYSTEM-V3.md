@@ -1,10 +1,12 @@
 # Agentic Incident Triage — System Plan v3 (Phase 2 closure)
 
-**Status.** Draft 2026-06-14, post-Phase-2. Successor to
+**Status.** Updated 2026-06-15 against `src/agent/` (post-Phase-2; Phase 3 engineering tasks #101–#105 now also shipped). Successor to
 [`DOCS/docs7/AGENTIC-SYSTEM.md`](../docs7/AGENTIC-SYSTEM.md). Reflects the
-**code that actually exists** in `src/agent/` after Phase 2 increments
-#1–#5 shipped (ReAct loop, 4 tools, rerank, failure-mode taxonomy,
-budget-bounded eval, tool-subset ablation).
+**code that actually exists** in `src/agent/`: Phase 2 increments
+#1–#5 (ReAct loop, 4 tools, rerank, failure-mode taxonomy,
+budget-bounded eval, tool-subset ablation) plus the Phase 3 plumbing
+work (shared `harness_builder.py`, runs_root parameterisation, per-dataset
+loader fetchable-marker fixes, smoke-script upgrades).
 
 **Paper framing.** The agentic system *is* the contribution. The TCH
 cascade is internal-only. Every claim ladders to one of: (a) the agent
@@ -1267,14 +1269,15 @@ The framework's value is partly in what it falsifies:
 
 | Dataset | Loader | Predictions location | Runs root | Notes |
 |---|---|---|---|---|
-| OB | `load_ob_cases` | `data/derived/global/2026-05-25-.../comparison/v2*/per-window-predictions.jsonl` | `data/runs/` | All 4 tools fire |
-| OTel Demo | `load_otel_demo_cases` | `data/derived/global/2026-06-09-.../comparison/` (TBD) | `data/otel-demo-runs/` | All 4 tools possible; cascade not yet run |
-| WoL | `load_wol_cases` | `data/derived/global/2026-06-11-.../tch-lite-refit/*-predictions.jsonl` | (n/a) | Only `peers` tool applicable; verifier structurally skipped |
+| OB | `load_ob_cases` (`data_loaders/ob_loader.py`) | `data/derived/global/2026-05-25-.../comparison/v2*/per-window-predictions.jsonl` | `data/runs/` | All 4 tools fire; sets all `*_fetchable` markers on `bundle.extra` |
+| OTel Demo | `load_otel_demo_cases` (`data_loaders/otel_demo_loader.py:278`) | `data/derived/global/2026-06-09-.../comparison/` (TBD) | `data/otel-demo-runs/` | Loader sets `k8s_events_fetchable`, `trace_summary_fetchable`, `metric_snapshots_fetchable` — all 4 tools fire when cascade predictions exist |
+| WoL | `load_wol_cases` (`data_loaders/wol_loader.py:256`) | `data/derived/global/2026-06-11-.../tch-lite-refit/*-predictions.jsonl` | (n/a) | Loader sets `extra={}` deliberately — the 3 telemetry tools auto-drop on missing flags; only `request_similar_incident_window` applies; verifier structurally skipped via `VERIFIER_KNOWN_HELPFUL` calibration |
 
 The loader's responsibility is to set the right `bundle.extra`
 markers so the capabilities observer fires the right flags.
-Phase 3 task #103/104 patches the OTel + WoL loaders to set
-`*_fetchable` markers (or omit them, in WoL's case).
+This wiring is exercised by `harness_builder.build_harness_for_dataset(...)`
+(`src/agent/harness_builder.py`; see §20.1), which is the single
+construction path used by every smoke and analysis script.
 
 ---
 
@@ -1284,11 +1287,13 @@ Phase 3 task #103/104 patches the OTel + WoL loaders to set
 
 ### 19.1 Smoke runners
 
+All three smokes now construct their runner via `harness_builder.build_harness_for_dataset(...)`, so they share the same controller (`CapabilityAwareRuleController`), the same ReAct tool registration path, and the same failure-mode taxonomy. The per-dataset behaviour difference comes entirely from the loader's `bundle.extra` markers (§18).
+
 | Script | Dataset | Phase 2 ready? |
 |---|---|---|
 | `smoke_ob.py` | OB | ✓ — all 4 tools + ReAct + failure-mode + budget cap |
-| `smoke_wol.py` | WoL | ✗ — uses base `RuleController`; needs upgrade |
-| `smoke_otel_demo.py` | OTel Demo | ✗ — uses base `RuleController`; needs upgrade |
+| `smoke_wol.py` | WoL | ✓ — uses `CapabilityAwareRuleController` via `harness_builder`; only `request_similar_incident_window` fires (the other 3 tools auto-drop on missing flags); verifier structurally skipped |
+| `smoke_otel_demo.py` | OTel Demo | ✓ — uses `CapabilityAwareRuleController` via `harness_builder`; all 4 tools possible when cascade predictions land |
 
 ### 19.2 Analysis scripts
 
@@ -1325,13 +1330,22 @@ Phase 3 task #103/104 patches the OTel + WoL loaders to set
 
 ### 20.1 Code work (engineering, not research)
 
+Tasks #101–#105 from the original Phase 3 list have shipped since the V3 draft. The remaining engineering work is RQ-driven analysis tooling.
+
+**Shipped since the original V3 draft:**
+
+| Item | Status | Where it landed |
+|---|---|---|
+| Shared `harness_builder.py` | ✓ shipped | `src/agent/harness_builder.py` — used by `smoke_ob.py`, `smoke_wol.py`, `smoke_otel_demo.py`, `capability_mask_sweep.py`, `tool_ablation.py`, `skill_ablation.py`, `pareto_sweep.py`, `budget_curve.py` |
+| `runs_root` plumbing | ✓ shipped | `runs_root_override` parameter on `build_harness_for_dataset(...)` flows to `RawRunDataLake(runs_root=...)` |
+| OTel Demo loader fetchable markers | ✓ shipped | `data_loaders/otel_demo_loader.py:278` sets `k8s_events_fetchable` / `trace_summary_fetchable` / `metric_snapshots_fetchable` |
+| WoL loader peers-only markers | ✓ shipped | `data_loaders/wol_loader.py:256` sets `extra={}` deliberately; the 3 telemetry tools auto-drop on missing flags |
+| WoL + OTel smokes upgrade | ✓ shipped | Both scripts now route through `harness_builder` and exercise `CapabilityAwareRuleController` + the ReAct registration path |
+
+**Still deferred:**
+
 | Item | Why deferred | Phase 3 task # |
 |---|---|---|
-| Shared `harness_builder.py` | Three smokes have drifted; one builder eliminates that | 101 |
-| `runs_root` plumbing | OTel Demo uses `data/otel-demo-runs/` | 102 |
-| OTel Demo loader fetchable markers | Without it the 4 tools no-op | 103 |
-| WoL loader peers-only markers | Other 3 tools should auto-drop on WoL | 104 |
-| WoL + OTel smokes upgrade | Currently pre-Phase-2 | 105 |
 | Cost-baseline counterfactual script | RQ-A2 needs "always-everything" comparison | 114 |
 | Capability-mask harness | RQ-C4 doesn't have one yet | 117 |
 
@@ -1366,7 +1380,7 @@ Every deferred upgrade has a documented hook:
   - [`results/ob/3.6-failure-mode-catalog/SUMMARY.md`](../../results/ob/3.6-failure-mode-catalog/SUMMARY.md) — RQ-D6 closure
   - [`results/ob/3.7-budget-curve/SUMMARY.md`](../../results/ob/3.7-budget-curve/SUMMARY.md) — RQ-A7 closure (non-monotone)
   - [`results/ob/3.8-tool-ablation/SUMMARY.md`](../../results/ob/3.8-tool-ablation/SUMMARY.md) — peers-dominant finding
-- **Test suite**: `src/agent/tests/` — 18 modules, 439 tests passing.
+- **Test suite**: `src/agent/tests/` — 19 modules (+1 since the original draft).
 - **Source roots referenced in this doc**:
   - `src/agent/types.py`, `plan.py`, `trace.py`, `budget.py`, `capabilities.py`, `capabilities_observer.py`, `tool_protocol.py`
   - `src/agent/skills/base.py`, `registry.py`, `cache.py`, `predictions_backed.py`, `retrievers.py`, `composition.py`, `evidence_request.py`, `rerank_with_evidence.py`, `reformulate_query.py`
@@ -1378,10 +1392,13 @@ Every deferred upgrade has a documented hook:
   - `src/agent/llm/base.py`, `providers/*.py`
   - `src/agent/integrity/graph_metadata.py`
   - `src/agent/data_loaders/__init__.py`, `ob_loader.py`, `wol_loader.py`, `otel_demo_loader.py`
+  - `src/agent/harness_builder.py`
 
 ---
 
-*Generated 2026-06-14. v3 of the AITS system plan; reflects the
-code state after Phase 2 increments #1–#5 closed. Phase 3
-prerequisites and ordered task list live in
+*Originally drafted 2026-06-14. Last updated 2026-06-15 against `src/agent/`;
+Phase 2 increments #1–#5 closed, Phase 3 engineering tasks #101–#105
+(harness builder + loader fetchable-marker fixes + WoL/OTel smoke
+upgrades) also shipped. The remaining Phase 3 work is RQ-driven
+analysis tooling — see §20.1 and
 [`RESEARCH-QUESTIONS2.md`](RESEARCH-QUESTIONS2.md) §9.*

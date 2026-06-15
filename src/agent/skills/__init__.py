@@ -1,21 +1,25 @@
-"""Agent skills layer (Phase 1.6+).
+"""Agent skills layer.
 
-    skills.base     — Skill ABC, AgentContext, MemoryView, FailureMode
-    skills.cache    — SkillCache (content-addressed; ablation accelerator)
-    skills.registry — SkillRegistry + register_skill helper
+Infrastructure:
+    skills.base                — Skill ABC, AgentContext, MemoryView, FailureMode
+    skills.cache               — SkillCache (content-addressed; ablation accelerator)
+    skills.registry            — SkillRegistry + register_skill helper
+    skills.predictions_backed  — PredictionsBackedSkill base for cascade-derived retrievers
 
-Concrete skill classes live in this package (one per file, registered
-at import time) starting in Phase 1.7:
-
-    skills.triage_numeric           — HGB wrapper
-    skills.retrieve_dense           — BiEncoder wrapper
-    skills.retrieve_log_sequence    — LogSeq2Vec wrapper
-    skills.retrieve_hybrid_fusion   — Hybrid-RRF wrapper
-    skills.retrieve_knowledge_graph — KG-Retrieval wrapper
-    skills.verify_with_llm          — DiagnosisAgent wrapper
-    skills.extract_entities_llm     — KG-extractor wrapper
-    skills.reformulate_query        — new in v1
-    skills.compose_l2 / compose_triage / compose_novelty
+Concrete skill modules (each file registers one or more skills):
+    skills.retrievers           — triage_numeric, retrieve_dense,
+                                  retrieve_log_sequence, retrieve_hybrid_fusion,
+                                  retrieve_hybrid_fusion_llm,
+                                  retrieve_knowledge_graph, verify_with_llm
+    skills.composition          — compose_l2, compose_triage, compose_novelty
+    skills.extract_entities_llm — KG entity extractor (indexing-time only)
+    skills.reformulate_query    — bounded-action query reformulator
+    skills.evidence_request     — EvidenceRequestSkill base + 4 ReAct tools
+                                  (request_pod_events,
+                                   request_extended_trace_window,
+                                   request_pod_metrics,
+                                   request_similar_incident_window)
+    skills.rerank_with_evidence — consumes ReAct tool results to re-rank L2
 """
 
 from .base import (

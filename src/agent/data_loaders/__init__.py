@@ -1,14 +1,19 @@
 """Dataset loaders — produce `EvaluationCase`s from on-disk artifacts.
 
-Three datasets are supported (or will be); each gets its own loader that
-knows the directory layout + filename conventions. The output is always
-a list of `EvaluationCase` the harness can consume.
+One loader per dataset; each knows the directory layout + filename
+conventions for its source data. The output is always a list of
+`EvaluationCase` the harness can consume.
 
 Available loaders:
-  - `load_ob_cases` — Online Boutique (`<global_dir>/global-triage-examples.jsonl`
-    + `comparison/v2a-resplit/per-window-predictions.jsonl` for gold).
+  - `load_ob_cases` — Online Boutique (telemetry + synthetic Jira).
+  - `load_otel_demo_cases` — OpenTelemetry Demo (polyglot telemetry).
+  - `load_wol_cases` — World-of-Logs (real Apache Jira tickets, no
+    telemetry; sets `extra={}` so the 3 telemetry tools auto-drop).
 
-OTel Demo + WoL loaders will land in Phase 2.
+Each loader is also responsible for setting the right `bundle.extra`
+markers (`k8s_events_fetchable`, `trace_summary_fetchable`,
+`metric_snapshots_fetchable`) so the CapabilitiesObserver fires the
+right flags for ReAct-tool fetchability.
 """
 
 from .ob_loader import load_ob_cases

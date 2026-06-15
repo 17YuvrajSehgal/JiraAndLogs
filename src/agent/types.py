@@ -18,9 +18,11 @@ from typing import Any, Literal
 # ---------------------------------------------------------------------------
 # Triage decision enum
 # ---------------------------------------------------------------------------
-# Three-class enum reserved from day 1. v1 controller only emits the
-# first two; the third (`needs_review`) is wired up for the deferred
-# self-critique extension (XX_AGENTIC_IDEA.md §4.4).
+# Four states. `noise` / `ticket_worthy` are emitted by composition skills.
+# `needs_review` is the runner's graceful-degradation output when a plan
+# aborts before any composition output landed (runner.py near line 503).
+# `borderline` is emitted by the state layer when page suppression downgrades
+# a `ticket_worthy` decision tied to an already-open incident.
 
 TriageDecision = Literal["noise", "ticket_worthy", "needs_review", "borderline"]
 EvaluationMode = Literal["telemetry_diagnosis", "text_retrieval_generalisation"]
@@ -110,12 +112,21 @@ class InputBundle:
     """All evidence the agent has for one incident window.
 
     Every field except `window_id` and `dataset` is optional. The
-    Capabilities Observer (Phase 1.5) inspects which fields are
-    non-empty and produces a Capabilities set; the controller then
-    selects skills based on those flags.
+    `CapabilitiesObserver` (`capabilities_observer.py`) inspects which
+    fields are non-empty (or which `*_fetchable` markers `extra` carries)
+    and produces a Capabilities set; the controller then selects skills
+    based on those flags.
 
-    `extra` is a forward-compatible slot for evidence types we haven't
-    designed yet (e.g. ReAct request_more_evidence outputs in v3).
+    `extra` is a forward-compatible slot the loader and ReAct tools
+    populate. Current well-known keys:
+      - `k8s_events_fetchable` / `trace_summary_fetchable` /
+        `metric_snapshots_fetchable` — set by the data loader to tell
+        the observer the data lake has the raw JSON on disk even
+        though it isn't in the bundle.
+      - `tool_results` — list of `ToolResult` written by
+        `EvidenceRequestSkill` subclasses (see `tool_protocol.py`).
+      - `tool_call_history` — per-window record of `(tool, args_hash)`
+        calls, used for loop-detection and budget enforcement.
     """
 
     window_id: str
@@ -198,8 +209,8 @@ class InputBundle:
 
     def replace_extra(self, **kwargs: Any) -> "InputBundle":
         """Return a copy with the `extra` dict updated. Used by
-        EvidenceRequestSkill subclasses (the v3 ReAct hook) to attach
-        newly-fetched evidence without mutating the original bundle."""
+        `EvidenceRequestSkill` subclasses to attach newly-fetched
+        evidence without mutating the original bundle."""
         new_extra = {**self.extra, **kwargs}
         return dataclasses.replace(self, extra=new_extra)
 
@@ -255,9 +266,10 @@ class SkillOutput:
     """Uniform output of every skill.
 
     `triage_decision` is None when the skill doesn't make a triage call
-    (e.g. a pure retriever). `triage_decision="needs_review"` is
-    reserved for the deferred self-critique extension; v1 emits only
-    `noise` and `ticket_worthy`.
+    (e.g. a pure retriever). Composition skills emit `noise` or
+    `ticket_worthy`; the runner can also surface `needs_review` on plan
+    abort. `borderline` is reserved for state-layer page-suppression
+    output and is not emitted by skills directly.
 
     `evidence_used` lists which Capability flags the skill actually
     consumed — useful for the §9 ablation analysis ("did `verify` rely

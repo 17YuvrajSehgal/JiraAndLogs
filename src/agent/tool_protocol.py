@@ -1,31 +1,29 @@
-"""ReAct tool-calling protocol — Phase 2 of the smarter-agent plan.
+"""ReAct tool-calling protocol — evidence-fetcher data types and helpers.
 
 Defines the data types an `EvidenceRequestSkill` produces (ToolRequest)
 and consumes (ToolResult), plus the in-bundle slot
 (`bundle.extra["tool_results"]`) where fulfilled tool results live so
 downstream skills can read them.
 
-Design (per `DOCS/docs8/IMPLEMENTATION-PLAN.md` §5):
-
 A tool is a *skill that fetches evidence the agent didn't have at
-window-decoration time* — pod events, an extended trace window, a
-peer-incident retrieval, etc. The skill itself queries the data lake
-(no LLM in v1 — that's the v2 step). The result is stored in the
-bundle's `extra` dict under a well-known key, so subsequent skills
-(compose_l2, compose_triage, retrieve_*) can read it.
+window-decoration time* — pod events, an extended trace window, pod
+metrics, peer-incident retrieval. The skill queries the data lake
+(`RawRunDataLake`) and stores the result in the bundle's `extra` dict
+under a well-known key, so subsequent skills (rerank_with_evidence,
+compose_l2, compose_triage) can read it.
 
-Why this design (vs the §15.1 sketch in AGENTIC-SYSTEM.md):
+Why this design:
 - Keeps the runner unchanged. No "re-observe capabilities then
   re-invoke skill" loop. The runner just executes a Plan; tools are
   Skills like any other.
-- Bundle augmentation happens *in-skill* via `ctx.replace_bundle(...)`,
-  so the next skill in the same Plan automatically sees the new
-  evidence.
-- Future LLM-emitted tool requests can be layered on top: a future
-  `decide_next_tool` skill emits a ToolRequest in its SkillOutput,
-  and the controller's plan adds the corresponding EvidenceRequestSkill.
-  v1 just hardcodes "always run RequestPodEvents in the evidence
-  branch" — close enough to ReAct for evaluation purposes.
+- Bundle augmentation happens *in-skill* via mutation of
+  `ctx.extra[TOOL_RESULTS_KEY]`, so the next skill in the same Plan
+  sees the new evidence without runner involvement.
+- Tool selection is controller-driven today: `CapabilityAwareRuleController`
+  opens deterministic gates when retrieval consensus is low. A future
+  LLM-emitted variant slots in as a new controller subclass without
+  changes to this protocol — a `decide_next_tool` skill would emit a
+  ToolRequest the controller consumes when building its Plan.
 """
 
 from __future__ import annotations

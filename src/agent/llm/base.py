@@ -111,10 +111,10 @@ class LLMProviderConfig:
 # Telemetry hook
 # ---------------------------------------------------------------------------
 #
-# Phase 1.3 will register a TokenLogger here. For now we expose a simple
-# callback registration so the base.chat_json() invokes whatever's
-# registered when a call completes (success OR failure). Keeping it as a
-# free function means provider code stays oblivious to telemetry concerns.
+# A TokenLogger is registered here at runner startup; base.chat_json()
+# invokes whatever's registered when a call completes (success OR failure).
+# Keeping it as a free function means provider code stays oblivious to
+# telemetry concerns.
 
 
 _telemetry_hook: Callable[[dict[str, Any]], None] | None = None

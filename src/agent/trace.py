@@ -1,14 +1,14 @@
 """Trace + TraceEvent — the audit log of a single agent decision.
 
 The Runner appends a TraceEvent to the Trace for every notable step
-(plan_start, skill_start, skill_end, cache_hit, budget_check, fallback,
+(plan_start, skill_start, skill_end, skill_skipped_by_gate, cache_hit,
+budget_check_passed, budget_exceeded, skill_failed, fallback_triggered,
 plan_end). The final Trace is serialised to
-`data/agent_traces/<experiment>/<bundle_id>.json`.
+`<trace_root>/<experiment>/<bundle_id>.json`.
 
-Traces are the **substrate for** debugging, ablation analysis, and the
-v2 LearnedController's training data.
-
-Spec: `DOCS/docs7/AGENTIC-SYSTEM.md` §4.7.
+Traces are the **substrate for** debugging, paired-bootstrap and
+skill-ablation analysis, failure-mode cataloguing, distractor-sweep
+re-runs, and (future) learned-controller training-data construction.
 """
 
 from __future__ import annotations
