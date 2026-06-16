@@ -212,7 +212,7 @@ The budget curve is the strongest single illustration of the section's headline:
 \subsection{Capability-mask robustness}
 \label{sec:results:capmask}
 
-The capability-mask sweep tests the agent's graceful degradation: we strip named capability flags from the inspector's output before the controller emits a plan, then re-run the agent under the counterfactual condition. Of the eight masks tested, two move metrics. Removing the numeric-feature capability collapses triage accuracy by $11.7$ absolute points with $p < 10^{-4}$, replicating the skill-ablation finding through a different mechanism (the masked capability auto-drops the numeric classifier rather than removing it from the registry directly). Removing the trace-summary capability \emph{improves} Hit@1 by $0.30$ points (CI $[0.00, +0.91]$, $p = 0.65$, not significant)---the same negative-trace finding from a third angle. No other mask produces non-zero per-window deltas. The agent runs end-to-end on every mask; no crashes, no NaN outputs, and the controller's plan-identifier count stays at four across the entire grid.
+The capability-mask sweep tests the agent's graceful degradation: we strip named capability flags from the inspector's output before the controller emits a plan, then re-run the agent under the counterfactual condition. Of the eight masks tested, two move metrics. Removing the numeric-feature capability collapses triage accuracy by $\Delta = -0.117$ with $p < 10^{-4}$, replicating the skill-ablation finding through a different mechanism (the masked capability auto-drops the numeric classifier rather than removing it from the registry directly). Removing the trace-summary capability \emph{improves} Hit@1 by $\Delta = +0.0030$ (CI $[0.0000, +0.0091]$, $p = 0.65$, not significant)---the same negative-trace finding from a third angle. No other mask produces non-zero per-window deltas. The agent runs end-to-end on every mask; no crashes, no NaN outputs, and the controller's plan-identifier count stays at four across the entire grid.
 
 The triple-validation pattern (skill ablation, tool ablation, capability mask) on the numeric-feature finding is what gives us high confidence in the load-bearing claim: triage accuracy is carried by the numeric-feature classifier with $p < 10^{-4}$ from three independent mechanisms, and no other component reaches significance.
 
@@ -223,7 +223,7 @@ A reviewer's first question for any retrieval paper is whether the system beats 
 
 \begin{table}[ht]
   \centering
-  \caption{Naive-baseline comparison: BM25-only retrieval versus the agent, on the agent-evaluable subset of each test split.}
+  \caption{Naive-baseline comparison: BM25-only retrieval versus the agent, on the agent-evaluable subset of each test split. \dswol{} reports two evaluable counts: the smaller one applies to the agent (the cheap-path gate closes confidently on most windows, so few escalations fire), the larger one applies to the always-on cascade baseline.}
   \label{tab:bm25}
   \small
   \begin{tabular}{lrrrrr}
@@ -232,12 +232,12 @@ A reviewer's first question for any retrieval paper is whether the system beats 
     \midrule
     \dsob{}    & $331$ & $0.0514$ & $0.0876$ & $0.7583$ & $\mathbf{8.66\times}$ \\
     \dsotel{}  & $119$ & $0.3866$ & $0.5630$ & $0.7563$ & $1.34\times$ \\
-    \dswol{}   & $55$  & $0.0000$ & $0.6000$ & $0.8364$ & $1.39\times$ \\
+    \dswol{}   & $48$ (agent) / $276$ (cascade) & $0.004$ & $0.609$ & $1.000$ & $1.64\times$ \\
     \bottomrule
   \end{tabular}
 \end{table}
 
-On the synthetic dataset BM25 collapses to Hit@5 below $9\%$ because the humanised Jira tickets use vocabulary that does not match the telemetry-side evidence text; the agent's $0.7583$ is $8.66\times$ better. On the real-Apache-Jira dataset BM25 retrieves the gold ticket in the top-five $60\%$ of the time but \emph{never} as the top-one ($\text{Hit@1} = 0$), because keyword overlap alone is insufficient to disambiguate among same-project tickets; the agent's $0.7818$ Hit@1 makes the difference between a system that always asks the engineer to pick and one that puts the right answer first $78\%$ of the time. The cross-dataset replication is the subject of \S\ref{sec:cross-app}.
+On the synthetic dataset BM25 collapses to Hit@5 below $9\%$ because the humanised Jira tickets use vocabulary that does not match the telemetry-side evidence text; the agent's $0.7583$ is $8.66\times$ better. On the real-Apache-Jira dataset BM25 retrieves the gold ticket in the top-five $60.9\%$ of the time but almost \emph{never} as the top-one ($\text{Hit@1} = 0.004$), because keyword overlap alone is insufficient to disambiguate among same-project tickets; the agent's $0.958$ Hit@1 (a $245\times$ relative lift over BM25 at the rank-one cut) is the difference between a system that always asks the engineer to pick and one that puts the right answer first $96\%$ of the time. The cross-dataset replication is the subject of \S\ref{sec:cross-app}.
 
 \subsection{Operational metrics and failure modes}
 \label{sec:results:failures}
