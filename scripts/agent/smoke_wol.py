@@ -27,7 +27,7 @@ Usage:
     PYTHONPATH=src python scripts/agent/smoke_wol.py \\
         --global-dir data/derived/global/2026-06-11-wol-real-global \\
         [--limit 100] [--split test] [--cache-dir data/skill_cache] \\
-        [--output data/agent_runs/wol-smoke.json]
+        [--output results/wol-v2/agent-runs/wol-fulltest.json]
 
 The smoke asserts the RQ-A8 structural-skip property after the run:
 `verify_with_llm` must NOT appear in any case's invocations.
@@ -109,7 +109,6 @@ def main() -> None:
         include_verifier=args.include_verifier,
         use_state_layer=not args.no_state,
         max_tool_calls=args.max_tool_calls,
-        experiment_prefix="smoke",
     )
 
     print(f"[smoke_wol] running agent over {len(cases)} cases...")

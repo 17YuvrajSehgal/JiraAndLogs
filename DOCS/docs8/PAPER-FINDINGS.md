@@ -371,7 +371,7 @@ The capability-mask check confirms the fail-fast gate: removing
 re-run on v2 pending).
 
 → Cite: `data/derived/global/2026-06-15-wol-real-v2-global/tch-lite-refit/biencoder-mode3-results.json`
-+ `data/agent_runs/smoke-wol-v2-2026-06-16/report.json`.
++ `results/wol-v2/agent-runs/wol-v2-2026-06-16/report.json`.
 
 ### RQ-C4 (capability-mask robustness) — graceful degradation; v2 sharpens the WoL numbers
 

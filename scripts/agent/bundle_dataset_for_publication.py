@@ -41,7 +41,7 @@ DATASETS = {
         "raw_root_name": "otel-demo-runs",
     },
     "world-of-logs": {
-        "dataset_id": "2026-06-11-wol-real-global",
+        "dataset_id": "2026-06-15-wol-real-v2-global",   # v2 refresh 2026-06-16 (Phase B augmented)
         "raw_id_prefix": None,
         "raw_root_name": "wol",   # full dir; gzipped-only inclusion handled below
     },

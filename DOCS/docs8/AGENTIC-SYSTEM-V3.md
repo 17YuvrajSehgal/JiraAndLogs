@@ -183,8 +183,8 @@ system. Given one OB window
 
 10. **Trace persist.** `Trace.close(decision)` + `Trace.write_to(...)`
     serialises the whole event log to
-    `data/agent_runs/<experiment>/<window_id>.json`. The decision
-    is byte-replayable from this file.
+    `results/<dataset>/agent-runs/<experiment>/<window_id>.json`.
+    The decision is byte-replayable from this file.
 
 11. **Score.** EvalHarness compares `decision.matched_issue_ids`
     against `gold_matched_issue_ids` → `CaseResult` with
@@ -232,7 +232,7 @@ flowchart TB
 
     subgraph "L3 — Runner"
         RUN[AgentRunner<br/>execute + emit Trace]
-        TRACE[(Trace<br/>per-window events<br/>data/agent_runs/...)]
+        TRACE[(Trace<br/>per-window events<br/>results/&lt;dataset&gt;/agent-runs/...)]
         SCACHE[(SkillCache<br/>data/skill_cache/)]
     end
 
@@ -482,7 +482,7 @@ class Trace:
     finished_at: str | None
 
     def latest_output(skill_name) -> SkillOutput | None     # the rerank skill uses this
-    def write_to(output_root, experiment) -> Path           # persists to data/agent_runs/...
+    def write_to(output_root, experiment) -> Path           # persists to <output_root>/<experiment>/...
 ```
 
 `TraceEventKind` (`trace.py:26–37`): `plan_start`, `skill_start`,
@@ -891,11 +891,13 @@ it.
 ### 10.3 Trace persistence
 
 Traces are JSON files at
-`<trace_root>/<experiment>/<window_id>.json`. The smoke script
-sets `trace_root=data/agent_runs/v6/traces` (or v5, v7…), and
-`experiment="smoke-2026-05-25-dataset-v5-large-global"` is the
-sub-directory. Each file is a serialised `Trace` (events list +
-final decision + plan_id + timestamps).
+`<trace_root>/<experiment>/<window_id>.json`. The OB headline runs
+write to `results/ob/agent-runs/v{5,6,7-budget2,v7-verifier-on}/traces/<dataset_id>/`;
+the WoL v2 headline run writes to
+`results/wol-v2/agent-runs/wol-v2-2026-06-16/traces/<dataset_id>/`.
+`experiment` defaults to `fulltest-<dataset_id>` (see
+`harness_builder.py:423`). Each file is a serialised `Trace`
+(events list + final decision + plan_id + timestamps).
 
 ---
 
@@ -1172,7 +1174,7 @@ NEO4J_DATABASE=                         # auto-selected per dataset via Neo4jCon
 
 # Agent telemetry + cache
 AGENT_EXPERIMENT=
-AGENT_TRACE_DIR=data/agent_runs
+AGENT_TRACE_DIR=results/agent-runs       # legacy default was data/agent_runs; the move to results/ was 2026-06-16
 AGENT_CACHE_DIR=data/skill_cache
 AGENT_LLM_TELEMETRY_DIR=data/llm_telemetry
 ```
@@ -1196,7 +1198,7 @@ verifier_calibration:
   known_helpful_distributions:
     - 2026-05-25-dataset-v5-large-global       # OB
   known_harmful_distributions:
-    - 2026-06-11-wol-real-global                # WoL (Mode 3 §3.9)
+    - 2026-06-15-wol-real-v2-global             # WoL v2 (Mode 3 §3.9)
   default_policy: skip
 
 llm:
@@ -1219,7 +1221,7 @@ Per-dataset databases prevent cross-contamination:
 _DATASET_TO_DB = {
     "2026-05-25-dataset-v5-large-global":  "neo4j-ob",
     "2026-06-09-otel-demo-v1-global":      "neo4j-otel",
-    "2026-06-11-wol-real-global":          "neo4j-wol",
+    "2026-06-15-wol-real-v2-global":       "neo4j-wol",   # v2 (Phase B augmented; supersedes 2026-06-11 v1)
 }
 ```
 

@@ -9,7 +9,7 @@ class distribution 21/26/53). v1 numbers retained only as
 - OB: `results/ob/PHASE3-OB-SUMMARY.md` + `results/ob/{3.5..4.9}-*/SUMMARY.md`
 - OTel: `results/otel-demo/PHASE3-OTEL-SUMMARY.md` + `results/otel-demo/{3.6..4.8}-*/`
 - WoL v2 cascade: `data/derived/global/2026-06-15-wol-real-v2-global/tch-lite-refit/`
-- WoL v2 agent: `data/agent_runs/smoke-wol-v2-2026-06-16/{report,bootstrap}.json`
+- WoL v2 agent: `results/wol-v2/agent-runs/wol-v2-2026-06-16/{report,bootstrap}.json`
 
 ---
 
@@ -136,12 +136,12 @@ done
 PYTHONPATH=src python scripts/agent/smoke_wol.py \
     --global-dir data/derived/global/2026-06-15-wol-real-v2-global \
     --order-by-incident-time \
-    --output data/agent_runs/smoke-wol-v2-2026-06-16/report.json
+    --output results/wol-v2/agent-runs/wol-v2-2026-06-16/report.json
 
 PYTHONPATH=src python scripts/agent/bootstrap_predictions.py \
     --predictions data/derived/global/2026-06-15-wol-real-v2-global/tch-lite-refit/*.jsonl \
     --paired bi_encoder_retrieval hybrid_rrf_retrieval \
-    --output data/agent_runs/smoke-wol-v2-2026-06-16/bootstrap.json
+    --output results/wol-v2/agent-runs/wol-v2-2026-06-16/bootstrap.json
 ```
 
 ---

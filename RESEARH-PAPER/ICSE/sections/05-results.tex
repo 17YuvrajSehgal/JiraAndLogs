@@ -51,7 +51,7 @@ Three numbers in this table are load-bearing for the rest of the paper. First, H
 
 The headline cost claim is computed by comparing the agent's actual cost on the \dsob{} test split against an always-on cascade counterfactual in which every diagnostic primitive runs on every window (see \S\ref{sec:evaluation:baselines}). Costs are sourced from a per-skill table whose assumptions are documented in Appendix~A; the language-model verifier dominates the dollar axis at $\$0.0005$ per call and $1{,}969$ tokens.
 
-Table~\ref{tab:cost-vs-cascade} reports cost in two configurations. The \emph{verifier-off} configuration is the cheap-smoke default (the verifier is not registered, mostly because the smoke does not require the LM Studio service to be reachable). The \emph{verifier-on} configuration is the production-realistic one in which the always-on baseline does include the language-model verifier; this is the configuration the paper recommends as the headline cost result, because the verifier is the configuration that meaningfully matters in deployment.
+Table~\ref{tab:cost-vs-cascade} reports cost in two configurations. The \emph{verifier-off} configuration is the lightweight default used when the language-model service is unavailable (the verifier is not registered). The \emph{verifier-on} configuration is the production-realistic one in which the always-on baseline does include the language-model verifier; this is the configuration the paper recommends as the headline cost result, because the verifier is the configuration that meaningfully matters in deployment.
 
 \begin{table}[ht]
   \centering

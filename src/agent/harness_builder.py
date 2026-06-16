@@ -420,7 +420,7 @@ def build_harness_for_dataset(
     runs_root_override: Path | None = None,
     max_reformulation_retries: int = 1,
     cheap_path_threshold: float | None = None,
-    experiment_prefix: str = "smoke",
+    experiment_prefix: str = "fulltest",
 ) -> tuple[EvalHarness, ApplesToApplesContract]:
     """Build an EvalHarness for OB / WoL / OTel Demo from one entry point.
 
@@ -446,7 +446,10 @@ def build_harness_for_dataset(
             tests + ablations. Default None = use profile.runs_root.
         max_reformulation_retries: passed to CapabilityAwareRuleController.
         experiment_prefix: prefix for runner.experiment (used to name
-            the trace subdirectory). Default "smoke".
+            the trace subdirectory). Default "fulltest" — the smoke
+            scripts run the entire test split, so "smoke" was a misnomer
+            and is no longer the default. Pass a custom value here for
+            development sub-runs that genuinely are smoke tests.
 
     Returns:
         (harness, contract) tuple ready for `harness.evaluate(cases, contract=contract, ...)`.

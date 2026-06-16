@@ -127,7 +127,7 @@ For each component, include ONE phrase that captures *what changes when this is 
 | Tool Cache | "args_hash = sha256(args)[:16]; per-tool subdirs" |
 | StateLayer | "Per-service ring (size 12); rule: same top1 + same family + no recovery → suppress" |
 | AgentDecision | "evaluation_mode tag enforces apples-to-apples in eval harness" |
-| Trace | "Bit-replayable from `data/agent_runs/<exp>/<window_id>.json`" |
+| Trace | "Bit-replayable from `results/<dataset>/agent-runs/<exp>/<window_id>.json`" |
 | LLMProvider | "ABC — 6 concrete providers; one telemetry hook records every call" |
 
 ### 7.6 Renderable Mermaid blueprint

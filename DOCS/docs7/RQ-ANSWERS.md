@@ -1,5 +1,18 @@
 # RQ-ANSWERS — current findings on every research question
 
+> **⚠ LEGACY DOC (2026-06-13 snapshot).** This file is preserved for
+> historical reference. The **current** paper-ready RQ status lives in
+> [`DOCS/docs8/RQ-CLOSURE-TABLE.md`](../docs8/RQ-CLOSURE-TABLE.md) and
+> headline numbers in [`DOCS/docs8/PAPER-FINDINGS.md`](../docs8/PAPER-FINDINGS.md).
+>
+> **Path migration (2026-06-16).** Every `data/agent_runs/...` and
+> `data/agent_traces/...` reference below has been superseded by paths
+> under `results/<dataset>/agent-runs/` and `results/<dataset>/agent-traces/`.
+> Some artifact filenames cited here (`wol-distractor-sweep.json`,
+> `wol-mode3-bootstrap.json`, `cost-summary.json`, etc.) were planned
+> outputs that never materialised in their original form — see the
+> consolidated v2 layout under `results/wol-v2/` for the actual files.
+
 **Status as of 2026-06-13.** Companion to [`RESEARCH-QUESTIONS.md`](RESEARCH-QUESTIONS.md)
 and [`AGENTIC-SYSTEM.md`](AGENTIC-SYSTEM.md). One section per RQ.
 

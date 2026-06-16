@@ -299,7 +299,7 @@ Add the `evidence-gathering` branch (Phase 1 branch 7). Add per-family tool pref
 `scripts/agent/eval_budget_bounded.py`:
 - Re-run the agent with `max_tool_calls ∈ {0, 1, 2, 3}` on the same OB test split.
 - Report Hit@5 / Hit@1 / MRR / wall_time / $cost per budget setting.
-- Emit `data/agent_runs/ob-budget-bounded-curve.json`.
+- Emit `results/ob/agent-runs/ob-budget-bounded-curve.json`.
 
 This is the RQ-A7 paper figure.
 

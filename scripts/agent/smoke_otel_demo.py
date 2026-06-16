@@ -23,7 +23,7 @@ Usage:
     PYTHONPATH=src python scripts/agent/smoke_otel_demo.py \\
         --global-dir data/derived/global/2026-06-09-otel-demo-v1-global \\
         [--split test|validation|train] \\
-        [--limit 100] [--output data/agent_runs/otel-smoke.json]
+        [--limit 100] [--output results/otel-demo/agent-runs/otel-fulltest.json]
 
 If the cascade hasn't been run yet, the predictions-backed
 retrievers log warnings and skip themselves; the harness still
@@ -90,7 +90,6 @@ def main() -> None:
         include_verifier=args.include_verifier,
         use_state_layer=not args.no_state,
         max_tool_calls=args.max_tool_calls,
-        experiment_prefix="smoke",
     )
 
     print(f"[smoke_otel] running agent over {len(cases)} cases...")

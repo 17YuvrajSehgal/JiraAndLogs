@@ -1040,11 +1040,11 @@ done
 # 6. Re-run agent smoke + headline numbers
 python scripts/agent/smoke_wol.py \
     --global-dir data/derived/global/2026-06-15-wol-real-v2-global \
-    --experiment smoke-wol-v2-2026-06-15
+    --experiment wol-v2-2026-06-15
 
 # 7. Re-run bootstrap CIs on new predictions
 python scripts/agent/bootstrap_predictions.py \
-    --predictions-dir data/agent_runs/smoke-wol-v2-2026-06-15
+    --predictions-dir results/wol-v2/agent-runs/wol-v2-2026-06-15
 ```
 
 ### After the v2 dataset lands

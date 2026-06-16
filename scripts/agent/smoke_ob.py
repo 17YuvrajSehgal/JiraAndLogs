@@ -12,7 +12,7 @@ Usage:
         [--limit 100] \\
         [--split test] \\
         [--cache-dir data/skill_cache] \\
-        [--output data/agent_runs/ob-smoke-2026-06-12.json]
+        [--output results/ob/agent-runs/ob-fulltest-2026-06-12.json]
 
 Skip flags:
     --no-verifier        don't even register verify_with_llm (cheap smoke)
@@ -91,7 +91,6 @@ def main() -> None:
         include_verifier=args.include_verifier,
         use_state_layer=not args.no_state,
         max_tool_calls=args.max_tool_calls,
-        experiment_prefix="smoke",
     )
 
     print(f"[smoke_ob] running agent over {len(cases)} cases...")
