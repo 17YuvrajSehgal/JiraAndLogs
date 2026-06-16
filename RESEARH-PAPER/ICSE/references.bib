@@ -33,7 +33,7 @@
 %% Add entries as needed. The references list has no page limit at ICSE.
 
 %% ---------------------------------------------------------------------
-%% Active entries (uncommented, verified canonical metadata)
+%% System / dataset references (URLs + standards)
 %% ---------------------------------------------------------------------
 
 @inproceedings{cormack2009rrf,
@@ -69,37 +69,141 @@
 }
 
 %% ---------------------------------------------------------------------
-%% Keys referenced from paper sections — populate before submission.
-%% Listed by the section that uses them so they can be filled in batches.
-%%
-%% \cite{} keys to populate:
+%% A. Operational data + AIOps
+%% ---------------------------------------------------------------------
+
+@inproceedings{xu2009hdfs,
+  author    = {Xu, Wei and Huang, Ling and Fox, Armando and Patterson, David and Jordan, Michael I.},
+  title     = {Detecting large-scale system problems by mining console logs},
+  booktitle = {Proceedings of the ACM SIGOPS 22nd Symposium on Operating Systems Principles (SOSP)},
+  year      = {2009},
+  pages     = {117--132},
+}
+
+@inproceedings{oliner2007supercomputers,
+  author    = {Oliner, Adam and Stearley, Jon},
+  title     = {What supercomputers say: A study of five system logs},
+  booktitle = {37th Annual IEEE/IFIP International Conference on Dependable Systems and Networks (DSN)},
+  year      = {2007},
+  pages     = {575--584},
+}
+
+@article{notaro2021aiops,
+  author  = {Notaro, Paolo and Cardoso, Jorge and Gerndt, Michael},
+  title   = {A survey of {AIOps} methods for failure management},
+  journal = {ACM Transactions on Intelligent Systems and Technology},
+  year    = {2021},
+}
+
+%% ---------------------------------------------------------------------
+%% B. Retrieval / IR foundations
+%% ---------------------------------------------------------------------
+
+@article{robertson2009bm25,
+  author  = {Robertson, Stephen and Zaragoza, Hugo},
+  title   = {The Probabilistic Relevance Framework: {BM25} and Beyond},
+  journal = {Foundations and Trends in Information Retrieval},
+  year    = {2009},
+  volume  = {3},
+  number  = {4},
+  pages   = {333--389},
+}
+
+@inproceedings{reimers2019sbert,
+  author    = {Reimers, Nils and Gurevych, Iryna},
+  title     = {{Sentence-BERT}: Sentence Embeddings using {Siamese BERT}-Networks},
+  booktitle = {Proceedings of the 2019 Conference on Empirical Methods in Natural Language Processing (EMNLP)},
+  year      = {2019},
+  pages     = {3982--3992},
+}
+
+@inproceedings{karpukhin2020dpr,
+  author    = {Karpukhin, Vladimir and O{\u g}uz, Barlas and Min, Sewon and Lewis, Patrick and Wu, Ledell and Edunov, Sergey and Chen, Danqi and Yih, Wen-tau},
+  title     = {Dense Passage Retrieval for Open-Domain Question Answering},
+  booktitle = {Proceedings of the 2020 Conference on Empirical Methods in Natural Language Processing (EMNLP)},
+  year      = {2020},
+  pages     = {6769--6781},
+}
+
+@inproceedings{formal2021splade,
+  author    = {Formal, Thibault and Piwowarski, Benjamin and Clinchant, St{\'e}phane},
+  title     = {{SPLADE}: Sparse Lexical and Expansion Model for First Stage Ranking},
+  booktitle = {Proceedings of the 44th International ACM SIGIR Conference on Research and Development in Information Retrieval},
+  year      = {2021},
+  pages     = {2288--2292},
+}
+
+@article{nogueira2019rerank,
+  author  = {Nogueira, Rodrigo and Cho, Kyunghyun},
+  title   = {Passage Re-ranking with {BERT}},
+  journal = {arXiv preprint arXiv:1901.04085},
+  year    = {2019},
+}
+
+%% ---------------------------------------------------------------------
+%% C. RAG / tool-using LLM agents
+%% ---------------------------------------------------------------------
+
+@inproceedings{lewis2020rag,
+  author    = {Lewis, Patrick and Perez, Ethan and Piktus, Aleksandra and Petroni, Fabio and Karpukhin, Vladimir and Goyal, Naman and K{\"u}ttler, Heinrich and Lewis, Mike and Yih, Wen-tau and Rockt{\"a}schel, Tim and Riedel, Sebastian and Kiela, Douwe},
+  title     = {Retrieval-Augmented Generation for Knowledge-Intensive {NLP} Tasks},
+  booktitle = {Advances in Neural Information Processing Systems (NeurIPS)},
+  year      = {2020},
+}
+
+@inproceedings{yao2023react,
+  author    = {Yao, Shunyu and Zhao, Jeffrey and Yu, Dian and Du, Nan and Shafran, Izhak and Narasimhan, Karthik and Cao, Yuan},
+  title     = {{ReAct}: Synergizing Reasoning and Acting in Language Models},
+  booktitle = {International Conference on Learning Representations (ICLR)},
+  year      = {2023},
+}
+
+@inproceedings{schick2023toolformer,
+  author    = {Schick, Timo and Dwivedi-Yu, Jane and Dess{\`i}, Roberto and Raileanu, Roberta and Lomeli, Maria and Hambro, Eric and Zettlemoyer, Luke and Cancedda, Nicola and Scialom, Thomas},
+  title     = {Toolformer: Language Models Can Teach Themselves to Use Tools},
+  booktitle = {Advances in Neural Information Processing Systems (NeurIPS)},
+  year      = {2023},
+}
+
+@article{izacard2023atlas,
+  author  = {Izacard, Gautier and Lewis, Patrick and Lomeli, Maria and Hosseini, Lucas and Petroni, Fabio and Schick, Timo and Dwivedi-Yu, Jane and Joulin, Armand and Riedel, Sebastian and Grave, Edouard},
+  title   = {{Atlas}: Few-shot Learning with Retrieval Augmented Language Models},
+  journal = {Journal of Machine Learning Research},
+  year    = {2023},
+  volume  = {24},
+  number  = {251},
+  pages   = {1--43},
+}
+
+%% ---------------------------------------------------------------------
+%% D. Cost-aware cascaded inference
+%% ---------------------------------------------------------------------
+
+@inproceedings{viola2001cascade,
+  author    = {Viola, Paul and Jones, Michael},
+  title     = {Rapid Object Detection using a Boosted Cascade of Simple Features},
+  booktitle = {Proceedings of the IEEE Computer Society Conference on Computer Vision and Pattern Recognition (CVPR)},
+  year      = {2001},
+}
+
+@inproceedings{teerapittayanon2016branchynet,
+  author    = {Teerapittayanon, Surat and McDanel, Bradley and Kung, H. T.},
+  title     = {{BranchyNet}: Fast Inference via Early Exiting from Deep Neural Networks},
+  booktitle = {23rd International Conference on Pattern Recognition (ICPR)},
+  year      = {2016},
+  pages     = {2464--2469},
+}
+
+%% ---------------------------------------------------------------------
+%% Keys still to populate (uncomment + verify metadata before citing):
 %%
 %%   §2 background:
-%%     hdfs-dataset            (Xu et al., SOSP 2009 — "Detecting large-scale system problems by mining console logs")
-%%     bgl-dataset             (Oliner & Stearley, DSN 2007 — "What supercomputers say: A study of five system logs")
-%%     thunderbird-dataset     (same as bgl-dataset entry; verify provenance)
 %%     tawos                   (Tawosi et al. — TAWOS dataset paper; verify venue/year)
 %%
 %%   §9 related — log anomaly detection:
 %%     drain                   (He et al., ICWS 2017 — "Drain: an online log parsing approach with fixed depth tree")
 %%     deeplog                 (Du et al., CCS 2017 — "DeepLog: Anomaly detection and diagnosis from system logs through deep learning")
 %%     loganomaly              (Meng et al., IJCAI 2019)
-%%     metalog                 (verify venue/year)
-%%
-%%   §9 related — AIOps:
-%%     aiops-survey            (e.g., Bogatinovski et al., ACM CSUR 2022)
-%%     incident-routing        (Microsoft / Google production-AIOps; verify specific paper)
-%%     incident-clustering     (same; verify)
-%%
-%%   §9 related — retrieval / RAG:
-%%     sentencetransformers    (Reimers & Gurevych, EMNLP 2019 — "Sentence-BERT")
-%%     dpr                     (Karpukhin et al., EMNLP 2020 — "Dense passage retrieval for open-domain question answering")
-%%     colbert                 (Khattab & Zaharia, SIGIR 2020)
-%%     ms-marco-reranker       (Nogueira & Cho, arXiv 2019 — passage re-ranking with BERT)
-%%     monobert                (same; verify which to cite)
-%%     splade                  (Formal et al., SIGIR 2021 — "SPLADE: Sparse lexical and expansion model for first stage ranking")
-%%     rag-lewis               (Lewis et al., NeurIPS 2020 — "Retrieval-augmented generation for knowledge-intensive NLP tasks")
-%%     atlas                   (Izacard et al., 2022 — "Atlas: Few-shot learning with retrieval-augmented language models")
 %%
 %%   §9 related — KG from text:
 %%     kg-from-text            (representative survey or anchor paper)
