@@ -78,7 +78,7 @@ class VerifierCalibration:
           known_helpful_distributions:
             - 2026-05-25-dataset-v5-large-global   # OB
           known_harmful_distributions:
-            - 2026-06-11-wol-real-global            # WoL (Mode 3 §3.9)
+            - 2026-06-15-wol-real-v2-global         # WoL v2 (Mode 3 §3.9)
           default_policy: skip
     """
 

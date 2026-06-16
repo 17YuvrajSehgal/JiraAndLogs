@@ -70,7 +70,7 @@ The loader's one job: produce the right bundle shape so the capabilities observe
 | Metric snapshots | ✓ | ✓ | ✗ |
 | Memory text (Jira corpus) | ✓ | ✓ | ✓ |
 
-WoL is "text-only" — that's why it's the strongest test of the agent's generalization: it has the **least** evidence and still hits the highest Hit@1 (0.7818), Hit@5 (0.8364), and triage accuracy (0.9342).
+WoL is "text-only" — that's why it's the strongest test of the agent's generalization: it has the **least** evidence and still hits the highest retrieval numbers — WoL v2: Hit@1 = 0.958, Hit@5 = 1.000. Triage accuracy is the honest negative: 0.164 baseline (below the 0.496 majority-class floor), reflecting the text-only limitation; the `dense_only` configuration recovers triage to 0.921. See `PAPER-FINDINGS.md` for the WoL v2 numbers and `RQ-CLOSURE-TABLE.md` row C1 for cross-dataset Hit@5.
 
 **Citations.**
 - `InputBundle` definition: `src/agent/types.py:109`
@@ -935,6 +935,217 @@ Same retrieval claim as before, but now joined by a defensible triage claim — 
 - WoL build script — add a `resolution` filter here: `scripts/research-lab/build_wol_real_corpus.py:46–94`.
 - Source archive (2.7M Jira issues + 800K GitHub + 2.7M SO): `data/wol/WoL_v1-2025-11-10.archive.gz` per `data/wol/README.md`.
 - Mode 3 design rationale: `data/derived/global/2026-06-11-wol-real-global/README.md` §"Splits" + §"Known limitations".
+
+---
+
+## Q6 — LOCKED PLAN (2026-06-15)
+
+After verifying Mongo capacity per bucket per project, §6.1–§6.9 is now **locked** with these specifics. Build script: `scripts/research-lab/build_wol_real_corpus_v2.py`.
+
+### Decisions made via AskUserQuestion
+
+| Question | Decision |
+|---|---|
+| What is "regular data"? | **In-domain non-bug Jira** — same 7 Apache projects, issuetype ∈ {Improvement, New Feature, Question, Documentation, Wish}. Labeled `noise`. |
+| Target ratio | **Match OB** (21 : 25 : 54). Keep 2000 ticket_worthy; add ~2400 borderline + ~5100 noise → ~9500 total. |
+| Family scope | **Same 7 Apache only** — Spark, Cassandra, HBase, Flink, Ambari, Kafka, MariaDB-Server. |
+| Duplicate-link clustering (§6.6) | **YES, in-scope** — Jira `is duplicate of` / `Cloners` / `Cause` link types collapse multi-ticket clusters under a shared `incident_episode_id`. |
+
+### Measured Mongo capacity (real counts, 2026-06-15)
+
+Per-project capacity with existing quality filters (`pred_uncertainty ≤ 0.05`, `desc ≥ 200 chars`, `log_msgs ≥ 1` for Bug rows; logs filter dropped for non-Bug rows since regular Improvement/Question/Documentation tickets often have no logs):
+
+```
+BUCKET                              Spark Cassan  HBase  Flink Ambari  Kafka MariaDB  TOTAL
+-------------------------------------------------------------------------------------------
+borderline_duplicate                  453    402    236    363     78    159    318   2009
+borderline_incomplete                 527      8     16      4      2      3    150    710
+borderline_cantrepro                  204    213    124    189     31     60    145    966
+noise_wontfix                         128     88     88    101     16     50    141    612
+noise_invalid                         215    130    170     58     33     40      0    646
+noise_notabug                          23     13      6     56      2     27    293    420
+noise_notaproblem                     441    206     91    164     31     73      0   1006
+regular_improvement                   688    435    317    409     51    183      0   2083
+regular_newfeature                     38     14     14     24      1      5      0     96
+regular_question                      111      0      0      0      0      0      0    111
+regular_docs                           24      0      0      0      2      0      0     26
+regular_wish                           11      0      1      0      1      6      0     19
+-------------------------------------------------------------------------------------------
+BORDERLINE TOTAL: 3,685   (target 2,400 — 1.5x headroom)
+NOISE + REGULAR : 5,019   (target 5,100 — essentially at ceiling)
+```
+
+**Two capacity gotchas the build script handles:**
+
+1. **MariaDB-Server has zero non-Bug issuetypes.** It doesn't use the Improvement / Question / Documentation / Wish workflow in its Jira project. The build script's `_distribute_quota()` redistributes MariaDB's regular-data quota to projects with headroom (mostly Spark + Cassandra + Flink + HBase).
+2. **Ambari is thin everywhere.** 248 total capacity vs an OB-ratio target of ~938. The script caps at availability; expect the val split to be slightly lighter on Ambari than strict-stratification would predict.
+
+### What the build script does, end-to-end
+
+`scripts/research-lab/build_wol_real_corpus_v2.py augment --source-global-dir <v1> --out-global-dir <v2>`:
+
+1. **Copy v1 invariants** — `jira-memory-corpus.jsonl` (unchanged), `jira-shadow-humanized-v2/`, `distractors/`, `novelty-queries/`, `v2_kg_extractions/` (memory-side), `triage-feature-columns.json`, priority mapping.
+2. **Harvest Mongo** — 12 bucket types × 7 projects = 84 pool extractions. Each cached at `<out>/.pool_cache/<bucket>/<project>.jsonl`. Subsequent runs reuse the cache.
+3. **Distribute quotas** — borderline target split across the 3 resolution sub-buckets proportional to capacity; noise budget split 55/45 between resolution-noise (4 sub-buckets) and regular-noise (5 sub-buckets). Within each sub-bucket, projects get their OB-ratio share, with deficit redistribution.
+4. **Sample + field-map** — `random.Random(seed=42)` for determinism. Each sampled doc passes through `map_to_triagewindow_v2()` which mirrors v1's `map_to_triagewindow` but accepts `triage_label` as a parameter and falls back to `summary + description` when `log_msgs` is empty (regular non-Bug data).
+5. **Cluster duplicate-links** — union-find over **Jira `key`** (e.g. `SPARK-13326`). Edges come from `fields.issuelinks` with link type ∈ {Duplicate, Cloners, Cause, Caused, Caused by}. Only edges where both endpoints survived sampling produce a merged cluster.
+6. **Concatenate JSONL** — v1's 2000 rows verbatim + ~7500 new rows → `global-triage-examples.jsonl` (~9500 rows total).
+7. **Update split manifest** — family assignment unchanged (Spark/Cassandra/HBase/Flink → train, Ambari → val, Kafka/MariaDB-Server → test); `label_counts_by_split` regenerated per the new label distribution.
+8. **Regenerate gold matchings** — v1 ticket_worthy rows keep their gold; new borderline/noise rows get **empty `matched_memory_issue_ids`**. Eval harness treats empty gold as "this window doesn't contribute to Hit@K aggregation" (mean-with-filter); triage and novelty metrics still apply normally.
+9. **Write metadata + README** — full provenance, label-counts table, list of deferred follow-up work.
+
+### What stays unchanged in v2 — by design
+
+- **Memory corpus** (`jira-memory-corpus.jsonl`) — still 2000 ticket_worthy past tickets. Noise/borderline/regular queries are NOT in memory (mirrors OB: `noise` and `observation_window` queries don't generate Jira tickets to retrieve against). The agent's job on a noise query is to fail-fast: low retrieval confidence → emit `triage = noise`.
+- **Family assignment** — Spark/Cassandra/HBase/Flink → train, Ambari → val, Kafka/MariaDB-Server → test. Same leave-one-domain-out structure.
+- **Memory-side artifacts** — `jira-shadow-humanized-v2/`, `v2_kg_extractions/`, `triage-feature-columns.json`, `wol-priority-mapping.json`.
+- **Distractor pool** (300 off-topic) and **novelty queries** (800 OOD) — independent of Mode 3 augmentation; copied as-is.
+
+### Deferred work (run separately after build completes)
+
+| Step | Why deferred | How long | Command |
+|---|---|---|---|
+| Re-extract KG entities over new ~7500 rows | LLM pass is multi-hour; not blocking smoke test | ~3 hours | `python scripts/agent/extract_window_entities.py --global-dir <v2>` |
+| Re-run cascade predictions on new test split | Required for BiEncoder/Hybrid-RRF/KG/LogSeq2Vec headline numbers | ~6 wall hours | `python scripts/research-lab/run_{biencoder,hybrid_rrf,kg_retrieval,logseq2vec,bm25}_wol_mode3.py --global-dir <v2>` |
+| Re-run agent smoke + bootstrap CIs | Headline numbers regenerate | ~30 min after cascade | `python scripts/agent/smoke_wol.py --global-dir <v2>` then `bootstrap_predictions.py` |
+
+### Execution checklist
+
+```bash
+# 1. Verify wol-mongo container is up
+docker ps --filter "name=wol-mongo"
+
+# 2. Run the augment (Mongo harvest + sample + field-map + cluster + write)
+PYTHONIOENCODING=utf-8 PYTHONUTF8=1 python scripts/research-lab/build_wol_real_corpus_v2.py augment \
+    --source-global-dir data/derived/global/2026-06-11-wol-real-global \
+    --out-global-dir    data/derived/global/2026-06-15-wol-real-v2-global
+
+# 3. Sanity-check the output dataset (label distribution)
+python -c "import json,collections; \
+c=collections.Counter(json.loads(l)['triage_label'] \
+  for l in open('data/derived/global/2026-06-15-wol-real-v2-global/global-triage-examples.jsonl')); \
+print(dict(c))"
+# Expected: {'ticket_worthy': 2000, 'borderline': ~2400, 'noise': ~5100}
+
+# 4. (Deferred ~3hr) Re-run KG extraction over new rows
+python scripts/agent/extract_window_entities.py \
+    --global-dir data/derived/global/2026-06-15-wol-real-v2-global
+
+# 5. (Deferred ~6hr — can run overnight) Re-run cascade
+for pipe in biencoder hybrid_rrf kg_retrieval logseq2vec bm25; do
+    python scripts/research-lab/run_${pipe}_wol_mode3.py \
+        --global-dir data/derived/global/2026-06-15-wol-real-v2-global
+done
+
+# 6. Re-run agent smoke + headline numbers
+python scripts/agent/smoke_wol.py \
+    --global-dir data/derived/global/2026-06-15-wol-real-v2-global \
+    --experiment smoke-wol-v2-2026-06-15
+
+# 7. Re-run bootstrap CIs on new predictions
+python scripts/agent/bootstrap_predictions.py \
+    --predictions-dir data/agent_runs/smoke-wol-v2-2026-06-15
+```
+
+### After the v2 dataset lands
+
+The §5.7 reframing recommendations get **replaced** because the dataset itself becomes triage-evaluable:
+
+| Doc | Old wording | New wording (post-v2) |
+|---|---|---|
+| PAPER-FINDINGS.md §"World of Logs" | "n=55 evaluable; triage_acc=0.9342 highest of 3 datasets" | "n_eval = 304 + ~7500 evaluable across 3 classes; trivial baseline triage_acc = 0.54 (OB-matched); agent triage_acc = X" |
+| PAPER-FINDINGS.md §A4 page suppression | "1.000 universal across 3 datasets" | "1.000 OB / 1.000 OTel / X.XXX WoL-v2 (Y multi-ticket clusters)" |
+| RQ-CLOSURE-TABLE.md row A4 | "1.000 ✓ 3/3 universal" | "1.000 OB/OTel; WoL-v2 measured non-trivially via Jira link clustering" |
+
+When the v2 numbers come in, the WoL section becomes a **load-bearing** triage + suppression result, not just a retrieval result. Both red flags from §5 close.
+
+**Citations.**
+- Build script: `scripts/research-lab/build_wol_real_corpus_v2.py`
+- Measured Mongo counts (this section): live Mongo query 2026-06-15.
+- Existing v1 build patterns reused: `scripts/research-lab/build_wol_real_corpus.py:179–504` (aggregation pipeline, `sample_per_project`, field mappers).
+- Triage decision enum: `src/agent/types.py` — confirms `noise` and `borderline` are existing labels, no schema change needed.
+
+---
+
+## Q5 — OUTCOME (2026-06-16, post-v2)
+
+Phase B v2 ran end-to-end. Real outcomes against the Q5 red flags:
+
+### Red flag #1 — single-class triage / trivial baseline = 1.000 → RESOLVED, with a new honest finding
+
+**Resolved:** v2's class distribution is now ticket_worthy / borderline / noise = 21.4% / 25.7% / 52.9% — near-perfect match for OB ratio. Trivial single-class baseline drops to 0.214 on the full dataset (was 1.000 on v1) and **0.496 on the test split majority class** (always-predict-noise).
+
+**But v2 surfaced a new honest finding** the v1 single-class dataset could not have shown:
+
+- **Agent triage accuracy = 0.164**, BELOW all three trivial single-class baselines (0.496 noise, 0.320 borderline, 0.184 ticket_worthy).
+- Mechanism: WoL has no telemetry → `triage_numeric` doesn't fire → `compose_triage` falls back to retrieval-confidence → rich 2000-ticket memory yields high-confidence matches for borderline / noise queries too → 901/1648 cases (54.7%) get paged as ticket_worthy.
+- This is a **measured weakness of the text-only triage path** — not a dataset artefact. The agent's retrieval lane is operating at Hit@5 = 1.000; the failure is purely in the triage composition.
+- Goes into the paper's "Discussion / honest framing" section, not the headline. Future work: learned text-classifier head OR memory-novelty-aware threshold on retrieval confidence.
+
+### Red flag #2 — pages/incident = 1.000 structurally trivial → RESOLVED substantively
+
+- v1: 18 suppressions over 304 windows (each its own 1-window incident). 1.000 pages/incident was structurally trivial.
+- **v2: 510 suppressions over 1648 windows; 901 distinct incidents.** Pages/incident = 1.000 is now substantive — the StateLayer suppression rule operates over real multi-window incident sequences produced by the Jira `is duplicate of` link union-find (90 multi-ticket clusters at build time, expanded via state-layer tracking to 510 actual suppression events).
+- The "1.000 universal across 3 datasets" claim is now genuinely load-bearing on all three.
+
+### Red flag #3 — plan diversity = 1 → MITIGATED (1 → 2)
+
+- v1: 1 plan ID across 304 windows.
+- v2: **2 plan IDs** across 1648 windows (`plan_dc3eb48e98f8`, `plan_baf2a91d0f2e`). The state_suppress branch now fires alongside active_fault, exercising the controller branching mechanism on WoL for the first time.
+- Still below OB/OTel's 4 plans (those have a 4-way `window_type` taxonomy WoL lacks), but the branching IS now operational on WoL. Disclose honestly.
+
+### Red flag #4 — Mode 3 self-contained retrieval caveats → unchanged
+
+The Mode 3 self-contained design (query pool = memory pool with same-window exclusion), project-conditioned gold, and small n_eval are unchanged in v2 — but:
+
+- n_eval went from 55 → 48 at the agent level (because agent uses stricter "has retrieval gold" criterion than the cascade scripts) and 55 → 276 at the cascade level (5× larger evaluable sample).
+- Family-held-out split (train: Spark/Cassandra/HBase/Flink → test: Kafka/MariaDB-Server) unchanged.
+- Strong-gold relation (≥50% Jaccard symptom overlap) unchanged.
+
+### Measured headline numbers (replace v1 everywhere)
+
+| Metric | v1 | **v2** |
+|---|---:|---:|
+| n test rows | 304 | **1648** |
+| n_eval (cascade) | 55 | **276** |
+| n_eval (agent) | 55 | 48 |
+| Agent Hit@1 | 0.7818 | **0.958** |
+| Agent Hit@5 | 0.8364 | **1.000** |
+| Agent MRR | 0.8045 | 0.976 |
+| Agent triage acc | 0.9342 | **0.164** (HONEST: below 0.496 majority baseline) |
+| Pages/incident | 1.000 (structural) | **1.000 (substantive)** |
+| Suppressions fired | 18 | **510** (28×) |
+| Distinct plan IDs | 1 | **2** |
+| Cascade BiEncoder Hit@5 coarse | 0.7553 | **0.971** [0.949, 0.989] |
+| Cascade Hybrid-RRF Hit@5 strong | 0.787 | **0.814** (+0.135 over BiEncoder strong) |
+| Cascade BM25 Hit@5 | 0.6000 | 0.609 (clean replication) |
+| RQ-D5 false_novel | 0.7% | 0.0% |
+| Verifier structural-skip | ✓ | ✓ |
+
+### Documentation already updated (2026-06-16)
+
+- `DOCS/docs8/PAPER-FINDINGS.md` — abstract paragraph, WoL headline table, RQ-A1, RQ-A4, RQ-B3, RQ-C1, RQ-D5, and a new "honest negative #4" in the Discussion section.
+- `DOCS/docs8/RQ-CLOSURE-TABLE.md` — all WoL cells, status banner, Cross-dataset findings, WoL v2 closure summary, reproduction one-liner.
+- `memory/project-wol-methodology-redflags.md` — v2 status block at top.
+
+### Still to do (mechanical, non-blocking)
+
+1. ~~Re-run RQ-A5 skill-disable ablations on v2~~ ✓ **DONE 2026-06-16**: `no_hybrid` lifts triage by +0.7462 [+0.7230, +0.7700] p<0.001\*\*\* — paper-quotable headline finding ([4.1 SUMMARY](../../results/wol-v2/4.1-skill-ablation/SUMMARY.md))
+2. ~~Re-run RQ-C4 capability-mask paired-delta on v2~~ ✓ **DONE**: −0.958 Hit@1 [−1.000, −0.896] p<0.001\*\*\* (sharpens v1's −0.78) ([4.4 SUMMARY](../../results/wol-v2/4.4-capability-mask/SUMMARY.md))
+3. ~~Measure WoL v2 cost-vs-cascade savings (RQ-A2 WoL)~~ ✓ **DONE**: 98.9% wall / 100% USD savings (highest of 3 datasets) ([4.5 SUMMARY](../../results/wol-v2/4.5-cost-vs-cascade/SUMMARY.md))
+4. ~~Re-run RQ-D6 tool-use failure-mode catalog on v2 traces~~ ✓ **DONE**: 0 invocations across 1641 traces (framework correctly skips tools when retrieval confident) ([3.6 SUMMARY](../../results/wol-v2/3.6-failure-mode-catalog/SUMMARY.md))
+5. Plus: RQ-A6 tool ablation, RQ-A7 budget curve, RQ-B2 Pareto sweep all measured ✓
+6. Plus: paired-delta CIs computed for skill-ablation, tool-ablation, and capability-mask cells ✓
+
+**All measurable analyses complete.** Outstanding items are architectural-change deferrals (RQ-A3 reformulation Hit@K requires live-retrieval mode; RQ-D1 agent-level distractor needs cascade re-train with poisoned memory). Both disclosed in `PAPER-FINDINGS.md` §v1 deferrals.
+
+Final consolidated artifacts:
+- `results/wol-v2/PHASE3-WOL-V2-SUMMARY.md` — master per-RQ summary
+- `results/wol-v2/{3.6..4.14}/SUMMARY.md` — per-section finding details
+- `DOCS/docs8/PAPER-FINDINGS.md` — updated with v2 numbers in every relevant RQ section
+- `DOCS/docs8/RQ-CLOSURE-TABLE.md` — all WoL cells filled with measured v2 numbers
+
+None of these change the headline; they fill in the remaining "v2 pending" cells in the closure table.
 
 ---
 

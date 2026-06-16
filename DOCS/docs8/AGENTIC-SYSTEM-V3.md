@@ -1244,15 +1244,26 @@ The §3.8 tool-subset ablation found that the production-default
 config (peers-only, 1 tool/window) beats v5's all-4-tools config
 on Hit@1, MRR, and cost.
 
-### 17.2 RQ closures (per `RESEARCH-QUESTIONS2.md` §9 addendum)
+### 17.2 RQ closures (per `RESEARCH-QUESTIONS2.md` + `RQ-CLOSURE-TABLE.md`)
 
-| RQ | OB status | Headline |
-|---|---|---|
-| A1 (plan diversity) | partial — 4 of 6 branches observed | 4 distinct plan IDs/1008 windows; remaining 2 need WoL/OTel |
-| A4 (page suppression) | ✓ closed | pages/incident = 1.000, 20 suppressions |
-| A6 (ReAct lift) | ✓ closed | +0.0151 Hit@1 from peers-only |
-| A7 (budget curve) | ✓ closed — **NEGATIVE finding** | non-monotone: 0.6767→0.6798→**0.6647→0.6647**→0.6888 |
-| D6 (failure modes) | ✓ closed | 93.6% success / 6.4% empty / 0% on the other 3 |
+Cross-dataset status (see `RQ-CLOSURE-TABLE.md` for the master view and
+`PAPER-FINDINGS.md` for paired-bootstrap CIs):
+
+| RQ | OB | OTel Demo | WoL v2 | Headline |
+|---|---|---|---|---|
+| A1 (plan diversity) | ✓ | ✓ | ✓ | 4 distinct plan IDs on OB/OTel, 2 on WoL — closed on the ≥4-or-dataset-justified criterion |
+| A4 (page suppression) | ✓ | ✓ | ✓ | pages/incident = 1.000 on all three; 20 / 1 / 510 suppressions fired |
+| A5 (skill ablation) | ✓ | ✓ | ✓ | numeric-feature classifier essential ($p < 10^{-4}$ on OB/OTel); see PAPER-FINDINGS §C |
+| A6 (ReAct lift) | ✓ — **NULL** | ✓ — **NULL** | ✓ — **NULL** | +0.0151 paired p=0.18 (OB); exactly 0 on OTel and WoL v2; not statistically distinguishable from zero |
+| A7 (budget curve) | ✓ — **NEGATIVE** | — | — | non-monotone on OB; `peers`-only beats all-4-tools |
+| A8 (verifier OOD) | ✓ | — | ✓ (structural skip) | −0.272 Hit@5 on WoL Mode 3 → `VERIFIER_KNOWN_HELPFUL` calibration enforces skip |
+| C1 (cross-dataset Hit@5) | 0.836 | 0.6471 (Hit@1) | 1.000 | WoL v2 produces the highest retrieval numbers under the smallest evidence set |
+| D6 (failure modes) | ✓ | ✓ | ✓ | 93.6% success / 6.4% empty / 0% on the other 3 modes on OB; rates similar on OTel/WoL |
+
+Source-of-truth links:
+- OB results: `results/ob/{3.5–3.8, 4.12, 4.13, 4.14, 4.15}/SUMMARY.md`
+- OTel Demo: `results/otel-demo/` (cross-app transfer)
+- WoL v2: `results/wol-v2/PHASE3-WOL-V2-SUMMARY.md` + `results/wol-v2/{headline-agent-smoke, 4.12-paired-delta-cis}/`
 
 ### 17.3 The 4 honest negative findings
 

@@ -24,7 +24,7 @@ PROJECT_ROOT = Path("C:/workplace/JiraAndLogs")
 DATASETS = [
     ("2026-05-25-dataset-v5-large-global", "neo4j-ob"),
     ("2026-06-09-otel-demo-v1-global",     "neo4j-otel"),
-    ("2026-06-11-wol-real-global",         "neo4j-wol"),
+    ("2026-06-15-wol-real-v2-global",      "neo4j-wol"),  # WoL v2 (Phase B augmented)
 ]
 
 

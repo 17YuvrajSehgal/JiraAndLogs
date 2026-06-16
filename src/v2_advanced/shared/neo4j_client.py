@@ -63,7 +63,11 @@ class Neo4jConfig:
 _DATASET_TO_DB: dict[str, str] = {
     "2026-05-25-dataset-v5-large-global":  "neo4j-ob",
     "2026-06-09-otel-demo-v1-global":      "neo4j-otel",
-    "2026-06-11-wol-real-global":          "neo4j-wol",
+    # WoL v2 (Phase B augmented — adds borderline + noise + duplicate-link clusters).
+    # Reuses the neo4j-wol DB slot since the v1 dataset is gone. If you want to
+    # keep both v1 and v2 simultaneously, create a separate neo4j-wol-v2 DB in
+    # Neo4j Desktop and point this entry at it.
+    "2026-06-15-wol-real-v2-global":       "neo4j-wol",
 }
 
 

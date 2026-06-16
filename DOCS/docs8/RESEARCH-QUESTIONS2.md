@@ -58,7 +58,7 @@ These are the questions the agent's existence is *for*. If any fail, the paper's
 
 - **What we measure:** `pages_per_incident` = (n_pages emitted) / (n_distinct incident_ids). Target ≤ 1.5, current cascade ~6, agent target = 1.0.
 - **What's evidence-of-success:** OB run produces ≤ 1.5 pages-per-incident with ≥ 30 suppressions fired (proves the rule actually fires).
-- **Status:** **CURRENTLY CLOSED for OB** — 1008/1008 windows, 430 pages, 430 incidents, pages-per-incident = 1.000, 39 suppressions fired. Needs replication on WoL + OTel Demo.
+- **Status:** **CLOSED on all three datasets** — pages-per-incident = 1.000 on OB, OTel Demo, and WoL v2. OB v1 first-pass recorded 39 suppressions; Phase 1 gate tuning settled it to 20 (see `IMPLEMENTATION-PLAN.md` §8). WoL v2 records 510 suppressions over 1648 windows. OTel Demo: 1 suppression on 247 windows. The page-suppression rule generalises; the absolute suppression count is dataset-specific because it depends on multi-window incident frequency.
 - **Why it matters:** operational claim that maps to engineer-hours saved. ICSE reviewers love this metric.
 
 ### RQ-A5. Skill ablation — which skills carry the agent's claims?

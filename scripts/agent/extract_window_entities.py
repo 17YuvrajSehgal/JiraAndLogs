@@ -82,8 +82,13 @@ def main() -> None:
     p = argparse.ArgumentParser(description=__doc__)
     p.add_argument("--global-dir", type=Path, required=True)
     p.add_argument("--split", default="test", choices=["train", "validation", "test"])
-    p.add_argument("--lm-studio-url", default="http://localhost:1234")
+    p.add_argument("--lm-studio-url", default="http://localhost:1234",
+                   help="Base URL for the OpenAI-compatible chat-completions server. "
+                        "Use https://api.openai.com for OpenAI proper.")
     p.add_argument("--model", default="local-model")
+    p.add_argument("--api-key-env", default=None,
+                   help="Name of env var holding the Bearer API key (e.g. OPENAI_API_KEY). "
+                        "Unset → no auth header (local LM Studio).")
     p.add_argument("--max-tokens", type=int, default=600)
     p.add_argument("--limit", type=int, default=0)
     p.add_argument("--out-dir", type=str, default="v2_kg_extractions_windows")
@@ -107,14 +112,24 @@ def main() -> None:
     from v2_advanced.shared import LMStudioClient
     from v2_advanced.shared.lm_studio import LMStudioConfig
 
-    cfg = LMStudioConfig(base_url=args.lm_studio_url, model=args.model)
+    import os
+    api_key = None
+    if args.api_key_env:
+        api_key = os.environ.get(args.api_key_env)
+        if not api_key:
+            raise SystemExit(
+                f"--api-key-env={args.api_key_env} set, but that env var is empty.",
+            )
+        log.info("Using API key from env var %s (Bearer auth enabled).", args.api_key_env)
+    cfg = LMStudioConfig(base_url=args.lm_studio_url, model=args.model, api_key=api_key)
     client = LMStudioClient(cfg)
     if not client.is_available():
         raise SystemExit(
-            f"LM Studio not reachable at {args.lm_studio_url}. "
-            "Start LM Studio's local server with a model loaded first.",
+            f"LLM endpoint not reachable at {args.lm_studio_url}. "
+            "If using OpenAI: verify --api-key-env points to a valid key. "
+            "If using LM Studio: start the local server with a model loaded first.",
         )
-    log.info("LM Studio reachable at %s", args.lm_studio_url)
+    log.info("LLM endpoint reachable at %s (model=%s)", args.lm_studio_url, args.model)
 
     windows = list(_iter_test_windows(
         args.global_dir, args.split,
