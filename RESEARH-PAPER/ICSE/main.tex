@@ -1,6 +1,15 @@
-% ICSE 2027 submission — memory-augmented incident triage with cross-app generalization
+% ICSE 2027 submission — Capability-Adaptive Incident Triage
+%
+% Contribution: a per-window diagnostic-planning agent that adapts to the
+% evidence each window presents, with on-demand evidence gathering and
+% replayable execution traces. Evaluated on three datasets including
+% real Apache Jira tickets.
+%
 % Build: make  (runs pdflatex -> bibtex -> pdflatex -> pdflatex)
-% See README.md for structure rationale + headline numbers to populate.
+% Numbers source-of-truth: DOCS/docs8/PAPER-FINDINGS.md +
+%                          DOCS/docs8/RQ-CLOSURE-TABLE.md +
+%                          per-section SUMMARY.md under results/{ob,otel-demo,wol}/
+% Architecture source-of-truth: DOCS/docs8/AGENTIC-SYSTEM-V3.md
 
 \documentclass[sigconf,review,anonymous]{acmart}
 
@@ -12,10 +21,11 @@
 \usepackage{tabularx}              % stretchy column widths
 \usepackage{microtype}             % typographic refinements
 \usepackage{xspace}                % smarter spacing after macros
-\usepackage{listings}              % code blocks (use sparingly in 10-page paper)
+\usepackage{listings}              % code blocks (use sparingly)
 \usepackage{subcaption}            % sub-figures (a) (b) (c)
 \usepackage{amsmath, amssymb}      % math
 \usepackage{balance}               % balance the last page
+\usepackage{xcolor}                % colored text for \todo macro
 
 % Hide the ACM rights block during review
 \setcopyright{none}
@@ -25,24 +35,34 @@
 
 % =====================================================================
 % Macros — short forms for terms used throughout the paper
+%
+% Kept minimal. The paper deliberately avoids cascade-era jargon
+% (TCH, RRF, L1/L2/L3, etc.) in user-facing prose: those are
+% implementation details of the diagnostic skills the agent invokes,
+% not user-facing contributions of this paper.
 % =====================================================================
-\newcommand{\tch}{\textsc{TCH}\xspace}
-\newcommand{\hgb}{\textsc{HGB}\xspace}
-\newcommand{\sota}{\textsc{SOTA}\xspace}
-\newcommand{\bienc}{\textsc{BiEncoder}\xspace}
-\newcommand{\hrrf}{\textsc{Hybrid-RRF}\xspace}
-\newcommand{\logseq}{\textsc{LogSeq2Vec}\xspace}
-\newcommand{\kgret}{\textsc{KG-Retrieval}\xspace}
-\newcommand{\agent}{\textsc{DiagnosisAgent}\xspace}
+
+% The two retrieval primitives we reference repeatedly in §3-§5
+% as concrete examples of cascade-derived skills:
+\newcommand{\hgb}{histogram gradient-boosted classifier\xspace}
+\newcommand{\bienc}{fine-tuned dense bi-encoder retriever\xspace}
+
+% The three datasets are referenced often. Short forms keep prose clean:
+\newcommand{\dsob}{\textsc{OB}\xspace}                 % Online Boutique synthetic
+\newcommand{\dsotel}{\textsc{OTel}\xspace}             % OpenTelemetry Demo
+\newcommand{\dswol}{\textsc{WoL}\xspace}               % World of Logs (real Apache Jira)
+
+% Editorial / drafting macros
 \newcommand{\todo}[1]{\textcolor{red}{\textbf{[TODO:\,#1]}}}
-\usepackage{xcolor}
+\newcommand{\sys}{the agent\xspace}                    % avoid repeating "the agent" identically
+\newcommand{\paragraphhead}[1]{\smallskip\noindent\textbf{#1}\hspace{0.5em}}
 
 % =====================================================================
 % Title / authors — anonymized for review per ICSE policy
 % =====================================================================
-\title{Memory-Augmented Incident Triage with Cross-App Generalization}
-% Optional subtitle; remove if not used in final
-% \subtitle{Subtitle here}
+\title{Capability-Adaptive Incident Triage:\\
+       Per-Window Diagnostic Planning Across Synthetic and Real Production Tickets}
+% \subtitle{}
 
 \author{Anonymous Author(s)}
 \affiliation{
@@ -62,7 +82,7 @@
 
 % ACM CCS / keywords — fill in before submission per ICSE template
 % \ccsdesc[500]{Software and its engineering~Software maintenance tools}
-% \keywords{incident triage, memory-augmented retrieval, AIOps, microservices, fault injection}
+% \keywords{incident triage, memory-augmented retrieval, AIOps, microservices, fault injection, capability-adaptive agents}
 
 \maketitle
 

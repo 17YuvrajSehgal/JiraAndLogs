@@ -265,20 +265,45 @@ def extract_from_window(
     catalog = resolve_catalog(explicit_path=service_catalog_path)
     system_prompt = _window_system_prompt_for(catalog)
 
+    # Build user prompt with soft context (family + severity) when known.
+    # Reason: thin telemetry windows (e.g. OTel Demo) benefit from family
+    # hints to infer canonical error_classes; OB-style windows with rich
+    # evidence are unaffected. Keys are listed before evidence so the LLM
+    # can ground them quickly.
+    context_lines = [f"WINDOW ID: {window_id}"]
+    if family and family != "unknown":
+        context_lines.append(f"SCENARIO FAMILY: {family}")
+    if severity:
+        context_lines.append(f"WINDOW TYPE: {severity}")
+    user_prompt = "\n".join(context_lines) + "\n\n" + evidence_text
+
+    # Cache key includes family + severity so backfills invalidate.
+    cache_key_input = f"{evidence_text}\nfamily={family}\nseverity={severity}"
     cache_file = None
     if cache_dir is not None:
-        cache_file = cache_dir / "window" / f"{window_id}__{_content_hash(evidence_text)}.json"
+        cache_file = cache_dir / "window" / f"{window_id}__{_content_hash(cache_key_input)}.json"
         if cache_file.exists():
             try:
                 d = json.loads(cache_file.read_text(encoding="utf-8"))
                 return WindowExtraction.from_dict(d)
             except (json.JSONDecodeError, OSError):
                 pass
+        # Also accept legacy cache (hash on evidence_text only) so prior
+        # extraction work isn't thrown away if family/severity didn't change.
+        legacy = cache_dir / "window" / f"{window_id}__{_content_hash(evidence_text)}.json"
+        if legacy.exists():
+            try:
+                d = json.loads(legacy.read_text(encoding="utf-8"))
+                ext_legacy = WindowExtraction.from_dict(d)
+                if ext_legacy.family == family and ext_legacy.severity == severity:
+                    return ext_legacy
+            except (json.JSONDecodeError, OSError):
+                pass
 
     try:
         obj = client.chat_json(
             system=system_prompt,
-            user=f"WINDOW ID: {window_id}\n\n{evidence_text}",
+            user=user_prompt,
             temperature=0.0,
             max_tokens=max_tokens,
             response_format=WINDOW_EXTRACTION_RF,

@@ -17,7 +17,7 @@ single-line path using `build_memory_doc_text`.
 
 Usage:
     PYTHONPATH=src python scripts/research-lab/build_wol_logseq.py \\
-        --global-dir data/derived/global/2026-06-11-wol-real-global
+        --global-dir data/derived/global/2026-06-15-wol-real-v2-global
 """
 from __future__ import annotations
 
@@ -64,7 +64,7 @@ def _infer_severity(line: str) -> str:
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--global-dir", type=Path,
-                    default=Path("data/derived/global/2026-06-11-wol-real-global"))
+                    default=Path("data/derived/global/2026-06-15-wol-real-v2-global"))
     ap.add_argument("--out-subdir", default="v2_logseq")
     ap.add_argument("--max-lines-per-window", type=int, default=80)
     args = ap.parse_args()

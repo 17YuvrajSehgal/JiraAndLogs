@@ -31,6 +31,52 @@ class Neo4jConfig:
     password: str = "123456789"
     database: str = "neo4j"   # default database
 
+    @classmethod
+    def from_env(cls, dataset_id: str | None = None) -> "Neo4jConfig":
+        """Build config from env vars with per-dataset DB selection.
+
+        Selection rules (highest priority first):
+          1. NEO4J_DATABASE env var — wins unconditionally
+          2. dataset_id arg — maps to {neo4j-ob, neo4j-otel, neo4j-wol}
+             via the canonical prefix on each dataset's global-dir name
+          3. fallback "neo4j" (the default DB)
+
+        Per IMPROVEMENTS.md §1.1 Option C, each dataset lives in its
+        own database under one local Neo4j instance — no clearing
+        required when switching datasets.
+        """
+        import os as _os
+        uri      = _os.environ.get("NEO4J_URI", "neo4j://127.0.0.1:7687")
+        user     = _os.environ.get("NEO4J_USERNAME", "neo4j")
+        password = _os.environ.get("NEO4J_PASSWORD", "123456789")
+
+        db = _os.environ.get("NEO4J_DATABASE", "").strip()
+        if not db and dataset_id:
+            db = _DATASET_TO_DB.get(_dataset_prefix(dataset_id), "neo4j")
+        if not db:
+            db = "neo4j"
+        return cls(uri=uri, user=user, password=password, database=db)
+
+
+# Canonical mapping: dataset prefix -> Neo4j database name. Add new
+# datasets here when they get a dedicated DB.
+_DATASET_TO_DB: dict[str, str] = {
+    "2026-05-25-dataset-v5-large-global":  "neo4j-ob",
+    "2026-06-09-otel-demo-v1-global":      "neo4j-otel",
+    # WoL v2 (Phase B augmented — adds borderline + noise + duplicate-link clusters).
+    # Reuses the neo4j-wol DB slot since the v1 dataset is gone. If you want to
+    # keep both v1 and v2 simultaneously, create a separate neo4j-wol-v2 DB in
+    # Neo4j Desktop and point this entry at it.
+    "2026-06-15-wol-real-v2-global":       "neo4j-wol",
+}
+
+
+def _dataset_prefix(dataset_id: str) -> str:
+    """Extract canonical key from a global-dir name or path-component."""
+    # Strip directory components; the dataset ID is the last segment.
+    from pathlib import Path as _Path
+    return _Path(dataset_id).name
+
 
 class Neo4jClient:
     """Wraps the neo4j driver. Use as a context manager:

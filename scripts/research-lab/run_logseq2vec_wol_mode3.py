@@ -6,7 +6,7 @@ per-project stratification. Outputs land alongside the BiEncoder results.
 
 Prerequisites:
     * scripts/research-lab/build_wol_logseq.py has run so
-      data/derived/global/2026-06-11-wol-real-global/v2_logseq/<wid>.jsonl
+      data/derived/global/2026-06-15-wol-real-v2-global/v2_logseq/<wid>.jsonl
       exists for every window.
 
 Outputs:
@@ -26,9 +26,9 @@ from pathlib import Path
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--global-dir", type=Path,
-                    default=Path("data/derived/global/2026-06-11-wol-real-global"))
+                    default=Path("data/derived/global/2026-06-15-wol-real-v2-global"))
     ap.add_argument("--out-dir", type=Path,
-                    default=Path("data/derived/global/2026-06-11-wol-real-global/tch-lite-refit"))
+                    default=Path("data/derived/global/2026-06-15-wol-real-v2-global/tch-lite-refit"))
     ap.add_argument("--humanized-subdir", default="bulk-20260611")
     ap.add_argument("--humanized-root",   default="jira-shadow-humanized-v2")
     ap.add_argument("--logseq-subdir",    default="v2_logseq")

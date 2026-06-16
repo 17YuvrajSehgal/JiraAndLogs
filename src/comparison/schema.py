@@ -46,6 +46,14 @@ class PipelinePrediction:
     # Zero when no gold match exists OR no prior tickets share the
     # family. Drives the headline depth-stratified retrieval curve.
     n_prior_family_tickets: int | None = None
+    # RQ-A9 / RQ-B3: mean per-window wall-time for THIS pipeline's
+    # predict step on the test split. Computed centrally in
+    # comparison.runner as predict_seconds / len(predictions); kept
+    # as a single value per row (not per-prediction) since pipelines
+    # don't currently time each predict() call individually. The
+    # agent's cost-savings analysis multiplies this by the skip-rate
+    # to estimate counterfactual cost saved.
+    pipeline_predict_seconds_per_window: float | None = None
 
     def as_dict(self) -> dict[str, Any]:
         return {
@@ -65,6 +73,7 @@ class PipelinePrediction:
             "is_hard_case": self.is_hard_case,
             "triage_reason_class": self.triage_reason_class,
             "n_prior_family_tickets": self.n_prior_family_tickets,
+            "pipeline_predict_seconds_per_window": self.pipeline_predict_seconds_per_window,
         }
 
 

@@ -1470,7 +1470,7 @@ def main(argv: list[str] | None = None) -> int:
     p_dist.add_argument("--cache-root", default="data/derived/wol/extraction-cache")
     p_dist.add_argument("--out-dir", required=True)
     p_dist.add_argument("--priority-mapping",
-                        default="data/derived/global/2026-06-11-wol-real-global/wol-priority-mapping.json")
+                        default="data/derived/global/2026-06-15-wol-real-v2-global/wol-priority-mapping.json")
     p_dist.add_argument("--n-per-project", type=int, default=MODE1_N_PER_PROJECT)
     p_dist.add_argument("--seed", type=int, default=42)
     p_dist.add_argument("--dataset-run-id", default="wol-distractor-2026-06-11")
@@ -1480,7 +1480,7 @@ def main(argv: list[str] | None = None) -> int:
     p_nov.add_argument("--cache-root", default="data/derived/wol/extraction-cache")
     p_nov.add_argument("--out-dir", required=True)
     p_nov.add_argument("--priority-mapping",
-                       default="data/derived/global/2026-06-11-wol-real-global/wol-priority-mapping.json")
+                       default="data/derived/global/2026-06-15-wol-real-v2-global/wol-priority-mapping.json")
     p_nov.add_argument("--n-per-project", type=int, default=MODE2_N_PER_PROJECT)
     p_nov.add_argument("--seed", type=int, default=42)
     p_nov.add_argument("--dataset-run-id", default="wol-novelty-2026-06-11")
@@ -1492,7 +1492,7 @@ def main(argv: list[str] | None = None) -> int:
                         help="Global-dir root for the WoL Mode 3 dataset; "
                              "mirror files written directly here.")
     p_self.add_argument("--priority-mapping",
-                        default="data/derived/global/2026-06-11-wol-real-global/wol-priority-mapping.json")
+                        default="data/derived/global/2026-06-15-wol-real-v2-global/wol-priority-mapping.json")
     p_self.add_argument("--synthetic-global-dir",
                         default="data/derived/global/2026-05-25-dataset-v5-large-global",
                         help="Source path for triage-feature-columns.json to copy across.")
@@ -1503,9 +1503,9 @@ def main(argv: list[str] | None = None) -> int:
 
     p_all = sub.add_parser("all", help="candidate-pools + all three modes.", **common)
     p_all.add_argument("--cache-root", default="data/derived/wol/extraction-cache")
-    p_all.add_argument("--out-root", default="data/derived/global/2026-06-11-wol-real-global")
+    p_all.add_argument("--out-root", default="data/derived/global/2026-06-15-wol-real-v2-global")
     p_all.add_argument("--priority-mapping",
-                       default="data/derived/global/2026-06-11-wol-real-global/wol-priority-mapping.json")
+                       default="data/derived/global/2026-06-15-wol-real-v2-global/wol-priority-mapping.json")
     p_all.add_argument("--synthetic-global-dir",
                        default="data/derived/global/2026-05-25-dataset-v5-large-global",
                        help="Source path for triage-feature-columns.json to copy across.")

@@ -18,7 +18,9 @@ import argparse
 import json
 from pathlib import Path
 
+from agent.integrity import GraphMetadata, write_graph_metadata
 from v2_advanced.shared import Neo4jClient, get_logger, log_step
+from v2_advanced.shared.neo4j_client import Neo4jConfig
 
 from .loader import load_extractions
 from .schema import IncidentExtraction
@@ -38,6 +40,11 @@ def main() -> None:
     p.add_argument("--source", choices=["llm", "rules"], default="llm")
     p.add_argument("--no-clear", action="store_true",
                    help="skip clearing the graph before loading")
+    p.add_argument("--database", default=None,
+                   help="Neo4j database name. Defaults to the canonical "
+                        "per-dataset mapping (neo4j-ob / neo4j-otel / "
+                        "neo4j-wol) inferred from --global-dir, with "
+                        "NEO4J_DATABASE env var taking priority.")
     args = p.parse_args()
 
     src_dir = args.global_dir / _SOURCE_DIRS[args.source]
@@ -67,13 +74,33 @@ def main() -> None:
                 extractions.append(IncidentExtraction.from_dict(json.loads(line)))
         log.info("extractions loaded", n=len(extractions))
 
-    with Neo4jClient() as neo:
+    cfg = Neo4jConfig.from_env(dataset_id=args.global_dir.name)
+    if args.database:
+        cfg.database = args.database  # explicit CLI override
+    log.info("neo4j target", database=cfg.database)
+    with Neo4jClient(cfg) as neo:
         counts = load_extractions(
             neo, extractions,
             clear_first=not args.no_clear,
             batch_size=50,
         )
         log.info("post-load counts", **counts)
+
+        # Phase 1.14: stamp the GraphMetadata fingerprint so the agent's
+        # startup integrity check can verify the right dataset is loaded.
+        # `global-dir` is a Path like
+        # `data/derived/global/<dataset_id>` — the trailing dir name is
+        # the dataset id we fingerprint.
+        dataset_id = args.global_dir.name
+        write_graph_metadata(
+            neo,
+            GraphMetadata(
+                dataset_id=dataset_id,
+                n_incidents=int(counts.get("Incident", len(extractions))),
+                global_dir=str(args.global_dir),
+            ),
+        )
+        log.info("GraphMetadata fingerprint written", dataset_id=dataset_id)
 
 
 if __name__ == "__main__":

@@ -48,11 +48,11 @@ def _load_jsonl(p: Path) -> list[dict]:
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--queries", type=Path,
-                    default="data/derived/global/2026-06-11-wol-real-global/novelty-queries/windows.jsonl")
+                    default="data/derived/global/2026-06-15-wol-real-v2-global/novelty-queries/windows.jsonl")
     ap.add_argument("--memory", type=Path,
                     default="data/derived/global/2026-05-25-dataset-v5-large-global/jira-memory-corpus.jsonl")
     ap.add_argument("--out-dir", type=Path,
-                    default="data/derived/global/2026-06-11-wol-real-global")
+                    default="data/derived/global/2026-06-15-wol-real-v2-global")
     ap.add_argument("--model", default="sentence-transformers/all-MiniLM-L6-v2",
                     help="Off-the-shelf sentence transformer. Approximates the BiEncoder's similarity head.")
     ap.add_argument("--max-chars", type=int, default=512,

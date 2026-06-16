@@ -209,8 +209,16 @@ class KnowledgeGraphRetrievalPipeline(PipelineRunner):
             extractions_by_id = {e.ticket_id: e for e in extractions}
 
         # 4) Load extractions into Neo4j
+        # Per-dataset database selection: pick neo4j-ob / neo4j-otel /
+        # neo4j-wol from the global_dir name unless NEO4J_DATABASE
+        # overrides. URI / user / password stay as constructor kwargs
+        # (one Neo4j instance hosts all dataset DBs).
+        env_cfg = Neo4jConfig.from_env(dataset_id=global_dir.name)
         neo_cfg = Neo4jConfig(
-            uri=self.neo4j_uri, user=self.neo4j_user, password=self.neo4j_password,
+            uri=self.neo4j_uri,
+            user=self.neo4j_user,
+            password=self.neo4j_password,
+            database=env_cfg.database,
         )
         with Neo4jClient(neo_cfg) as neo:
             with log_step(log, "load_into_neo4j"):

@@ -1,124 +1,255 @@
-% Section 5 — Results
-% Page budget: ~2 pages in acmart sigconf two-column (~1500-1700 words).
-% Source-of-truth: short-technical/sections/{06-experiments, 07-results}.tex
-% All numbers cross-checked against
-% data/derived/global/.../comparison/v2g-final-models/final/tch_metrics.json.
+% Section 5 — Results on synthetic microservices telemetry (OB)
+% Page budget: ~3 pages in acmart sigconf two-column (~2500-2800 words).
+% Source-of-truth (every number): the per-section SUMMARY.md files under
+%   results/ob/{3.5..4.14}/SUMMARY.md and
+%   DOCS/docs8/PAPER-FINDINGS.md.
 %
-% Editorial discipline (per author direction):
-%   - No implementation primitives, field names, or YAML.
-%   - No project-internal phase labels ("v2f", "G1", "G4", "G7"); each
-%     refinement is named by what it does.
-%   - No methodology repetition (§4 already covered splits, metrics, bootstrap).
-%   - No design repetition (§3 already covered the cascade layers).
-%   - Interpretation kept compact; deeper discussion lives in §7.
+% Editorial discipline:
+%   - Every measured number cites a source-of-truth file in a footnote
+%     or in-line. No fabrication; if a value cannot be located in the
+%     source, it does not appear.
+%   - Cross-dataset numbers (OTel/WoL) live in §6. §5 is OB-deep with
+%     brief cross-confirmations where they strengthen the within-dataset
+%     story.
 
 \section{Results}
 \label{sec:results}
 
-All numbers below are computed on the held-out test partition described in \S\ref{sec:evaluation:splits}, with paired-bootstrap confidence intervals computed under the procedure in \S\ref{sec:evaluation:statistics}.
+All numbers below are computed on the held-out test partition of \dsob{} (\S\ref{sec:evaluation:datasets:ob}) unless noted. Headline metrics carry $95\%$ percentile confidence intervals from $1{,}000$-resample paired bootstrap at seed $42$; pairwise deltas additionally carry \emph{paired-delta} confidence intervals as described in \S\ref{sec:evaluation:stats}.
 
-\subsection{Headline metrics}
+\subsection{Headline performance}
 \label{sec:results:headline}
 
-Table~\ref{tab:headline} reports the final cascade against the same cascade as initially specified (before three component-level refinements integrated into the final). Every retrieval and triage metric ties or improves; no metric regresses. The single dominant change is in the novelty channel, where novel recall rises by a factor of 4.9 at preserved precision.
+Table~\ref{tab:headline-ob} reports the agent's headline metrics on the $1{,}008$-window \dsob{} test split (of which $331$ are evaluable for retrieval --- they carry at least one time-visible gold ticket).
 
 \begin{table}[ht]
   \centering
-  \caption{Headline metrics, final cascade versus the same cascade before refinements. $\Delta$ rel $=$ $(\text{Final}-\text{Initial})/\text{Initial}$.}
-  \label{tab:headline}
+  \caption{Headline metrics on \dsob{}. $95\%$ percentile CIs from $1{,}000$-resample bootstrap at seed $42$.}
+  \label{tab:headline-ob}
+  \small
+  \begin{tabular}{lrr}
+    \toprule
+    Metric & Point & $95\%$ CI \\
+    \midrule
+    Hit@1                       & $0.6888$ & $[0.6385, 0.7405]$ \\
+    Hit@5                       & $0.7583$ & $[0.7085, 0.8029]$ \\
+    Hit@10                      & $0.7583$ & $[0.7085, 0.8029]$ \\
+    MRR                         & $0.7138$ & $[0.6637, 0.7604]$ \\
+    Triage accuracy             & $0.8343$ & $[0.8095, 0.8591]$ \\
+    Novel recall / precision    & $0.5361 / 0.1128$ & --- \\
+    Pages-per-incident          & $1.000$  & --- \\
+    Suppressions fired          & $20$     & --- \\
+    Distinct plan identifiers   & $4 / 6$  & --- \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+Three numbers in this table are load-bearing for the rest of the paper. First, Hit@5 at $0.7583$ is the retrieval ceiling we will hold constant while we vary cost in \S\ref{sec:results:cost} and \S\ref{sec:results:pareto}: every optimisation the agent permits has to preserve this value or it will not appear in the production recommendation. Second, triage accuracy at $0.8343$ is the metric we will see degrade significantly when we remove the numeric-feature classifier in \S\ref{sec:results:ablation}. Third, pages-per-incident at $1.000$ across all twenty test-set suppression events is the operational claim we will replicate on the other two datasets in \S\ref{sec:cross-app}. Novelty precision is low ($0.1128$); this is a known blind spot whose mechanism we localise in \S\ref{sec:results:failures}.
+
+\subsection{Adaptive selection cuts cost without quality loss}
+\label{sec:results:cost}
+
+The headline cost claim is computed by comparing the agent's actual cost on the \dsob{} test split against an always-on cascade counterfactual in which every diagnostic primitive runs on every window (see \S\ref{sec:evaluation:baselines}). Costs are sourced from a per-skill table whose assumptions are documented in Appendix~A; the language-model verifier dominates the dollar axis at $\$0.0005$ per call and $1{,}969$ tokens.
+
+Table~\ref{tab:cost-vs-cascade} reports cost in two configurations. The \emph{verifier-off} configuration is the lightweight default used when the language-model service is unavailable (the verifier is not registered). The \emph{verifier-on} configuration is the production-realistic one in which the always-on baseline does include the language-model verifier; this is the configuration the paper recommends as the headline cost result, because the verifier is the configuration that meaningfully matters in deployment.
+
+\begin{table}[ht]
+  \centering
+  \caption{Cost on \dsob{}: agent versus the always-on cascade counterfactual on the same $1{,}008$ windows.}
+  \label{tab:cost-vs-cascade}
+  \small
+  \setlength{\tabcolsep}{4pt}
+  \begin{tabular}{lrrr}
+    \toprule
+    Configuration & Resource & Agent & Cascade \\
+    \midrule
+    Verifier-off  & Wall time (s)       & $61.2$    & $101.9$   \\
+                  & LLM tokens          & $71{,}600$ & $121{,}600$ \\
+                  & USD-equivalent      & $\$0.018$  & $\$0.030$ \\
+    \cmidrule(lr){1-4}
+    \textbf{Verifier-on} & Wall time (s) & $1{,}524$ & $4{,}783$ \\
+                  & LLM tokens          & $258{,}655$ & $720{,}176$ \\
+                  & USD-equivalent      & $\$0.065$  & $\$0.182$  \\
+    \midrule
+    \multicolumn{4}{l}{\textbf{Savings (verifier-on, production-realistic): $68.1\%$ wall, $64.1\%$ tokens, $64.1\%$ USD.}} \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+The savings split across two mechanisms. The first, capability-drop, removes a primitive from the plan when its required evidence is not in the bundle: on \dsob{}, the structural and knowledge-graph retrievers are dropped because the dataset does not surface a knowledge-graph capability flag (which is consistent with the agent's design \S\ref{sec:approach:gating} and disclosed honestly in the per-skill breakdown). The second mechanism, gate-skip, drops a primitive at runtime when the cheap path is sufficiently confident. The gate-skip rates per primitive are reported in Table~\ref{tab:per-skill-savings}.
+
+\begin{table}[ht]
+  \centering
+  \caption{Per-primitive gate-save rates on \dsob{} (verifier-on). A high save rate means the cheap path was confident on most active-fault windows for that primitive.}
+  \label{tab:per-skill-savings}
   \small
   \begin{tabular}{lrrr}
     \toprule
-    Metric & Initial & \textbf{Final} & $\Delta$ rel \\
+    Primitive & Invoked & Gated out & Save rate \\
     \midrule
-    Hit@1                 & 0.707 & \textbf{0.722} & $+2.1\%$ \\
-    Hit@5                 & 0.912 & \textbf{0.912} & tied \\
-    MRR                   & 0.788 & \textbf{0.794} & $+0.7\%$ \\
-    PR-AUC strict         & 0.9998 & \textbf{0.9998} & tied \\
-    PR-AUC inclusive      & 0.853 & \textbf{0.856} & $+0.4\%$ \\
-    ROC-AUC               & 0.9999 & \textbf{0.9999} & tied \\
-    Novel precision       & 0.940 & \textbf{0.940} & tied \\
-    \textbf{Novel recall} & \textbf{0.163} & \textbf{0.793} & $\boldsymbol{+388\%}$ \\
+    Hybrid retriever (rule)   & $95$  & $209$ & $68.8\%$ \\
+    Language-model verifier   & $95$  & $209$ & $68.8\%$ \\
+    Reformulator              & $179$ & $125$ & $41.1\%$ \\
+    Each of the 4 ReAct tools & $179$ & $125$ & $41.1\%$ \\
+    Reranker                  & $179$ & $125$ & $41.1\%$ \\
+    Retrieval composer        & $678$ & $31$  & $4.4\%$  \\
+    Dense retriever, triage classifier, composers & $1008$ & $0$ & $0.0\%$ \\
     \bottomrule
   \end{tabular}
 \end{table}
 
-\subsection{Cascade versus single-pipeline baselines}
-\label{sec:results:vs-baselines}
+The structural pattern is the one the agent's design predicts: the most expensive primitives have the highest save rates. The language-model verifier and the hybrid retriever, both gated by the same cheap-path-confident condition, skip on two thirds of active-fault windows. The four evidence-gathering tools and the reformulator share a lower-consensus gate and skip on roughly forty percent. The cheap-path primitives (the dense retriever, the numeric classifier, the composers) run on every window because they are the cheap path. Hit@K is unchanged across this entire skip pattern: the gated primitives are not contributing to the rank-one ranking on the windows where they fire, which we confirm directly in \S\ref{sec:results:ablation}.
 
-Table~\ref{tab:vs-baselines} reports each of the seven individual pipelines as a standalone system, alongside the cascade that composes them. The cascade ties or beats every individual pipeline on every metric. The Hit@5 gap of 11.5 percentage points absolute over the best single retriever is the strongest evidence that fusion captures complementary signal: every pipeline's standalone Hit@5 sits below the cascade's by a margin that no two-pipeline fusion alone can close.
+\subsection{The cost-quality Pareto curve}
+\label{sec:results:pareto}
+
+A single threshold parameter controls how confident the cheap path must be before the gate closes. Sweeping this threshold over $\{0.50, 0.60, 0.70, 0.80, 0.90, 0.95\}$ traces a Pareto curve over (Hit@$K$, cost). Table~\ref{tab:pareto-ob} reports the curve under the verifier-on configuration.
 
 \begin{table}[ht]
   \centering
-  \caption{Standalone retrieval and triage per pipeline, plus the cascade. \textbf{Bold} marks the best in column; every column has a different single-pipeline winner.}
-  \label{tab:vs-baselines}
+  \caption{Pareto sweep over the cheap-path confidence threshold on \dsob{} (verifier-on). Hit@K is invariant; only cost varies.}
+  \label{tab:pareto-ob}
   \small
-  \setlength{\tabcolsep}{4pt}
   \begin{tabular}{lrrrr}
     \toprule
-    Pipeline & Hit@1 & Hit@5 & MRR & PR-AUC \\
+    Threshold & Hit@1 & Hit@5 & USD & Wall saved \\
     \midrule
-    \hgb{}                  & ---            & ---            & ---            & \textbf{0.9998} \\
-    \bienc{}                & 0.695          & 0.789          & 0.729          & 0.287 \\
-    \hrrf{} (rule)          & 0.583          & 0.798          & 0.669          & 0.236 \\
-    \hrrf{} (LLM)           & 0.432          & 0.667          & 0.517          & 0.292 \\
-    \logseq{}               & 0.483          & 0.531          & 0.498          & 0.313 \\
-    \kgret{}                & 0.079          & 0.556          & 0.228          & ---   \\
-    \agent{}                & 0.386          & 0.436          & 0.405          & 0.243 \\
-    \midrule
-    \textbf{\tch{}}         & \textbf{0.722} & \textbf{0.912} & \textbf{0.794} & \textbf{0.9998} \\
+    $0.50$              & $0.6888$ & $0.7583$ & $\$0.0589$ & $72.3\%$ \\
+    $0.60$              & $0.6888$ & $0.7583$ & $\$0.0599$ & $71.7\%$ \\
+    $0.70$              & $0.6888$ & $0.7583$ & $\$0.0614$ & $70.7\%$ \\
+    $0.80$              & $0.6888$ & $0.7583$ & $\$0.0624$ & $70.1\%$ \\
+    $0.90$ (default)    & $0.6888$ & $0.7583$ & $\$0.0654$ & $68.1\%$ \\
+    $0.95$              & $0.6888$ & $0.7583$ & $\$0.0679$ & $66.5\%$ \\
     \bottomrule
   \end{tabular}
 \end{table}
 
-Paired-bootstrap deltas confirm statistical significance for every comparison except one. Against the strongest single retriever for top-one precision, the cascade's lift on Hit@1 ($+0.027$) sits inside the 95\% confidence interval ($[-0.020, +0.072]$); the cascade \emph{ties} that retriever's top-one figure without sacrificing the other channels. Against every other pipeline on every other metric, the cascade is statistically dominant.
+The Pareto front is \emph{flat} in Hit@K across the entire operating range. Every retrieval metric is identical to four decimal places for every threshold; only USD cost varies. The agent's design predicts this: the cascade-derived primitives that get gated as the threshold drops do not change the rank-one ranking on \dsob{} (see \S\ref{sec:results:ablation}), so reducing the threshold makes the gate close more often without sacrificing retrieval quality. The production recommendation is therefore unambiguous: drop the threshold from the documented default of $0.90$ to $0.50$ and recover an additional four percentage points of cost savings at zero retrieval cost. We discuss the cross-dataset generalisability of this recommendation in \S\ref{sec:cross-app}.
 
-\subsection{Where the lift came from}
-\label{sec:results:progression}
+\subsection{What carries the lift: skill and tool ablation}
+\label{sec:results:ablation}
 
-Three refinements were integrated into the cascade after the initial specification was locked. Table~\ref{tab:cumulative} reports the cumulative effect of each, integrated in sequence. The pattern is the most informative finding of the project.
+The cost-savings result raises an obvious question: \emph{which} primitives are load-bearing and which are decoration? We answer it with three ablation grids: one over individual cascade-derived primitives, one over the four-tool on-demand evidence-gathering subset, and one over capability flags.
 
-\begin{table*}[t]
+\subsubsection{Skill ablation}
+
+The skill-ablation grid disables one primitive (or one named group) at a time and re-runs the agent on the same $1{,}008$ test windows. Of ten ablation cells tested, only two produce a non-zero paired-delta against the baseline. Table~\ref{tab:skill-paired} reports the paired-delta confidence intervals for the four cells that move at least one metric.
+
+\begin{table}[ht]
   \centering
-  \caption{Cumulative effect of the three integrated refinements. Each row adds one refinement to the row above. Retrieval and triage metrics are essentially fixed from row two onward; the project's full empirical lift is in the novelty-recall column.}
-  \label{tab:cumulative}
+  \caption{Skill-ablation paired-delta CIs on \dsob{} (1{,}000 paired resamples). Cells not shown produce exactly $0$ per-window delta on every metric; their CI collapses to $[0, 0]$ with $p=1.000$.}
+  \label{tab:skill-paired}
   \small
-  \setlength{\tabcolsep}{8pt}
-  \begin{tabular}{@{}lrrrrr@{}}
+  \begin{tabular}{llrrr}
     \toprule
-    Stage & Hit@1 & Hit@5 & MRR & PR-AUC inclusive & Novel recall \\
+    Cell & Metric & $\Delta$ & $95\%$ CI & $p$ \\
     \midrule
-    Initial cascade                       & 0.707 & 0.912 & 0.788 & 0.853 & 0.163 \\
-    \;\;$+$ bi-encoder mixed negatives    & 0.722 & 0.912 & 0.794 & 0.856 & 0.161 \\
-    \;\;$+$ complete agent coverage       & 0.722 & 0.912 & 0.794 & 0.856 & 0.356 \\
-    \;\;$+$ learned novelty classifier    & 0.722 & 0.912 & 0.794 & 0.856 & \textbf{0.793} \\
+    \texttt{no\_react}           & Hit@1     & $-0.0121$ & $[-0.0302, +0.0060]$ & $0.262$ \\
+    \texttt{no\_react}           & MRR       & $-0.0078$ & $[-0.0199, +0.0033]$ & $0.176$ \\
+    \texttt{no\_triage\_numeric} & Triage    & $-0.117$  & $[-0.139, -0.097]$   & $<10^{-4}$ \\
+    \texttt{dense\_only}         & Triage    & $-0.117$  & $[-0.139, -0.097]$   & $<10^{-4}$ \\
     \bottomrule
   \end{tabular}
-\end{table*}
+\end{table}
 
-The first refinement adds one truly random negative per anchor to the bi-encoder's fine-tuning curriculum, alongside the original hard negatives mined by sparse retrieval. This forces semantic discrimination beyond lexical overlap and produces a modest lift on the top-one position; the other channels are unchanged. The second refinement completes the language-model agent's coverage of the test set: where the agent had previously run only on a strategic subset of windows, extending it to the full set roughly doubles the novelty channel's recall. The third refinement, contributing the bulk of the headline win, replaces the fixed retrieval-confidence threshold inside the novelty layer with a learned per-window classifier conditioned on coarse window metadata; this lifts novel recall by a further factor of 2.2 at unchanged precision.
+Two findings drop out. First, the numeric-feature classifier is statistically essential for triage accuracy: removing it (either directly or via the \texttt{dense\_only} reduction) drops triage accuracy by $11.7$ absolute points with $p < 10^{-4}$. The effect is large, sharp, and one-sided. Second, the on-demand evidence-gathering loop's positive contribution is \emph{not} statistically significant: the point estimate of $-0.0121$ Hit@1 for the \texttt{no\_react} cell straddles zero in its $95\%$ paired interval, with $p = 0.262$. We cannot reject the null hypothesis that the loop has no effect on Hit@1.
 
-The structural observation that emerges from Table~\ref{tab:cumulative} is that the retrieval channel (Hit@1, Hit@5, MRR) is essentially fixed across every refinement: every metric in the retrieval columns is identical from row 2 onward. The project's full empirical lift comes from the novelty channel. We had originally framed the work as a retrieval-improvement project; the data shows it is more accurately a novelty-detection project. The retrieval channel was already at a local optimum --- the union of the four chosen retrievers' top-five lists contains the gold ticket on 97.6\% of windows, and the cascade's 0.912 sits at 93.5\% of that union ceiling --- whereas the novelty channel had been resting on a fixed-threshold heuristic that was leaving most of its addressable signal on the table.
+Every other skill ablation produces exactly zero per-window delta across all metrics. Removing the structural retriever, the knowledge-graph retriever, the log-sequence retriever, the hybrid-fusion variants, the reformulator, the language-model verifier, or the novelty composer leaves every test window's retrieval rank unchanged. The cascade's retrieval ranking on \dsob{} is anchored by the dense retriever, and the other primitives serve as backup signals on the few windows where the dense retriever is genuinely uncertain.
 
-\subsection{Three rerankers, three negative results}
-\label{sec:results:rerankers}
+\subsubsection{Tool ablation}
 
-Three independent attempts were made to improve the top-one retrieval slot beyond the cascade's overlap-rerank, each with a different mechanism, each integrated into the cascade in the natural place a reranker would go. All three underperformed the cascade. The pattern is consistent enough to be reported as a finding in its own right.
+The on-demand evidence-gathering loop comprises four tools (Kubernetes events, extended trace, Prometheus snapshot, peer-incident retrieval) plus a reranker. The four tools yield $2^{4} = 16$ activation subsets. Table~\ref{tab:tool-paired} reports the paired-delta CIs against the empty (no-tools) baseline for the most informative cells; the full table appears in the supplementary material.
 
-The first attempt fine-tuned a cross-encoder, which reads query and document jointly so that token-level interactions a bi-encoder cannot see become available. Integrated as a fifth retriever in the fusion, it lowered Hit@1 by 5.4 percentage points; integrated as a reranker over the cascade's top-five, it lowered Hit@1 by 4.5 percentage points. The second attempt allowed the language-model agent to override the cascade's top-one pick when its self-rated confidence exceeded a threshold. Audited on a 200-window sample, the agent was right when the cascade was wrong on three windows, and wrong when the cascade was right on eight --- a net loss of five top-one wins. The third attempt invoked a separate large-language-model judge over the cascade's top-five output with a strict JSON output schema and confidence-gated override of the top-one. The judge's confidence distribution turned out to be uninformative (more than 80\% of calls reported a confidence near 0.85, regardless of whether the candidate was correct), and every override threshold tested cost between 2.7 and 13 points of Hit@1.
+\begin{table}[ht]
+  \centering
+  \caption{Tool-subset paired-delta CIs on \dsob{} (against the empty no-tools baseline). The single statistically-significant finding is a \emph{negative} one: the extended-trace tool harms Hit@1.}
+  \label{tab:tool-paired}
+  \small
+  \begin{tabular}{lrrr}
+    \toprule
+    Subset & $\Delta$ Hit@1 & $95\%$ CI & $p$ \\
+    \midrule
+    \textbf{Extended-trace alone}      & $\mathbf{-0.0181}$ & $\mathbf{[-0.0332, -0.0060]}$ & $\mathbf{0.002}$ \\
+    Extended-trace $+$ metrics         & $-0.0181$ & $[-0.0332, -0.0060]$ & $0.002$ \\
+    Events $+$ extended-trace          & $-0.0121$ & $[-0.0272,  0.0000]$ & $0.104$ \\
+    Peers alone (best by point estimate) & $+0.0151$ & $[-0.0060, +0.0363]$ & $0.180$ \\
+    All four tools (full ReAct config) & $+0.0121$ & $[-0.0060, +0.0302]$ & $0.262$ \\
+    Events alone                       & $+0.0030$ & $[-0.0091, +0.0181]$ & $0.832$ \\
+    Metrics alone                      & $\;0$     & $[0, 0]$             & $1.000$ \\
+    \bottomrule
+  \end{tabular}
+\end{table}
 
-The three designs are mechanistically distinct---a re-encoded joint score, an LLM verification stage, an LLM scoring stage---but the negative result is identical. We discuss its interpretation in \S\ref{sec:discussion}; here we simply report that on this dataset, multi-retriever consensus on the top-one slot resists every reranker we tried.
+The single statistically-significant ReAct-related finding on \dsob{} is a negative one: invoking the extended-trace tool in isolation (or with the metrics tool) costs $1.8$ absolute Hit@1 percentage points at $p = 0.002$, with a paired CI strictly below zero. The mechanism is intelligible: the trace tool surfaces a list of services seen on the call path during the window, and on \dsob{}'s call topology those service names match memory-side tickets across multiple unrelated scenario families, polluting the reranker's token bag with cross-family noise. The peer-incident tool, by contrast, surfaces same-family memory-side prose whose tokens are family-specific, and its point estimate is positive; but the positive estimate ($+0.0151$ Hit@1) does not separate from noise ($p = 0.180$), and we report it as suggestive rather than conclusive.
 
-\subsection{Robustness}
-\label{sec:results:robustness}
+The honest paper claim that emerges from Tables~\ref{tab:skill-paired} and~\ref{tab:tool-paired} is that the on-demand evidence-gathering loop's framework is fully implemented, fully instrumented, fully replayable, and---on this dataset, at this sample size---does not deliver a statistically distinguishable Hit@1 lift. One of its tools is significantly harmful and should be disabled in production. Per-family tool selection (\S\ref{sec:discussion}) is the natural follow-up that this finding motivates.
 
-Robustness was measured against two forms of noise: distractor tickets injected into the retrieval corpus, and entire scenario families held out of training.
+\subsection{The budget-bounded retrieval curve}
+\label{sec:results:budget}
 
-\paragraph{Memory noise.} We injected distractor tickets into the retrieval corpus at four ratios and measured the relative degradation. At a 10\% distractor ratio, Hit@5 drops by 0.3\% and Hit@1 by 0.4\% (both within bootstrap noise). At 25\%, Hit@5 drops 1.3\% and Hit@1 drops 8.8\%. At 50\%, Hit@5 drops only 2.0\% relative to the clean baseline; Hit@1 is more sensitive at 14.2\% relative. The relative sensitivity ranking is consistent across ratios: Hit@5 $\gg$ MRR $>$ Hit@1, reflecting that distractors can displace the top pick without disturbing the top-five coverage that the cascade's RRF rule defends.
+A complementary view of the four-tool subset is the budget-bounded retrieval curve, in which we cap the number of tools that may be invoked per window at $N \in \{0, 1, 2, 3, 4\}$ and let the controller's branch list pick which $N$ to call. Table~\ref{tab:budget-ob} reports the curve.
 
-\paragraph{Family shift.} Under leave-one-family-out cross-validation (twenty-seven folds, each holding out a complete scenario family from training and evaluating only on that family), the novelty F1 at the best operating point comes in at 0.788, which is 11.4\% relative below the in-distribution figure of 0.890. The headline novel-recall win survives the shift: even under family hold-out, the cascade's novel recall (0.783) exceeds the initial cascade's in-distribution recall (0.163) by 381\% relative. Precision is robust across most families --- nineteen of twenty-seven families exceed 0.90 precision at the headline threshold --- while recall splits sharply by family structure: families dominated by pre-fault or recovery windows generalize perfectly, while families dominated by active-fault windows lose 30 to 50 points of recall when held out, consistent with the learned classifier exploiting active-fault metadata that does not transfer to families it has not seen.
+\begin{table}[ht]
+  \centering
+  \caption{Budget-bounded Hit@K on \dsob{}. The curve is non-monotone in the number of tools called.}
+  \label{tab:budget-ob}
+  \small
+  \begin{tabular}{rrrrr}
+    \toprule
+    $N$ & Hit@1 & Hit@5 & MRR & Triage acc \\
+    \midrule
+    $0$ & $0.6767$ & $0.7583$ & $0.7060$ & $0.8413$ \\
+    $1$ & $0.6798$ & $0.7583$ & $0.7080$ & $0.8413$ \\
+    $2$ & $\mathbf{0.6647}$ & $0.7583$ & $0.6970$ & $0.8413$ \\
+    $3$ & $\mathbf{0.6647}$ & $0.7583$ & $0.6970$ & $0.8413$ \\
+    $4$ & $0.6888$ & $0.7583$ & $0.7138$ & $0.8413$ \\
+    \bottomrule
+  \end{tabular}
+\end{table}
 
-\subsection{Engineer utility}
-\label{sec:results:utility}
+The budget curve is the strongest single illustration of the section's headline: the original ``more tools is better'' hypothesis is rejected. Adding the second and third tools on top of the first costs $1.2$ Hit@1 points relative to no tools at all; only the fourth tool (peer-incident retrieval) recovers and overshoots. The mechanism is the same as Table~\ref{tab:tool-paired}: tool two is the extended-trace tool, which surfaces cross-family service-name tokens; tool three is the Prometheus snapshot, whose synthesised symptom tokens reinforce the noise; only tool four's same-family peer prose overpowers the noise. We discuss the implications for per-family tool selection in \S\ref{sec:discussion}.
 
-Under the serial-candidate-review simulation defined in \S\ref{sec:evaluation:metrics}, the cascade reduces the expected time-to-diagnose per resolvable incident by approximately six to seven minutes relative to the detection-only baseline that produces no retrieval output. Across the scale of incidents a typical on-call queue handles per week, this is the difference between an engineer who spends most of their time investigating familiar incidents and one who has the budget to investigate the genuinely novel ones. The cascade itself runs at roughly sixteen microseconds per window after the per-pipeline predictions are cached, so the engineering-minutes saved are net of the cascade's own runtime cost.
+\subsection{Capability-mask robustness}
+\label{sec:results:capmask}
+
+The capability-mask sweep tests the agent's graceful degradation: we strip named capability flags from the inspector's output before the controller emits a plan, then re-run the agent under the counterfactual condition. Of the eight masks tested, two move metrics. Removing the numeric-feature capability collapses triage accuracy by $11.7$ absolute points with $p < 10^{-4}$, replicating the skill-ablation finding through a different mechanism (the masked capability auto-drops the numeric classifier rather than removing it from the registry directly). Removing the trace-summary capability \emph{improves} Hit@1 by $0.30$ points (CI $[0.00, +0.91]$, $p = 0.65$, not significant)---the same negative-trace finding from a third angle. No other mask produces non-zero per-window deltas. The agent runs end-to-end on every mask; no crashes, no NaN outputs, and the controller's plan-identifier count stays at four across the entire grid.
+
+The triple-validation pattern (skill ablation, tool ablation, capability mask) on the numeric-feature finding is what gives us high confidence in the load-bearing claim: triage accuracy is carried by the numeric-feature classifier with $p < 10^{-4}$ from three independent mechanisms, and no other component reaches significance.
+
+\subsection{Against the naive baseline}
+\label{sec:results:bm25}
+
+A reviewer's first question for any retrieval paper is whether the system beats a naive keyword baseline. Table~\ref{tab:bm25} reports the BM25-only retrieval against the agent on the agent-evaluable subset of each test split. The BM25 entries are computed on the identical window set as the agent's so the comparison is apples-to-apples.
+
+\begin{table}[ht]
+  \centering
+  \caption{Naive-baseline comparison: BM25-only retrieval versus the agent, on the agent-evaluable subset of each test split.}
+  \label{tab:bm25}
+  \small
+  \begin{tabular}{lrrrrr}
+    \toprule
+    Dataset & $n_{\text{eval}}$ & BM25 Hit@1 & BM25 Hit@5 & Agent Hit@5 & Lift \\
+    \midrule
+    \dsob{}    & $331$ & $0.0514$ & $0.0876$ & $0.7583$ & $\mathbf{8.66\times}$ \\
+    \dsotel{}  & $119$ & $0.3866$ & $0.5630$ & $0.7563$ & $1.34\times$ \\
+    \dswol{}   & $55$  & $0.0000$ & $0.6000$ & $0.8364$ & $1.39\times$ \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+On the synthetic dataset BM25 collapses to Hit@5 below $9\%$ because the humanised Jira tickets use vocabulary that does not match the telemetry-side evidence text; the agent's $0.7583$ is $8.66\times$ better. On the real-Apache-Jira dataset BM25 retrieves the gold ticket in the top-five $60\%$ of the time but \emph{never} as the top-one ($\text{Hit@1} = 0$), because keyword overlap alone is insufficient to disambiguate among same-project tickets; the agent's $0.7818$ Hit@1 makes the difference between a system that always asks the engineer to pick and one that puts the right answer first $78\%$ of the time. The cross-dataset replication is the subject of \S\ref{sec:cross-app}.
+
+\subsection{Operational metrics and failure modes}
+\label{sec:results:failures}
+
+We close the OB results with the operational metrics and the failure-mode catalog.
+
+\paragraphhead{Plan diversity (RQ-A1).} The controller emits four distinct plan identifiers across the $1{,}008$ \dsob{} test windows. The six branches defined in \S\ref{sec:approach:plan} are all implemented; the two that do not fire are the state-suppression branch (which requires a consecutive ticket-worthy sequence on the same scenario family without recovery, a pattern the locked test split does not surface frequently) and the default branch (which catches unrecognised window types, of which the split has none). The plan-identifier count is consistent with a controller that branches on real input rather than emitting a single fixed pipeline.
+
+\paragraphhead{Page suppression (RQ-A4).} The cross-window state layer fires twenty suppression events on the test split, downgrading repeated pages to attached-to-existing-incident status. The resulting pages-per-incident ratio is $1.000$ ($358$ pages over $358$ incidents). The metric is universal across the three datasets, as \S\ref{sec:cross-app} confirms.
+
+\paragraphhead{Tool-use failure modes (RQ-D6).} Of $716$ tool invocations on the active-fault gated subset, $670$ ($93.6\%$) return a usable signal, $46$ ($6.4\%$) return an empty result, and the remaining three failure modes (hallucinated tool name, looping repeated call, budget exhausted) each fire on zero windows. The empty-result cases all concentrate on the peer-incident tool applied to the loadgenerator scenario family, where the post-own-incident-exclusion peer set is empty by construction. The three never-firing failure modes are defences for the v2 language-model-emitted version of the loop (\S\ref{sec:approach:tooluse}); v1's rule-based controller cannot reach them by construction.
+
+\paragraphhead{Failure-category distribution (RQ-D5).} Categorising every test-set decision into one of eight primary failure or success buckets, the distribution is dominated by two cells: $34.6\%$ of windows are correctly dismissed as noise, and $32.5\%$ are flagged as novel when in fact a memory-side gold exists (the false-novel category). The false-novel rate is the agent's largest blind spot. We localise its mechanism in \S\ref{sec:discussion}: the false-novel signal is driven by the language-model verifier's overly-eager novelty flag, which is structurally absent on datasets where the verifier is disabled. Other categories include false-positive triage ($12.9\%$), retrieval miss ($7.9\%$), and a residual long tail.
+
+\paragraphhead{Reformulation (RQ-A3, not measurable in v1).} The reformulator's gate opens on $179$ of $1{,}008$ windows ($17.8\%$), and the primitive emits a reformulated query under its bounded action vocabulary. The primitive's Hit@K contribution cannot be measured on this paper's predictions-backed retrievers, which key into a cached prediction by window identifier rather than by query text and therefore do not respond to text-level reformulation. The framework is in place; a live-retrieval re-run is required to measure the lift and is left to future work.

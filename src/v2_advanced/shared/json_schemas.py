@@ -184,7 +184,9 @@ VERIFY_SCHEMA: dict[str, Any] = {
             "description": "True if no candidate is consistent with the hypothesis.",
         },
     },
-    "required": ["ranked"],
+    # Both top-level properties must be `required` under OpenAI's strict
+    # structured-outputs mode (LM Studio is lenient about this).
+    "required": ["ranked", "novel"],
     "additionalProperties": False,
 }
 

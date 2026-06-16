@@ -196,7 +196,17 @@ def load_all_predictions(global_dir: Path) -> dict[str, WindowState]:
     if _learned_path:
         global _LEARNED_NOVELTY_INDEX, _LEARNED_NOVELTY_THRESHOLD
         _LEARNED_NOVELTY_INDEX = {}
-        full_path = base / _learned_path
+        # Resolve robustly: try as-given first (handles absolute paths and
+        # paths relative to CWD), then fall back to base-relative. Without
+        # this, a path that looks correct from the repo root silently
+        # mis-joins inside Path() and the learned classifier never loads —
+        # the cascade quietly falls back to default L3 with no warning.
+        _p_candidates = [Path(_learned_path), base / _learned_path]
+        full_path = next((p for p in _p_candidates if p.exists()), _p_candidates[0])
+        if not full_path.exists():
+            print(f"[build_cascade] WARNING: TCH_LEARNED_NOVELTY_PATH set "
+                  f"to {_learned_path!r} but no file found at "
+                  f"{_p_candidates[0]} or {_p_candidates[1]}")
         if full_path.exists():
             with full_path.open(encoding="utf-8") as fh:
                 for line in fh:
