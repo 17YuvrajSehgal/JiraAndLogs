@@ -16,10 +16,10 @@ Use cases:
 Usage:
     PYTHONPATH=src python scripts/agent/bootstrap_predictions.py \\
         --predictions \\
-            data/derived/global/2026-06-11-wol-real-global/tch-lite-refit/biencoder-predictions.jsonl \\
-            data/derived/global/2026-06-11-wol-real-global/tch-lite-refit/hybrid-rrf-predictions.jsonl \\
-            data/derived/global/2026-06-11-wol-real-global/tch-lite-refit/logseq2vec-predictions.jsonl \\
-            data/derived/global/2026-06-11-wol-real-global/tch-lite-refit/kg-retrieval-predictions.jsonl \\
+            data/derived/global/2026-06-15-wol-real-v2-global/tch-lite-refit/biencoder-predictions.jsonl \\
+            data/derived/global/2026-06-15-wol-real-v2-global/tch-lite-refit/hybrid-rrf-predictions.jsonl \\
+            data/derived/global/2026-06-15-wol-real-v2-global/tch-lite-refit/logseq2vec-predictions.jsonl \\
+            data/derived/global/2026-06-15-wol-real-v2-global/tch-lite-refit/kg-retrieval-predictions.jsonl \\
         --paired bi_encoder_retrieval hybrid_rrf_retrieval \\
         --output data/agent_runs/wol-mode3-bootstrap.json
 """

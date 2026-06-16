@@ -26,7 +26,7 @@ Output JSONL (one row per query window):
 
 Usage:
     PYTHONPATH=src python scripts/agent/build_cross_corpus_gold.py \\
-        --memory-dataset data/derived/global/2026-06-11-wol-real-global \\
+        --memory-dataset data/derived/global/2026-06-15-wol-real-v2-global \\
         --query-dataset  data/derived/global/2026-06-09-otel-demo-v1-global \\
         --project-filter Kafka \\
         --threshold 0.10 \\

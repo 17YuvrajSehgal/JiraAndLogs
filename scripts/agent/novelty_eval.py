@@ -30,7 +30,7 @@ queries, all of which are TP → precision stays at 1.000.
 
 Usage:
     PYTHONPATH=src python scripts/agent/novelty_eval.py \\
-        --global-dir data/derived/global/2026-06-11-wol-real-global \\
+        --global-dir data/derived/global/2026-06-15-wol-real-v2-global \\
         [--agent-signal <path>] \\
         [--learned-signal <path>] \\
         [--free-threshold 0.5] \\

@@ -12,7 +12,7 @@ overwrites the field.
 
 Usage:
     PYTHONPATH=src python scripts/agent/annotate_wol_depth.py \\
-        --global-dir data/derived/global/2026-06-11-wol-real-global \\
+        --global-dir data/derived/global/2026-06-15-wol-real-v2-global \\
         --inplace
 """
 

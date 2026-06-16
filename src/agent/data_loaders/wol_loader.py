@@ -96,7 +96,7 @@ def load_wol_cases(
 
     Args:
         global_dir: WoL dataset root (e.g.
-            `data/derived/global/2026-06-11-wol-real-global`).
+            `data/derived/global/2026-06-15-wol-real-v2-global`).
         split: "train" | "validation" | "test" (default "test").
         limit: optional cap (smoke convenience).
         gold_filename: predictions JSONL under `tch-lite-refit/` to pull

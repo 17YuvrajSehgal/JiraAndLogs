@@ -25,7 +25,7 @@ and `smoke_otel_demo.py`, per Phase 3 task #101.
 
 Usage:
     PYTHONPATH=src python scripts/agent/smoke_wol.py \\
-        --global-dir data/derived/global/2026-06-11-wol-real-global \\
+        --global-dir data/derived/global/2026-06-15-wol-real-v2-global \\
         [--limit 100] [--split test] [--cache-dir data/skill_cache] \\
         [--output results/wol-v2/agent-runs/wol-fulltest.json]
 

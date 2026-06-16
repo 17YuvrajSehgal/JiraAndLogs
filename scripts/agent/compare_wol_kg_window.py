@@ -24,7 +24,7 @@ becomes non-zero.
 
 Usage:
     PYTHONPATH=src python scripts/agent/compare_wol_kg_window.py \\
-        --global-dir data/derived/global/2026-06-11-wol-real-global \\
+        --global-dir data/derived/global/2026-06-15-wol-real-v2-global \\
         [--output data/agent_runs/wol-kg-window-compare.json]
 """
 

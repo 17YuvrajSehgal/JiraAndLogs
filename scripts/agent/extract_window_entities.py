@@ -22,7 +22,7 @@ serving on http://localhost:1234 + the right model loaded.
 
 Usage:
     PYTHONPATH=src python scripts/agent/extract_window_entities.py \\
-        --global-dir data/derived/global/2026-06-11-wol-real-global \\
+        --global-dir data/derived/global/2026-06-15-wol-real-v2-global \\
         --split test \\
         [--limit 20]
 """

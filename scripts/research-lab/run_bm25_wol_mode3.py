@@ -27,9 +27,9 @@ from pathlib import Path
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--global-dir", type=Path,
-                    default="data/derived/global/2026-06-11-wol-real-global")
+                    default="data/derived/global/2026-06-15-wol-real-v2-global")
     ap.add_argument("--out-dir", type=Path,
-                    default="data/derived/global/2026-06-11-wol-real-global/tch-lite-refit")
+                    default="data/derived/global/2026-06-15-wol-real-v2-global/tch-lite-refit")
     ap.add_argument("--verbose", action="store_true")
     args = ap.parse_args()
 

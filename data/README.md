@@ -11,7 +11,7 @@ data/
 │   └── global/
 │       ├── 2026-05-25-dataset-v5-large-global/            # **Online Boutique** locked global dataset ← publishable
 │       ├── 2026-06-09-otel-demo-v1-global/                # **OTel Demo** global ← publishable
-│       └── 2026-06-11-wol-real-global/                    # **WoL** Mode 1+2+3 global ← publishable
+│       └── 2026-06-15-wol-real-v2-global/                 # **WoL v2** Mode 1+2+3 global ← publishable (supersedes 2026-06-11 v1)
 │
 ├── runs/                            # **OB** raw collection runs (~80 GB) — optional reference
 ├── otel-demo-runs/                  # **OTel Demo** raw collection runs (~19 GB) — optional reference
@@ -26,7 +26,7 @@ The three `data/derived/global/<id>/` directories are the **publishable artifact
 |---|---|---|---|---|---|
 | **Online Boutique** (`2026-05-25-dataset-v5-large-global/`) | 6,720 | 347 | 27 | Loki + Tempo + Prometheus + k8s | 4701 / 1011 / 1008 |
 | **OTel Demo** (`2026-06-09-otel-demo-v1-global/`) | 1,643 | 147 | 52 | Loki + Tempo + Prometheus + k8s | 1150 / 246 / 247 |
-| **WoL** (`2026-06-11-wol-real-global/`) | 2,000 | 2,000 | 7 | none (real Apache Jira text) | by-family: 1398 / 298 / 304 |
+| **WoL v2** (`2026-06-15-wol-real-v2-global/`) | 9,341 | 2,000 | 7 | none (real Apache Jira text) | by-family: 7,147 / 546 / 1,648 |
 
 **One paragraph each:**
 
@@ -34,7 +34,7 @@ The three `data/derived/global/<id>/` directories are the **publishable artifact
 
 - **OTel Demo.** Synthetic but realistic deployment of the OpenTelemetry demo application, global at `data/derived/global/2026-06-09-otel-demo-v1-global/` — 1,643 windows × 147 memory tickets across 52 scenario families (Kafka outage, network partition, payment outage, cart-redis degradation, cascading-Kafka-checkout, multi-fault, network-latency, l1-compact-*, etc.). Full telemetry. Used as a cross-application generalization test: does the OB-trained system transfer to a different microservices app with the same telemetry modality?
 
-- **WoL (World of Logs).** Real Apache Jira data (MSR 2026 dataset). Source archive at `data/wol/`; derived global at `data/derived/global/2026-06-11-wol-real-global/` — 2,000 real Jira tickets from 7 Apache projects (Spark, Cassandra, HBase, Flink, Ambari, Kafka, MariaDB-Server). **No telemetry** — only log lines that engineers pasted into the Jira ticket. Used for the WoL Mode 1 (distractor), Mode 2 (novelty), Mode 3 (self-contained retrieval) evaluations. See [`DOCS/docs7/REAL-DATA-WoL-PLAN.md`](../DOCS/docs7/REAL-DATA-WoL-PLAN.md).
+- **WoL (World of Logs) v2.** Real Apache Jira data (MSR 2026 source). Source archive at `data/wol/`; derived global at `data/derived/global/2026-06-15-wol-real-v2-global/` — **9,341 real Jira tickets** from 7 Apache projects (Spark, Cassandra, HBase, Flink, Ambari, Kafka, MariaDB-Server): 2,000 `ticket_worthy` + 2,399 `borderline` + 4,942 `noise`. **No telemetry** — only log lines that engineers pasted into the Jira ticket. v2 (locked 2026-06-16) supersedes v1 (`2026-06-11-wol-real-global`, locked 2026-06-13) by adding the negative labels so triage accuracy becomes non-trivial, plus 90 multi-ticket incident clusters that exercise the `pages_per_incident` metric. See [`DOCS/docs7/REAL-DATA-WoL-PLAN.md`](../DOCS/docs7/REAL-DATA-WoL-PLAN.md).
 
 ## Publishable artifact set (per dataset)
 

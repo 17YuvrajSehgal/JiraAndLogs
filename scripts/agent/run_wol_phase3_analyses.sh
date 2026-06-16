@@ -2,12 +2,12 @@
 # WoL Phase 3 analysis playbook — one-shot runner.
 #
 # Pre-requisite: WoL cascade predictions in
-#   data/derived/global/2026-06-11-wol-real-global/tch-lite-refit/
+#   data/derived/global/2026-06-15-wol-real-v2-global/tch-lite-refit/
 # must exist (at minimum: biencoder-predictions.jsonl).
 #
 # Run this AFTER the WoL cascade re-gen lands. It executes every
 # Phase-3 analysis we ran on OB + OTel, with --dataset wol selected.
-# Pace: smoke + 8 analyses, ~5 min total wall (predictions-backed
+# Pace: baseline + 8 analyses, ~5 min total wall (predictions-backed
 # skills are sub-millisecond).
 #
 # Usage:
@@ -18,10 +18,10 @@ set -euo pipefail
 cd "$(dirname "$0")/../.."   # repo root
 export PYTHONPATH=src
 
-GLOBAL_DIR="data/derived/global/2026-06-11-wol-real-global"
-DATASET_ID="2026-06-11-wol-real-global"
-WOL_RESULTS="results/wol"
-WOL_RUNS="data/agent_runs/wol"
+GLOBAL_DIR="data/derived/global/2026-06-15-wol-real-v2-global"
+DATASET_ID="2026-06-15-wol-real-v2-global"
+WOL_RESULTS="results/wol-v2"
+WOL_RUNS="results/wol-v2/agent-runs/wol-phase3-rerun"
 
 mkdir -p "$WOL_RUNS"
 mkdir -p \
@@ -49,19 +49,19 @@ fi
 echo "[wol-phase3] cascade predictions located ✓"
 
 # ============================================================
-# Stage 3 — baseline smoke
+# Stage 3 — baseline run
 # ============================================================
 echo ""
-echo "=== [1/9] Baseline smoke ==="
+echo "=== [1/9] Baseline run ==="
 python scripts/agent/smoke_wol.py \
   --global-dir "$GLOBAL_DIR" \
-  --output "$WOL_RUNS/wol-smoke.json" \
+  --output "$WOL_RUNS/wol-fulltest.json" \
   --trace-root "$WOL_RUNS/traces"
 
-cp "$WOL_RUNS/wol-smoke.json" "$WOL_RESULTS/4.0-baseline/wol-smoke.json"
-cp "$WOL_RUNS/wol-smoke.json" "$WOL_RESULTS/4.3-bootstrap-cis/wol-smoke.json"
+cp "$WOL_RUNS/wol-fulltest.json" "$WOL_RESULTS/4.0-baseline/wol-fulltest.json"
+cp "$WOL_RUNS/wol-fulltest.json" "$WOL_RESULTS/4.3-bootstrap-cis/wol-fulltest.json"
 
-TRACE_DIR="$WOL_RUNS/traces/smoke-$DATASET_ID"
+TRACE_DIR="$WOL_RUNS/traces/fulltest-$DATASET_ID"
 
 # ============================================================
 # Stage 4 — per-RQ analyses
@@ -96,7 +96,7 @@ python scripts/agent/skill_ablation.py \
 echo ""
 echo "=== [6/9] §4.3 — bootstrap CIs ==="
 python scripts/agent/bootstrap_headlines.py \
-  --reports "$WOL_RESULTS/4.3-bootstrap-cis/wol-smoke.json"
+  --reports "$WOL_RESULTS/4.3-bootstrap-cis/wol-fulltest.json"
 
 echo ""
 echo "=== [7/9] §4.4 — capability-mask sweep ==="
@@ -114,7 +114,7 @@ python scripts/agent/cost_vs_cascade.py \
 echo ""
 echo "=== [9/9] §4.8 — failure categories ==="
 python scripts/agent/failure_categories.py \
-  --reports "$WOL_RESULTS/4.3-bootstrap-cis/wol-smoke.json" \
+  --reports "$WOL_RESULTS/4.3-bootstrap-cis/wol-fulltest.json" \
   --output "$WOL_RESULTS/4.8-failure-categories/categories.json"
 
 echo ""

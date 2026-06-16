@@ -355,18 +355,18 @@ class TestObservationContextFromConfig(unittest.TestCase):
         config = {
             "experiment": {
                 "name": "wol-baseline",
-                "dataset_id": "2026-06-11-wol-real-global",
+                "dataset_id": "2026-06-15-wol-real-v2-global",
             },
             "verifier_calibration": {
                 "known_helpful_distributions": ["2026-05-25-dataset-v5-large-global"],
-                "known_harmful_distributions": ["2026-06-11-wol-real-global"],
+                "known_harmful_distributions": ["2026-06-15-wol-real-v2-global"],
                 "default_policy": "skip",
             },
         }
         ctx = ObservationContext.from_agent_config(
             config, has_kg_graph_memory=True, has_kg_graph_window=False,
         )
-        self.assertEqual(ctx.dataset_id, "2026-06-11-wol-real-global")
+        self.assertEqual(ctx.dataset_id, "2026-06-15-wol-real-v2-global")
         self.assertTrue(ctx.has_kg_graph_memory)
         self.assertFalse(ctx.has_kg_graph_window)
         # WoL is in known_harmful → verifier off
