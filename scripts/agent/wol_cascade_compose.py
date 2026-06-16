@@ -16,7 +16,7 @@ Predictions are pre-computed (no inference), so this is pure analysis
 
 Usage:
     PYTHONPATH=src python scripts/agent/wol_cascade_compose.py \\
-        --global-dir data/derived/global/2026-06-11-wol-real-global \\
+        --global-dir data/derived/global/2026-06-15-wol-real-v2-global \\
         --output data/agent_runs/wol-cascade-composition.json
 """
 

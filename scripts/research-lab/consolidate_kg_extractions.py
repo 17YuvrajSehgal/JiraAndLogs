@@ -12,7 +12,7 @@ just overwrites the consolidated file.
 
 Usage:
     python scripts/research-lab/consolidate_kg_extractions.py \\
-        --global-dir data/derived/global/2026-06-11-wol-real-global
+        --global-dir data/derived/global/2026-06-15-wol-real-v2-global
 """
 from __future__ import annotations
 

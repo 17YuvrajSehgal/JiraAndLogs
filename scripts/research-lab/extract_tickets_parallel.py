@@ -16,7 +16,7 @@ re-runs are cheap and interrupted runs resume by skipping cached tickets.
 
 Usage:
     PYTHONPATH=src python scripts/research-lab/extract_tickets_parallel.py \\
-        --global-dir data/derived/global/2026-06-11-wol-real-global \\
+        --global-dir data/derived/global/2026-06-15-wol-real-v2-global \\
         --humanized-subdir bulk-20260611 \\
         --model qwen/qwen3.6-35b-a3b \\
         --workers 4

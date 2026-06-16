@@ -20,7 +20,7 @@ Usage:
     PYTHONPATH=src python scripts/agent/run_distractor_sweep.py \\
         --cascade-predictions data/derived/global/2026-05-25-dataset-v5-large-global/comparison/v2g-final-models/final/per-window-predictions.jsonl \\
         --triage-examples data/derived/global/2026-05-25-dataset-v5-large-global/global-triage-examples.jsonl \\
-        --distractors data/derived/global/2026-06-11-wol-real-global/distractors/timeline.jsonl \\
+        --distractors data/derived/global/2026-06-15-wol-real-v2-global/distractors/timeline.jsonl \\
         --memory-size 347 \\
         --distractor-pool-size 300 \\
         --ratios 0,10,25,50 \\

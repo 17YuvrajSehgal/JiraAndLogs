@@ -30,9 +30,9 @@ Output JSONL (one row per OOD query):
 
 Usage:
     PYTHONPATH=src python scripts/agent/run_diagnosis_on_ood.py \\
-        --global-dir data/derived/global/2026-06-11-wol-real-global \\
+        --global-dir data/derived/global/2026-06-15-wol-real-v2-global \\
         --queries novelty-queries/windows.jsonl \\
-        --output data/derived/global/2026-06-11-wol-real-global/ood-diagnosis-predictions.jsonl \\
+        --output data/derived/global/2026-06-15-wol-real-v2-global/ood-diagnosis-predictions.jsonl \\
         [--limit 50]
 """
 
