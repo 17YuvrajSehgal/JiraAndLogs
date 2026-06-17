@@ -1,0 +1,109 @@
+<mxfile host="app.diagrams.net">
+  <diagram name="Agent-Architecture" id="agent-arch-001">
+    <mxGraphModel dx="2300" dy="1320" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="900" pageHeight="1000" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="l0-observer" parent="1" style="sketch=0;outlineConnect=0;dashed=0;verticalLabelPosition=middle;verticalAlign=middle;align=right;html=1;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.cloudwatch_2;fillColor=#E7157B;strokeColor=#ffffff;strokeWidth=1;fontSize=12;fontStyle=1;labelBackgroundColor=none;fontColor=light-dark(#000000,#FFFFFF);labelPosition=left;labelBorderColor=none;" value="&lt;span&gt;L0 — Capabilities Observer&lt;/span&gt;&lt;br&gt;&lt;font&gt;emits flags (NUMERIC | TEXT | LOGS |&lt;br&gt;TRACE | K8S | METRICS | MEMORY | VERIFIER_OK)&lt;/font&gt;" vertex="1">
+          <mxGeometry height="60" width="60" x="420" y="170" as="geometry" />
+        </mxCell>
+        <mxCell id="l1-controller" parent="1" style="sketch=0;outlineConnect=0;dashed=0;verticalLabelPosition=middle;verticalAlign=middle;align=left;html=1;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.step_functions;fillColor=#E7157B;strokeColor=#ffffff;strokeWidth=1;fontSize=12;fontStyle=1;labelBackgroundColor=none;fontColor=light-dark(#000000,#FFFFFF);labelPosition=right;labelBorderColor=none;" value="&lt;span&gt;L1 — Controller&lt;/span&gt;&lt;br&gt;&lt;font&gt;CapabilityAwareRuleController&lt;br&gt;selects 1 of 6 branches&lt;/font&gt;" vertex="1">
+          <mxGeometry height="60" width="60" x="420" y="320" as="geometry" />
+        </mxCell>
+        <mxCell id="l5-state" parent="1" style="shape=cylinder3;html=1;boundedLbl=1;backgroundOutline=1;size=15;fillColor=#dae8fc;strokeColor=#6c8ebf;strokeWidth=1;shadow=0;verticalLabelPosition=top;verticalAlign=bottom;align=center;fontSize=12;fontStyle=1;labelBackgroundColor=none;fontColor=light-dark(#000000,#FFFFFF);labelPosition=center;labelBorderColor=none;" value="&lt;span&gt;L5 — State Layer&lt;/span&gt;&lt;br&gt;&lt;font&gt;per-service ring buffer (n=12)&lt;br&gt;page-suppression rule&lt;/font&gt;" vertex="1">
+          <mxGeometry height="60" width="60" x="30" y="350" as="geometry" />
+        </mxCell>
+        <mxCell id="l2-plan" parent="1" style="sketch=0;outlineConnect=0;dashed=0;verticalLabelPosition=middle;verticalAlign=middle;align=right;html=1;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.managed_workflows_for_apache_airflow;fillColor=#945DF2;strokeColor=#ffffff;strokeWidth=1;fontSize=12;fontStyle=1;labelBackgroundColor=none;fontColor=light-dark(#000000,#FFFFFF);labelPosition=left;labelBorderColor=none;" value="&lt;span&gt;L2 — Plan&lt;/span&gt;&lt;br&gt;&lt;font&gt;ordered skill invocations&lt;br&gt;+ gates + per-call budget&lt;/font&gt;" vertex="1">
+          <mxGeometry height="60" width="60" x="420" y="490" as="geometry" />
+        </mxCell>
+        <mxCell id="skill-cache" parent="1" style="shape=cylinder3;html=1;boundedLbl=1;backgroundOutline=1;size=15;fillColor=#dae8fc;strokeColor=#6c8ebf;strokeWidth=1;shadow=0;verticalLabelPosition=top;verticalAlign=bottom;align=center;fontSize=12;fontStyle=1;labelBackgroundColor=none;fontColor=light-dark(#000000,#FFFFFF);labelPosition=center;labelBorderColor=none;" value="&lt;span&gt;SkillCache&lt;/span&gt;&lt;br&gt;&lt;font&gt;content-addressed&lt;br&gt;on-disk cache&lt;/font&gt;" vertex="1">
+          <mxGeometry height="60" width="60" x="270" y="750" as="geometry" />
+        </mxCell>
+        <mxCell id="l3-runner" parent="1" style="sketch=0;outlineConnect=0;dashed=0;verticalLabelPosition=bottom;verticalAlign=bottom;align=center;html=1;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.lambda;fillColor=#ED7100;strokeColor=#ffffff;strokeWidth=1;fontSize=12;fontStyle=1;labelBackgroundColor=none;fontColor=light-dark(#000000,#FFFFFF);labelBorderColor=none;" value="&lt;span&gt;L3 — Runner&lt;/span&gt;&lt;br&gt;&lt;font&gt;walks Plan; evaluates gate;&lt;br&gt;invokes skill; writes trace&lt;/font&gt;" vertex="1">
+          <mxGeometry height="60" width="60" x="580" y="600" as="geometry" />
+        </mxCell>
+        <mxCell id="budget" parent="1" style="sketch=0;outlineConnect=0;dashed=0;verticalLabelPosition=bottom;verticalAlign=bottom;align=center;html=1;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.cost_explorer;fillColor=#945DF2;strokeColor=#ffffff;strokeWidth=1;fontSize=12;fontStyle=1;labelBackgroundColor=none;fontColor=light-dark(#000000,#FFFFFF);labelBorderColor=none;" value="&lt;span&gt;Budget&lt;/span&gt;&lt;br&gt;&lt;font&gt;tokens / wall / USD&lt;/font&gt;" vertex="1">
+          <mxGeometry height="60" width="60" x="940" y="630" as="geometry" />
+        </mxCell>
+        <mxCell id="trace" parent="1" style="sketch=0;outlineConnect=0;dashed=0;verticalLabelPosition=bottom;verticalAlign=bottom;align=center;html=1;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.cloudtrail;fillColor=#E7157B;strokeColor=#ffffff;strokeWidth=1;fontSize=12;fontStyle=1;labelBackgroundColor=none;fontColor=light-dark(#000000,#FFFFFF);labelBorderColor=none;" value="&lt;span&gt;Trace&lt;/span&gt;&lt;br&gt;&lt;font&gt;replayable JSON log&lt;/font&gt;" vertex="1">
+          <mxGeometry height="60" width="60" x="1030" y="700" as="geometry" />
+        </mxCell>
+        <mxCell id="l4-registry" parent="1" style="rounded=1;html=1;fillColor=#d5e8d4;strokeColor=#82b366;strokeWidth=1;shadow=1;fontStyle=1;fontSize=12;align=center;verticalAlign=bottom;dashed=0;spacingTop=8;labelBackgroundColor=none;fontColor=light-dark(#000000,#FFFFFF);labelBorderColor=none;labelPosition=center;verticalLabelPosition=top;" value="Re" vertex="1">
+          <mxGeometry height="160" width="1190" x="30" y="840" as="geometry" />
+        </mxCell>
+        <mxCell id="skill-triage" parent="l4-registry" style="sketch=0;outlineConnect=0;dashed=0;verticalLabelPosition=top;verticalAlign=bottom;align=center;html=1;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.sagemaker_canvas;fillColor=#01A88D;strokeColor=#ffffff;strokeWidth=1;fontSize=12;fontStyle=1;labelBackgroundColor=none;fontColor=light-dark(#000000,#FFFFFF);labelBorderColor=none;labelPosition=center;spacingTop=0;" value="&lt;span&gt;Triage&lt;/span&gt;&lt;br&gt;&lt;font&gt;HGB classifier&lt;/font&gt;" vertex="1">
+          <mxGeometry height="50" width="74.375" x="59.5" y="63" as="geometry" />
+        </mxCell>
+        <mxCell id="skill-verify" parent="l4-registry" style="sketch=0;outlineConnect=0;dashed=0;verticalLabelPosition=top;verticalAlign=bottom;align=center;html=1;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.sagemaker_model;fillColor=#01A88D;strokeColor=#ffffff;strokeWidth=1;fontSize=12;fontStyle=1;labelBackgroundColor=none;fontColor=light-dark(#000000,#FFFFFF);labelBorderColor=none;labelPosition=center;spacingTop=0;" value="&lt;span&gt;LLM Verifier&lt;/span&gt;&lt;br&gt;&lt;font&gt;root-cause check&lt;/font&gt;" vertex="1">
+          <mxGeometry height="50" width="74.375" x="450" y="62" as="geometry" />
+        </mxCell>
+        <mxCell id="skill-compose" parent="l4-registry" style="sketch=0;outlineConnect=0;dashed=0;verticalLabelPosition=top;verticalAlign=bottom;align=center;html=1;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.eventbridge;fillColor=#E7157B;strokeColor=#ffffff;strokeWidth=1;fontSize=12;fontStyle=1;labelBackgroundColor=none;fontColor=light-dark(#000000,#FFFFFF);labelBorderColor=none;labelPosition=center;spacingTop=0;" value="&lt;span&gt;Composers&lt;/span&gt; (3)&lt;br&gt;&lt;font&gt;L2 RRF / triage / novelty&lt;/font&gt;" vertex="1">
+          <mxGeometry height="50" width="74.375" x="649" y="62" as="geometry" />
+        </mxCell>
+        <mxCell id="skill-react" parent="l4-registry" style="sketch=0;outlineConnect=0;dashed=0;verticalLabelPosition=top;verticalAlign=bottom;align=center;html=1;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.systems_manager;fillColor=#E7157B;strokeColor=#ffffff;strokeWidth=1;fontSize=12;fontStyle=1;labelBackgroundColor=none;fontColor=light-dark(#000000,#FFFFFF);labelBorderColor=none;labelPosition=center;spacingTop=0;" value="&lt;span&gt;ReAct Tools&lt;/span&gt; (4)&lt;br&gt;&lt;font&gt;pod-events / trace / metrics / peers&lt;/font&gt;" vertex="1">
+          <mxGeometry height="50" width="74.375" x="845" y="62" as="geometry" />
+        </mxCell>
+        <mxCell id="skill-rerank" parent="l4-registry" style="sketch=0;outlineConnect=0;dashed=0;verticalLabelPosition=top;verticalAlign=bottom;align=center;html=1;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.glue;fillColor=#945DF2;strokeColor=#ffffff;strokeWidth=1;fontSize=12;fontStyle=1;labelBackgroundColor=none;fontColor=light-dark(#000000,#FFFFFF);labelBorderColor=none;labelPosition=center;spacingTop=0;" value="&lt;span&gt;Rerank&lt;/span&gt;&lt;br&gt;&lt;font&gt;consumes tool_results&lt;/font&gt;" vertex="1">
+          <mxGeometry height="50" width="74.375" x="1041.25" y="63" as="geometry" />
+        </mxCell>
+        <mxCell id="e-react-rerank" edge="1" parent="l4-registry" source="skill-react" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=1;exitY=0.5;entryX=0;entryY=0.5;strokeWidth=1;endArrow=classic;endFill=1;curved=1;fontSize=12;labelBackgroundColor=none;strokeColor=#82b366;verticalAlign=bottom;fontColor=light-dark(#000000,#FFFFFF);fontStyle=1;labelBorderColor=none;" target="skill-rerank" value="tool_results">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="G3F5fu--NovVcMHT2X0m-6" parent="l4-registry" style="image;aspect=fixed;perimeter=ellipsePerimeter;html=1;align=center;shadow=0;dashed=0;fontColor=light-dark(#000000,#FFFFFF);labelBackgroundColor=none;fontSize=12;spacingTop=0;image=img/lib/ibm/miscellaneous/retrieve_rank.svg;strokeWidth=1;labelPosition=center;verticalLabelPosition=top;verticalAlign=bottom;" value="Retrievers(5)&lt;div&gt;Dense / Log-Seq / Hybrid/ KG&lt;/div&gt;" vertex="1">
+          <mxGeometry height="60" width="60" x="263" y="58" as="geometry" />
+        </mxCell>
+        <mxCell id="agent-decision" parent="1" style="shape=image;html=1;verticalAlign=bottom;verticalLabelPosition=bottom;labelBackgroundColor=none;imageAspect=0;aspect=fixed;image=https://icons.diagrams.net/icon-cache1/Business_Success-2515/brain-think-brainstorm-creative-idea-1080.svg;fontSize=12;fontStyle=1;align=center;fontColor=light-dark(#000000,#FFFFFF);labelBorderColor=none;strokeWidth=1;" value="&lt;span&gt;AgentDecision&lt;/span&gt;&lt;br&gt;&lt;font&gt;triage | matched_ids | novelty&lt;br&gt;plan_id | cost | trace_path&lt;/font&gt;" vertex="1">
+          <mxGeometry height="60" width="60" x="-100" y="1040" as="geometry" />
+        </mxCell>
+        <mxCell id="data-lake" parent="1" style="shape=cylinder3;html=1;boundedLbl=1;backgroundOutline=1;size=15;fillColor=#fff2cc;strokeColor=#d6b656;strokeWidth=1;shadow=0;verticalLabelPosition=bottom;verticalAlign=bottom;align=center;fontSize=12;fontStyle=1;labelBackgroundColor=none;fontColor=light-dark(#000000,#FFFFFF);labelBorderColor=none;" value="&lt;span&gt;Data Lake&lt;/span&gt;&lt;br&gt;&lt;font&gt;raw run access:&lt;br&gt;k8s | tempo | prom | peers&lt;/font&gt;" vertex="1">
+          <mxGeometry height="60" width="60" x="930" y="1050" as="geometry" />
+        </mxCell>
+        <mxCell id="e2" edge="1" parent="1" source="l0-observer" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.5;exitY=1;entryX=0.5;entryY=0;strokeWidth=1;endArrow=classic;endFill=1;curved=1;fontSize=12;labelBackgroundColor=none;verticalAlign=bottom;fontColor=light-dark(#000000,#FFFFFF);fontStyle=1;labelBorderColor=none;" target="l1-controller" value="capabilities">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e3" edge="1" parent="1" source="l5-state" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=1;exitY=0.5;strokeWidth=1;endArrow=classic;endFill=1;dashed=1;curved=1;fontSize=12;labelBackgroundColor=none;verticalAlign=bottom;fontColor=light-dark(#000000,#FFFFFF);exitDx=0;exitDy=0;exitPerimeter=0;fontStyle=1;labelBorderColor=none;" target="l1-controller" value="state view">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e4" edge="1" parent="1" source="l1-controller" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.5;exitY=1;entryX=0.5;entryY=0;strokeWidth=1;endArrow=classic;endFill=1;curved=1;fontSize=12;labelBackgroundColor=none;verticalAlign=bottom;fontColor=light-dark(#000000,#FFFFFF);fontStyle=1;labelBorderColor=none;" target="l2-plan" value="emits Plan">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e5" edge="1" parent="1" source="l2-plan" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.5;exitY=1;entryX=0.5;entryY=0;strokeWidth=1;endArrow=classic;endFill=1;curved=1;verticalAlign=bottom;labelBackgroundColor=none;fontColor=light-dark(#000000,#FFFFFF);fontSize=12;fontStyle=1;labelBorderColor=none;" target="l3-runner">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e6" edge="1" parent="1" source="skill-cache" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=1;exitY=0.5;entryX=0;entryY=0.5;strokeWidth=1;endArrow=classic;endFill=1;startArrow=classic;startFill=1;dashed=1;curved=1;fontSize=12;labelBackgroundColor=none;verticalAlign=bottom;fontColor=light-dark(#000000,#FFFFFF);fontStyle=1;labelBorderColor=none;" target="l3-runner" value="lookup / put">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e7" edge="1" parent="1" source="l3-runner" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=1;exitY=0.5;entryX=0;entryY=0.5;strokeWidth=1;endArrow=classic;endFill=1;startArrow=classic;startFill=1;dashed=1;curved=1;fontSize=12;labelBackgroundColor=none;verticalAlign=bottom;fontColor=light-dark(#000000,#FFFFFF);fontStyle=1;labelBorderColor=none;" target="budget" value="check / deduct">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e8" edge="1" parent="1" source="l3-runner" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=1;exitY=0.8;entryX=0;entryY=0.8;strokeWidth=1;endArrow=classic;endFill=1;dashed=1;curved=1;fontSize=12;labelBackgroundColor=none;verticalAlign=bottom;fontColor=light-dark(#000000,#FFFFFF);fontStyle=1;labelBorderColor=none;" target="trace" value="write events">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e9" edge="1" parent="1" source="l3-runner" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.5;exitY=1;entryX=0.5;entryY=0;strokeWidth=1;endArrow=classic;endFill=1;startArrow=classic;startFill=1;curved=1;fontSize=12;labelBackgroundColor=none;verticalAlign=bottom;fontColor=light-dark(#000000,#FFFFFF);fontStyle=1;labelBorderColor=none;" target="l4-registry" value="invoke / return">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e10" edge="1" parent="1" source="skill-react" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.5;exitY=1;entryX=0.5;entryY=0;strokeWidth=1;endArrow=classic;endFill=1;dashed=1;curved=1;fontSize=12;labelBackgroundColor=none;verticalAlign=bottom;fontColor=light-dark(#000000,#FFFFFF);fontStyle=1;labelBorderColor=none;" target="data-lake" value="fetch evidence">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e11" edge="1" parent="1" source="l3-runner" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0;exitY=0.5;entryX=0.5;entryY=0;strokeWidth=1;endArrow=classic;endFill=1;curved=1;fontSize=12;labelBackgroundColor=none;verticalAlign=bottom;fontColor=light-dark(#000000,#FFFFFF);fontStyle=1;labelBorderColor=none;" target="agent-decision" value="final decision">
+          <mxGeometry relative="1" x="-0.0843" y="40" as="geometry">
+            <mxPoint as="offset" />
+            <Array as="points">
+              <mxPoint x="-40" y="630" />
+              <mxPoint x="-40" y="1000" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="G3F5fu--NovVcMHT2X0m-2" edge="1" parent="1" source="G3F5fu--NovVcMHT2X0m-1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;verticalAlign=bottom;labelBackgroundColor=none;fontColor=light-dark(#000000,#FFFFFF);fontSize=12;fontStyle=1;labelBorderColor=none;strokeWidth=1;" target="l0-observer">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="G3F5fu--NovVcMHT2X0m-1" parent="1" style="verticalLabelPosition=middle;aspect=fixed;html=1;shape=mxgraph.salesforce.data;fillColor=none;strokeColor=none;verticalAlign=middle;labelBackgroundColor=none;fontColor=light-dark(#000000,#FFFFFF);labelPosition=left;align=right;fontSize=12;fontStyle=1;labelBorderColor=none;strokeWidth=1;" value="&#xa;&lt;span style=&quot;forced-color-adjust: none; font-family: Helvetica; font-style: normal; font-variant-ligatures: normal; font-variant-caps: normal; letter-spacing: normal; orphans: 2; text-align: center; text-indent: 0px; text-transform: none; widows: 2; word-spacing: 0px; -webkit-text-stroke-width: 0px; white-space: nowrap; text-decoration-thickness: initial; text-decoration-style: initial; text-decoration-color: initial; box-shadow: none !important;&quot;&gt;InputBundle&lt;/span&gt;&lt;br style=&quot;forced-color-adjust: none; font-family: Helvetica; font-style: normal; font-variant-ligatures: normal; font-variant-caps: normal; letter-spacing: normal; orphans: 2; text-align: center; text-indent: 0px; text-transform: none; widows: 2; word-spacing: 0px; -webkit-text-stroke-width: 0px; white-space: nowrap; text-decoration-thickness: initial; text-decoration-style: initial; text-decoration-color: initial; box-shadow: none !important;&quot;&gt;&lt;font style=&quot;forced-color-adjust: none; font-family: Helvetica; font-style: normal; font-variant-ligatures: normal; font-variant-caps: normal; letter-spacing: normal; orphans: 2; text-align: center; text-indent: 0px; text-transform: none; widows: 2; word-spacing: 0px; -webkit-text-stroke-width: 0px; white-space: nowrap; text-decoration-thickness: initial; text-decoration-style: initial; text-decoration-color: initial; box-shadow: none !important;&quot;&gt;per-window evidence&lt;/font&gt;&#xa;&#xa;" vertex="1">
+          <mxGeometry height="60" width="48.6" x="426" y="20" as="geometry" />
+        </mxCell>
+        <mxCell id="G3F5fu--NovVcMHT2X0m-3" edge="1" parent="1" source="agent-decision" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;entryPerimeter=0;fontSize=12;fontStyle=1;fontColor=light-dark(#000000,#FFFFFF);labelBackgroundColor=none;labelBorderColor=none;strokeWidth=1;curved=1;endArrow=block;endFill=0;" target="l5-state">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
