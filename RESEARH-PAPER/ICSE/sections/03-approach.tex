@@ -45,7 +45,7 @@ To make this work, six concerns are factored into separate layers, each replacea
 
 Every diagnostic invocation is cacheable; every decision is replayable from the trace; every layer is unit-tested in isolation. The remainder of this section walks through each layer, explains the design choices, and notes which mechanisms exist to keep the system honest under measurement. Figure~\ref{fig:agent-architecture} renders the six layers, their primary and sidecar dataflow, and the skill registry partitioned by cost class.
 
-\begin{figure*}[t]
+\begin{figure*}[!t]
   \centering
   \includegraphics[width=\linewidth]{figures/agent-architecture.png}
   \caption{The capability-adaptive incident-triage agent. \emph{Primary flow} (solid arrows): each per-window \texttt{InputBundle} is inspected by L0, which emits a capability set the L1 \emph{CapabilityAwareRule} controller combines with the L5 state view to select one of six branches (\textsc{state\_suppress}, \textsc{pre\_fault\_baseline}, \textsc{recovery\_window}, \textsc{observation\_window}, \textsc{active\_fault}, \textsc{default}); the resulting L2 Plan is walked by the L3 AgentRunner, which invokes diagnostic primitives from the L4 Skill Registry (sixteen runtime skills plus one indexing-time entity extractor, partitioned into cost classes \textsc{cheap}, \textsc{medium}, \textsc{expensive$\cdot$LLM}, and \textsc{low}). \emph{Sidecars} (dashed arrows): the SkillCache lookup/put loop, Budget check/deduct, Trace append, MemoryView read, and the on-demand ReAct tools' fetch into the raw run data lake. Decision precedence inside the active-fault branch is \texttt{rerank} $\rightarrow$ \texttt{compose\_l2} $\rightarrow$ \texttt{retrieve\_dense}; expensive retrievers and the LLM verifier fire only when the cheap path is unconfident (escalation gate); the four ReAct tools and rerank fire only when retrieval consensus is low (reformulation gate). The AgentDecision is emitted to the EvaluationReport and written back to the L5 ring buffer (cross-window loop).}
@@ -65,7 +65,7 @@ The second and third are two hybrid sparse-plus-dense retrievers that combine a 
 
 \paragraphhead{Structural retriever.} A fourth escalation primitive scores past tickets by weighted entity overlap against a small knowledge graph populated once, offline, from a language-model extraction pass over each memory ticket's text. The graph carries one node per memory ticket plus typed nodes for affected services, components, observable symptoms, error classes, root causes, and resolutions, with edges linking each ticket to the entities it mentions (Figure~\ref{fig:kg-vis}). At query time the live window's entities are extracted by the same canonical-vocabulary rule extractor used by one of the hybrid variants, and a parameterised graph query scores each ticket by an additive overlap function that weights error-class matches more highly than service matches, service matches more highly than component matches, and component matches more highly than symptom matches.
 
-\begin{figure*}[t]
+\begin{figure*}[!t]
   \centering
   \begin{subfigure}[t]{0.55\linewidth}
     \centering

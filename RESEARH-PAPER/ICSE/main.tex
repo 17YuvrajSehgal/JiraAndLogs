@@ -26,6 +26,21 @@
 \usepackage{amsmath, amssymb}      % math
 \usepackage{balance}               % balance the last page
 \usepackage{xcolor}                % colored text for \todo macro
+\usepackage{placeins}              % \FloatBarrier — flushes floats at section boundaries
+
+% =====================================================================
+% Float placement — keep two-column-spanning figures near their text.
+% acmart's defaults are conservative and our wide `figure*` blocks were
+% piling up on the last page; the tweaks below let LaTeX place a single
+% wide float at the top of a column even when it occupies most of it.
+% =====================================================================
+\setcounter{topnumber}{3}                          % up to 3 top floats per page
+\setcounter{bottomnumber}{2}
+\setcounter{totalnumber}{4}
+\renewcommand{\topfraction}{0.92}                  % a top float may use up to 92% of a page
+\renewcommand{\bottomfraction}{0.7}
+\renewcommand{\textfraction}{0.05}                 % keep at least 5% text on a float page
+\renewcommand{\floatpagefraction}{0.7}             % a float-only page must be at least 70% floats
 
 % Hide the ACM rights block during review
 \setcopyright{none}
