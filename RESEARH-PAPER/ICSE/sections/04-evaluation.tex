@@ -31,9 +31,9 @@ This section fixes the methodology under which every measurement in \S\ref{sec:r
 
 The agent is evaluated on three datasets chosen to stress different parts of its design: a controlled synthetic microservices benchmark, a structurally different polyglot synthetic application that we use as a \emph{zero-shot} transfer test, and a corpus of real Apache Jira tickets paired with telemetry-style queries that we use under a \emph{family-held-out} leave-one-domain-out split. The two synthetic datasets are built by an identical pipeline, summarised in Figure~\ref{fig:data-collection}: a load generator drives traffic into the application running on a Kubernetes cluster while a fault injector (application-level scenarios plus Chaos Mesh) perturbs the system; the same scenarios drive both a synthetic Jira ticket that is then humanised by a language model, and the five telemetry channels that get joined to the ticket as labelled data for the agent.
 
-\begin{figure*}[!t]
+\begin{figure*}[!tp]
   \centering
-  \includegraphics[width=0.85\linewidth]{figures/data-collection-workflow.png}
+  \includegraphics[width=0.85\linewidth,height=0.62\textheight,keepaspectratio]{figures/data-collection-workflow.png}
   \caption{Synthetic data-collection workflow for \dsob{} and \dsotel{}. A load generator drives traffic into the application running on a Kubernetes cluster (\texttt{e2-standard-16}); two fault-injection mechanisms perturb the system in parallel---application-level scenarios (54 YAML scenarios using \texttt{SetEnv}, \texttt{RestartPods}, \texttt{ScaleDeployment} primitives) and Chaos Mesh (DNS, network partition, memory pressure). Five telemetry channels are collected per window: Alert Manager, Prometheus metrics, Loki logs, Kubernetes events, and Tempo traces. The same fault scenarios drive synthetic Jira ticket generation in parallel; an LLM humaniser rewrites the synthetic tickets into engineer-voice prose. Labelled data is the union of the five telemetry channels and the humanised tickets; the agent consumes it for training and evaluation.}
   \label{fig:data-collection}
 \end{figure*}
@@ -111,3 +111,5 @@ The choice of seed and the choice of $1{,}000$ resamples are deliberate. Both ar
 \label{sec:evaluation:impl}
 
 The agent is implemented as a Python library; the diagnostic primitives are wrapped behind a uniform skill interface. The fine-tuned dense bi-encoder uses sentence-transformers' all-MiniLM-L6-v2 backbone~\cite{reimers2019sbert} ($22$M parameters, $384$-d embedding) trained for five epochs at a fine-tune batch size of thirty-two on a single GPU; fine-tune time is approximately two hours per dataset on a consumer-grade card and is faster on the smaller \dsotel{}. The language-model verifier is configured to run against a self-hosted OpenAI-compatible endpoint by default (LM Studio with a Qwen-3.6-35B-class model at the time of writing) and against vendor-hosted endpoints (OpenAI, Anthropic, Ollama, vLLM) by changing a single environment variable; all dollar-equivalent cost numbers in this paper are computed at gpt-4o-mini token rates so that the savings percentage is interpretable on a vendor-served deployment. Cache, trace, and per-skill prediction outputs are persisted under a deterministic directory layout that lets a reviewer reproduce any specific window's decision by re-running a single command. The fine-tune random seed, the bootstrap seed, and the controller's gate-threshold defaults are all exposed via command-line arguments.
+
+\FloatBarrier
