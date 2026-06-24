@@ -19,10 +19,21 @@ from __future__ import annotations
 
 import argparse
 import json
+import logging
 import sys
 import time
 from collections import defaultdict
 from pathlib import Path
+
+# Configure root logger so every INFO from neural_models.* / comparison.* /
+# v2_advanced.* etc. is visible on stdout. Without this, fine-tune progress is
+# silently dropped (see bm25 / kg_retrieval scripts for the same pattern).
+logging.basicConfig(
+    level=logging.INFO,
+    format="[%(asctime)s] %(levelname)s %(name)s: %(message)s",
+    datefmt="%H:%M:%S",
+    force=True,
+)
 
 
 def main() -> int:

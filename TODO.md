@@ -1,3 +1,310 @@
+# WoL v3 (80K Dataset) — Status & Remaining Work
+
+*Last updated: 2026-06-24 (after BiEncoder OOM on 14h serial run)*
+
+**Dataset under measurement.** `data/derived/global/2026-06-17-wol-real-v3-global/`
+(Option C — 24 distributed-systems Apache projects, no quality filters, 78,140 query rows).
+
+**Source-of-truth files for paper numbers.**
+- `DOCS/docs8/PAPER-FINDINGS.md` — current paper claims sourced from v2
+- `DOCS/docs8/RQ-CLOSURE-TABLE.md` — master RQ status
+- `RESEARH-PAPER/ICSE/sections/` — LaTeX sections that need v3 number updates
+
+---
+
+## ✅ DONE (verified on disk, reproducible)
+
+### 1. WoL v3 dataset built
+
+Path: `data/derived/global/2026-06-17-wol-real-v3-global/` (~1.3 GB on disk)
+
+| Artifact | Rows | Confirmed |
+|---|---:|---|
+| `jira-memory-corpus.jsonl` | 38,642 | ✅ |
+| `global-triage-examples.jsonl` (queries) | 78,140 | ✅ |
+| `window-memory-matchings.jsonl` (coarse gold) | 78,140 | ✅ |
+| `window-memory-matchings-strong.jsonl` (Jaccard > 0.15) | 78,140 | ✅ |
+| `jira-shadow-humanized-v2/bulk-20260617/timeline.jsonl` | 38,642 | ✅ |
+| `triage-split-manifest.json` | — | ✅ family→split |
+| `dataset-metadata.json` + `README.md` + `source-mapping.csv` | — | ✅ |
+
+Headline composition: **38,642 ticket_worthy + 25,619 borderline + 13,879 noise = 78,140 queries**, across **24 Apache projects**. Test families = Kafka + MariaDB-Server (13,388 windows). Multi-incident clusters: 2,456.
+
+**Build script**: `scripts/research-lab/build_wol_real_corpus_v3.py`.
+
+### 2. KG extractions completed (gpt-4o-mini via OpenAI)
+
+| Artifact | Rows | Cost |
+|---|---:|---:|
+| `v2_kg_extractions/all_extractions.jsonl` (memory side) | 38,600 | ~$17 |
+| `v2_kg_extractions/ticket/*.json` (per-ticket cache) | 38,587 individual files | — |
+| `v2_kg_extractions_windows/all_extractions.jsonl` (window side) | 78,140 | ~$19 |
+| `v2_kg_extractions_windows/window/*.json` (per-window cache) | 78,139 individual files | — |
+
+Total OpenAI spend on extraction: **~$36**.
+
+**Scripts** (all patched during this run):
+- `scripts/research-lab/extract_tickets_parallel.py` — memory side. Patches: `--shard M/N`, `--max-input-chars`, `--timeout-s`, `--max-retries`, `--api-key-env`.
+- `scripts/agent/extract_window_entities.py` — window side. Same patches plus parallel workers.
+- `scripts/research-lab/consolidate_kg_extractions.py` — safety-net: rebuild consolidated JSONL from per-ticket cache after sharded runs.
+- `src/v2_advanced/shared/lm_studio.py` — proper 429 backoff (10 retries, exponential up to 300s, honors Retry-After header), 4xx non-retry, downgraded routine 429 messages to DEBUG.
+
+### 3. Neo4j running with v3 graph loaded
+
+- Container: `neo4j-kg` (Docker, default creds neo4j/123456789, port 7687)
+- Database: default `neo4j` (Community Edition single-DB)
+- Loaded: 38,462 Incident · 1,622 Component · 335 ErrorClass · 37,480 RootCause · 32,041 Fix · 98,176 Symptom nodes
+- Reload script: `src/v2_advanced/proposal_d_knowledge_graph/reload_neo4j.py`
+- Dataset→DB mapping updated for v3 in `src/v2_advanced/shared/neo4j_client.py:71-74`
+
+### 4. KG-Retrieval cascade — first cascade done
+
+`data/derived/global/2026-06-17-wol-real-v3-global/tch-lite-refit/`
+- `kg-retrieval-mode3-results.json` (1.9 KB) — headline metrics
+- `kg-retrieval-predictions.jsonl` (60.9 MB) — 13,388 per-window predictions
+
+| Metric | coarse-match | strong-match (Jaccard > 0.15) |
+|---|---:|---:|
+| n_with_gold | 5,150 | 4,362 |
+| **Hit@1** | **0.2072** | 0.0550 |
+| **Hit@5** | **0.2806** | 0.0640 |
+| MRR | 0.2333 | 0.0582 |
+
+Per-project (coarse): `wol-kafka` Hit@5 = 0.0635, `wol-mariadb-server` Hit@5 = 0.3207.
+
+Runtime: 2h 6m (50 min Neo4j graph load + 75 min scoring 78,140 windows + 1s triage head fit).
+
+### 5. Orchestration
+
+- **`scripts/research-lab/run_all_v3_cascades.sh`** — parallel-cascade orchestrator + results aggregator (produces `SUMMARY.md` + `v3-all-results.json`). Patched to skip LogSeq2Vec (N/A for WoL) and use `--humanized-subdir bulk-20260617`.
+- **`run_biencoder_wol_mode3.py` and `run_hybrid_rrf_wol_mode3.py`** — patched with `logging.basicConfig(force=True)` so internal logger output reaches the log file (was previously silent past torch init).
+
+---
+
+## 🟡 IN PROGRESS / KNOWN-BROKEN
+
+| Item | State | Lesson |
+|---|---|---|
+| BiEncoder fine-tune (first attempt — parallel) | killed by user when 3-pipeline parallel run threatened OOM | Don't run BiEncoder+BM25+Hybrid-RRF in parallel; they collectively hold ~17 GB |
+| BiEncoder fine-tune (second attempt — serial) | **OOM-killed at 13h 57m**, free RAM had dropped to 1.15 GB | At 5 epochs over 60,916 train examples on CPU, BiEncoder takes 14+ hours. Window for OOM is too long. **Re-run with `--finetune-epochs 2` (defensible reduction)** |
+| `run_all_v3_cascades.sh` orchestrator (parallel attempt) | exited 2 (bash syntax error in post-wait section after I edited it during the run) | Don't edit a running bash script. Aggregator path still works when invoked standalone. |
+
+---
+
+## ❌ TO DO — required to produce v3 paper numbers
+
+The agent eval needs cascade prediction JSONLs as input (see `src/agent/skills/predictions_backed.py:18-29`). The agent's WoL skill profile (`src/agent/harness_builder.py:171-198`) reads:
+- `tch-lite-refit/biencoder-predictions.jsonl` → `RetrieveDenseSkill`
+- `tch-lite-refit/hybrid-rrf-predictions.jsonl` → `RetrieveHybridFusionSkill`
+- `tch-lite-refit/kg-retrieval-predictions.jsonl` → `RetrieveKnowledgeGraphSkill` ✅
+- `tch-lite-refit/diagnosis-agent-predictions.jsonl` → `VerifyWithLLMSkill` (calibrated OFF for WoL; not needed)
+
+BM25 is **not** consumed by the agent at runtime, but it IS the RQ-E3 paper baseline (`DOCS/docs8/PAPER-FINDINGS.md:100-119` — "Agent Hit@5 vs BM25 Hit@5"), so its predictions are still needed for the paper.
+
+### Phase 1 — Cascade panel (compute-bound; serial to avoid OOM)
+
+#### Task 1.1 — BiEncoder cascade (re-run)
+
+**Recommendation**: re-run with `--finetune-epochs 2` (down from 5) to cap wall-clock at ~5 hr instead of 14 hr. Most of the contrastive-learning signal lands in epoch 1; epochs 2-5 add ≤2 pts Hit@5 in v2 ablations.
+
+```bash
+export PYTHONPATH=src
+export PYTHONIOENCODING=utf-8 PYTHONUTF8=1
+python -u scripts/research-lab/run_biencoder_wol_mode3.py \
+    --global-dir data/derived/global/2026-06-17-wol-real-v3-global \
+    --out-dir    data/derived/global/2026-06-17-wol-real-v3-global/tch-lite-refit \
+    --humanized-subdir bulk-20260617 \
+    --finetune-epochs 2 \
+    > logs/v3_biencoder.log 2>&1
+```
+
+**Output**: `tch-lite-refit/biencoder-predictions.jsonl` (13,388 rows) + `biencoder-mode3-results.json`.
+
+**ETA**: 3-5 hours. **OOM risk**: close all other apps; needs ~5 GB headroom.
+
+#### Task 1.2 — BM25 cascade
+
+No fine-tune; just builds an index over memory, threshold-tunes on val, predicts on test.
+
+```bash
+python -u scripts/research-lab/run_bm25_wol_mode3.py \
+    --global-dir data/derived/global/2026-06-17-wol-real-v3-global \
+    --out-dir    data/derived/global/2026-06-17-wol-real-v3-global/tch-lite-refit \
+    > logs/v3_bm25.log 2>&1
+```
+
+**Output**: `tch-lite-refit/bm25-predictions.jsonl` + `bm25-mode3-results.json`.
+
+**ETA**: 1-2 hours. **OOM risk**: low (BM25 doesn't fine-tune a transformer).
+
+**Needed for**: paper RQ-E3 baseline table (not agent runtime).
+
+#### Task 1.3 — Hybrid-RRF cascade
+
+Internally fits a BiEncoder + sparse SPLADE + KG retrievers and RRF-fuses them.
+
+**Recommendation**: drop `--biencoder-finetune-epochs` to 1 (from 3 default) to keep this tractable.
+
+```bash
+python -u scripts/research-lab/run_hybrid_rrf_wol_mode3.py \
+    --global-dir data/derived/global/2026-06-17-wol-real-v3-global \
+    --out-dir    data/derived/global/2026-06-17-wol-real-v3-global/tch-lite-refit \
+    --humanized-subdir bulk-20260617 \
+    --biencoder-finetune-epochs 1 \
+    > logs/v3_hybrid_rrf.log 2>&1
+```
+
+**Output**: `tch-lite-refit/hybrid-rrf-predictions.jsonl` + `hybrid-rrf-mode3-results.json`.
+
+**ETA**: 5-7 hours at `--biencoder-finetune-epochs 1` (was 15+ hr at default 3).
+
+#### Task 1.4 — Aggregator → SUMMARY.md
+
+Once all 4 results files (kg-retrieval ✅, biencoder, bm25, hybrid-rrf) are present:
+
+```bash
+bash scripts/research-lab/run_all_v3_cascades.sh
+```
+
+The preflight will detect the 3 already-present cascades and skip them via cache, then run the aggregator's Python heredoc which emits:
+- `tch-lite-refit/SUMMARY.md` — paper-ready Markdown table
+- `tch-lite-refit/v3-all-results.json` — machine-readable union
+
+Alternative: invoke the aggregator's heredoc directly without re-running cascades (safer if cascades are flaky).
+
+**ETA**: 1 second.
+
+### Phase 2 — Agent end-to-end eval
+
+#### Task 2.1 — Run `smoke_wol.py` on v3 test split
+
+The actual paper headline. Reads from `tch-lite-refit/*-predictions.jsonl`, runs the capability-adaptive agent on 13,388 test windows, emits per-window decisions + metrics.
+
+```bash
+PYTHONPATH=src python -u scripts/agent/smoke_wol.py \
+    --global-dir data/derived/global/2026-06-17-wol-real-v3-global \
+    --split test \
+    --output    results/wol-v3/agent-runs/wol-fulltest.json \
+    > logs/v3_agent.log 2>&1
+```
+
+Per `scripts/agent/smoke_wol.py:13-30`, the agent's effective WoL skill set:
+- ACTIVE: BiEncoder, Hybrid-RRF, KG-Retrieval, compose_l2 (RRF+rerank), compose_triage (logistic stacker), compose_novelty (disjunction), `request_similar_incident_window` (the only ReAct tool that works on WoL — peers-only)
+- STRUCTURALLY SKIPPED: `triage_numeric` (no NUMERIC_FEATURES), `retrieve_log_sequence` (no ORDERED_LOGS), `verify_with_llm` (VerifierCalibration marks WoL as known_harmful), 3 telemetry ReAct tools (no K8S/TRACE/METRIC flags)
+
+**Output**: `results/wol-v3/agent-runs/wol-fulltest.json` (per-window agent decisions + aggregate metrics).
+
+**ETA**: 2-3 hours for full 13,388-window test split. **OOM risk**: moderate. Watch carefully.
+
+#### Task 2.2 — Bootstrap CIs on agent output
+
+The paper reports paired-bootstrap CIs for Hit@K, MRR, triage acc, cost savings.
+
+```bash
+PYTHONPATH=src python scripts/agent/bootstrap_predictions.py \
+    --predictions results/wol-v3/agent-runs/wol-fulltest.json \
+    --n-resamples 1000 --seed 42 \
+    > results/wol-v3/agent-runs/bootstrap-cis.json
+```
+
+**ETA**: ~30 min for 1000 resamples over 13,388 rows.
+
+#### Task 2.3 — Per-pipeline bootstrap CIs (for cascade panel table)
+
+```bash
+PYTHONPATH=src python scripts/agent/bootstrap_headlines.py \
+    --global-dir data/derived/global/2026-06-17-wol-real-v3-global \
+    --out-dir results/wol-v3/cascade-cis \
+    > logs/v3_bootstrap.log 2>&1
+```
+
+**ETA**: ~30 min.
+
+### Phase 3 — Paper integration
+
+#### Task 3.1 — Update `DOCS/docs8/PAPER-FINDINGS.md` with v3 columns
+
+For each numerical claim currently citing v2, add a v3 column. Don't delete v2 — keep both for the "v2 vs v3 cross-validation" framing.
+
+Sections to update:
+- "Abstract / Introduction headline numbers" — add v3 Hit@5, Hit@1, MRR, triage_acc, pages/incident
+- "Section: Datasets" — add v3 row (24 projects, 78,140 queries)
+- "Section: Retrieval results" — cascade panel table with v3 row per pipeline
+- "Section: Agent results" — agent Hit@K, cost savings (where computable on WoL)
+- "Section: Threats to validity" — note v3 expands beyond microservice-adjacent into Hadoop ecosystem
+
+#### Task 3.2 — Update `DOCS/docs8/RQ-CLOSURE-TABLE.md` with v3 evidence
+
+For each RQ that uses WoL as the real-data leg, add v3 confirmation/refutation.
+
+#### Task 3.3 — Update LaTeX sections in `RESEARH-PAPER/ICSE/sections/`
+
+- `04-evaluation.tex` — v3 dataset description (replace v2 numbers in §4.1.3 WoL paragraph)
+- `05-results.tex` — Mode 3 retrieval table with all 4 cascades + agent on v3
+- `00-abstract.tex` — refresh headline numbers (Hit@5, cost savings, pages/incident)
+- `10-conclusion.tex` — refresh headline numbers
+- `figures/data-collection-workflow.png` is OB/OTel-only and unaffected by v3
+
+#### Task 3.4 — Update `data/derived/global/2026-06-17-wol-real-v3-global/README.md`
+
+Add a "Results" section linking to `tch-lite-refit/SUMMARY.md` and `results/wol-v3/agent-runs/wol-fulltest.json`.
+
+### Phase 4 — Dataset publication prep
+
+#### Task 4.1 — Rebuild publishable bundle
+
+```bash
+PYTHONPATH=src python scripts/agent/bundle_dataset_for_publication.py \
+    --global-dir data/derived/global/2026-06-17-wol-real-v3-global \
+    --out data/wol/WoL_v3-2026-06-17.archive.gz
+```
+
+(Verify the script accepts v3 directly; v2 version may need a small profile addition.)
+
+#### Task 4.2 — Refresh `data/wol/README.md`
+
+The current README documents the v1 archive. Add a v3 section pointing at the new bundle.
+
+---
+
+## ⚠️ Persistent OOM risk — how to mitigate
+
+Machine is ~31 GB total RAM. Steady-state when one cascade runs:
+- BiEncoder: ~5 GB
+- Neo4j Docker: ~2 GB
+- Windows + Git Bash + minor apps: ~10-15 GB
+- Leaves ~9-14 GB headroom — fine as long as nothing else opens.
+
+Things that have triggered OOMs:
+- Running 3 cascades in parallel (~17 GB combined)
+- Browser tabs growing while BiEncoder ran for 14+ hours
+- Other dev tools spinning up
+
+**During Tasks 1.1, 1.3, 2.1**: close Chrome, IDE projects unrelated to this work, video conferencing, anything that allocates. We've already lost 18+ hours of compute to OOM kills.
+
+---
+
+## Decision points (need user input)
+
+- **D-1**: Confirm `--finetune-epochs 2` for BiEncoder vs. attempt `--finetune-epochs 5` again (longer, riskier).
+- **D-2**: Confirm `--biencoder-finetune-epochs 1` for Hybrid-RRF vs. default 3.
+- **D-3**: Final paper section to update first — abstract numbers or full §5 results table?
+
+---
+
+## Provenance / reproducibility notes
+
+- All v3 build code uses `seed=42` deterministically.
+- KG extractions: per-ticket cache files keyed on `ticket_id + sha1(text)[:8]`. Resumable.
+- Cascade prediction scripts cache against `global_dir`; re-running with the same git SHA + dataset gives bit-identical predictions.
+- OpenAI extractions are NON-reproducible (model versions drift). The extracted JSONL files on disk ARE the source of truth.
+
+---
+
+# ARCHIVED — v2-era TODO (kept for reference; do not act on without re-validation)
+
+---
+
 # TODO — fresh run to close every RQ with no caveats
 
 **Status: 2026-06-13.** Single-pass plan. No re-iteration budgeted. Every

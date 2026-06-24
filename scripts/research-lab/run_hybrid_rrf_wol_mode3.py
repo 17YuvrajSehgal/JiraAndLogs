@@ -18,10 +18,20 @@ from __future__ import annotations
 
 import argparse
 import json
+import logging
 import sys
 import time
 from collections import defaultdict
 from pathlib import Path
+
+# Configure root logger so every INFO from internal pipelines is visible on
+# stdout. Without this, fine-tune / fusion progress is silently dropped.
+logging.basicConfig(
+    level=logging.INFO,
+    format="[%(asctime)s] %(levelname)s %(name)s: %(message)s",
+    datefmt="%H:%M:%S",
+    force=True,
+)
 
 
 def main() -> int:
