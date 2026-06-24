@@ -1,0 +1,642 @@
+{
+  "collection_total": 360778,
+  "sweep_a_apache7_no_filters": {
+    "per_project_total": {
+      "Spark": 7192,
+      "Cassandra": 4699,
+      "HBase": 4823,
+      "Flink": 4634,
+      "Ambari": 4062,
+      "Kafka": 3006,
+      "MariaDB Server": 11126
+    },
+    "per_issuetype_total": {
+      "Bug": 34036,
+      "Improvement": 2615,
+      "New Feature": 126,
+      "Task / Sub-task": 1854,
+      "Question": 145,
+      "Documentation": 28,
+      "Wish": 24,
+      "Test / Other": 502
+    },
+    "grand_total": 39542
+  },
+  "sweep_b_entire_collection_no_filters": {
+    "by_issuetype_group": {
+      "Bug": 312245,
+      "Improvement": 16217,
+      "New Feature": 1658,
+      "Task / Sub-task": 14843,
+      "Question": 988,
+      "Documentation": 147,
+      "Wish": 448,
+      "Test / Other": 3020
+    },
+    "any_issuetype": 360778
+  },
+  "sweep_c_top50_bug_only": [
+    {
+      "rank": 1,
+      "project": "Qt",
+      "bug_count": 17726,
+      "in_apache7": false
+    },
+    {
+      "rank": 2,
+      "project": "Minecraft: Java Edition",
+      "bug_count": 13302,
+      "in_apache7": false
+    },
+    {
+      "rank": 3,
+      "project": "MariaDB Server",
+      "bug_count": 10627,
+      "in_apache7": true
+    },
+    {
+      "rank": 4,
+      "project": "Core Server",
+      "bug_count": 7245,
+      "in_apache7": false
+    },
+    {
+      "rank": 5,
+      "project": "Spark",
+      "bug_count": 5503,
+      "in_apache7": true
+    },
+    {
+      "rank": 6,
+      "project": "Confluence Server and Data Center",
+      "bug_count": 4535,
+      "in_apache7": false
+    },
+    {
+      "rank": 7,
+      "project": "Sakai",
+      "bug_count": 4469,
+      "in_apache7": false
+    },
+    {
+      "rank": 8,
+      "project": "Tools (JBoss Tools)",
+      "bug_count": 4466,
+      "in_apache7": false
+    },
+    {
+      "rank": 9,
+      "project": "Jira Server and Data Center",
+      "bug_count": 4158,
+      "in_apache7": false
+    },
+    {
+      "rank": 10,
+      "project": "Flink",
+      "bug_count": 3943,
+      "in_apache7": true
+    },
+    {
+      "rank": 11,
+      "project": "Cassandra",
+      "bug_count": 3933,
+      "in_apache7": true
+    },
+    {
+      "rank": 12,
+      "project": "Apache Flex",
+      "bug_count": 3887,
+      "in_apache7": false
+    },
+    {
+      "rank": 13,
+      "project": "JBoss Enterprise Application Platform",
+      "bug_count": 3825,
+      "in_apache7": false
+    },
+    {
+      "rank": 14,
+      "project": "Hive",
+      "bug_count": 3813,
+      "in_apache7": false
+    },
+    {
+      "rank": 15,
+      "project": "Ambari",
+      "bug_count": 3761,
+      "in_apache7": true
+    },
+    {
+      "rank": 16,
+      "project": "HBase",
+      "bug_count": 3749,
+      "in_apache7": true
+    },
+    {
+      "rank": 17,
+      "project": "Qt Creator",
+      "bug_count": 3625,
+      "in_apache7": false
+    },
+    {
+      "rank": 18,
+      "project": "Red Hat Fuse",
+      "bug_count": 3366,
+      "in_apache7": false
+    },
+    {
+      "rank": 19,
+      "project": "Minecraft Launcher",
+      "bug_count": 3182,
+      "in_apache7": false
+    },
+    {
+      "rank": 20,
+      "project": "IMPALA",
+      "bug_count": 3125,
+      "in_apache7": false
+    },
+    {
+      "rank": 21,
+      "project": "Groovy",
+      "bug_count": 3016,
+      "in_apache7": false
+    },
+    {
+      "rank": 22,
+      "project": "WildFly",
+      "bug_count": 2716,
+      "in_apache7": false
+    },
+    {
+      "rank": 23,
+      "project": "Geode",
+      "bug_count": 2624,
+      "in_apache7": false
+    },
+    {
+      "rank": 24,
+      "project": "Kafka",
+      "bug_count": 2520,
+      "in_apache7": true
+    },
+    {
+      "rank": 25,
+      "project": "Infinispan",
+      "bug_count": 2454,
+      "in_apache7": false
+    },
+    {
+      "rank": 26,
+      "project": "Ignite",
+      "bug_count": 2420,
+      "in_apache7": false
+    },
+    {
+      "rank": 27,
+      "project": "Spring Framework",
+      "bug_count": 2361,
+      "in_apache7": false
+    },
+    {
+      "rank": 28,
+      "project": "Apache Drill",
+      "bug_count": 2273,
+      "in_apache7": false
+    },
+    {
+      "rank": 29,
+      "project": "Dev - Nexus Repo",
+      "bug_count": 2268,
+      "in_apache7": false
+    },
+    {
+      "rank": 30,
+      "project": "Apache Cordova",
+      "bug_count": 2235,
+      "in_apache7": false
+    },
+    {
+      "rank": 31,
+      "project": "Artifactory Binary Repository",
+      "bug_count": 2134,
+      "in_apache7": false
+    },
+    {
+      "rank": 32,
+      "project": "Bamboo",
+      "bug_count": 2127,
+      "in_apache7": false
+    },
+    {
+      "rank": 33,
+      "project": "Mesos",
+      "bug_count": 2122,
+      "in_apache7": false
+    },
+    {
+      "rank": 34,
+      "project": "Keycloak",
+      "bug_count": 2121,
+      "in_apache7": false
+    },
+    {
+      "rank": 35,
+      "project": "Derby",
+      "bug_count": 2098,
+      "in_apache7": false
+    },
+    {
+      "rank": 36,
+      "project": "Hadoop Common",
+      "bug_count": 2097,
+      "in_apache7": false
+    },
+    {
+      "rank": 37,
+      "project": "Hadoop HDFS",
+      "bug_count": 2027,
+      "in_apache7": false
+    },
+    {
+      "rank": 38,
+      "project": "Solr",
+      "bug_count": 2002,
+      "in_apache7": false
+    },
+    {
+      "rank": 39,
+      "project": "DAOS",
+      "bug_count": 1931,
+      "in_apache7": false
+    },
+    {
+      "rank": 40,
+      "project": "Harmony",
+      "bug_count": 1907,
+      "in_apache7": false
+    },
+    {
+      "rank": 41,
+      "project": "Beam",
+      "bug_count": 1858,
+      "in_apache7": false
+    },
+    {
+      "rank": 42,
+      "project": "ActiveMQ",
+      "bug_count": 1782,
+      "in_apache7": false
+    },
+    {
+      "rank": 43,
+      "project": "Fabric",
+      "bug_count": 1758,
+      "in_apache7": false
+    },
+    {
+      "rank": 44,
+      "project": "Application Server 3  4  5 and 6",
+      "bug_count": 1740,
+      "in_apache7": false
+    },
+    {
+      "rank": 45,
+      "project": "Camel",
+      "bug_count": 1711,
+      "in_apache7": false
+    },
+    {
+      "rank": 46,
+      "project": "CXF",
+      "bug_count": 1684,
+      "in_apache7": false
+    },
+    {
+      "rank": 47,
+      "project": "Apache Arrow",
+      "bug_count": 1662,
+      "in_apache7": false
+    },
+    {
+      "rank": 48,
+      "project": "Bitbucket Cloud",
+      "bug_count": 1612,
+      "in_apache7": false
+    },
+    {
+      "rank": 49,
+      "project": "Hadoop YARN",
+      "bug_count": 1591,
+      "in_apache7": false
+    },
+    {
+      "rank": 50,
+      "project": "Confluence Cloud",
+      "bug_count": 1512,
+      "in_apache7": false
+    }
+  ],
+  "sweep_d_top50_all_issuetypes": [
+    {
+      "rank": 1,
+      "project": "Qt",
+      "total": 18298,
+      "in_apache7": false
+    },
+    {
+      "rank": 2,
+      "project": "Minecraft: Java Edition",
+      "total": 13302,
+      "in_apache7": false
+    },
+    {
+      "rank": 3,
+      "project": "MariaDB Server",
+      "total": 11126,
+      "in_apache7": true
+    },
+    {
+      "rank": 4,
+      "project": "Core Server",
+      "total": 8866,
+      "in_apache7": false
+    },
+    {
+      "rank": 5,
+      "project": "Spark",
+      "total": 7192,
+      "in_apache7": true
+    },
+    {
+      "rank": 6,
+      "project": "Jira Server and Data Center",
+      "total": 5082,
+      "in_apache7": false
+    },
+    {
+      "rank": 7,
+      "project": "Tools (JBoss Tools)",
+      "total": 4926,
+      "in_apache7": false
+    },
+    {
+      "rank": 8,
+      "project": "Confluence Server and Data Center",
+      "total": 4902,
+      "in_apache7": false
+    },
+    {
+      "rank": 9,
+      "project": "HBase",
+      "total": 4823,
+      "in_apache7": true
+    },
+    {
+      "rank": 10,
+      "project": "Sakai",
+      "total": 4749,
+      "in_apache7": false
+    },
+    {
+      "rank": 11,
+      "project": "Cassandra",
+      "total": 4699,
+      "in_apache7": true
+    },
+    {
+      "rank": 12,
+      "project": "Hive",
+      "total": 4685,
+      "in_apache7": false
+    },
+    {
+      "rank": 13,
+      "project": "Flink",
+      "total": 4634,
+      "in_apache7": true
+    },
+    {
+      "rank": 14,
+      "project": "Ambari",
+      "total": 4062,
+      "in_apache7": true
+    },
+    {
+      "rank": 15,
+      "project": "JBoss Enterprise Application Platform",
+      "total": 3979,
+      "in_apache7": false
+    },
+    {
+      "rank": 16,
+      "project": "Apache Flex",
+      "total": 3965,
+      "in_apache7": false
+    },
+    {
+      "rank": 17,
+      "project": "Qt Creator",
+      "total": 3754,
+      "in_apache7": false
+    },
+    {
+      "rank": 18,
+      "project": "IMPALA",
+      "total": 3636,
+      "in_apache7": false
+    },
+    {
+      "rank": 19,
+      "project": "Red Hat Fuse",
+      "total": 3600,
+      "in_apache7": false
+    },
+    {
+      "rank": 20,
+      "project": "Groovy",
+      "total": 3278,
+      "in_apache7": false
+    },
+    {
+      "rank": 21,
+      "project": "Spring Framework",
+      "total": 3271,
+      "in_apache7": false
+    },
+    {
+      "rank": 22,
+      "project": "Minecraft Launcher",
+      "total": 3182,
+      "in_apache7": false
+    },
+    {
+      "rank": 23,
+      "project": "WildFly",
+      "total": 3051,
+      "in_apache7": false
+    },
+    {
+      "rank": 24,
+      "project": "Kafka",
+      "total": 3006,
+      "in_apache7": true
+    },
+    {
+      "rank": 25,
+      "project": "Ignite",
+      "total": 2955,
+      "in_apache7": false
+    },
+    {
+      "rank": 26,
+      "project": "Geode",
+      "total": 2903,
+      "in_apache7": false
+    },
+    {
+      "rank": 27,
+      "project": "Hadoop HDFS",
+      "total": 2853,
+      "in_apache7": false
+    },
+    {
+      "rank": 28,
+      "project": "Infinispan",
+      "total": 2663,
+      "in_apache7": false
+    },
+    {
+      "rank": 29,
+      "project": "Hadoop Common",
+      "total": 2646,
+      "in_apache7": false
+    },
+    {
+      "rank": 30,
+      "project": "Bamboo",
+      "total": 2594,
+      "in_apache7": false
+    },
+    {
+      "rank": 31,
+      "project": "Apache Drill",
+      "total": 2522,
+      "in_apache7": false
+    },
+    {
+      "rank": 32,
+      "project": "Dev - Nexus Repo",
+      "total": 2483,
+      "in_apache7": false
+    },
+    {
+      "rank": 33,
+      "project": "Artifactory Binary Repository",
+      "total": 2461,
+      "in_apache7": false
+    },
+    {
+      "rank": 34,
+      "project": "Camel",
+      "total": 2460,
+      "in_apache7": false
+    },
+    {
+      "rank": 35,
+      "project": "Apache Cordova",
+      "total": 2429,
+      "in_apache7": false
+    },
+    {
+      "rank": 36,
+      "project": "Solr",
+      "total": 2347,
+      "in_apache7": false
+    },
+    {
+      "rank": 37,
+      "project": "Keycloak",
+      "total": 2337,
+      "in_apache7": false
+    },
+    {
+      "rank": 38,
+      "project": "Beam",
+      "total": 2296,
+      "in_apache7": false
+    },
+    {
+      "rank": 39,
+      "project": "Mesos",
+      "total": 2273,
+      "in_apache7": false
+    },
+    {
+      "rank": 40,
+      "project": "Derby",
+      "total": 2264,
+      "in_apache7": false
+    },
+    {
+      "rank": 41,
+      "project": "Apache Arrow",
+      "total": 2234,
+      "in_apache7": false
+    },
+    {
+      "rank": 42,
+      "project": "Application Server 3  4  5 and 6",
+      "total": 2177,
+      "in_apache7": false
+    },
+    {
+      "rank": 43,
+      "project": "WiredTiger",
+      "total": 2142,
+      "in_apache7": false
+    },
+    {
+      "rank": 44,
+      "project": "Hadoop YARN",
+      "total": 2133,
+      "in_apache7": false
+    },
+    {
+      "rank": 45,
+      "project": "Fabric",
+      "total": 2079,
+      "in_apache7": false
+    },
+    {
+      "rank": 46,
+      "project": "DAOS",
+      "total": 2030,
+      "in_apache7": false
+    },
+    {
+      "rank": 47,
+      "project": "Harmony",
+      "total": 2016,
+      "in_apache7": false
+    },
+    {
+      "rank": 48,
+      "project": "CXF",
+      "total": 2002,
+      "in_apache7": false
+    },
+    {
+      "rank": 49,
+      "project": "ActiveMQ",
+      "total": 1952,
+      "in_apache7": false
+    },
+    {
+      "rank": 50,
+      "project": "Community Support - Open Source Project Repository Hosting",
+      "total": 1940,
+      "in_apache7": false
+    }
+  ]
+}
