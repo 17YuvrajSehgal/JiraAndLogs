@@ -19,7 +19,9 @@ from __future__ import annotations
 import argparse
 import json
 import logging
+import os
 import sys
+import threading
 import time
 from collections import defaultdict
 from pathlib import Path
@@ -34,6 +36,53 @@ logging.basicConfig(
 )
 
 
+# Mutable singleton the main thread updates; heartbeat thread reads it.
+_HEARTBEAT_PHASE: dict[str, str] = {"name": "starting"}
+
+
+def _set_phase(name: str) -> None:
+    _HEARTBEAT_PHASE["name"] = name
+    print(f"[hybrid-rrf:phase] -> {name}", flush=True)
+
+
+def _start_heartbeat(label: str = "hybrid-rrf", every_seconds: float = 30.0) -> threading.Event:
+    """Spawn a daemon thread that prints "[<label>:heartbeat] ..." every
+    `every_seconds` so the log file never goes silent for >30s during
+    long internal training loops."""
+    stop = threading.Event()
+    t0 = time.time()
+
+    try:
+        import psutil  # type: ignore
+        proc = psutil.Process(os.getpid())
+    except Exception:                                                # noqa: BLE001
+        proc = None
+
+    def _ram_gb() -> str:
+        if proc is None:
+            return "?"
+        try:
+            return f"{proc.memory_info().rss / (1024**3):.2f}"
+        except Exception:                                            # noqa: BLE001
+            return "?"
+
+    def _run() -> None:
+        n = 0
+        while not stop.wait(every_seconds):
+            n += 1
+            elapsed = time.time() - t0
+            mins = elapsed / 60.0
+            print(
+                f"[{label}:heartbeat] tick={n} elapsed={mins:6.1f}min "
+                f"rss={_ram_gb()}GB phase={_HEARTBEAT_PHASE['name']}",
+                flush=True,
+            )
+
+    th = threading.Thread(target=_run, daemon=True, name="heartbeat")
+    th.start()
+    return stop
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--global-dir", type=Path,
@@ -46,6 +95,9 @@ def main() -> int:
     ap.add_argument("--seed", type=int, default=42)
     args = ap.parse_args()
 
+    heartbeat_stop = _start_heartbeat(label="hybrid-rrf", every_seconds=30.0)
+    _set_phase("imports")
+
     sys.path.insert(0, "src")
 
     from v2_advanced.proposal_c_hybrid_retrieval.pipeline import HybridRRFRetrievalPipeline
@@ -57,6 +109,7 @@ def main() -> int:
     print(f"[hybrid-rrf] biencoder_finetune_epochs={args.biencoder_finetune_epochs}")
     print()
 
+    _set_phase("instantiate_pipeline")
     pipeline = HybridRRFRetrievalPipeline(
         humanized_subdir=args.humanized_subdir,
         humanized_root=args.humanized_root,
@@ -66,6 +119,7 @@ def main() -> int:
         seed=args.seed,
     )
 
+    _set_phase(f"train_and_predict (bienc_epochs={args.biencoder_finetune_epochs})")
     t0 = time.time()
     result = pipeline.train_and_predict(
         global_dir=args.global_dir,
@@ -73,15 +127,18 @@ def main() -> int:
         target_fpr=0.05,
     )
     wall = time.time() - t0
+    _set_phase("post_predict")
     print(f"\n[hybrid-rrf] fit+predict completed in {wall:.1f}s "
-          f"(fit={result.fit_seconds:.1f}s, predict={result.predict_seconds:.1f}s)")
-    print(f"[hybrid-rrf] {len(result.predictions)} test predictions")
+          f"(fit={result.fit_seconds:.1f}s, predict={result.predict_seconds:.1f}s)",
+          flush=True)
+    print(f"[hybrid-rrf] {len(result.predictions)} test predictions", flush=True)
 
+    _set_phase("write_predictions")
     pred_path = args.out_dir / "hybrid-rrf-predictions.jsonl"
     with pred_path.open("w", encoding="utf-8") as fh:
         for p in result.predictions:
             fh.write(json.dumps(p.as_dict(), default=str, ensure_ascii=False) + "\n")
-    print(f"[hybrid-rrf] wrote predictions to {pred_path}")
+    print(f"[hybrid-rrf] wrote predictions to {pred_path}", flush=True)
 
     strong_path = args.global_dir / "window-memory-matchings-strong.jsonl"
     strong_gold = {}
@@ -136,8 +193,11 @@ def main() -> int:
             },
         }
 
+    _set_phase("compute_metrics_coarse")
     coarse_m = metrics(result.predictions, None,        "coarse")
+    _set_phase("compute_metrics_strong")
     strong_m = metrics(result.predictions, strong_gold, "strong")
+    _set_phase("write_results")
 
     results = {
         "config": {
@@ -177,6 +237,8 @@ def main() -> int:
         print(f"  {proj:<30s}  n={v['n']:>4d}  Hit@1={v['hit_at_1']:>.4f}  "
               f"Hit@5={v['hit_at_5']:>.4f}  MRR={v['mrr']:>.4f}")
 
+    _set_phase("done")
+    heartbeat_stop.set()
     return 0
 
 
