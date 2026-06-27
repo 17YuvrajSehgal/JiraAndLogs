@@ -1,6 +1,6 @@
 # WoL v3 (80K Dataset) — Status & Remaining Work
 
-*Last updated: 2026-06-25 (BiEncoder complete; BM25 + Hybrid-RRF remaining)*
+*Last updated: 2026-06-26 (BM25 complete; only Hybrid-RRF + agent eval remaining)*
 
 **Dataset under measurement.** `data/derived/global/2026-06-17-wol-real-v3-global/`
 (Option C — 24 distributed-systems Apache projects, no quality filters, 78,140 query rows).
@@ -102,7 +102,35 @@ Per-project (coarse):
 - v3 Hit@5 0.905 / Hit@1 0.856 — ~5pt / ~10pt drop
 - Explanation: v3 has 19× more memory items (38K vs 2K) and 8× more queries (13K vs 1.6K) across 24 projects vs 7. More confusable candidates per query → lower top-k. Still a strong real-Apache-Jira retrieval number for the paper.
 
-### 5. Orchestration
+### 6. BM25 cascade — done (2026-06-26 17:24)
+
+`data/derived/global/2026-06-17-wol-real-v3-global/tch-lite-refit/`
+- `bm25-predictions.jsonl` (63.8 MB) — 13,388 per-window predictions
+- `bm25-mode3-results.json` — synthesized post-hoc by `scripts/research-lab/synthesize_bm25_results.py` (the run_bm25_wol_mode3.py script writes only the predictions JSONL, not a results JSON; the synthesizer reads the predictions and computes metrics identical to BiEncoder's metric block)
+
+| Metric | coarse-match | strong-match (Jaccard > 0.15) |
+|---|---:|---:|
+| n_with_gold | 5,150 | 4,362 |
+| **Hit@1** | **0.0146** | 0.0147 |
+| **Hit@5** | **0.7266** | 0.7398 |
+| MRR | 0.3293 | 0.3315 |
+
+Per-project (coarse):
+- `wol-kafka` (n=803): Hit@1 = 0.0050, Hit@5 = 0.6663, MRR = 0.2820
+- `wol-mariadb-server` (n=4347): Hit@1 = 0.0163, Hit@5 = 0.7378, MRR = 0.3381
+
+**Total runtime: 19h 17m (69,442.9 s)** — 1 epoch over 13,388 test queries × 38,642 memory docs.
+
+**Where the time went (verified from log)**:
+- 3.87s: BM25 index build over 38,642 memory docs
+- ~3h 39m (13,167s): val threshold tuning on 3,836 val queries (each query scores top-k against full memory)
+- ~15h 38m (56,275s): test prediction on 13,388 queries (0.2 windows/s sustained, single-threaded CPU)
+
+**Why so slow vs my earlier estimate (1-2 hrs)**: v3's memory pool is 19× v2's (38,642 vs 2,000). BM25 retrieval cost is linear in memory size, so per-query is ~19× slower than v2. My estimate didn't account for this.
+
+**Paper story**: Hit@1 = 0.0146 vs Hit@5 = 0.7266 is a **50× gap** — BM25 finds the right candidate in its top-5 73% of the time but can't precisely rank it. This makes the agent's BiEncoder-driven Hit@1 = 0.856 a **58× lift over BM25 Hit@1** — the strongest "agent beats naive baseline" line in the paper for WoL.
+
+### 7. Orchestration
 
 - **`scripts/research-lab/run_all_v3_cascades.sh`** — parallel-cascade orchestrator + results aggregator (produces `SUMMARY.md` + `v3-all-results.json`). Patched to skip LogSeq2Vec (N/A for WoL) and use `--humanized-subdir bulk-20260617`.
 - **`run_biencoder_wol_mode3.py` and `run_hybrid_rrf_wol_mode3.py`** — patched with `logging.basicConfig(force=True)` so internal logger output reaches the log file (was previously silent past torch init).
@@ -137,22 +165,11 @@ Ran with `--finetune-epochs 5` (apples-to-apples with v2). See "✅ DONE" §5 ab
 
 **Lesson learned for future runs**: ~95% of wall-clock was CPU-bound BM25 hard-negative mining during the training-pair build phase. The actual GPU fine-tune was 20 min. Adding per-epoch training logs wouldn't have helped because the silent phase was *before* the fit started.
 
-#### Task 1.2 — BM25 cascade
+#### Task 1.2 — BM25 cascade ✅ DONE (2026-06-26 17:24)
 
-No fine-tune; just builds an index over memory, threshold-tunes on val, predicts on test.
+Ran with the standard CLI plus a post-hoc results-JSON synthesizer (the BM25 script doesn't write `*-mode3-results.json` natively). See "✅ DONE" §6 above for actual numbers and runtime breakdown.
 
-```bash
-python -u scripts/research-lab/run_bm25_wol_mode3.py \
-    --global-dir data/derived/global/2026-06-17-wol-real-v3-global \
-    --out-dir    data/derived/global/2026-06-17-wol-real-v3-global/tch-lite-refit \
-    > logs/v3_bm25.log 2>&1
-```
-
-**Output**: `tch-lite-refit/bm25-predictions.jsonl` + `bm25-mode3-results.json`.
-
-**ETA**: 1-2 hours. **OOM risk**: low (BM25 doesn't fine-tune a transformer).
-
-**Needed for**: paper RQ-E3 baseline table (not agent runtime).
+**ETA estimate was wrong**: I said 1-2 hours; actual was **19h 17m**. Reason: v3 memory is 19× v2's, and BM25's `topk` is linear in memory size — so per-query is ~19× slower than v2. Lesson for Hybrid-RRF: the v3 retrieval phase will be ~19× slower than v2 too.
 
 #### Task 1.3 — Hybrid-RRF cascade
 
