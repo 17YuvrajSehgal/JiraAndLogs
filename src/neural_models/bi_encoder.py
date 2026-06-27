@@ -43,6 +43,7 @@ from __future__ import annotations
 
 import logging
 import math
+import os
 import sys
 import time
 from pathlib import Path
@@ -73,6 +74,102 @@ def _evi(window: Any, max_chars: int) -> str:
 
 def _doc_text(issue: Any, max_chars: int) -> str:
     return (build_memory_doc_text(issue) or "")[:max_chars]
+
+
+# ---------------------------------------------------------------------------
+# Parallel BM25 hard-negative mining (result-preserving).
+#
+# The per-window BM25 retrieval + time-ordered visibility filtering is the
+# dominant cost of BiEncoder training at v3 scale (~61k windows x ~39k memory
+# docs; the scorer and the visibility filter are both pure-Python and
+# single-threaded). Each window is independent, so we fan the per-window
+# "mining" across processes and then reassemble the training pairs
+# DETERMINISTICALLY in the main process using a single seeded RNG, in the
+# original window order. The emitted pairs are bit-identical to the serial
+# path regardless of worker count; only wall-clock changes.
+#
+# Enabled by env var BIENC_BM25_JOBS (default 1 = original serial path;
+# 0 or negative = use all CPUs). Uses the 'fork' start method so workers
+# inherit the fitted BM25 scorer and corpus copy-on-write with no pickling.
+# ---------------------------------------------------------------------------
+
+# Worker-visible globals (populated in the parent before fork).
+_MINE_CORPUS: Any = None
+_MINE_BM25: Any = None
+_MINE_BY_ID: Any = None
+_MINE_WINDOWS: Any = None
+_MINE_MAX_CHARS: int = 512
+_MINE_TOP_N: int = 20
+_MINE_NEED_RANDOM: bool = False
+
+
+def _bm25_jobs() -> int:
+    """Resolve worker count from BIENC_BM25_JOBS (default 1 = serial)."""
+    raw = os.environ.get("BIENC_BM25_JOBS", "").strip()
+    if not raw:
+        return 1
+    try:
+        v = int(raw)
+    except ValueError:
+        return 1
+    if v <= 0:
+        return os.cpu_count() or 1
+    return v
+
+
+def _mine_worker_init() -> None:
+    # The work is pure-Python; keep each worker single-threaded so the
+    # process pool does not oversubscribe the node's cores.
+    os.environ.setdefault("OMP_NUM_THREADS", "1")
+
+
+def _mine_window_record(w: Any):
+    """Mine one window. Returns a small picklable record:
+
+      None                          -> contributes nothing, NOT counted
+      ("kept_no_anchor",)           -> counted in n_windows_kept, no pairs
+      ("ok", anchor, gold_ids, pos_texts, wrong_texts, random_ids)
+
+    `random_ids` is only populated when random negatives are requested, to
+    avoid materialising the (potentially corpus-sized) background pool.
+    """
+    corpus = _MINE_CORPUS
+    bm25 = _MINE_BM25
+    by_id = _MINE_BY_ID
+    max_chars = _MINE_MAX_CHARS
+
+    gold = list(getattr(w, "matched_memory_issue_ids", None) or [])
+    if not gold:
+        return None
+    visible = corpus.visible_to(w)
+    visible_ids = {iss.jira_shadow_issue_id for iss in visible}
+    gold_in_view = [g for g in gold if g in visible_ids and g in by_id]
+    if not gold_in_view:
+        return None
+    anchor = _evi(w, max_chars)
+    if not anchor:
+        return ("kept_no_anchor",)
+
+    hits = bm25.retrieve(w, corpus, top_k=_MINE_TOP_N)
+    gold_set = set(gold_in_view)
+    wrong = [h for h in hits if h.issue_id not in gold_set]
+    pos_texts = [_doc_text(by_id[g], max_chars) for g in gold_in_view]
+    wrong_texts = [_doc_text(h.issue, max_chars) for h in wrong]
+
+    random_ids: list[str] = []
+    if _MINE_NEED_RANDOM:
+        wrong_ids = {h.issue_id for h in wrong}
+        random_ids = [
+            iss.jira_shadow_issue_id
+            for iss in visible
+            if iss.jira_shadow_issue_id not in gold_set
+            and iss.jira_shadow_issue_id not in wrong_ids
+        ]
+    return ("ok", anchor, gold_in_view, pos_texts, wrong_texts, random_ids)
+
+
+def _mine_window_record_idx(i: int):
+    return _mine_window_record(_MINE_WINDOWS[i])
 
 
 class BiEncoderRetrievalPipeline(PipelineRunner):
@@ -159,52 +256,90 @@ class BiEncoderRetrievalPipeline(PipelineRunner):
         bm25 = BM25Retriever()
         bm25.fit(corpus)
 
+        # --- Phase 1: mine per-window records (expensive; optionally parallel)
+        # Publish the shared, read-only state for fork-inheriting workers.
+        global _MINE_CORPUS, _MINE_BM25, _MINE_BY_ID, _MINE_WINDOWS
+        global _MINE_MAX_CHARS, _MINE_TOP_N, _MINE_NEED_RANDOM
+        _MINE_CORPUS = corpus
+        _MINE_BM25 = bm25
+        _MINE_BY_ID = by_id
+        _MINE_WINDOWS = train_windows
+        _MINE_MAX_CHARS = self.max_chars
+        _MINE_TOP_N = self.bm25_top_n
+        _MINE_NEED_RANDOM = self.n_random_negs > 0
+
+        n_jobs = _bm25_jobs()
+        n = len(train_windows)
+
+        # Guard: 'fork' after CUDA is initialized corrupts the child CUDA
+        # context. The mining happens before any model is built, and
+        # torch.manual_seed is lazy (does not init CUDA), so this is normally
+        # safe — but fall back to serial if CUDA is somehow already live.
+        cuda_live = False
+        if n_jobs > 1:
+            try:
+                import torch
+                cuda_live = bool(torch.cuda.is_initialized())
+            except Exception:                                        # noqa: BLE001
+                cuda_live = False
+            if cuda_live:
+                print(
+                    f"[{self.name}] CUDA already initialized; running BM25 "
+                    f"mining serially to avoid fork+CUDA corruption.",
+                    file=sys.stderr, flush=True,
+                )
+
+        t_mine = time.time()
+        if n_jobs > 1 and n > 1 and not cuda_live:
+            import multiprocessing as mp
+
+            chunk = max(1, n // (n_jobs * 8))
+            print(
+                f"[{self.name}] mining BM25 hard negatives for {n} windows "
+                f"across {n_jobs} processes (chunksize={chunk}) ...",
+                file=sys.stderr, flush=True,
+            )
+            ctx = mp.get_context("fork")
+            with ctx.Pool(processes=n_jobs, initializer=_mine_worker_init) as pool:
+                records = pool.map(_mine_window_record_idx, range(n), chunksize=chunk)
+        else:
+            records = [_mine_window_record(w) for w in train_windows]
+        print(
+            f"[{self.name}] BM25 mining done in {time.time() - t_mine:.1f}s "
+            f"(n_jobs={n_jobs}, n_windows={n})",
+            file=sys.stderr, flush=True,
+        )
+
+        # --- Phase 2: assemble pairs DETERMINISTICALLY (single seeded RNG,
+        # original window order). This reproduces the serial logic exactly:
+        # the RNG is advanced in the same order and over equal-length lists,
+        # so the emitted pairs are independent of the worker count.
         pairs: list[InputExample] = []
         n_windows_kept = 0
-        for w in train_windows:
-            gold = list(getattr(w, "matched_memory_issue_ids", None) or [])
-            if not gold:
-                continue
-            visible = corpus.visible_to(w)
-            visible_ids = {iss.jira_shadow_issue_id for iss in visible}
-            gold_in_view = [g for g in gold if g in visible_ids and g in by_id]
-            if not gold_in_view:
+        for rec in records:
+            if rec is None:
                 continue
             n_windows_kept += 1
-
-            anchor = _evi(w, self.max_chars)
-            if not anchor:
+            if rec[0] != "ok":
                 continue
+            _tag, anchor, gold_ids, pos_texts, wrong_texts, random_ids = rec
 
-            # BM25 hard negatives — top-N candidates NOT in gold
-            hits = bm25.retrieve(w, corpus, top_k=self.bm25_top_n)
-            gold_set = set(gold_in_view)
-            wrong = [h for h in hits if h.issue_id not in gold_set]
+            if self.use_all_golds:
+                gold_emit = list(zip(gold_ids, pos_texts))
+            else:
+                gid = rng.choice(gold_ids)
+                gold_emit = [(gid, _doc_text(by_id[gid], self.max_chars))]
 
-            # G1: random-negative pool = visible memory tickets NOT in gold
-            # and NOT in BM25 top-N (so they're truly "background" — not
-            # confusable on lexical signal alone)
-            wrong_ids = {h.issue_id for h in wrong}
-            random_pool = [
-                iss for iss in visible
-                if iss.jira_shadow_issue_id not in gold_set
-                and iss.jira_shadow_issue_id not in wrong_ids
-            ]
-
-            golds_to_emit = gold_in_view if self.use_all_golds else [rng.choice(gold_in_view)]
-            for gid in golds_to_emit:
-                positive = _doc_text(by_id[gid], self.max_chars)
+            for _gid, positive in gold_emit:
                 if not positive:
                     continue
                 texts = [anchor, positive]
-                if wrong and self.n_hard_negs > 0:
-                    chosen = rng.sample(wrong, min(self.n_hard_negs, len(wrong)))
-                    for h in chosen:
-                        texts.append(_doc_text(h.issue, self.max_chars))
-                if random_pool and self.n_random_negs > 0:
-                    chosen = rng.sample(random_pool, min(self.n_random_negs, len(random_pool)))
-                    for iss in chosen:
-                        texts.append(_doc_text(iss, self.max_chars))
+                if wrong_texts and self.n_hard_negs > 0:
+                    chosen = rng.sample(wrong_texts, min(self.n_hard_negs, len(wrong_texts)))
+                    texts.extend(chosen)
+                if random_ids and self.n_random_negs > 0:
+                    chosen_ids = rng.sample(random_ids, min(self.n_random_negs, len(random_ids)))
+                    texts.extend(_doc_text(by_id[i], self.max_chars) for i in chosen_ids)
                 pairs.append(InputExample(texts=texts))
 
         print(
