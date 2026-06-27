@@ -45,14 +45,59 @@ def main() -> int:
     ap.add_argument("--global-dir", type=Path, required=True)
     ap.add_argument("--humanized-root",  default="jira-shadow-humanized-v2")
     ap.add_argument("--humanized-subdir", default="bulk-20260531")
-    ap.add_argument("--lm-studio-url", default="http://localhost:1234")
+    ap.add_argument("--lm-studio-url", default="http://localhost:1234",
+                    help="Base URL for the OpenAI-compatible chat-completions server. "
+                         "Use https://api.openai.com for OpenAI proper.")
     ap.add_argument("--model", default="local-model")
+    ap.add_argument("--api-key-env", default=None,
+                    help="Env var holding the Bearer API key (e.g. OPENAI_API_KEY). "
+                         "Unset → no auth header (local LM Studio).")
     ap.add_argument("--workers", type=int, default=4)
     ap.add_argument("--limit", type=int, default=0)
     ap.add_argument("--out", default="v2_kg_extractions")
+    ap.add_argument("--shard", default=None,
+                    help="Process only tickets where hash(ticket_id) %% N == M, "
+                         "given as 'M/N' (e.g. '0/2' = first half, '1/2' = second half). "
+                         "Used to split work across parallel processes (e.g. one OpenAI + "
+                         "one local LM Studio). Each shard sees a disjoint, balanced subset.")
+    ap.add_argument("--max-input-chars", type=int, default=50000,
+                    help="Truncate memory_text above this length before the LLM call. "
+                         "Default 50000 (~12.5K tokens) — safe under a 25K-context LM Studio "
+                         "load. Normal tickets are below this and unaffected; only the "
+                         "~2%% of tickets with very long log dumps get truncated.")
+    ap.add_argument("--timeout-s", type=float, default=120.0,
+                    help="Per-request HTTP timeout in seconds. Default 120. "
+                         "For LM Studio: drop to 60-90 to fail fast on stuck tickets. "
+                         "For OpenAI: keep at 120+.")
+    ap.add_argument("--max-retries", type=int, default=3,
+                    help="Generic-error retry budget (timeouts, 5xx, network). "
+                         "Default 3. For LM Studio: set to 0 so a stuck ticket fails "
+                         "in `timeout-s` seconds instead of 4*timeout. Failed tickets "
+                         "can be picked up later via the other shard / OpenAI.")
     args = ap.parse_args()
 
+    # Validate --shard early
+    shard_m: int | None = None
+    shard_n: int | None = None
+    if args.shard:
+        try:
+            m_str, n_str = args.shard.split("/")
+            shard_m, shard_n = int(m_str), int(n_str)
+            if shard_m < 0 or shard_n <= 0 or shard_m >= shard_n:
+                raise ValueError("out of range")
+        except ValueError:
+            raise SystemExit(
+                f"--shard must be 'M/N' with 0 <= M < N (got {args.shard!r})",
+            )
+
     sys.path.insert(0, "src")
+
+    import os
+    import logging as _stdlogging
+
+    # Silence routine 429-backoff DEBUG noise; surface only real errors/warnings.
+    _stdlogging.basicConfig(level=_stdlogging.WARNING, format="%(asctime)s %(levelname)s %(message)s")
+    _stdlogging.getLogger("v2_advanced.lm_studio").setLevel(_stdlogging.WARNING)
 
     from memorygraph.humanized_loader import load_humanized_corpus
     from v2_advanced.shared.lm_studio import LMStudioConfig
@@ -71,24 +116,59 @@ def main() -> int:
     print(f"[parallel] loaded {len(issues)} humanized tickets", flush=True)
 
     tickets = []
+    n_truncated = 0
     for iss in issues:
+        text = iss.memory_text or ""
+        if args.max_input_chars > 0 and len(text) > args.max_input_chars:
+            text = text[: args.max_input_chars] + "\n[... truncated due to context limit]"
+            n_truncated += 1
         tickets.append({
             "ticket_id":          iss.jira_shadow_issue_id,
-            "memory_text":        iss.memory_text or "",
+            "memory_text":        text,
             "severity_seen":      iss.severity or "",
             "source_episode_id":  iss.incident_episode_id or "",
             "scenario_family":    iss.scenario_family or "",
         })
+    if n_truncated:
+        print(f"[parallel] truncated {n_truncated} oversized tickets to <= {args.max_input_chars} chars",
+              flush=True)
+
+    if shard_n is not None:
+        import hashlib
+        n_before = len(tickets)
+        tickets = [
+            t for t in tickets
+            if (int(hashlib.sha1(t["ticket_id"].encode("utf-8")).hexdigest(), 16) % shard_n) == shard_m
+        ]
+        print(f"[parallel] shard {shard_m}/{shard_n}: {len(tickets)}/{n_before} tickets in this shard",
+              flush=True)
 
     if args.limit > 0:
         tickets = tickets[: args.limit]
         print(f"[parallel] limited to {len(tickets)} tickets", flush=True)
 
-    cfg = LMStudioConfig(base_url=args.lm_studio_url, model=args.model)
+    api_key = None
+    if args.api_key_env:
+        api_key = os.environ.get(args.api_key_env)
+        if not api_key:
+            raise SystemExit(
+                f"--api-key-env={args.api_key_env} set, but that env var is empty.",
+            )
+        print(f"[parallel] Using API key from env var {args.api_key_env}", flush=True)
+    cfg = LMStudioConfig(
+        base_url=args.lm_studio_url,
+        model=args.model,
+        api_key=api_key,
+        timeout_s=args.timeout_s,
+        max_retries=args.max_retries,
+    )
     client = LMStudioClient(cfg)
     if not client.is_available():
-        raise SystemExit(f"LM Studio unreachable at {args.lm_studio_url}")
-    print(f"[parallel] LM Studio reachable; model={args.model}", flush=True)
+        raise SystemExit(
+            f"LLM endpoint unreachable at {args.lm_studio_url}. "
+            "If using OpenAI: verify --api-key-env points to a valid key.",
+        )
+    print(f"[parallel] endpoint reachable; model={args.model}", flush=True)
 
     n_done = 0
     n_cached = 0

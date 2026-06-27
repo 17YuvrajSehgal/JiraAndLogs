@@ -60,6 +60,11 @@ class LMStudioConfig:
     timeout_s: float = 120.0
     max_retries: int = 3
     retry_backoff_s: float = 2.0
+    # Rate-limit specific knobs. When the server responds with HTTP 429, we
+    # use a much longer exponential backoff and a higher retry budget — local
+    # LM Studio never returns 429, but remote OpenAI-compatible APIs do.
+    rate_limit_max_retries: int = 10
+    rate_limit_backoff_s: float = 10.0   # base; doubled each retry up to 300s cap
     # Optional bearer token. Set to use the same /v1/chat/completions
     # endpoint against a remote OpenAI-compatible service (OpenAI, Together,
     # Groq, etc.). When None, no Authorization header is sent (local LM Studio).
@@ -177,7 +182,11 @@ class LMStudioClient:
         url = f"{self.config.base_url}/v1/chat/completions"
 
         last_err: Exception | None = None
-        for attempt in range(1, self.config.max_retries + 1):
+        # Track rate-limit retries separately from generic retries — 429s deserve
+        # a much longer backoff (rate limit windows are 60s+) and a higher budget.
+        n_rate_limit_attempts = 0
+        n_generic_attempts = 0
+        while True:
             try:
                 headers = {"Content-Type": "application/json"}
                 if self.config.api_key:
@@ -202,18 +211,86 @@ class LMStudioClient:
                 if not content or not str(content).strip():
                     raise LMStudioError("empty response from LM Studio")
                 return content
-            except (urllib.error.URLError, urllib.error.HTTPError, OSError, TimeoutError, KeyError, json.JSONDecodeError) as e:
+            except urllib.error.HTTPError as e:
                 last_err = e
+                is_rate_limit = (e.code == 429)
+                if is_rate_limit:
+                    n_rate_limit_attempts += 1
+                    if n_rate_limit_attempts > self.config.rate_limit_max_retries:
+                        break
+                    # Honor Retry-After header if present (seconds, or HTTP-date).
+                    retry_after = None
+                    try:
+                        ra = e.headers.get("Retry-After") if e.headers else None
+                        if ra is not None:
+                            retry_after = float(ra)
+                    except (ValueError, TypeError):
+                        retry_after = None
+                    # Exponential backoff capped at 300s, with the Retry-After
+                    # header as a floor if the server provides one.
+                    backoff = min(
+                        self.config.rate_limit_backoff_s * (2 ** (n_rate_limit_attempts - 1)),
+                        300.0,
+                    )
+                    if retry_after is not None:
+                        backoff = max(backoff, retry_after + 1.0)
+                    # 429s are expected behavior, not errors — log at DEBUG so the
+                    # main output stays clean. Final-give-up case still raises and
+                    # surfaces to the caller below.
+                    log.debug(
+                        "lm_studio rate-limited (429); backing off",
+                        attempt=n_rate_limit_attempts,
+                        max=self.config.rate_limit_max_retries,
+                        backoff_s=backoff,
+                        retry_after=retry_after,
+                    )
+                    time.sleep(backoff)
+                    continue
+                # Non-429 HTTP errors. 4xx (except 429) are deterministic — the
+                # server is telling us the request is invalid (e.g. 400 Bad
+                # Request from content filter or schema mismatch). Retrying
+                # won't help; bail immediately. 5xx errors are transient and
+                # use the generic retry budget.
+                if 400 <= e.code < 500:
+                    # Try to extract the server's error message body for debugging.
+                    detail = ""
+                    try:
+                        detail = e.read().decode("utf-8", errors="replace")[:400]
+                    except Exception:
+                        pass
+                    log.warning(
+                        "lm_studio non-retryable HTTP error",
+                        code=e.code,
+                        detail=detail,
+                    )
+                    break
+                # 5xx — retry with generic budget.
+                n_generic_attempts += 1
+                if n_generic_attempts > self.config.max_retries:
+                    break
+                log.warning(
+                    "lm_studio HTTP error",
+                    attempt=n_generic_attempts,
+                    max=self.config.max_retries,
+                    code=e.code,
+                    error=type(e).__name__,
+                )
+                time.sleep(self.config.retry_backoff_s * n_generic_attempts)
+            except (urllib.error.URLError, OSError, TimeoutError, KeyError, json.JSONDecodeError) as e:
+                last_err = e
+                n_generic_attempts += 1
+                if n_generic_attempts > self.config.max_retries:
+                    break
                 log.warning(
                     "lm_studio call failed",
-                    attempt=attempt,
+                    attempt=n_generic_attempts,
                     max=self.config.max_retries,
                     error=type(e).__name__,
                 )
-                if attempt < self.config.max_retries:
-                    time.sleep(self.config.retry_backoff_s * attempt)
+                time.sleep(self.config.retry_backoff_s * n_generic_attempts)
         raise LMStudioError(
-            f"LM Studio failed after {self.config.max_retries} retries: {last_err!r}"
+            f"LM Studio failed after {n_generic_attempts} generic + "
+            f"{n_rate_limit_attempts} rate-limit retries: {last_err!r}"
         )
 
     def chat_json(

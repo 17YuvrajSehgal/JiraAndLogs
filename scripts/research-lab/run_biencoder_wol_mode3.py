@@ -19,10 +19,77 @@ from __future__ import annotations
 
 import argparse
 import json
+import logging
+import os
 import sys
+import threading
 import time
 from collections import defaultdict
 from pathlib import Path
+
+# Configure root logger so every INFO from neural_models.* / comparison.* /
+# v2_advanced.* etc. is visible on stdout. Without this, fine-tune progress is
+# silently dropped (see bm25 / kg_retrieval scripts for the same pattern).
+logging.basicConfig(
+    level=logging.INFO,
+    format="[%(asctime)s] %(levelname)s %(name)s: %(message)s",
+    datefmt="%H:%M:%S",
+    force=True,
+)
+
+
+def _start_heartbeat(label: str = "bienc", every_seconds: float = 30.0) -> threading.Event:
+    """Spawn a daemon thread that prints "[<label>:heartbeat] ..." every
+    `every_seconds`. Returns a `stop` event the caller can set() to stop
+    the heartbeat (otherwise it runs until the process exits).
+
+    Each line shows wall-clock elapsed since heartbeat-start, process
+    RSS (if psutil is available), and the current phase label set by
+    the caller. Lines are flushed immediately so they appear in the
+    redirected log file even when the main thread is busy in an inner
+    blocking call (e.g. sentence-transformers fit()).
+    """
+    stop = threading.Event()
+    t0 = time.time()
+
+    try:
+        import psutil  # type: ignore
+        proc = psutil.Process(os.getpid())
+    except Exception:                                                # noqa: BLE001
+        proc = None
+
+    def _ram_gb() -> str:
+        if proc is None:
+            return "?"
+        try:
+            return f"{proc.memory_info().rss / (1024**3):.2f}"
+        except Exception:                                            # noqa: BLE001
+            return "?"
+
+    def _run() -> None:
+        n = 0
+        while not stop.wait(every_seconds):
+            n += 1
+            elapsed = time.time() - t0
+            mins = elapsed / 60.0
+            print(
+                f"[{label}:heartbeat] tick={n} elapsed={mins:6.1f}min "
+                f"rss={_ram_gb()}GB phase={_HEARTBEAT_PHASE['name']}",
+                flush=True,
+            )
+
+    th = threading.Thread(target=_run, daemon=True, name="heartbeat")
+    th.start()
+    return stop
+
+
+# Mutable singleton the main thread updates; heartbeat thread reads it.
+_HEARTBEAT_PHASE: dict[str, str] = {"name": "starting"}
+
+
+def _set_phase(name: str) -> None:
+    _HEARTBEAT_PHASE["name"] = name
+    print(f"[bienc:phase] -> {name}", flush=True)
 
 
 def main() -> int:
@@ -44,6 +111,10 @@ def main() -> int:
     ap.add_argument("--seed", type=int, default=42)
     args = ap.parse_args()
 
+    # ---- Heartbeat so the log file never goes silent for >30s ----
+    heartbeat_stop = _start_heartbeat(label="bienc", every_seconds=30.0)
+    _set_phase("imports")
+
     sys.path.insert(0, "src")
 
     # Defer the heavy import until after the path is set.
@@ -59,6 +130,7 @@ def main() -> int:
           f"epochs={args.finetune_epochs}")
     print()
 
+    _set_phase("instantiate_pipeline")
     pipeline = BiEncoderRetrievalPipeline(
         humanized_subdir=args.humanized_subdir,
         humanized_root=args.humanized_root,
@@ -70,6 +142,7 @@ def main() -> int:
         seed=args.seed,
     )
 
+    _set_phase(f"train_and_predict (epochs={args.finetune_epochs})")
     t0 = time.time()
     result = pipeline.train_and_predict(
         global_dir=args.global_dir,
@@ -77,16 +150,19 @@ def main() -> int:
         target_fpr=0.05,
     )
     wall = time.time() - t0
+    _set_phase("post_predict")
     print(f"\n[bienc] fit+predict completed in {wall:.1f}s "
-          f"(fit={result.fit_seconds:.1f}s, predict={result.predict_seconds:.1f}s)")
-    print(f"[bienc] {len(result.predictions)} test predictions")
+          f"(fit={result.fit_seconds:.1f}s, predict={result.predict_seconds:.1f}s)",
+          flush=True)
+    print(f"[bienc] {len(result.predictions)} test predictions", flush=True)
 
     # ---- Persist per-window predictions ----
+    _set_phase("write_predictions")
     pred_path = args.out_dir / "biencoder-predictions.jsonl"
     with pred_path.open("w", encoding="utf-8") as fh:
         for p in result.predictions:
             fh.write(json.dumps(p.as_dict(), default=str, ensure_ascii=False) + "\n")
-    print(f"\n[bienc] wrote predictions to {pred_path}")
+    print(f"\n[bienc] wrote predictions to {pred_path}", flush=True)
 
     # ---- Load strong-match gold ----
     strong_path = args.global_dir / "window-memory-matchings-strong.jsonl"
@@ -150,8 +226,11 @@ def main() -> int:
         }
         return out
 
+    _set_phase("compute_metrics_coarse")
     coarse_m = metrics(result.predictions, None,                "coarse")
+    _set_phase("compute_metrics_strong")
     strong_m = metrics(result.predictions, strong_gold,         "strong")
+    _set_phase("write_results")
 
     # ---- Save and print ----
     results = {
@@ -194,6 +273,8 @@ def main() -> int:
         print(f"  {proj:<30s}  n={v['n']:>4d}  Hit@1={v['hit_at_1']:>.4f}  "
               f"Hit@5={v['hit_at_5']:>.4f}  MRR={v['mrr']:>.4f}")
 
+    _set_phase("done")
+    heartbeat_stop.set()
     return 0
 
 

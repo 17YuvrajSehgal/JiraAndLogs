@@ -68,6 +68,10 @@ _DATASET_TO_DB: dict[str, str] = {
     # keep both v1 and v2 simultaneously, create a separate neo4j-wol-v2 DB in
     # Neo4j Desktop and point this entry at it.
     "2026-06-15-wol-real-v2-global":       "neo4j-wol",
+    # WoL v3-plus (24 distributed-systems projects, no quality filters,
+    # ~78K queries, ~38K memory). Lives in its own DB to keep v2 around
+    # for comparison.
+    "2026-06-17-wol-real-v3-global":       "neo4j-wol-v3",
 }
 
 
