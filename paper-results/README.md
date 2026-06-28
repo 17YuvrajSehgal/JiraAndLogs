@@ -1,20 +1,16 @@
-# paper-results — fresh, publishable result set
+# paper-results — ICSE result set
 
-Self-contained results for the ICSE submission, collected fresh (no mixing with
-`data/` or the old `results/`). Categorized by the question each answers.
-See `DOCS/review-sol.md` for the plan and `provenance/` for reproducibility.
+Fresh, publishable results (clean of `data/` and the old `results/`). See `DOCS/collection-log.md` for provenance and `DOCS/audit-findings.md` for the correctness audit. Large per-window predictions/traces are shipped as a release archive (gitignored).
 
-| Dir | What it holds |
-|---|---|
-| `retrieval-cascades/` | Per-pipeline retrieval panel (Hit@1/5/10, MRR, CIs), per dataset |
-| `baselines/` | Prior-art (SOTA dense, cross-encoder rerank, TF-IDF) + LLM-RAG |
-| `agent-end-to-end/` | Full agent eval: Hit@K, triage acc, novelty, pages/incident |
-| `agent-value/` | What the agent adds: cost@iso-accuracy, skill/tool ablations |
-| `kg-usefulness/` | Is the KG helpful: ±graph ablation, complementarity, explanation judge |
-| `robustness/` | Multi-seed variance, multiple-comparison correction, negative-results |
-| `gold-validation/` | LLM-as-judge relevance + human-annotation kit |
-| `provenance/` | git SHA, env freeze, seeds, run configs, LLM prompts |
+## Category summaries
+- [`retrieval-cascades/SUMMARY.md`](retrieval-cascades/SUMMARY.md)
+- [`baselines/SUMMARY.md`](baselines/SUMMARY.md)
+- [`kg-usefulness/SUMMARY.md`](kg-usefulness/SUMMARY.md)
+- [`gold-validation/SUMMARY.md`](gold-validation/SUMMARY.md)
+- [`robustness/SUMMARY.md`](robustness/SUMMARY.md)
+- [`agent-end-to-end/SUMMARY.md`](agent-end-to-end/SUMMARY.md)
+- `agent-value/` — cost@iso-accuracy + skill/tool/budget ablations (per-dataset JSON)
+- `provenance/` — env freeze, config (seeds/epochs/splits), git SHA
 
-Datasets: `online-boutique` (2026-05-25-dataset-v5-large-global),
-`otel-demo` (2026-06-09-otel-demo-v1-global),
-`wol-v3` (2026-06-17-wol-real-v3-global).
+## Headline (WoL real data, coarse Hit@5)
+Hybrid-RRF **0.970** > BiEncoder 0.905 > LLM-RAG 0.856 > BM25 0.727 — fusion of SPLADE+BiEncoder+graph wins on real Jira data and beats the LLM-RAG baseline.
