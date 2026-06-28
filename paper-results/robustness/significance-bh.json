@@ -4,7 +4,7 @@
   "seed": 42,
   "alpha": 0.05,
   "correction": "benjamini-hochberg",
-  "n_tests": 16,
+  "n_tests": 17,
   "results": [
     {
       "n_paired": 331,
@@ -17,7 +17,7 @@
       "a_hit5": 0.5589123867069486,
       "b_hit5": 0.6344410876132931,
       "comparison": "online-boutique: Hybrid vs BiEncoder",
-      "q_value_bh": 0.0256,
+      "q_value_bh": 0.027200000000000002,
       "significant_bh": true
     },
     {
@@ -59,7 +59,7 @@
       "a_hit5": 0.5589123867069486,
       "b_hit5": 0.4652567975830816,
       "comparison": "online-boutique: Hybrid vs KG",
-      "q_value_bh": 0.0035555555555555557,
+      "q_value_bh": 0.003777777777777778,
       "significant_bh": true
     },
     {
@@ -87,7 +87,7 @@
       "a_hit5": 0.5589123867069486,
       "b_hit5": 0.5921450151057401,
       "comparison": "online-boutique: KG-effect (Hybrid vs no-graph)",
-      "q_value_bh": 0.19733333333333333,
+      "q_value_bh": 0.20966666666666667,
       "significant_bh": false
     },
     {
@@ -101,7 +101,7 @@
       "a_hit5": 0.6722689075630253,
       "b_hit5": 0.680672268907563,
       "comparison": "otel-demo: Hybrid vs BiEncoder",
-      "q_value_bh": 0.942,
+      "q_value_bh": 0.9660000000000001,
       "significant_bh": false
     },
     {
@@ -115,7 +115,7 @@
       "a_hit5": 0.6722689075630253,
       "b_hit5": 0.5966386554621849,
       "comparison": "otel-demo: Hybrid vs BM25(fair)",
-      "q_value_bh": 0.0930909090909091,
+      "q_value_bh": 0.09890909090909092,
       "significant_bh": false
     },
     {
@@ -129,7 +129,7 @@
       "a_hit5": 0.6722689075630253,
       "b_hit5": 0.6638655462184874,
       "comparison": "otel-demo: Hybrid vs BGE-dense",
-      "q_value_bh": 0.942,
+      "q_value_bh": 0.9660000000000001,
       "significant_bh": false
     },
     {
@@ -157,7 +157,7 @@
       "a_hit5": 0.6722689075630253,
       "b_hit5": 0.6386554621848739,
       "comparison": "otel-demo: Hybrid vs LLM-RAG",
-      "q_value_bh": 0.5464615384615384,
+      "q_value_bh": 0.5806153846153846,
       "significant_bh": false
     },
     {
@@ -171,7 +171,7 @@
       "a_hit5": 0.6722689075630253,
       "b_hit5": 0.680672268907563,
       "comparison": "otel-demo: KG-effect (Hybrid vs no-graph)",
-      "q_value_bh": 0.942,
+      "q_value_bh": 0.9660000000000001,
       "significant_bh": false
     },
     {
@@ -229,6 +229,20 @@
       "comparison": "wol-v3: Hybrid vs LLM-RAG",
       "q_value_bh": 0.0,
       "significant_bh": true
+    },
+    {
+      "n_paired": 5150,
+      "delta_hit5": -0.0001941747572815622,
+      "ci95": [
+        -0.0033009708737864463,
+        0.002912621359223211
+      ],
+      "p_value": 0.966,
+      "a_hit5": 0.9700970873786408,
+      "b_hit5": 0.9702912621359223,
+      "comparison": "wol-v3: KG-effect (Hybrid vs no-graph)",
+      "q_value_bh": 0.9660000000000001,
+      "significant_bh": false
     }
   ]
 }

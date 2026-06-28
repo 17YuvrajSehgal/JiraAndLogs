@@ -132,3 +132,30 @@ Hybrid-RRF **0.970** > BiEncoder 0.905 > LLM-RAG 0.856 > BM25 0.727 > KG (re-run
 cascades, kg-usefulness (OB/OTel + WoL pending), agent-end-to-end, agent-value,
 gold-validation, robustness (multi-seed + BH significance + negative-results),
 provenance. Bulky predictions/traces gitignored (ship as archive).
+
+---
+
+## COMPLETE — 2026-06-28
+
+**All cells collected.** WoL ±graph ablation finished (job 621702, with the
+HYBRID_TRIAGE_SCORE_SAMPLE fix): WoL no-graph Hit@5 0.970 = with-graph 0.970
+(Δ Hit@1 +0.009, Hit@5 −0.000, MRR +0.003). KG-effect on Hit@5 is **not
+significant on any dataset** (BH q: OB 0.21, OTel 0.97, WoL 0.97) — the graph
+sharpens top-rank (Hit@1/MRR) and adds complementary hits (14.2% OB / 10.1%
+OTel / 1.6% WoL) rather than widening Hit@5. Honest, consistent across angles.
+
+Final significance: **17 paired-bootstrap tests, 10 significant after BH**.
+
+### Final paper-results/ inventory (all committed; bulky preds/traces gitignored)
+- retrieval-cascades/ (OB,OTel,WoL × BiEncoder/BM25/KG/Hybrid) + SUMMARY
+- baselines/ (bge,e5,mpnet,tfidf,bm25,ce,llm-rag) + SUMMARY
+- agent-end-to-end/ (3 datasets, full test split) + SUMMARY
+- agent-value/ (cost-vs-cascade 40/63/78% savings + skill/tool/budget) + SUMMARY
+- kg-usefulness/ (±graph ablation + complementarity) + SUMMARY
+- gold-validation/ (LLM-judge, 3 datasets) + SUMMARY
+- robustness/ (multi-seed + significance-bh + negative-results) + SUMMARY
+- provenance/ (env freeze, config, git SHA) ; README.md (master index)
+- DOCS/threats-to-validity.md (gap #3 scoping)
+
+**Deferred (optional, documented):** comparison leaderboard (triage PR-AUC),
+LLM explanation-judge (KG angle 3), WoL multi-seed, gold-judge prompt tuning.
