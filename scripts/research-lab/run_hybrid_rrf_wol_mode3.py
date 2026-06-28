@@ -93,7 +93,11 @@ def main() -> int:
     ap.add_argument("--humanized-root",   default="jira-shadow-humanized-v2")
     ap.add_argument("--biencoder-finetune-epochs", type=int, default=5)
     ap.add_argument("--seed", type=int, default=42)
+    ap.add_argument("--skip-graph", action="store_true",
+                    help="KG-usefulness ablation: fuse SPLADE+BiEncoder only "
+                         "(no graph retriever). Writes *-nograph-* outputs.")
     args = ap.parse_args()
+    _tag = "hybrid-rrf-nograph" if args.skip_graph else "hybrid-rrf"
 
     heartbeat_stop = _start_heartbeat(label="hybrid-rrf", every_seconds=30.0)
     _set_phase("imports")
@@ -115,7 +119,7 @@ def main() -> int:
         humanized_root=args.humanized_root,
         biencoder_finetune_epochs=args.biencoder_finetune_epochs,
         skip_window_extraction=True,  # rule-based windows (no LLM calls per window)
-        skip_graph=False,
+        skip_graph=args.skip_graph,
         seed=args.seed,
     )
 
@@ -134,7 +138,7 @@ def main() -> int:
     print(f"[hybrid-rrf] {len(result.predictions)} test predictions", flush=True)
 
     _set_phase("write_predictions")
-    pred_path = args.out_dir / "hybrid-rrf-predictions.jsonl"
+    pred_path = args.out_dir / f"{_tag}-predictions.jsonl"
     with pred_path.open("w", encoding="utf-8") as fh:
         for p in result.predictions:
             fh.write(json.dumps(p.as_dict(), default=str, ensure_ascii=False) + "\n")
@@ -206,7 +210,7 @@ def main() -> int:
             "humanized_subdir": args.humanized_subdir,
             "biencoder_finetune_epochs": args.biencoder_finetune_epochs,
             "skip_window_extraction":   True,
-            "skip_graph":     False,
+            "skip_graph":     args.skip_graph,
             "seed":           args.seed,
         },
         "metadata": {
@@ -220,7 +224,7 @@ def main() -> int:
         "strong": strong_m,
     }
 
-    out_path = args.out_dir / "hybrid-rrf-mode3-results.json"
+    out_path = args.out_dir / f"{_tag}-mode3-results.json"
     out_path.write_text(json.dumps(results, default=str, indent=2), encoding="utf-8")
     print(f"[hybrid-rrf] wrote results to {out_path}\n")
 

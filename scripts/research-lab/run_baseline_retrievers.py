@@ -73,7 +73,7 @@ def main() -> int:
     ap.add_argument("--global-dir", type=Path, required=True)
     ap.add_argument("--humanized-subdir", required=True)
     ap.add_argument("--humanized-root", default="jira-shadow-humanized-v2")
-    ap.add_argument("--method", required=True, choices=list(_MODELS) + ["tfidf", "ce"])
+    ap.add_argument("--method", required=True, choices=list(_MODELS) + ["tfidf", "bm25", "ce"])
     ap.add_argument("--out-dir", type=Path, required=True)
     ap.add_argument("--split", default="test")
     ap.add_argument("--limit", type=int, default=0, help="0 = all test windows")
@@ -118,6 +118,16 @@ def main() -> int:
         M = vec.fit_transform(mem_texts)          # (Nmem, V)
         Q = vec.transform(q_texts)                # (Nq, V)
         sims = (Q @ M.T).toarray().astype(np.float32)   # cosine (l2-normalized tfidf)
+    elif args.method == "bm25":
+        # Fair BM25 over the SAME (humanized) memory the dense methods use,
+        # so the lexical baseline is comparable (the cascade BM25 indexes the
+        # raw jira-memory-corpus, which differs on OB/OTel).
+        from rank_bm25 import BM25Okapi
+        from comparison.retrievers import tokenize
+        bm = BM25Okapi([tokenize(t) for t in mem_texts])
+        sims = np.zeros((len(q_texts), len(mem_texts)), dtype=np.float32)
+        for i, qt in enumerate(q_texts):
+            sims[i] = bm.get_scores(tokenize(qt))
     elif args.method in _MODELS:
         from sentence_transformers import SentenceTransformer
         model = SentenceTransformer(_MODELS[args.method], device=device)
