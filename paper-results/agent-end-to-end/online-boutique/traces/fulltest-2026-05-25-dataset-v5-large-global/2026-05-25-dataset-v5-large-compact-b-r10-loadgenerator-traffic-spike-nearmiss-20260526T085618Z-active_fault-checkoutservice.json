@@ -1,0 +1,1447 @@
+{
+  "bundle_id": "2026-05-25-dataset-v5-large-compact-b-r10-loadgenerator-traffic-spike-nearmiss-20260526T085618Z-active_fault-checkoutservice",
+  "plan_id": "plan_34246ccf6299",
+  "started_at": "2026-06-28T08:32:28.401+00:00",
+  "finished_at": "2026-06-28T08:32:28.527+00:00",
+  "n_events": 26,
+  "events": [
+    {
+      "ts": "2026-06-28T08:32:28.401+00:00",
+      "kind": "plan_start",
+      "skill": null,
+      "skill_version": null,
+      "duration_ms": null,
+      "output": null,
+      "error": null,
+      "budget_snapshot": {
+        "max_llm_tokens": 100000,
+        "max_wall_seconds": 90.0,
+        "max_usd_equivalent": 0.5,
+        "max_skill_calls": 12,
+        "spent_tokens": 0,
+        "spent_seconds": 0.0,
+        "spent_usd": 0.0,
+        "spent_calls": 0
+      },
+      "notes": {
+        "plan_id": "plan_34246ccf6299",
+        "controller": "capability_aware_rule:active_fault",
+        "n_invocations": 12,
+        "dataset": "online_boutique",
+        "ablation": ""
+      }
+    },
+    {
+      "ts": "2026-06-28T08:32:28.401+00:00",
+      "kind": "skill_start",
+      "skill": "triage_numeric",
+      "skill_version": "1.0.0",
+      "duration_ms": null,
+      "output": null,
+      "error": null,
+      "budget_snapshot": {
+        "max_llm_tokens": 100000,
+        "max_wall_seconds": 90.0,
+        "max_usd_equivalent": 0.5,
+        "max_skill_calls": 12,
+        "spent_tokens": 0,
+        "spent_seconds": 0.0,
+        "spent_usd": 0.0,
+        "spent_calls": 0
+      },
+      "notes": {}
+    },
+    {
+      "ts": "2026-06-28T08:32:28.401+00:00",
+      "kind": "skill_end",
+      "skill": "triage_numeric",
+      "skill_version": "1.0.0",
+      "duration_ms": 0.018,
+      "output": {
+        "skill": "triage_numeric",
+        "skill_version": "1.0.0",
+        "triage_score": 6.083913816870591e-05,
+        "triage_decision": "noise",
+        "matched_issue_ids": [],
+        "is_novel": null,
+        "confidence": 6.083913816870591e-05,
+        "evidence_used": [
+          "NUMERIC_FEATURES"
+        ],
+        "cost": {
+          "llm_tokens": 0,
+          "wall_seconds": 0.0,
+          "usd": 0.0,
+          "n_calls": 1
+        },
+        "extra": {
+          "gold_label": "noise",
+          "gold_is_novel": false,
+          "gold_matched_issue_ids": [],
+          "scenario_family": "frontend-traffic-pressure",
+          "service_name": "checkoutservice",
+          "window_type": "active_fault",
+          "is_hard_case": true,
+          "triage_reason_class": null
+        }
+      },
+      "error": null,
+      "budget_snapshot": {
+        "max_llm_tokens": 100000,
+        "max_wall_seconds": 90.0,
+        "max_usd_equivalent": 0.5,
+        "max_skill_calls": 12,
+        "spent_tokens": 0,
+        "spent_seconds": 0.0,
+        "spent_usd": 0.0,
+        "spent_calls": 1
+      },
+      "notes": {}
+    },
+    {
+      "ts": "2026-06-28T08:32:28.401+00:00",
+      "kind": "skill_start",
+      "skill": "retrieve_dense",
+      "skill_version": "1.0.0",
+      "duration_ms": null,
+      "output": null,
+      "error": null,
+      "budget_snapshot": {
+        "max_llm_tokens": 100000,
+        "max_wall_seconds": 90.0,
+        "max_usd_equivalent": 0.5,
+        "max_skill_calls": 12,
+        "spent_tokens": 0,
+        "spent_seconds": 0.0,
+        "spent_usd": 0.0,
+        "spent_calls": 1
+      },
+      "notes": {}
+    },
+    {
+      "ts": "2026-06-28T08:32:28.401+00:00",
+      "kind": "skill_end",
+      "skill": "retrieve_dense",
+      "skill_version": "1.0.0",
+      "duration_ms": 0.02,
+      "output": {
+        "skill": "retrieve_dense",
+        "skill_version": "1.0.0",
+        "triage_score": 0.469735684367602,
+        "triage_decision": "noise",
+        "matched_issue_ids": [
+          "shadow-2026-05-25-dataset-v5-large-compact-b-r06-checkoutservice-unavailable-critical-20260526T050651Z",
+          "shadow-2026-05-25-dataset-v5-large-compact-b-r01-checkoutservice-unavailable-critical-20260526T005501Z",
+          "shadow-2026-05-25-dataset-v5-large-compact-b-r03-checkoutservice-unavailable-critical-20260526T023541Z",
+          "shadow-2026-05-25-dataset-v5-large-compact-b-r05-checkoutservice-unavailable-critical-20260526T041641Z",
+          "shadow-2026-05-25-dataset-v5-large-compact-b-r04-checkoutservice-unavailable-critical-20260526T032605Z"
+        ],
+        "is_novel": null,
+        "confidence": 0.469735684367602,
+        "evidence_used": [
+          "MEMORY_TEXT",
+          "TEXT_EVIDENCE"
+        ],
+        "cost": {
+          "llm_tokens": 0,
+          "wall_seconds": 0.0,
+          "usd": 0.0,
+          "n_calls": 1
+        },
+        "extra": {
+          "gold_label": "noise",
+          "gold_is_novel": false,
+          "gold_matched_issue_ids": [],
+          "scenario_family": "frontend-traffic-pressure",
+          "service_name": "checkoutservice",
+          "window_type": "active_fault",
+          "is_hard_case": true,
+          "triage_reason_class": null
+        }
+      },
+      "error": null,
+      "budget_snapshot": {
+        "max_llm_tokens": 100000,
+        "max_wall_seconds": 90.0,
+        "max_usd_equivalent": 0.5,
+        "max_skill_calls": 12,
+        "spent_tokens": 0,
+        "spent_seconds": 0.0,
+        "spent_usd": 0.0,
+        "spent_calls": 2
+      },
+      "notes": {}
+    },
+    {
+      "ts": "2026-06-28T08:32:28.401+00:00",
+      "kind": "skill_start",
+      "skill": "retrieve_hybrid_fusion",
+      "skill_version": "1.0.0",
+      "duration_ms": null,
+      "output": null,
+      "error": null,
+      "budget_snapshot": {
+        "max_llm_tokens": 100000,
+        "max_wall_seconds": 90.0,
+        "max_usd_equivalent": 0.5,
+        "max_skill_calls": 12,
+        "spent_tokens": 0,
+        "spent_seconds": 0.0,
+        "spent_usd": 0.0,
+        "spent_calls": 2
+      },
+      "notes": {}
+    },
+    {
+      "ts": "2026-06-28T08:32:28.401+00:00",
+      "kind": "skill_end",
+      "skill": "retrieve_hybrid_fusion",
+      "skill_version": "1.0.0",
+      "duration_ms": 0.006,
+      "output": {
+        "skill": "retrieve_hybrid_fusion",
+        "skill_version": "1.0.0",
+        "triage_score": null,
+        "triage_decision": null,
+        "matched_issue_ids": [],
+        "is_novel": null,
+        "confidence": 0.0,
+        "evidence_used": [
+          "MEMORY_TEXT",
+          "TEXT_EVIDENCE"
+        ],
+        "cost": {
+          "llm_tokens": 0,
+          "wall_seconds": 0.0,
+          "usd": 0.0,
+          "n_calls": 1
+        },
+        "extra": {
+          "prediction_missing": true
+        }
+      },
+      "error": null,
+      "budget_snapshot": {
+        "max_llm_tokens": 100000,
+        "max_wall_seconds": 90.0,
+        "max_usd_equivalent": 0.5,
+        "max_skill_calls": 12,
+        "spent_tokens": 0,
+        "spent_seconds": 0.0,
+        "spent_usd": 0.0,
+        "spent_calls": 3
+      },
+      "notes": {}
+    },
+    {
+      "ts": "2026-06-28T08:32:28.401+00:00",
+      "kind": "skill_start",
+      "skill": "compose_l2",
+      "skill_version": "1.0.0",
+      "duration_ms": null,
+      "output": null,
+      "error": null,
+      "budget_snapshot": {
+        "max_llm_tokens": 100000,
+        "max_wall_seconds": 90.0,
+        "max_usd_equivalent": 0.5,
+        "max_skill_calls": 12,
+        "spent_tokens": 0,
+        "spent_seconds": 0.0,
+        "spent_usd": 0.0,
+        "spent_calls": 3
+      },
+      "notes": {}
+    },
+    {
+      "ts": "2026-06-28T08:32:28.401+00:00",
+      "kind": "skill_end",
+      "skill": "compose_l2",
+      "skill_version": "1.0.0",
+      "duration_ms": 0.024,
+      "output": {
+        "skill": "compose_l2",
+        "skill_version": "1.0.0",
+        "triage_score": null,
+        "triage_decision": null,
+        "matched_issue_ids": [
+          "shadow-2026-05-25-dataset-v5-large-compact-b-r06-checkoutservice-unavailable-critical-20260526T050651Z",
+          "shadow-2026-05-25-dataset-v5-large-compact-b-r01-checkoutservice-unavailable-critical-20260526T005501Z",
+          "shadow-2026-05-25-dataset-v5-large-compact-b-r03-checkoutservice-unavailable-critical-20260526T023541Z",
+          "shadow-2026-05-25-dataset-v5-large-compact-b-r05-checkoutservice-unavailable-critical-20260526T041641Z",
+          "shadow-2026-05-25-dataset-v5-large-compact-b-r04-checkoutservice-unavailable-critical-20260526T032605Z"
+        ],
+        "is_novel": null,
+        "confidence": 1.0,
+        "evidence_used": [
+          "retrieve_dense",
+          "retrieve_hybrid_fusion"
+        ],
+        "cost": {
+          "llm_tokens": 0,
+          "wall_seconds": 0.001,
+          "usd": 0.0,
+          "n_calls": 1
+        },
+        "extra": {
+          "anchor_skill": "retrieve_dense",
+          "n_retrievers_seen": 2,
+          "rrf_k": 60.0
+        }
+      },
+      "error": null,
+      "budget_snapshot": {
+        "max_llm_tokens": 100000,
+        "max_wall_seconds": 90.0,
+        "max_usd_equivalent": 0.5,
+        "max_skill_calls": 12,
+        "spent_tokens": 0,
+        "spent_seconds": 0.001,
+        "spent_usd": 0.0,
+        "spent_calls": 4
+      },
+      "notes": {}
+    },
+    {
+      "ts": "2026-06-28T08:32:28.402+00:00",
+      "kind": "skill_start",
+      "skill": "reformulate_query",
+      "skill_version": "1.0.0",
+      "duration_ms": null,
+      "output": null,
+      "error": null,
+      "budget_snapshot": {
+        "max_llm_tokens": 100000,
+        "max_wall_seconds": 90.0,
+        "max_usd_equivalent": 0.5,
+        "max_skill_calls": 12,
+        "spent_tokens": 0,
+        "spent_seconds": 0.001,
+        "spent_usd": 0.0,
+        "spent_calls": 4
+      },
+      "notes": {}
+    },
+    {
+      "ts": "2026-06-28T08:32:28.402+00:00",
+      "kind": "skill_end",
+      "skill": "reformulate_query",
+      "skill_version": "1.0.0",
+      "duration_ms": 0.022,
+      "output": {
+        "skill": "reformulate_query",
+        "skill_version": "1.0.0",
+        "triage_score": null,
+        "triage_decision": null,
+        "matched_issue_ids": [],
+        "is_novel": null,
+        "confidence": 1.0,
+        "evidence_used": [
+          "TEXT_EVIDENCE"
+        ],
+        "cost": {
+          "llm_tokens": 0,
+          "wall_seconds": 0.0001,
+          "usd": 0.0,
+          "n_calls": 1
+        },
+        "extra": {
+          "reformulated_query": "SERVICE checkoutservice LOG-EVENTS [error] dep=paymentservice op=Charge err_class=Code(400) retry_attempt=0 [error] dep=paymentservice op=Charge err_class=Code(400) retry_attempt=0 TRACES total_spans=3555 error_spans=5 p50_ms=2.1 p95_ms=187.8 root=grpc.hipstershop.CurrencyService/Convert count=484 root=frontend count=154 root=grpc.hipstershop.CurrencyService/GetSupportedCurrencies count=126 root=hipstershop.CurrencyService/Convert count=14 root=opentelemetry.proto.collector.trace.v1.TraceService/Export count=11",
+          "original_query": "SERVICE checkoutservice\nLOG-EVENTS\n[error] dep=paymentservice op=Charge err_class=Code(400) retry_attempt=0\n[error] dep=paymentservice op=Charge err_class=Code(400) retry_attempt=0\nTRACES total_spans=3555 error_spans=5 p50_ms=2.1 p95_ms=187.8\n  root=grpc.hipstershop.CurrencyService/Convert count=484\n  root=frontend count=154\n  root=grpc.hipstershop.CurrencyService/GetSupportedCurrencies count=126\n  root=hipstershop.CurrencyService/Convert count=14\n  root=opentelemetry.proto.collector.trace.v1.TraceService/Export count=11",
+          "action_applied": {
+            "action": "drop_token",
+            "argument": "error",
+            "reason": "stub_drop_generic_token"
+          },
+          "retry_count": 1,
+          "n_previous_matches": 5
+        }
+      },
+      "error": null,
+      "budget_snapshot": {
+        "max_llm_tokens": 100000,
+        "max_wall_seconds": 90.0,
+        "max_usd_equivalent": 0.5,
+        "max_skill_calls": 12,
+        "spent_tokens": 0,
+        "spent_seconds": 0.0011,
+        "spent_usd": 0.0,
+        "spent_calls": 5
+      },
+      "notes": {}
+    },
+    {
+      "ts": "2026-06-28T08:32:28.402+00:00",
+      "kind": "skill_start",
+      "skill": "request_pod_events",
+      "skill_version": "1.0.0",
+      "duration_ms": null,
+      "output": null,
+      "error": null,
+      "budget_snapshot": {
+        "max_llm_tokens": 100000,
+        "max_wall_seconds": 90.0,
+        "max_usd_equivalent": 0.5,
+        "max_skill_calls": 12,
+        "spent_tokens": 0,
+        "spent_seconds": 0.0011,
+        "spent_usd": 0.0,
+        "spent_calls": 5
+      },
+      "notes": {}
+    },
+    {
+      "ts": "2026-06-28T08:32:28.404+00:00",
+      "kind": "skill_end",
+      "skill": "request_pod_events",
+      "skill_version": "1.0.0",
+      "duration_ms": 2.85,
+      "output": {
+        "skill": "request_pod_events",
+        "skill_version": "1.0.0",
+        "triage_score": null,
+        "triage_decision": null,
+        "matched_issue_ids": [],
+        "is_novel": null,
+        "confidence": 1.0,
+        "evidence_used": [
+          "request_pod_events"
+        ],
+        "cost": {
+          "llm_tokens": 0,
+          "wall_seconds": 0.0027362320106476545,
+          "usd": 0.0,
+          "n_calls": 1
+        },
+        "extra": {
+          "tool_result": {
+            "tool_name": "request_pod_events",
+            "args": {
+              "window_id": "2026-05-25-dataset-v5-large-compact-b-r10-loadgenerator-traffic-spike-nearmiss-20260526T085618Z-active_fault-checkoutservice"
+            },
+            "result": {
+              "events": [
+                {
+                  "timestamp": "2026-05-26T08:57:39Z",
+                  "type": "Normal",
+                  "reason": "Killing",
+                  "message": "Stopping container main",
+                  "pod": "loadgenerator-9fdcc8676-tbvgw",
+                  "kind": "Pod",
+                  "count": 1
+                },
+                {
+                  "timestamp": "2026-05-26T08:57:39Z",
+                  "type": "Normal",
+                  "reason": "SuccessfulDelete",
+                  "message": "Deleted pod: loadgenerator-9fdcc8676-tbvgw",
+                  "pod": "loadgenerator-9fdcc8676",
+                  "kind": "ReplicaSet",
+                  "count": 1
+                },
+                {
+                  "timestamp": "2026-05-26T08:57:39Z",
+                  "type": "Normal",
+                  "reason": "ScalingReplicaSet",
+                  "message": "Scaled down replica set loadgenerator-9fdcc8676 from 1 to 0",
+                  "pod": "loadgenerator",
+                  "kind": "Deployment",
+                  "count": 10
+                },
+                {
+                  "timestamp": "2026-05-26T08:57:38Z",
+                  "type": "Normal",
+                  "reason": "Created",
+                  "message": "Container created",
+                  "pod": "loadgenerator-55db58975b-2mtmb",
+                  "kind": "Pod",
+                  "count": 1
+                },
+                {
+                  "timestamp": "2026-05-26T08:57:38Z",
+                  "type": "Normal",
+                  "reason": "Started",
+                  "message": "Container started",
+                  "pod": "loadgenerator-55db58975b-2mtmb",
+                  "kind": "Pod",
+                  "count": 1
+                },
+                {
+                  "timestamp": "2026-05-26T08:57:37Z",
+                  "type": "Normal",
+                  "reason": "Pulled",
+                  "message": "Container image \"registry.k8s.io/e2e-test-images/busybox:1.29-4\" already present on machine and can be accessed by the pod",
+                  "pod": "loadgenerator-55db58975b-2mtmb",
+                  "kind": "Pod",
+                  "count": 1
+                },
+                {
+                  "timestamp": "2026-05-26T08:57:37Z",
+                  "type": "Normal",
+                  "reason": "Created",
+                  "message": "Container created",
+                  "pod": "loadgenerator-55db58975b-2mtmb",
+                  "kind": "Pod",
+                  "count": 1
+                },
+                {
+                  "timestamp": "2026-05-26T08:57:37Z",
+                  "type": "Normal",
+                  "reason": "Started",
+                  "message": "Container started",
+                  "pod": "loadgenerator-55db58975b-2mtmb",
+                  "kind": "Pod",
+                  "count": 1
+                },
+                {
+                  "timestamp": "2026-05-26T08:57:37Z",
+                  "type": "Normal",
+                  "reason": "Pulled",
+                  "message": "Container image \"us-central1-docker.pkg.dev/google-samples/microservices-demo/loadgenerator:v0.10.5\" already present on machine and can be accessed by the pod",
+                  "pod": "loadgenerator-55db58975b-2mtmb",
+                  "kind": "Pod",
+                  "count": 1
+                },
+                {
+                  "timestamp": "2026-05-26T08:57:36Z",
+                  "type": "Normal",
+                  "reason": "Scheduled",
+                  "message": "Successfully assigned online-boutique-research/loadgenerator-55db58975b-2mtmb to jira-telemetry-lab-worker",
+                  "pod": "loadgenerator-55db58975b-2mtmb",
+                  "kind": "Pod",
+                  "count": 1
+                },
+                {
+                  "timestamp": "2026-05-26T08:57:36Z",
+                  "type": "Normal",
+                  "reason": "SuccessfulCreate",
+                  "message": "Created pod: loadgenerator-55db58975b-2mtmb",
+                  "pod": "loadgenerator-55db58975b",
+                  "kind": "ReplicaSet",
+                  "count": 1
+                },
+                {
+                  "timestamp": "2026-05-26T08:57:36Z",
+                  "type": "Normal",
+                  "reason": "ScalingReplicaSet",
+                  "message": "Scaled up replica set loadgenerator-55db58975b from 0 to 1",
+                  "pod": "loadgenerator",
+                  "kind": "Deployment",
+                  "count": 24
+                },
+                {
+                  "timestamp": "2026-05-26T08:56:21Z",
+                  "type": "Normal",
+                  "reason": "Killing",
+                  "message": "Stopping container main",
+                  "pod": "loadgenerator-55db58975b-dfs97",
+                  "kind": "Pod",
+                  "count": 1
+                },
+                {
+                  "timestamp": "2026-05-26T08:56:21Z",
+                  "type": "Normal",
+                  "reason": "SuccessfulDelete",
+                  "message": "Deleted pod: loadgenerator-55db58975b-dfs97",
+                  "pod": "loadgenerator-55db58975b",
+                  "kind": "ReplicaSet",
+                  "count": 1
+                },
+                {
+                  "timestamp": "2026-05-26T08:56:21Z",
+                  "type": "Normal",
+                  "reason": "ScalingReplicaSet",
+                  "message": "Scaled down replica set loadgenerator-55db58975b from 1 to 0",
+                  "pod": "loadgenerator",
+                  "kind": "Deployment",
+                  "count": 24
+                },
+                {
+                  "timestamp": "2026-05-26T08:56:20Z",
+                  "type": "Normal",
+                  "reason": "Pulled",
+                  "message": "Container image \"us-central1-docker.pkg.dev/google-samples/microservices-demo/loadgenerator:v0.10.5\" already present on machine and can be accessed by the pod",
+                  "pod": "loadgenerator-9fdcc8676-tbvgw",
+                  "kind": "Pod",
+                  "count": 1
+                },
+                {
+                  "timestamp": "2026-05-26T08:56:20Z",
+                  "type": "Normal",
+                  "reason": "Created",
+                  "message": "Container created",
+                  "pod": "loadgenerator-9fdcc8676-tbvgw",
+                  "kind": "Pod",
+                  "count": 1
+                },
+                {
+                  "timestamp": "2026-05-26T08:56:20Z",
+                  "type": "Normal",
+                  "reason": "Started",
+                  "message": "Container started",
+                  "pod": "loadgenerator-9fdcc8676-tbvgw",
+                  "kind": "Pod",
+                  "count": 1
+                },
+                {
+                  "timestamp": "2026-05-26T08:56:19Z",
+                  "type": "Normal",
+                  "reason": "Pulled",
+                  "message": "Container image \"registry.k8s.io/e2e-test-images/busybox:1.29-4\" already present on machine and can be accessed by the pod",
+                  "pod": "loadgenerator-9fdcc8676-tbvgw",
+                  "kind": "Pod",
+                  "count": 1
+                },
+                {
+                  "timestamp": "2026-05-26T08:56:19Z",
+                  "type": "Normal",
+                  "reason": "Created",
+                  "message": "Container created",
+                  "pod": "loadgenerator-9fdcc8676-tbvgw",
+                  "kind": "Pod",
+                  "count": 1
+                },
+                {
+                  "timestamp": "2026-05-26T08:56:19Z",
+                  "type": "Normal",
+                  "reason": "Started",
+                  "message": "Container started",
+                  "pod": "loadgenerator-9fdcc8676-tbvgw",
+                  "kind": "Pod",
+                  "count": 1
+                },
+                {
+                  "timestamp": "2026-05-26T08:56:18Z",
+                  "type": "Normal",
+                  "reason": "Scheduled",
+                  "message": "Successfully assigned online-boutique-research/loadgenerator-9fdcc8676-tbvgw to jira-telemetry-lab-worker2",
+                  "pod": "loadgenerator-9fdcc8676-tbvgw",
+                  "kind": "Pod",
+                  "count": 1
+                },
+                {
+                  "timestamp": "2026-05-26T08:56:18Z",
+                  "type": "Normal",
+                  "reason": "SuccessfulCreate",
+                  "message": "Created pod: loadgenerator-9fdcc8676-tbvgw",
+                  "pod": "loadgenerator-9fdcc8676",
+                  "kind": "ReplicaSet",
+                  "count": 1
+                },
+                {
+                  "timestamp": "2026-05-26T08:56:18Z",
+                  "type": "Normal",
+                  "reason": "ScalingReplicaSet",
+                  "message": "Scaled up replica set loadgenerator-9fdcc8676 from 0 to 1",
+                  "pod": "loadgenerator",
+                  "kind": "Deployment",
+                  "count": 10
+                },
+                {
+                  "timestamp": "2026-05-26T08:52:29Z",
+                  "type": "Normal",
+                  "reason": "Pulled",
+                  "message": "Container image \"cartservice:v5.0.0-otel-pilot3\" already present on machine and can be accessed by the pod",
+                  "pod": "cartservice-866b57fbc9-mr4qz",
+                  "kind": "Pod",
+                  "count": 1
+                },
+                {
+                  "timestamp": "2026-05-26T08:52:29Z",
+                  "type": "Normal",
+                  "reason": "Created",
+                  "message": "Container created",
+                  "pod": "cartservice-866b57fbc9-mr4qz",
+                  "kind": "Pod",
+                  "count": 1
+                },
+                {
+                  "timestamp": "2026-05-26T08:52:29Z",
+                  "type": "Normal",
+                  "reason": "Started",
+                  "message": "Container started",
+                  "pod": "cartservice-866b57fbc9-mr4qz",
+                  "kind": "Pod",
+                  "count": 1
+                },
+                {
+                  "timestamp": "2026-05-26T08:52:28Z",
+                  "type": "Normal",
+                  "reason": "Killing",
+                  "message": "Stopping container server",
+                  "pod": "cartservice-866b57fbc9-kdz77",
+                  "kind": "Pod",
+                  "count": 1
+                },
+                {
+                  "timestamp": "2026-05-26T08:52:28Z",
+                  "type": "Normal",
+                  "reason": "Scheduled",
+                  "message": "Successfully assigned online-boutique-research/cartservice-866b57fbc9-mr4qz to jira-telemetry-lab-worker2",
+                  "pod": "cartservice-866b57fbc9-mr4qz",
+                  "kind": "Pod",
+                  "count": 1
+                },
+                {
+                  "timestamp": "2026-05-26T08:52:28Z",
+                  "type": "Normal",
+                  "reason": "SuccessfulCreate",
+                  "message": "Created pod: cartservice-866b57fbc9-mr4qz",
+                  "pod": "cartservice-866b57fbc9",
+                  "kind": "ReplicaSet",
+                  "count": 1
+                },
+                {
+                  "timestamp": "2026-05-26T08:47:50Z",
+                  "type": "Normal",
+                  "reason": "Pulled",
+                  "message": "Container image \"redis:alpine\" already present on machine and can be accessed by the pod",
+                  "pod": "redis-cart-797f945b56-bp85x",
+                  "kind": "Pod",
+                  "count": 1
+                },
+                {
+                  "timestamp": "2026-05-26T08:47:50Z",
+                  "type": "Normal",
+                  "reason": "Created",
+                  "message": "Container created",
+                  "pod": "redis-cart-797f945b56-bp85x",
+                  "kind": "Pod",
+                  "count": 1
+                },
+                {
+                  "timestamp": "2026-05-26T08:47:50Z",
+                  "type": "Normal",
+                  "reason": "Started",
+                  "message": "Container started",
+                  "pod": "redis-cart-797f945b56-bp85x",
+                  "kind": "Pod",
+                  "count": 1
+                },
+                {
+                  "timestamp": "2026-05-26T08:47:49Z",
+                  "type": "Normal",
+                  "reason": "Killing",
+                  "message": "Stopping container redis",
+                  "pod": "redis-cart-797f945b56-9gd62",
+                  "kind": "Pod",
+                  "count": 1
+                },
+                {
+                  "timestamp": "2026-05-26T08:47:49Z",
+                  "type": "Normal",
+                  "reason": "Scheduled",
+                  "message": "Successfully assigned online-boutique-research/redis-cart-797f945b56-bp85x to jira-telemetry-lab-worker",
+                  "pod": "redis-cart-797f945b56-bp85x",
+                  "kind": "Pod",
+                  "count": 1
+                },
+                {
+                  "timestamp": "2026-05-26T08:47:49Z",
+                  "type": "Normal",
+                  "reason": "SuccessfulCreate",
+                  "message": "Created pod: redis-cart-797f945b56-bp85x",
+                  "pod": "redis-cart-797f945b56",
+                  "kind": "ReplicaSet",
+                  "count": 1
+                },
+                {
+                  "timestamp": "2026-05-26T08:43:54Z",
+                  "type": "Normal",
+                  "reason": "Started",
+                  "message": "Container started",
+                  "pod": "redis-cart-797f945b56-9gd62",
+                  "kind": "Pod",
+                  "count": 1
+                },
+                {
+                  "timestamp": "2026-05-26T08:43:54Z",
+                  "type": "Warning",
+                  "reason": "Unhealthy",
+                  "message": "Readiness probe failed: dial tcp 10.244.1.212:6379: connect: connection refused",
+                  "pod": "redis-cart-797f945b56-9gd62",
+                  "kind": "Pod",
+                  "count": 1
+                },
+                {
+                  "timestamp": "2026-05-26T08:43:53Z",
+                  "type": "Normal",
+                  "reason": "Pulled",
+                  "message": "Container image \"redis:alpine\" already present on machine and can be accessed by the pod",
+                  "pod": "redis-cart-797f945b56-9gd62",
+                  "kind": "Pod",
+                  "count": 1
+                },
+                {
+                  "timestamp": "2026-05-26T08:43:53Z",
+                  "type": "Normal",
+                  "reason": "Created",
+                  "message": "Container created",
+                  "pod": "redis-cart-797f945b56-9gd62",
+                  "kind": "Pod",
+                  "count": 1
+                },
+                {
+                  "timestamp": "2026-05-26T08:43:52Z",
+                  "type": "Normal",
+                  "reason": "Scheduled",
+                  "message": "Successfully assigned online-boutique-research/redis-cart-797f945b56-9gd62 to jira-telemetry-lab-worker2",
+                  "pod": "redis-cart-797f945b56-9gd62",
+                  "kind": "Pod",
+                  "count": 1
+                },
+                {
+                  "timestamp": "2026-05-26T08:43:52Z",
+                  "type": "Normal",
+                  "reason": "Killing",
+                  "message": "Stopping container redis",
+                  "pod": "redis-cart-797f945b56-fxkvl",
+                  "kind": "Pod",
+                  "count": 1
+                },
+                {
+                  "timestamp": "2026-05-26T08:43:52Z",
+                  "type": "Normal",
+                  "reason": "SuccessfulCreate",
+                  "message": "Created pod: redis-cart-797f945b56-9gd62",
+                  "pod": "redis-cart-797f945b56",
+                  "kind": "ReplicaSet",
+                  "count": 1
+                },
+                {
+                  "timestamp": "2026-05-26T08:40:15Z",
+                  "type": "Normal",
+                  "reason": "Started",
+                  "message": "Container started",
+                  "pod": "frontend-7d9486c847-xsmv7",
+                  "kind": "Pod",
+                  "count": 1
+                },
+                {
+                  "timestamp": "2026-05-26T08:40:14Z",
+                  "type": "Normal",
+                  "reason": "Pulled",
+                  "message": "Container image \"frontend:v5.0.0-otel-pilot\" already present on machine and can be accessed by the pod",
+                  "pod": "frontend-7d9486c847-xsmv7",
+                  "kind": "Pod",
+                  "count": 1
+                },
+                {
+                  "timestamp": "2026-05-26T08:40:14Z",
+                  "type": "Normal",
+                  "reason": "Created",
+                  "message": "Container created",
+                  "pod": "frontend-7d9486c847-xsmv7",
+                  "kind": "Pod",
+                  "count": 1
+                },
+                {
+                  "timestamp": "2026-05-26T08:40:13Z",
+                  "type": "Normal",
+                  "reason": "Killing",
+                  "message": "Stopping container server",
+                  "pod": "frontend-7d9486c847-4mxlv",
+                  "kind": "Pod",
+                  "count": 1
+                },
+                {
+                  "timestamp": "2026-05-26T08:40:13Z",
+                  "type": "Normal",
+                  "reason": "Scheduled",
+                  "message": "Successfully assigned online-boutique-research/frontend-7d9486c847-xsmv7 to jira-telemetry-lab-worker",
+                  "pod": "frontend-7d9486c847-xsmv7",
+                  "kind": "Pod",
+                  "count": 1
+                },
+                {
+                  "timestamp": "2026-05-26T08:40:13Z",
+                  "type": "Normal",
+                  "reason": "SuccessfulCreate",
+                  "message": "Created pod: frontend-7d9486c847-xsmv7",
+                  "pod": "frontend-7d9486c847",
+                  "kind": "ReplicaSet",
+                  "count": 1
+                },
+                {
+                  "timestamp": "2026-05-26T08:38:10Z",
+                  "type": "Warning",
+                  "reason": "Unhealthy",
+                  "message": "Liveness probe failed: timeout: health rpc did not complete within 1s",
+                  "pod": "adservice-5b89c95bfc-54s9d",
+                  "kind": "Pod",
+                  "count": 1
+                }
+              ],
+              "n_events": 50,
+              "source_path": "data\\runs\\2026-05-25-dataset-v5-large-compact-b-r10\\raw\\kubernetes\\2026-05-25-dataset-v5-large-compact-b-r10-loadgenerator-traffic-spike-nearmiss-20260526T085618Z-active_fault-checkoutservice.json",
+              "window": {
+                "start_time": "2026-05-26T08:56:18.0000000+00:00",
+                "end_time": "2026-05-26T08:57:39.0000000+00:00",
+                "padded_start_time": "2026-05-26T08:51:18.0000000+00:00",
+                "padded_end_time": "2026-05-26T09:02:39.0000000+00:00"
+              },
+              "service_name": "checkoutservice",
+              "warning_count": 2
+            },
+            "cost_actual_ms": 2.7362320106476545,
+            "bytes_returned": 11274,
+            "cache_hit": true,
+            "error": null,
+            "failure_mode": null
+          },
+          "is_useful": true,
+          "failure_mode": null
+        }
+      },
+      "error": null,
+      "budget_snapshot": {
+        "max_llm_tokens": 100000,
+        "max_wall_seconds": 90.0,
+        "max_usd_equivalent": 0.5,
+        "max_skill_calls": 12,
+        "spent_tokens": 0,
+        "spent_seconds": 0.003836232010647655,
+        "spent_usd": 0.0,
+        "spent_calls": 6
+      },
+      "notes": {}
+    },
+    {
+      "ts": "2026-06-28T08:32:28.404+00:00",
+      "kind": "skill_start",
+      "skill": "request_extended_trace_window",
+      "skill_version": "1.0.0",
+      "duration_ms": null,
+      "output": null,
+      "error": null,
+      "budget_snapshot": {
+        "max_llm_tokens": 100000,
+        "max_wall_seconds": 90.0,
+        "max_usd_equivalent": 0.5,
+        "max_skill_calls": 12,
+        "spent_tokens": 0,
+        "spent_seconds": 0.003836232010647655,
+        "spent_usd": 0.0,
+        "spent_calls": 6
+      },
+      "notes": {}
+    },
+    {
+      "ts": "2026-06-28T08:32:28.406+00:00",
+      "kind": "skill_end",
+      "skill": "request_extended_trace_window",
+      "skill_version": "1.0.0",
+      "duration_ms": 1.319,
+      "output": {
+        "skill": "request_extended_trace_window",
+        "skill_version": "1.0.0",
+        "triage_score": null,
+        "triage_decision": null,
+        "matched_issue_ids": [],
+        "is_novel": null,
+        "confidence": 1.0,
+        "evidence_used": [
+          "request_extended_trace_window"
+        ],
+        "cost": {
+          "llm_tokens": 0,
+          "wall_seconds": 0.0012804850121028721,
+          "usd": 0.0,
+          "n_calls": 1
+        },
+        "extra": {
+          "tool_result": {
+            "tool_name": "request_extended_trace_window",
+            "args": {
+              "window_id": "2026-05-25-dataset-v5-large-compact-b-r10-loadgenerator-traffic-spike-nearmiss-20260526T085618Z-active_fault-checkoutservice"
+            },
+            "result": {
+              "n_traces": 200,
+              "n_error_traces": 0,
+              "services_seen": [
+                "cartservice",
+                "checkoutservice",
+                "currencyservice",
+                "emailservice",
+                "frontend",
+                "paymentservice",
+                "productcatalogservice",
+                "recommendationservice",
+                "shippingservice"
+              ],
+              "error_span_names": [],
+              "source_path": "data\\runs\\2026-05-25-dataset-v5-large-compact-b-r10\\raw\\tempo\\2026-05-25-dataset-v5-large-compact-b-r10-loadgenerator-traffic-spike-nearmiss-20260526T085618Z-active_fault-checkoutservice.json"
+            },
+            "cost_actual_ms": 1.2804850121028721,
+            "bytes_returned": 464,
+            "cache_hit": true,
+            "error": null,
+            "failure_mode": null
+          },
+          "is_useful": true,
+          "failure_mode": null
+        }
+      },
+      "error": null,
+      "budget_snapshot": {
+        "max_llm_tokens": 100000,
+        "max_wall_seconds": 90.0,
+        "max_usd_equivalent": 0.5,
+        "max_skill_calls": 12,
+        "spent_tokens": 0,
+        "spent_seconds": 0.005116717022750527,
+        "spent_usd": 0.0,
+        "spent_calls": 7
+      },
+      "notes": {}
+    },
+    {
+      "ts": "2026-06-28T08:32:28.406+00:00",
+      "kind": "skill_start",
+      "skill": "request_pod_metrics",
+      "skill_version": "1.0.0",
+      "duration_ms": null,
+      "output": null,
+      "error": null,
+      "budget_snapshot": {
+        "max_llm_tokens": 100000,
+        "max_wall_seconds": 90.0,
+        "max_usd_equivalent": 0.5,
+        "max_skill_calls": 12,
+        "spent_tokens": 0,
+        "spent_seconds": 0.005116717022750527,
+        "spent_usd": 0.0,
+        "spent_calls": 7
+      },
+      "notes": {}
+    },
+    {
+      "ts": "2026-06-28T08:32:28.407+00:00",
+      "kind": "skill_end",
+      "skill": "request_pod_metrics",
+      "skill_version": "1.0.0",
+      "duration_ms": 1.356,
+      "output": {
+        "skill": "request_pod_metrics",
+        "skill_version": "1.0.0",
+        "triage_score": null,
+        "triage_decision": null,
+        "matched_issue_ids": [],
+        "is_novel": null,
+        "confidence": 1.0,
+        "evidence_used": [
+          "request_pod_metrics"
+        ],
+        "cost": {
+          "llm_tokens": 0,
+          "wall_seconds": 0.0013170299935154617,
+          "usd": 0.0,
+          "n_calls": 1
+        },
+        "extra": {
+          "tool_result": {
+            "tool_name": "request_pod_metrics",
+            "args": {
+              "window_id": "2026-05-25-dataset-v5-large-compact-b-r10-loadgenerator-traffic-spike-nearmiss-20260526T085618Z-active_fault-checkoutservice"
+            },
+            "result": {
+              "restart_delta": 0,
+              "restart_total_latest": 0.0,
+              "cpu_max": 10.142003,
+              "cpu_mean": 9.731315333333333,
+              "mem_max": 14675968.0,
+              "mem_mean": 13673130.666666666,
+              "n_alerts_firing": 10,
+              "source_path": "data\\runs\\2026-05-25-dataset-v5-large-compact-b-r10\\raw\\prometheus\\2026-05-25-dataset-v5-large-compact-b-r10-loadgenerator-traffic-spike-nearmiss-20260526T085618Z-active_fault-checkoutservice.json"
+            },
+            "cost_actual_ms": 1.3170299935154617,
+            "bytes_returned": 400,
+            "cache_hit": true,
+            "error": null,
+            "failure_mode": null
+          },
+          "is_useful": true,
+          "failure_mode": null
+        }
+      },
+      "error": null,
+      "budget_snapshot": {
+        "max_llm_tokens": 100000,
+        "max_wall_seconds": 90.0,
+        "max_usd_equivalent": 0.5,
+        "max_skill_calls": 12,
+        "spent_tokens": 0,
+        "spent_seconds": 0.006433747016265989,
+        "spent_usd": 0.0,
+        "spent_calls": 8
+      },
+      "notes": {}
+    },
+    {
+      "ts": "2026-06-28T08:32:28.407+00:00",
+      "kind": "skill_start",
+      "skill": "request_similar_incident_window",
+      "skill_version": "1.0.0",
+      "duration_ms": null,
+      "output": null,
+      "error": null,
+      "budget_snapshot": {
+        "max_llm_tokens": 100000,
+        "max_wall_seconds": 90.0,
+        "max_usd_equivalent": 0.5,
+        "max_skill_calls": 12,
+        "spent_tokens": 0,
+        "spent_seconds": 0.006433747016265989,
+        "spent_usd": 0.0,
+        "spent_calls": 8
+      },
+      "notes": {}
+    },
+    {
+      "ts": "2026-06-28T08:32:28.512+00:00",
+      "kind": "skill_end",
+      "skill": "request_similar_incident_window",
+      "skill_version": "1.0.0",
+      "duration_ms": 104.826,
+      "output": {
+        "skill": "request_similar_incident_window",
+        "skill_version": "1.0.0",
+        "triage_score": null,
+        "triage_decision": null,
+        "matched_issue_ids": [],
+        "is_novel": null,
+        "confidence": 0.0,
+        "evidence_used": [
+          "request_similar_incident_window"
+        ],
+        "cost": {
+          "llm_tokens": 0,
+          "wall_seconds": 0.10476581400143914,
+          "usd": 0.0,
+          "n_calls": 1
+        },
+        "extra": {
+          "tool_result": {
+            "tool_name": "request_similar_incident_window",
+            "args": {
+              "scenario_family": "frontend-traffic-pressure",
+              "exclude_episode_id": "2026-05-25-dataset-v5-large-compact-b-r10-loadgenerator-traffic-spike-nearmiss-20260526T085618Z",
+              "global_dir": "data/derived/global/2026-05-25-dataset-v5-large-global",
+              "top_k": 3
+            },
+            "result": {
+              "peers": [],
+              "n_peers": 0,
+              "scenario_family": "frontend-traffic-pressure"
+            },
+            "cost_actual_ms": 104.76581400143914,
+            "bytes_returned": 75,
+            "cache_hit": false,
+            "error": null,
+            "failure_mode": "tool_returned_empty"
+          },
+          "is_useful": false,
+          "failure_mode": "tool_returned_empty"
+        }
+      },
+      "error": null,
+      "budget_snapshot": {
+        "max_llm_tokens": 100000,
+        "max_wall_seconds": 90.0,
+        "max_usd_equivalent": 0.5,
+        "max_skill_calls": 12,
+        "spent_tokens": 0,
+        "spent_seconds": 0.11119956101770513,
+        "spent_usd": 0.0,
+        "spent_calls": 9
+      },
+      "notes": {}
+    },
+    {
+      "ts": "2026-06-28T08:32:28.512+00:00",
+      "kind": "skill_start",
+      "skill": "rerank_with_evidence",
+      "skill_version": "1.0.0",
+      "duration_ms": null,
+      "output": null,
+      "error": null,
+      "budget_snapshot": {
+        "max_llm_tokens": 100000,
+        "max_wall_seconds": 90.0,
+        "max_usd_equivalent": 0.5,
+        "max_skill_calls": 12,
+        "spent_tokens": 0,
+        "spent_seconds": 0.11119956101770513,
+        "spent_usd": 0.0,
+        "spent_calls": 9
+      },
+      "notes": {}
+    },
+    {
+      "ts": "2026-06-28T08:32:28.521+00:00",
+      "kind": "skill_end",
+      "skill": "rerank_with_evidence",
+      "skill_version": "1.0.0",
+      "duration_ms": 8.465,
+      "output": {
+        "skill": "rerank_with_evidence",
+        "skill_version": "1.0.0",
+        "triage_score": null,
+        "triage_decision": null,
+        "matched_issue_ids": [
+          "shadow-2026-05-25-dataset-v5-large-compact-b-r06-checkoutservice-unavailable-critical-20260526T050651Z",
+          "shadow-2026-05-25-dataset-v5-large-compact-b-r01-checkoutservice-unavailable-critical-20260526T005501Z",
+          "shadow-2026-05-25-dataset-v5-large-compact-b-r03-checkoutservice-unavailable-critical-20260526T023541Z",
+          "shadow-2026-05-25-dataset-v5-large-compact-b-r05-checkoutservice-unavailable-critical-20260526T041641Z",
+          "shadow-2026-05-25-dataset-v5-large-compact-b-r04-checkoutservice-unavailable-critical-20260526T032605Z"
+        ],
+        "is_novel": null,
+        "confidence": 1.0,
+        "evidence_used": [
+          "tool_results"
+        ],
+        "cost": {
+          "llm_tokens": 0,
+          "wall_seconds": 0.008068055991316214,
+          "usd": 0.0,
+          "n_calls": 0
+        },
+        "extra": {
+          "alpha": 0.4,
+          "n_evidence_tokens": 44,
+          "n_top_k_swaps": 0,
+          "per_candidate_scores": [
+            {
+              "rank_in_l2": 1,
+              "overlap": 6,
+              "overlap_for_score": 6
+            },
+            {
+              "rank_in_l2": 2,
+              "overlap": 6,
+              "overlap_for_score": 6
+            },
+            {
+              "rank_in_l2": 3,
+              "overlap": 6,
+              "overlap_for_score": 6
+            },
+            {
+              "rank_in_l2": 4,
+              "overlap": 6,
+              "overlap_for_score": 6
+            },
+            {
+              "rank_in_l2": 5,
+              "overlap": 6,
+              "overlap_for_score": 6
+            }
+          ]
+        }
+      },
+      "error": null,
+      "budget_snapshot": {
+        "max_llm_tokens": 100000,
+        "max_wall_seconds": 90.0,
+        "max_usd_equivalent": 0.5,
+        "max_skill_calls": 12,
+        "spent_tokens": 0,
+        "spent_seconds": 0.11926761700902135,
+        "spent_usd": 0.0,
+        "spent_calls": 9
+      },
+      "notes": {}
+    },
+    {
+      "ts": "2026-06-28T08:32:28.521+00:00",
+      "kind": "skill_start",
+      "skill": "compose_triage",
+      "skill_version": "1.0.0",
+      "duration_ms": null,
+      "output": null,
+      "error": null,
+      "budget_snapshot": {
+        "max_llm_tokens": 100000,
+        "max_wall_seconds": 90.0,
+        "max_usd_equivalent": 0.5,
+        "max_skill_calls": 12,
+        "spent_tokens": 0,
+        "spent_seconds": 0.11926761700902135,
+        "spent_usd": 0.0,
+        "spent_calls": 9
+      },
+      "notes": {}
+    },
+    {
+      "ts": "2026-06-28T08:32:28.521+00:00",
+      "kind": "skill_end",
+      "skill": "compose_triage",
+      "skill_version": "1.0.0",
+      "duration_ms": 0.03,
+      "output": {
+        "skill": "compose_triage",
+        "skill_version": "1.0.0",
+        "triage_score": 0.469735684367602,
+        "triage_decision": "noise",
+        "matched_issue_ids": [],
+        "is_novel": null,
+        "confidence": 0.469735684367602,
+        "evidence_used": [
+          "retrieve_dense",
+          "retrieve_hybrid_fusion",
+          "retrieve_hybrid_fusion_llm",
+          "retrieve_knowledge_graph",
+          "retrieve_log_sequence",
+          "triage_numeric"
+        ],
+        "cost": {
+          "llm_tokens": 0,
+          "wall_seconds": 0.0001,
+          "usd": 0.0,
+          "n_calls": 1
+        },
+        "extra": {
+          "mode": "fallback_max",
+          "n_features_present": 2,
+          "threshold": 0.5
+        }
+      },
+      "error": null,
+      "budget_snapshot": {
+        "max_llm_tokens": 100000,
+        "max_wall_seconds": 90.0,
+        "max_usd_equivalent": 0.5,
+        "max_skill_calls": 12,
+        "spent_tokens": 0,
+        "spent_seconds": 0.11936761700902135,
+        "spent_usd": 0.0,
+        "spent_calls": 10
+      },
+      "notes": {}
+    },
+    {
+      "ts": "2026-06-28T08:32:28.521+00:00",
+      "kind": "skill_start",
+      "skill": "compose_novelty",
+      "skill_version": "1.0.0",
+      "duration_ms": null,
+      "output": null,
+      "error": null,
+      "budget_snapshot": {
+        "max_llm_tokens": 100000,
+        "max_wall_seconds": 90.0,
+        "max_usd_equivalent": 0.5,
+        "max_skill_calls": 12,
+        "spent_tokens": 0,
+        "spent_seconds": 0.11936761700902135,
+        "spent_usd": 0.0,
+        "spent_calls": 10
+      },
+      "notes": {}
+    },
+    {
+      "ts": "2026-06-28T08:32:28.521+00:00",
+      "kind": "skill_end",
+      "skill": "compose_novelty",
+      "skill_version": "1.0.0",
+      "duration_ms": 0.012,
+      "output": {
+        "skill": "compose_novelty",
+        "skill_version": "1.0.0",
+        "triage_score": null,
+        "triage_decision": null,
+        "matched_issue_ids": [],
+        "is_novel": true,
+        "confidence": 1.0,
+        "evidence_used": [],
+        "cost": {
+          "llm_tokens": 0,
+          "wall_seconds": 0.0001,
+          "usd": 0.0,
+          "n_calls": 1
+        },
+        "extra": {
+          "agent_novel": false,
+          "free_signal": true,
+          "free_signal_max_conf": 0.469735684367602,
+          "learned_signal": false,
+          "learned_novelty_prob": 0.0
+        }
+      },
+      "error": null,
+      "budget_snapshot": {
+        "max_llm_tokens": 100000,
+        "max_wall_seconds": 90.0,
+        "max_usd_equivalent": 0.5,
+        "max_skill_calls": 12,
+        "spent_tokens": 0,
+        "spent_seconds": 0.11946761700902135,
+        "spent_usd": 0.0,
+        "spent_calls": 11
+      },
+      "notes": {}
+    },
+    {
+      "ts": "2026-06-28T08:32:28.521+00:00",
+      "kind": "plan_end",
+      "skill": null,
+      "skill_version": null,
+      "duration_ms": null,
+      "output": null,
+      "error": null,
+      "budget_snapshot": {
+        "max_llm_tokens": 100000,
+        "max_wall_seconds": 90.0,
+        "max_usd_equivalent": 0.5,
+        "max_skill_calls": 12,
+        "spent_tokens": 0,
+        "spent_seconds": 0.11946761700902135,
+        "spent_usd": 0.0,
+        "spent_calls": 11
+      },
+      "notes": {
+        "aborted": false,
+        "n_skill_calls": 12,
+        "had_error": false
+      }
+    }
+  ],
+  "final_decision": {
+    "bundle_id": "2026-05-25-dataset-v5-large-compact-b-r10-loadgenerator-traffic-spike-nearmiss-20260526T085618Z-active_fault-checkoutservice",
+    "triage_decision": "noise",
+    "triage_score": 0.469735684367602,
+    "matched_issue_ids": [
+      "shadow-2026-05-25-dataset-v5-large-compact-b-r06-checkoutservice-unavailable-critical-20260526T050651Z",
+      "shadow-2026-05-25-dataset-v5-large-compact-b-r01-checkoutservice-unavailable-critical-20260526T005501Z",
+      "shadow-2026-05-25-dataset-v5-large-compact-b-r03-checkoutservice-unavailable-critical-20260526T023541Z",
+      "shadow-2026-05-25-dataset-v5-large-compact-b-r05-checkoutservice-unavailable-critical-20260526T041641Z",
+      "shadow-2026-05-25-dataset-v5-large-compact-b-r04-checkoutservice-unavailable-critical-20260526T032605Z"
+    ],
+    "is_novel": true,
+    "confidence": 0.469735684367602,
+    "evaluation_mode": "telemetry_diagnosis",
+    "plan_id": "plan_34246ccf6299",
+    "skills_invoked": [
+      "triage_numeric",
+      "retrieve_dense",
+      "retrieve_hybrid_fusion",
+      "compose_l2",
+      "reformulate_query",
+      "request_pod_events",
+      "request_extended_trace_window",
+      "request_pod_metrics",
+      "request_similar_incident_window",
+      "rerank_with_evidence",
+      "compose_triage",
+      "compose_novelty"
+    ],
+    "cost": {
+      "llm_tokens": 0,
+      "wall_seconds": 0.11946761700902135,
+      "usd": 0.0,
+      "n_calls": 11
+    },
+    "trace_path": "paper-results/agent-end-to-end/online-boutique/traces/fulltest-2026-05-25-dataset-v5-large-global/2026-05-25-dataset-v5-large-compact-b-r10-loadgenerator-traffic-spike-nearmiss-20260526T085618Z-active_fault-checkoutservice.json",
+    "ts": "2026-06-28T08:32:28.521+00:00"
+  }
+}

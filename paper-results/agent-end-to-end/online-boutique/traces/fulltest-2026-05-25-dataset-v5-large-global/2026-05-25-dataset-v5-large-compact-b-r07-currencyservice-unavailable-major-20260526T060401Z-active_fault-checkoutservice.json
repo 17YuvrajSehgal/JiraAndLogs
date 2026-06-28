@@ -1,0 +1,1429 @@
+{
+  "bundle_id": "2026-05-25-dataset-v5-large-compact-b-r07-currencyservice-unavailable-major-20260526T060401Z-active_fault-checkoutservice",
+  "plan_id": "plan_34246ccf6299",
+  "started_at": "2026-06-28T08:32:26.955+00:00",
+  "finished_at": "2026-06-28T08:32:27.005+00:00",
+  "n_events": 25,
+  "events": [
+    {
+      "ts": "2026-06-28T08:32:26.955+00:00",
+      "kind": "plan_start",
+      "skill": null,
+      "skill_version": null,
+      "duration_ms": null,
+      "output": null,
+      "error": null,
+      "budget_snapshot": {
+        "max_llm_tokens": 100000,
+        "max_wall_seconds": 90.0,
+        "max_usd_equivalent": 0.5,
+        "max_skill_calls": 12,
+        "spent_tokens": 0,
+        "spent_seconds": 0.0,
+        "spent_usd": 0.0,
+        "spent_calls": 0
+      },
+      "notes": {
+        "plan_id": "plan_34246ccf6299",
+        "controller": "capability_aware_rule:active_fault",
+        "n_invocations": 12,
+        "dataset": "online_boutique",
+        "ablation": ""
+      }
+    },
+    {
+      "ts": "2026-06-28T08:32:26.955+00:00",
+      "kind": "skill_start",
+      "skill": "triage_numeric",
+      "skill_version": "1.0.0",
+      "duration_ms": null,
+      "output": null,
+      "error": null,
+      "budget_snapshot": {
+        "max_llm_tokens": 100000,
+        "max_wall_seconds": 90.0,
+        "max_usd_equivalent": 0.5,
+        "max_skill_calls": 12,
+        "spent_tokens": 0,
+        "spent_seconds": 0.0,
+        "spent_usd": 0.0,
+        "spent_calls": 0
+      },
+      "notes": {}
+    },
+    {
+      "ts": "2026-06-28T08:32:26.955+00:00",
+      "kind": "skill_end",
+      "skill": "triage_numeric",
+      "skill_version": "1.0.0",
+      "duration_ms": 0.018,
+      "output": {
+        "skill": "triage_numeric",
+        "skill_version": "1.0.0",
+        "triage_score": 0.956070819259247,
+        "triage_decision": "ticket_worthy",
+        "matched_issue_ids": [],
+        "is_novel": null,
+        "confidence": 0.956070819259247,
+        "evidence_used": [
+          "NUMERIC_FEATURES"
+        ],
+        "cost": {
+          "llm_tokens": 0,
+          "wall_seconds": 0.0,
+          "usd": 0.0,
+          "n_calls": 1
+        },
+        "extra": {
+          "gold_label": "ticket_worthy",
+          "gold_is_novel": false,
+          "gold_matched_issue_ids": [
+            "shadow-2026-05-25-dataset-v5-large-compact-b-r01-currencyservice-unavailable-major-20260526T010226Z",
+            "shadow-2026-05-25-dataset-v5-large-compact-b-r02-currencyservice-unavailable-major-20260526T015333Z",
+            "shadow-2026-05-25-dataset-v5-large-compact-b-r03-currencyservice-unavailable-major-20260526T024422Z",
+            "shadow-2026-05-25-dataset-v5-large-compact-b-r04-currencyservice-unavailable-major-20260526T033342Z",
+            "shadow-2026-05-25-dataset-v5-large-compact-b-r05-currencyservice-unavailable-major-20260526T042414Z",
+            "shadow-2026-05-25-dataset-v5-large-compact-b-r06-currencyservice-unavailable-major-20260526T051428Z"
+          ],
+          "scenario_family": "currency-outage",
+          "service_name": "checkoutservice",
+          "window_type": "active_fault",
+          "is_hard_case": false,
+          "triage_reason_class": "dependency_failure"
+        }
+      },
+      "error": null,
+      "budget_snapshot": {
+        "max_llm_tokens": 100000,
+        "max_wall_seconds": 90.0,
+        "max_usd_equivalent": 0.5,
+        "max_skill_calls": 12,
+        "spent_tokens": 0,
+        "spent_seconds": 0.0,
+        "spent_usd": 0.0,
+        "spent_calls": 1
+      },
+      "notes": {}
+    },
+    {
+      "ts": "2026-06-28T08:32:26.955+00:00",
+      "kind": "skill_start",
+      "skill": "retrieve_dense",
+      "skill_version": "1.0.0",
+      "duration_ms": null,
+      "output": null,
+      "error": null,
+      "budget_snapshot": {
+        "max_llm_tokens": 100000,
+        "max_wall_seconds": 90.0,
+        "max_usd_equivalent": 0.5,
+        "max_skill_calls": 12,
+        "spent_tokens": 0,
+        "spent_seconds": 0.0,
+        "spent_usd": 0.0,
+        "spent_calls": 1
+      },
+      "notes": {}
+    },
+    {
+      "ts": "2026-06-28T08:32:26.955+00:00",
+      "kind": "skill_end",
+      "skill": "retrieve_dense",
+      "skill_version": "1.0.0",
+      "duration_ms": 0.009,
+      "output": {
+        "skill": "retrieve_dense",
+        "skill_version": "1.0.0",
+        "triage_score": 0.4673093392954093,
+        "triage_decision": "noise",
+        "matched_issue_ids": [
+          "shadow-2026-05-25-dataset-v5-large-compact-b-r04-currencyservice-unavailable-major-20260526T033342Z",
+          "shadow-2026-05-25-dataset-v5-large-compact-b-r01-currencyservice-unavailable-major-20260526T010226Z",
+          "shadow-2026-05-25-dataset-v5-large-compact-b-r03-currencyservice-unavailable-major-20260526T024422Z",
+          "shadow-2026-05-25-dataset-v5-large-compact-b-r02-currencyservice-unavailable-major-20260526T015333Z",
+          "shadow-2026-05-25-dataset-v5-large-compact-b-r05-currencyservice-unavailable-major-20260526T042414Z"
+        ],
+        "is_novel": null,
+        "confidence": 0.4673093392954093,
+        "evidence_used": [
+          "MEMORY_TEXT",
+          "TEXT_EVIDENCE"
+        ],
+        "cost": {
+          "llm_tokens": 0,
+          "wall_seconds": 0.0,
+          "usd": 0.0,
+          "n_calls": 1
+        },
+        "extra": {
+          "gold_label": "ticket_worthy",
+          "gold_is_novel": false,
+          "gold_matched_issue_ids": [
+            "shadow-2026-05-25-dataset-v5-large-compact-b-r01-currencyservice-unavailable-major-20260526T010226Z",
+            "shadow-2026-05-25-dataset-v5-large-compact-b-r02-currencyservice-unavailable-major-20260526T015333Z",
+            "shadow-2026-05-25-dataset-v5-large-compact-b-r03-currencyservice-unavailable-major-20260526T024422Z",
+            "shadow-2026-05-25-dataset-v5-large-compact-b-r04-currencyservice-unavailable-major-20260526T033342Z",
+            "shadow-2026-05-25-dataset-v5-large-compact-b-r05-currencyservice-unavailable-major-20260526T042414Z",
+            "shadow-2026-05-25-dataset-v5-large-compact-b-r06-currencyservice-unavailable-major-20260526T051428Z"
+          ],
+          "scenario_family": "currency-outage",
+          "service_name": "checkoutservice",
+          "window_type": "active_fault",
+          "is_hard_case": false,
+          "triage_reason_class": "dependency_failure"
+        }
+      },
+      "error": null,
+      "budget_snapshot": {
+        "max_llm_tokens": 100000,
+        "max_wall_seconds": 90.0,
+        "max_usd_equivalent": 0.5,
+        "max_skill_calls": 12,
+        "spent_tokens": 0,
+        "spent_seconds": 0.0,
+        "spent_usd": 0.0,
+        "spent_calls": 2
+      },
+      "notes": {}
+    },
+    {
+      "ts": "2026-06-28T08:32:26.955+00:00",
+      "kind": "skill_skipped_by_gate",
+      "skill": "retrieve_hybrid_fusion",
+      "skill_version": "1.0.0",
+      "duration_ms": null,
+      "output": null,
+      "error": null,
+      "budget_snapshot": null,
+      "notes": {
+        "reason": "gate_closed"
+      }
+    },
+    {
+      "ts": "2026-06-28T08:32:26.955+00:00",
+      "kind": "skill_start",
+      "skill": "compose_l2",
+      "skill_version": "1.0.0",
+      "duration_ms": null,
+      "output": null,
+      "error": null,
+      "budget_snapshot": {
+        "max_llm_tokens": 100000,
+        "max_wall_seconds": 90.0,
+        "max_usd_equivalent": 0.5,
+        "max_skill_calls": 12,
+        "spent_tokens": 0,
+        "spent_seconds": 0.0,
+        "spent_usd": 0.0,
+        "spent_calls": 2
+      },
+      "notes": {}
+    },
+    {
+      "ts": "2026-06-28T08:32:26.955+00:00",
+      "kind": "skill_end",
+      "skill": "compose_l2",
+      "skill_version": "1.0.0",
+      "duration_ms": 0.019,
+      "output": {
+        "skill": "compose_l2",
+        "skill_version": "1.0.0",
+        "triage_score": null,
+        "triage_decision": null,
+        "matched_issue_ids": [
+          "shadow-2026-05-25-dataset-v5-large-compact-b-r04-currencyservice-unavailable-major-20260526T033342Z",
+          "shadow-2026-05-25-dataset-v5-large-compact-b-r01-currencyservice-unavailable-major-20260526T010226Z",
+          "shadow-2026-05-25-dataset-v5-large-compact-b-r03-currencyservice-unavailable-major-20260526T024422Z",
+          "shadow-2026-05-25-dataset-v5-large-compact-b-r02-currencyservice-unavailable-major-20260526T015333Z",
+          "shadow-2026-05-25-dataset-v5-large-compact-b-r05-currencyservice-unavailable-major-20260526T042414Z"
+        ],
+        "is_novel": null,
+        "confidence": 1.0,
+        "evidence_used": [
+          "retrieve_dense"
+        ],
+        "cost": {
+          "llm_tokens": 0,
+          "wall_seconds": 0.001,
+          "usd": 0.0,
+          "n_calls": 1
+        },
+        "extra": {
+          "anchor_skill": "retrieve_dense",
+          "n_retrievers_seen": 1,
+          "rrf_k": 60.0
+        }
+      },
+      "error": null,
+      "budget_snapshot": {
+        "max_llm_tokens": 100000,
+        "max_wall_seconds": 90.0,
+        "max_usd_equivalent": 0.5,
+        "max_skill_calls": 12,
+        "spent_tokens": 0,
+        "spent_seconds": 0.001,
+        "spent_usd": 0.0,
+        "spent_calls": 3
+      },
+      "notes": {}
+    },
+    {
+      "ts": "2026-06-28T08:32:26.955+00:00",
+      "kind": "skill_start",
+      "skill": "reformulate_query",
+      "skill_version": "1.0.0",
+      "duration_ms": null,
+      "output": null,
+      "error": null,
+      "budget_snapshot": {
+        "max_llm_tokens": 100000,
+        "max_wall_seconds": 90.0,
+        "max_usd_equivalent": 0.5,
+        "max_skill_calls": 12,
+        "spent_tokens": 0,
+        "spent_seconds": 0.001,
+        "spent_usd": 0.0,
+        "spent_calls": 3
+      },
+      "notes": {}
+    },
+    {
+      "ts": "2026-06-28T08:32:26.955+00:00",
+      "kind": "skill_end",
+      "skill": "reformulate_query",
+      "skill_version": "1.0.0",
+      "duration_ms": 0.044,
+      "output": {
+        "skill": "reformulate_query",
+        "skill_version": "1.0.0",
+        "triage_score": null,
+        "triage_decision": null,
+        "matched_issue_ids": [],
+        "is_novel": null,
+        "confidence": 1.0,
+        "evidence_used": [
+          "TEXT_EVIDENCE"
+        ],
+        "cost": {
+          "llm_tokens": 0,
+          "wall_seconds": 0.0001,
+          "usd": 0.0,
+          "n_calls": 1
+        },
+        "extra": {
+          "reformulated_query": "SERVICE checkoutservice LOG-EVENTS [error] dep=currencyservice op=Convert err_class=Unavailable retry_attempt=0 [error] dep=currencyservice op=Convert err_class=Unavailable retry_attempt=0 [error] dep=currencyservice op=Convert err_class=Unavailable retry_attempt=0 [error] dep=currencyservice op=Convert err_class=Unavailable retry_attempt=0 [error] dep=currencyservice op=Convert err_class=Unavailable retry_attempt=0 [error] dep=currencyservice op=Convert err_class=Unavailable retry_attempt=0 [error] dep=currencyservice op=Convert err_class=Unavailable retry_attempt=0 [error] dep=currencyservice op=Convert err_class=Unavailable retry_attempt=0 [error] dep=currencyservice op=Convert err_class=Unavailable retry_attempt=0 [error] dep=currencyservice op=Convert err_class=Unavailable retry_attempt=0 [error] dep=currencyservice op=Convert err_class=Unavailable retry_attempt=0 [error] dep=currencyservice op=Convert err_class=Unavailable retry_attempt=0 [error] dep=currencyservice op=Convert err_class=Unavailable retry_attempt=0 [error] dep=currencyservice op=Convert err_class=Unavailable retry_attempt=0 [error] dep=currencyservice op=Convert err_class=Unavailable retry_attempt=0 [error] dep=currencyservice op=Convert err_class=Unavailable retry_attempt=0 [error] dep=currencyservice op=Convert err_class=Unavailable retry_attempt=0 [error] dep=currencyservice op=Convert err_class=Unavailable retry_attempt=0 [error] dep=currencyservice op=Convert err_class=Unavailable retry_attempt=0 [error] dep=currencyservice op=Convert err_class=Unavailable retry_attempt=0 TRACES total_spans=555 error_spans=242 p50_ms=0.7 p95_ms=4.5 root=frontend count=151 root=/grpc.health.v1.Health/Check count=13 root=opentelemetry.proto.collector.trace.v1.TraceService/Export count=11 root=grpc.health.v1.Health/Check count=10 root=grpc.grpc.health.v1.Health/Check count=6",
+          "original_query": "SERVICE checkoutservice\nLOG-EVENTS\n[error] dep=currencyservice op=Convert err_class=Unavailable retry_attempt=0\n[error] dep=currencyservice op=Convert err_class=Unavailable retry_attempt=0\n[error] dep=currencyservice op=Convert err_class=Unavailable retry_attempt=0\n[error] dep=currencyservice op=Convert err_class=Unavailable retry_attempt=0\n[error] dep=currencyservice op=Convert err_class=Unavailable retry_attempt=0\n[error] dep=currencyservice op=Convert err_class=Unavailable retry_attempt=0\n[error] dep=currencyservice op=Convert err_class=Unavailable retry_attempt=0\n[error] dep=currencyservice op=Convert err_class=Unavailable retry_attempt=0\n[error] dep=currencyservice op=Convert err_class=Unavailable retry_attempt=0\n[error] dep=currencyservice op=Convert err_class=Unavailable retry_attempt=0\n[error] dep=currencyservice op=Convert err_class=Unavailable retry_attempt=0\n[error] dep=currencyservice op=Convert err_class=Unavailable retry_attempt=0\n[error] dep=currencyservice op=Convert err_class=Unavailable retry_attempt=0\n[error] dep=currencyservice op=Convert err_class=Unavailable retry_attempt=0\n[error] dep=currencyservice op=Convert err_class=Unavailable retry_attempt=0\n[error] dep=currencyservice op=Convert err_class=Unavailable retry_attempt=0\n[error] dep=currencyservice op=Convert err_class=Unavailable retry_attempt=0\n[error] dep=currencyservice op=Convert err_class=Unavailable retry_attempt=0\n[error] dep=currencyservice op=Convert err_class=Unavailable retry_attempt=0\n[error] dep=currencyservice op=Convert err_class=Unavailable retry_attempt=0\nTRACES total_spans=555 error_spans=242 p50_ms=0.7 p95_ms=4.5\n  root=frontend count=151\n  root=/grpc.health.v1.Health/Check count=13\n  root=opentelemetry.proto.collector.trace.v1.TraceService/Export count=11\n  root=grpc.health.v1.Health/Check count=10\n  root=grpc.grpc.health.v1.Health/Check count=6",
+          "action_applied": {
+            "action": "drop_token",
+            "argument": "error",
+            "reason": "stub_drop_generic_token"
+          },
+          "retry_count": 1,
+          "n_previous_matches": 5
+        }
+      },
+      "error": null,
+      "budget_snapshot": {
+        "max_llm_tokens": 100000,
+        "max_wall_seconds": 90.0,
+        "max_usd_equivalent": 0.5,
+        "max_skill_calls": 12,
+        "spent_tokens": 0,
+        "spent_seconds": 0.0011,
+        "spent_usd": 0.0,
+        "spent_calls": 4
+      },
+      "notes": {}
+    },
+    {
+      "ts": "2026-06-28T08:32:26.955+00:00",
+      "kind": "skill_start",
+      "skill": "request_pod_events",
+      "skill_version": "1.0.0",
+      "duration_ms": null,
+      "output": null,
+      "error": null,
+      "budget_snapshot": {
+        "max_llm_tokens": 100000,
+        "max_wall_seconds": 90.0,
+        "max_usd_equivalent": 0.5,
+        "max_skill_calls": 12,
+        "spent_tokens": 0,
+        "spent_seconds": 0.0011,
+        "spent_usd": 0.0,
+        "spent_calls": 4
+      },
+      "notes": {}
+    },
+    {
+      "ts": "2026-06-28T08:32:26.957+00:00",
+      "kind": "skill_end",
+      "skill": "request_pod_events",
+      "skill_version": "1.0.0",
+      "duration_ms": 1.821,
+      "output": {
+        "skill": "request_pod_events",
+        "skill_version": "1.0.0",
+        "triage_score": null,
+        "triage_decision": null,
+        "matched_issue_ids": [],
+        "is_novel": null,
+        "confidence": 1.0,
+        "evidence_used": [
+          "request_pod_events"
+        ],
+        "cost": {
+          "llm_tokens": 0,
+          "wall_seconds": 0.0017038980149663985,
+          "usd": 0.0,
+          "n_calls": 1
+        },
+        "extra": {
+          "tool_result": {
+            "tool_name": "request_pod_events",
+            "args": {
+              "window_id": "2026-05-25-dataset-v5-large-compact-b-r07-currencyservice-unavailable-major-20260526T060401Z-active_fault-checkoutservice"
+            },
+            "result": {
+              "events": [
+                {
+                  "timestamp": "2026-05-26T06:05:30Z",
+                  "type": "Warning",
+                  "reason": "Unhealthy",
+                  "message": "Readiness probe failed: timeout: failed to connect service \"10.244.1.187:7000\" within 1s: context deadline exceeded",
+                  "pod": "currencyservice-58f675c8d8-896ns",
+                  "kind": "Pod",
+                  "count": 3
+                },
+                {
+                  "timestamp": "2026-05-26T06:05:27Z",
+                  "type": "Warning",
+                  "reason": "Unhealthy",
+                  "message": "Liveness probe failed: timeout: failed to connect service \"10.244.1.187:7000\" within 1s: context deadline exceeded",
+                  "pod": "currencyservice-58f675c8d8-896ns",
+                  "kind": "Pod",
+                  "count": 1
+                },
+                {
+                  "timestamp": "2026-05-26T06:05:17Z",
+                  "type": "Normal",
+                  "reason": "Pulled",
+                  "message": "Container image \"currencyservice:v5.0.0-otel-pilot2\" already present on machine and can be accessed by the pod",
+                  "pod": "currencyservice-58f675c8d8-896ns",
+                  "kind": "Pod",
+                  "count": 1
+                },
+                {
+                  "timestamp": "2026-05-26T06:05:17Z",
+                  "type": "Normal",
+                  "reason": "Created",
+                  "message": "Container created",
+                  "pod": "currencyservice-58f675c8d8-896ns",
+                  "kind": "Pod",
+                  "count": 1
+                },
+                {
+                  "timestamp": "2026-05-26T06:05:17Z",
+                  "type": "Normal",
+                  "reason": "Started",
+                  "message": "Container started",
+                  "pod": "currencyservice-58f675c8d8-896ns",
+                  "kind": "Pod",
+                  "count": 1
+                },
+                {
+                  "timestamp": "2026-05-26T06:05:16Z",
+                  "type": "Normal",
+                  "reason": "Scheduled",
+                  "message": "Successfully assigned online-boutique-research/currencyservice-58f675c8d8-896ns to jira-telemetry-lab-worker2",
+                  "pod": "currencyservice-58f675c8d8-896ns",
+                  "kind": "Pod",
+                  "count": 1
+                },
+                {
+                  "timestamp": "2026-05-26T06:05:16Z",
+                  "type": "Normal",
+                  "reason": "SuccessfulCreate",
+                  "message": "Created pod: currencyservice-58f675c8d8-896ns",
+                  "pod": "currencyservice-58f675c8d8",
+                  "kind": "ReplicaSet",
+                  "count": 1
+                },
+                {
+                  "timestamp": "2026-05-26T06:05:16Z",
+                  "type": "Normal",
+                  "reason": "ScalingReplicaSet",
+                  "message": "Scaled up replica set currencyservice-58f675c8d8 from 0 to 1",
+                  "pod": "currencyservice",
+                  "kind": "Deployment",
+                  "count": 7
+                },
+                {
+                  "timestamp": "2026-05-26T06:04:07Z",
+                  "type": "Warning",
+                  "reason": "Unhealthy",
+                  "message": "Readiness probe failed: timeout: failed to connect service \"10.244.1.180:7000\" within 1s: context deadline exceeded",
+                  "pod": "currencyservice-58f675c8d8-45m7z",
+                  "kind": "Pod",
+                  "count": 3
+                },
+                {
+                  "timestamp": "2026-05-26T06:04:01Z",
+                  "type": "Normal",
+                  "reason": "Killing",
+                  "message": "Stopping container server",
+                  "pod": "currencyservice-58f675c8d8-45m7z",
+                  "kind": "Pod",
+                  "count": 1
+                },
+                {
+                  "timestamp": "2026-05-26T06:04:01Z",
+                  "type": "Normal",
+                  "reason": "SuccessfulDelete",
+                  "message": "Deleted pod: currencyservice-58f675c8d8-45m7z",
+                  "pod": "currencyservice-58f675c8d8",
+                  "kind": "ReplicaSet",
+                  "count": 1
+                },
+                {
+                  "timestamp": "2026-05-26T06:04:01Z",
+                  "type": "Normal",
+                  "reason": "ScalingReplicaSet",
+                  "message": "Scaled down replica set currencyservice-58f675c8d8 from 1 to 0",
+                  "pod": "currencyservice",
+                  "kind": "Deployment",
+                  "count": 7
+                },
+                {
+                  "timestamp": "2026-05-26T06:01:49Z",
+                  "type": "Normal",
+                  "reason": "Pulled",
+                  "message": "Container image \"productcatalogservice:v5.0.0-otel-pilot\" already present on machine and can be accessed by the pod",
+                  "pod": "productcatalogservice-54576d588f-rxgnn",
+                  "kind": "Pod",
+                  "count": 1
+                },
+                {
+                  "timestamp": "2026-05-26T06:01:49Z",
+                  "type": "Normal",
+                  "reason": "Created",
+                  "message": "Container created",
+                  "pod": "productcatalogservice-54576d588f-rxgnn",
+                  "kind": "Pod",
+                  "count": 1
+                },
+                {
+                  "timestamp": "2026-05-26T06:01:49Z",
+                  "type": "Normal",
+                  "reason": "Started",
+                  "message": "Container started",
+                  "pod": "productcatalogservice-54576d588f-rxgnn",
+                  "kind": "Pod",
+                  "count": 1
+                },
+                {
+                  "timestamp": "2026-05-26T06:01:48Z",
+                  "type": "Normal",
+                  "reason": "Scheduled",
+                  "message": "Successfully assigned online-boutique-research/productcatalogservice-54576d588f-rxgnn to jira-telemetry-lab-worker",
+                  "pod": "productcatalogservice-54576d588f-rxgnn",
+                  "kind": "Pod",
+                  "count": 1
+                },
+                {
+                  "timestamp": "2026-05-26T06:01:48Z",
+                  "type": "Normal",
+                  "reason": "SuccessfulCreate",
+                  "message": "Created pod: productcatalogservice-54576d588f-rxgnn",
+                  "pod": "productcatalogservice-54576d588f",
+                  "kind": "ReplicaSet",
+                  "count": 1
+                },
+                {
+                  "timestamp": "2026-05-26T06:01:48Z",
+                  "type": "Normal",
+                  "reason": "ScalingReplicaSet",
+                  "message": "Scaled up replica set productcatalogservice-54576d588f from 0 to 1",
+                  "pod": "productcatalogservice",
+                  "kind": "Deployment",
+                  "count": 49
+                },
+                {
+                  "timestamp": "2026-05-26T06:00:55Z",
+                  "type": "Warning",
+                  "reason": "Unhealthy",
+                  "message": "Readiness probe failed: timeout: health rpc did not complete within 1s",
+                  "pod": "recommendationservice-848f5bc4f8-bq4sj",
+                  "kind": "Pod",
+                  "count": 3
+                },
+                {
+                  "timestamp": "2026-05-26T06:00:52Z",
+                  "type": "Warning",
+                  "reason": "Unhealthy",
+                  "message": "Liveness probe failed: timeout: health rpc did not complete within 1s",
+                  "pod": "recommendationservice-848f5bc4f8-bq4sj",
+                  "kind": "Pod",
+                  "count": 2
+                },
+                {
+                  "timestamp": "2026-05-26T06:00:33Z",
+                  "type": "Normal",
+                  "reason": "Killing",
+                  "message": "Stopping container server",
+                  "pod": "productcatalogservice-54576d588f-467ng",
+                  "kind": "Pod",
+                  "count": 1
+                },
+                {
+                  "timestamp": "2026-05-26T06:00:33Z",
+                  "type": "Normal",
+                  "reason": "SuccessfulDelete",
+                  "message": "Deleted pod: productcatalogservice-54576d588f-467ng",
+                  "pod": "productcatalogservice-54576d588f",
+                  "kind": "ReplicaSet",
+                  "count": 1
+                },
+                {
+                  "timestamp": "2026-05-26T06:00:33Z",
+                  "type": "Normal",
+                  "reason": "ScalingReplicaSet",
+                  "message": "Scaled down replica set productcatalogservice-54576d588f from 1 to 0",
+                  "pod": "productcatalogservice",
+                  "kind": "Deployment",
+                  "count": 49
+                },
+                {
+                  "timestamp": "2026-05-26T05:57:47Z",
+                  "type": "Normal",
+                  "reason": "Started",
+                  "message": "Container started",
+                  "pod": "checkoutservice-6464868965-cfjh5",
+                  "kind": "Pod",
+                  "count": 1
+                },
+                {
+                  "timestamp": "2026-05-26T05:57:46Z",
+                  "type": "Normal",
+                  "reason": "Scheduled",
+                  "message": "Successfully assigned online-boutique-research/checkoutservice-6464868965-cfjh5 to jira-telemetry-lab-worker",
+                  "pod": "checkoutservice-6464868965-cfjh5",
+                  "kind": "Pod",
+                  "count": 1
+                },
+                {
+                  "timestamp": "2026-05-26T05:57:46Z",
+                  "type": "Normal",
+                  "reason": "Pulled",
+                  "message": "Container image \"checkoutservice:v5.0.0-otel-pilot\" already present on machine and can be accessed by the pod",
+                  "pod": "checkoutservice-6464868965-cfjh5",
+                  "kind": "Pod",
+                  "count": 1
+                },
+                {
+                  "timestamp": "2026-05-26T05:57:46Z",
+                  "type": "Normal",
+                  "reason": "Created",
+                  "message": "Container created",
+                  "pod": "checkoutservice-6464868965-cfjh5",
+                  "kind": "Pod",
+                  "count": 1
+                },
+                {
+                  "timestamp": "2026-05-26T05:57:46Z",
+                  "type": "Normal",
+                  "reason": "SuccessfulCreate",
+                  "message": "Created pod: checkoutservice-6464868965-cfjh5",
+                  "pod": "checkoutservice-6464868965",
+                  "kind": "ReplicaSet",
+                  "count": 1
+                },
+                {
+                  "timestamp": "2026-05-26T05:57:46Z",
+                  "type": "Normal",
+                  "reason": "ScalingReplicaSet",
+                  "message": "Scaled up replica set checkoutservice-6464868965 from 0 to 1",
+                  "pod": "checkoutservice",
+                  "kind": "Deployment",
+                  "count": 7
+                },
+                {
+                  "timestamp": "2026-05-26T05:56:30Z",
+                  "type": "Normal",
+                  "reason": "Killing",
+                  "message": "Stopping container server",
+                  "pod": "checkoutservice-6464868965-z44sd",
+                  "kind": "Pod",
+                  "count": 1
+                },
+                {
+                  "timestamp": "2026-05-26T05:56:30Z",
+                  "type": "Normal",
+                  "reason": "SuccessfulDelete",
+                  "message": "Deleted pod: checkoutservice-6464868965-z44sd",
+                  "pod": "checkoutservice-6464868965",
+                  "kind": "ReplicaSet",
+                  "count": 1
+                },
+                {
+                  "timestamp": "2026-05-26T05:56:30Z",
+                  "type": "Normal",
+                  "reason": "ScalingReplicaSet",
+                  "message": "Scaled down replica set checkoutservice-6464868965 from 1 to 0",
+                  "pod": "checkoutservice",
+                  "kind": "Deployment",
+                  "count": 7
+                },
+                {
+                  "timestamp": "2026-05-26T05:47:37Z",
+                  "type": "Normal",
+                  "reason": "Killing",
+                  "message": "Stopping container main",
+                  "pod": "loadgenerator-9fdcc8676-dpfwg",
+                  "kind": "Pod",
+                  "count": 1
+                },
+                {
+                  "timestamp": "2026-05-26T05:47:37Z",
+                  "type": "Normal",
+                  "reason": "SuccessfulDelete",
+                  "message": "Deleted pod: loadgenerator-9fdcc8676-dpfwg",
+                  "pod": "loadgenerator-9fdcc8676",
+                  "kind": "ReplicaSet",
+                  "count": 1
+                },
+                {
+                  "timestamp": "2026-05-26T05:47:37Z",
+                  "type": "Normal",
+                  "reason": "ScalingReplicaSet",
+                  "message": "Scaled down replica set loadgenerator-9fdcc8676 from 1 to 0",
+                  "pod": "loadgenerator",
+                  "kind": "Deployment",
+                  "count": 6
+                },
+                {
+                  "timestamp": "2026-05-26T05:47:36Z",
+                  "type": "Normal",
+                  "reason": "Pulled",
+                  "message": "Container image \"us-central1-docker.pkg.dev/google-samples/microservices-demo/loadgenerator:v0.10.5\" already present on machine and can be accessed by the pod",
+                  "pod": "loadgenerator-55db58975b-rbdkk",
+                  "kind": "Pod",
+                  "count": 1
+                },
+                {
+                  "timestamp": "2026-05-26T05:47:36Z",
+                  "type": "Normal",
+                  "reason": "Created",
+                  "message": "Container created",
+                  "pod": "loadgenerator-55db58975b-rbdkk",
+                  "kind": "Pod",
+                  "count": 1
+                },
+                {
+                  "timestamp": "2026-05-26T05:47:36Z",
+                  "type": "Normal",
+                  "reason": "Started",
+                  "message": "Container started",
+                  "pod": "loadgenerator-55db58975b-rbdkk",
+                  "kind": "Pod",
+                  "count": 1
+                },
+                {
+                  "timestamp": "2026-05-26T05:47:35Z",
+                  "type": "Normal",
+                  "reason": "Pulled",
+                  "message": "Container image \"registry.k8s.io/e2e-test-images/busybox:1.29-4\" already present on machine and can be accessed by the pod",
+                  "pod": "loadgenerator-55db58975b-rbdkk",
+                  "kind": "Pod",
+                  "count": 1
+                },
+                {
+                  "timestamp": "2026-05-26T05:47:35Z",
+                  "type": "Normal",
+                  "reason": "Created",
+                  "message": "Container created",
+                  "pod": "loadgenerator-55db58975b-rbdkk",
+                  "kind": "Pod",
+                  "count": 1
+                },
+                {
+                  "timestamp": "2026-05-26T05:47:35Z",
+                  "type": "Normal",
+                  "reason": "Started",
+                  "message": "Container started",
+                  "pod": "loadgenerator-55db58975b-rbdkk",
+                  "kind": "Pod",
+                  "count": 1
+                },
+                {
+                  "timestamp": "2026-05-26T05:47:34Z",
+                  "type": "Normal",
+                  "reason": "Scheduled",
+                  "message": "Successfully assigned online-boutique-research/loadgenerator-55db58975b-rbdkk to jira-telemetry-lab-worker",
+                  "pod": "loadgenerator-55db58975b-rbdkk",
+                  "kind": "Pod",
+                  "count": 1
+                },
+                {
+                  "timestamp": "2026-05-26T05:47:34Z",
+                  "type": "Normal",
+                  "reason": "SuccessfulCreate",
+                  "message": "Created pod: loadgenerator-55db58975b-rbdkk",
+                  "pod": "loadgenerator-55db58975b",
+                  "kind": "ReplicaSet",
+                  "count": 1
+                },
+                {
+                  "timestamp": "2026-05-26T05:47:34Z",
+                  "type": "Normal",
+                  "reason": "ScalingReplicaSet",
+                  "message": "Scaled up replica set loadgenerator-55db58975b from 0 to 1",
+                  "pod": "loadgenerator",
+                  "kind": "Deployment",
+                  "count": 20
+                },
+                {
+                  "timestamp": "2026-05-26T05:46:19Z",
+                  "type": "Normal",
+                  "reason": "Killing",
+                  "message": "Stopping container main",
+                  "pod": "loadgenerator-55db58975b-q4542",
+                  "kind": "Pod",
+                  "count": 1
+                },
+                {
+                  "timestamp": "2026-05-26T05:46:19Z",
+                  "type": "Normal",
+                  "reason": "SuccessfulDelete",
+                  "message": "Deleted pod: loadgenerator-55db58975b-q4542",
+                  "pod": "loadgenerator-55db58975b",
+                  "kind": "ReplicaSet",
+                  "count": 1
+                },
+                {
+                  "timestamp": "2026-05-26T05:46:19Z",
+                  "type": "Normal",
+                  "reason": "ScalingReplicaSet",
+                  "message": "Scaled down replica set loadgenerator-55db58975b from 1 to 0",
+                  "pod": "loadgenerator",
+                  "kind": "Deployment",
+                  "count": 20
+                },
+                {
+                  "timestamp": "2026-05-26T05:46:18Z",
+                  "type": "Normal",
+                  "reason": "Pulled",
+                  "message": "Container image \"us-central1-docker.pkg.dev/google-samples/microservices-demo/loadgenerator:v0.10.5\" already present on machine and can be accessed by the pod",
+                  "pod": "loadgenerator-9fdcc8676-dpfwg",
+                  "kind": "Pod",
+                  "count": 1
+                },
+                {
+                  "timestamp": "2026-05-26T05:46:18Z",
+                  "type": "Normal",
+                  "reason": "Created",
+                  "message": "Container created",
+                  "pod": "loadgenerator-9fdcc8676-dpfwg",
+                  "kind": "Pod",
+                  "count": 1
+                },
+                {
+                  "timestamp": "2026-05-26T05:46:18Z",
+                  "type": "Normal",
+                  "reason": "Started",
+                  "message": "Container started",
+                  "pod": "loadgenerator-9fdcc8676-dpfwg",
+                  "kind": "Pod",
+                  "count": 1
+                }
+              ],
+              "n_events": 50,
+              "source_path": "data\\runs\\2026-05-25-dataset-v5-large-compact-b-r07\\raw\\kubernetes\\2026-05-25-dataset-v5-large-compact-b-r07-currencyservice-unavailable-major-20260526T060401Z-active_fault-checkoutservice.json",
+              "window": {
+                "start_time": "2026-05-26T06:04:01.0000000+00:00",
+                "end_time": "2026-05-26T06:05:39.0000000+00:00",
+                "padded_start_time": "2026-05-26T05:59:01.0000000+00:00",
+                "padded_end_time": "2026-05-26T06:10:39.0000000+00:00"
+              },
+              "service_name": "checkoutservice",
+              "warning_count": 5
+            },
+            "cost_actual_ms": 1.7038980149663985,
+            "bytes_returned": 11794,
+            "cache_hit": true,
+            "error": null,
+            "failure_mode": null
+          },
+          "is_useful": true,
+          "failure_mode": null
+        }
+      },
+      "error": null,
+      "budget_snapshot": {
+        "max_llm_tokens": 100000,
+        "max_wall_seconds": 90.0,
+        "max_usd_equivalent": 0.5,
+        "max_skill_calls": 12,
+        "spent_tokens": 0,
+        "spent_seconds": 0.0028038980149663988,
+        "spent_usd": 0.0,
+        "spent_calls": 5
+      },
+      "notes": {}
+    },
+    {
+      "ts": "2026-06-28T08:32:26.957+00:00",
+      "kind": "skill_start",
+      "skill": "request_extended_trace_window",
+      "skill_version": "1.0.0",
+      "duration_ms": null,
+      "output": null,
+      "error": null,
+      "budget_snapshot": {
+        "max_llm_tokens": 100000,
+        "max_wall_seconds": 90.0,
+        "max_usd_equivalent": 0.5,
+        "max_skill_calls": 12,
+        "spent_tokens": 0,
+        "spent_seconds": 0.0028038980149663988,
+        "spent_usd": 0.0,
+        "spent_calls": 5
+      },
+      "notes": {}
+    },
+    {
+      "ts": "2026-06-28T08:32:26.958+00:00",
+      "kind": "skill_end",
+      "skill": "request_extended_trace_window",
+      "skill_version": "1.0.0",
+      "duration_ms": 1.474,
+      "output": {
+        "skill": "request_extended_trace_window",
+        "skill_version": "1.0.0",
+        "triage_score": null,
+        "triage_decision": null,
+        "matched_issue_ids": [],
+        "is_novel": null,
+        "confidence": 1.0,
+        "evidence_used": [
+          "request_extended_trace_window"
+        ],
+        "cost": {
+          "llm_tokens": 0,
+          "wall_seconds": 0.0014355769963003695,
+          "usd": 0.0,
+          "n_calls": 1
+        },
+        "extra": {
+          "tool_result": {
+            "tool_name": "request_extended_trace_window",
+            "args": {
+              "window_id": "2026-05-25-dataset-v5-large-compact-b-r07-currencyservice-unavailable-major-20260526T060401Z-active_fault-checkoutservice"
+            },
+            "result": {
+              "n_traces": 200,
+              "n_error_traces": 0,
+              "services_seen": [
+                "cartservice",
+                "checkoutservice",
+                "emailservice",
+                "frontend",
+                "paymentservice",
+                "productcatalogservice",
+                "recommendationservice",
+                "shippingservice"
+              ],
+              "error_span_names": [],
+              "source_path": "data\\runs\\2026-05-25-dataset-v5-large-compact-b-r07\\raw\\tempo\\2026-05-25-dataset-v5-large-compact-b-r07-currencyservice-unavailable-major-20260526T060401Z-active_fault-checkoutservice.json"
+            },
+            "cost_actual_ms": 1.4355769963003695,
+            "bytes_returned": 442,
+            "cache_hit": true,
+            "error": null,
+            "failure_mode": null
+          },
+          "is_useful": true,
+          "failure_mode": null
+        }
+      },
+      "error": null,
+      "budget_snapshot": {
+        "max_llm_tokens": 100000,
+        "max_wall_seconds": 90.0,
+        "max_usd_equivalent": 0.5,
+        "max_skill_calls": 12,
+        "spent_tokens": 0,
+        "spent_seconds": 0.004239475011266768,
+        "spent_usd": 0.0,
+        "spent_calls": 6
+      },
+      "notes": {}
+    },
+    {
+      "ts": "2026-06-28T08:32:26.958+00:00",
+      "kind": "skill_start",
+      "skill": "request_pod_metrics",
+      "skill_version": "1.0.0",
+      "duration_ms": null,
+      "output": null,
+      "error": null,
+      "budget_snapshot": {
+        "max_llm_tokens": 100000,
+        "max_wall_seconds": 90.0,
+        "max_usd_equivalent": 0.5,
+        "max_skill_calls": 12,
+        "spent_tokens": 0,
+        "spent_seconds": 0.004239475011266768,
+        "spent_usd": 0.0,
+        "spent_calls": 6
+      },
+      "notes": {}
+    },
+    {
+      "ts": "2026-06-28T08:32:26.961+00:00",
+      "kind": "skill_end",
+      "skill": "request_pod_metrics",
+      "skill_version": "1.0.0",
+      "duration_ms": 3.075,
+      "output": {
+        "skill": "request_pod_metrics",
+        "skill_version": "1.0.0",
+        "triage_score": null,
+        "triage_decision": null,
+        "matched_issue_ids": [],
+        "is_novel": null,
+        "confidence": 1.0,
+        "evidence_used": [
+          "request_pod_metrics"
+        ],
+        "cost": {
+          "llm_tokens": 0,
+          "wall_seconds": 0.003034817986190319,
+          "usd": 0.0,
+          "n_calls": 1
+        },
+        "extra": {
+          "tool_result": {
+            "tool_name": "request_pod_metrics",
+            "args": {
+              "window_id": "2026-05-25-dataset-v5-large-compact-b-r07-currencyservice-unavailable-major-20260526T060401Z-active_fault-checkoutservice"
+            },
+            "result": {
+              "restart_delta": 0,
+              "restart_total_latest": 0.0,
+              "cpu_max": 2.10636,
+              "cpu_mean": 1.991341857142857,
+              "mem_max": 13737984.0,
+              "mem_mean": 13151085.714285715,
+              "n_alerts_firing": 7,
+              "source_path": "data\\runs\\2026-05-25-dataset-v5-large-compact-b-r07\\raw\\prometheus\\2026-05-25-dataset-v5-large-compact-b-r07-currencyservice-unavailable-major-20260526T060401Z-active_fault-checkoutservice.json"
+            },
+            "cost_actual_ms": 3.034817986190319,
+            "bytes_returned": 394,
+            "cache_hit": true,
+            "error": null,
+            "failure_mode": null
+          },
+          "is_useful": true,
+          "failure_mode": null
+        }
+      },
+      "error": null,
+      "budget_snapshot": {
+        "max_llm_tokens": 100000,
+        "max_wall_seconds": 90.0,
+        "max_usd_equivalent": 0.5,
+        "max_skill_calls": 12,
+        "spent_tokens": 0,
+        "spent_seconds": 0.007274292997457087,
+        "spent_usd": 0.0,
+        "spent_calls": 7
+      },
+      "notes": {}
+    },
+    {
+      "ts": "2026-06-28T08:32:26.961+00:00",
+      "kind": "skill_start",
+      "skill": "request_similar_incident_window",
+      "skill_version": "1.0.0",
+      "duration_ms": null,
+      "output": null,
+      "error": null,
+      "budget_snapshot": {
+        "max_llm_tokens": 100000,
+        "max_wall_seconds": 90.0,
+        "max_usd_equivalent": 0.5,
+        "max_skill_calls": 12,
+        "spent_tokens": 0,
+        "spent_seconds": 0.007274292997457087,
+        "spent_usd": 0.0,
+        "spent_calls": 7
+      },
+      "notes": {}
+    },
+    {
+      "ts": "2026-06-28T08:32:26.992+00:00",
+      "kind": "skill_end",
+      "skill": "request_similar_incident_window",
+      "skill_version": "1.0.0",
+      "duration_ms": 30.241,
+      "output": {
+        "skill": "request_similar_incident_window",
+        "skill_version": "1.0.0",
+        "triage_score": null,
+        "triage_decision": null,
+        "matched_issue_ids": [],
+        "is_novel": null,
+        "confidence": 1.0,
+        "evidence_used": [
+          "request_similar_incident_window"
+        ],
+        "cost": {
+          "llm_tokens": 0,
+          "wall_seconds": 0.03017484600422904,
+          "usd": 0.0,
+          "n_calls": 1
+        },
+        "extra": {
+          "tool_result": {
+            "tool_name": "request_similar_incident_window",
+            "args": {
+              "scenario_family": "currency-outage",
+              "exclude_episode_id": "2026-05-25-dataset-v5-large-compact-b-r07-currencyservice-unavailable-major-20260526T060401Z",
+              "global_dir": "data/derived/global/2026-05-25-dataset-v5-large-global",
+              "top_k": 3
+            },
+            "result": {
+              "peers": [
+                {
+                  "issue_id": "shadow-2026-05-25-dataset-v5-large-compact-b-r01-currencyservice-unavailable-major-20260526T010226Z",
+                  "episode_id": "2026-05-25-dataset-v5-large-compact-b-r01-currencyservice-unavailable-major-20260526T010226Z",
+                  "scenario_family": "currency-outage",
+                  "memory_text_head": "Summary: Intermittent slowness reported around checkoutservice\nComponents: checkoutservice, currencyservice, frontend\nLabels: dataset-2026-05-25-dataset-v5-large-compact-b-r01, root-dependency_failure, scenario-currencyservice-unavailable-major, severity-major, synthetic-incident, telemetry-linked\nDescription: Synthetic lab issue generated from Online Boutique telemetry.\n\nDataset run: 2026-05-25-dataset-v5-large-compact-b-r01\nEpisode: 2026-05-25-dataset-v5-large-compact-b-r01-currencyservice-unavailable-major-20260526T010226Z\nScenario: currencyservice-unavailable-major\nFault id: currencyservic"
+                },
+                {
+                  "issue_id": "shadow-2026-05-25-dataset-v5-large-compact-b-r02-currencyservice-unavailable-major-20260526T015333Z",
+                  "episode_id": "2026-05-25-dataset-v5-large-compact-b-r02-currencyservice-unavailable-major-20260526T015333Z",
+                  "scenario_family": "currency-outage",
+                  "memory_text_head": "Summary: Intermittent slowness reported around checkoutservice\nComponents: checkoutservice, currencyservice, frontend\nLabels: dataset-2026-05-25-dataset-v5-large-compact-b-r02, root-dependency_failure, scenario-currencyservice-unavailable-major, severity-major, synthetic-incident, telemetry-linked\nDescription: Synthetic lab issue generated from Online Boutique telemetry.\n\nDataset run: 2026-05-25-dataset-v5-large-compact-b-r02\nEpisode: 2026-05-25-dataset-v5-large-compact-b-r02-currencyservice-unavailable-major-20260526T015333Z\nScenario: currencyservice-unavailable-major\nFault id: currencyservic"
+                },
+                {
+                  "issue_id": "shadow-2026-05-25-dataset-v5-large-compact-b-r03-currencyservice-unavailable-major-20260526T024422Z",
+                  "episode_id": "2026-05-25-dataset-v5-large-compact-b-r03-currencyservice-unavailable-major-20260526T024422Z",
+                  "scenario_family": "currency-outage",
+                  "memory_text_head": "Summary: Intermittent slowness reported around checkoutservice\nComponents: checkoutservice, currencyservice, frontend\nLabels: dataset-2026-05-25-dataset-v5-large-compact-b-r03, root-dependency_failure, scenario-currencyservice-unavailable-major, severity-major, synthetic-incident, telemetry-linked\nDescription: Synthetic lab issue generated from Online Boutique telemetry.\n\nDataset run: 2026-05-25-dataset-v5-large-compact-b-r03\nEpisode: 2026-05-25-dataset-v5-large-compact-b-r03-currencyservice-unavailable-major-20260526T024422Z\nScenario: currencyservice-unavailable-major\nFault id: currencyservic"
+                }
+              ],
+              "n_peers": 3,
+              "scenario_family": "currency-outage"
+            },
+            "cost_actual_ms": 30.17484600422904,
+            "bytes_returned": 2754,
+            "cache_hit": false,
+            "error": null,
+            "failure_mode": null
+          },
+          "is_useful": true,
+          "failure_mode": null
+        }
+      },
+      "error": null,
+      "budget_snapshot": {
+        "max_llm_tokens": 100000,
+        "max_wall_seconds": 90.0,
+        "max_usd_equivalent": 0.5,
+        "max_skill_calls": 12,
+        "spent_tokens": 0,
+        "spent_seconds": 0.03744913900168613,
+        "spent_usd": 0.0,
+        "spent_calls": 8
+      },
+      "notes": {}
+    },
+    {
+      "ts": "2026-06-28T08:32:26.992+00:00",
+      "kind": "skill_start",
+      "skill": "rerank_with_evidence",
+      "skill_version": "1.0.0",
+      "duration_ms": null,
+      "output": null,
+      "error": null,
+      "budget_snapshot": {
+        "max_llm_tokens": 100000,
+        "max_wall_seconds": 90.0,
+        "max_usd_equivalent": 0.5,
+        "max_skill_calls": 12,
+        "spent_tokens": 0,
+        "spent_seconds": 0.03744913900168613,
+        "spent_usd": 0.0,
+        "spent_calls": 8
+      },
+      "notes": {}
+    },
+    {
+      "ts": "2026-06-28T08:32:27.000+00:00",
+      "kind": "skill_end",
+      "skill": "rerank_with_evidence",
+      "skill_version": "1.0.0",
+      "duration_ms": 8.421,
+      "output": {
+        "skill": "rerank_with_evidence",
+        "skill_version": "1.0.0",
+        "triage_score": null,
+        "triage_decision": null,
+        "matched_issue_ids": [
+          "shadow-2026-05-25-dataset-v5-large-compact-b-r01-currencyservice-unavailable-major-20260526T010226Z",
+          "shadow-2026-05-25-dataset-v5-large-compact-b-r03-currencyservice-unavailable-major-20260526T024422Z",
+          "shadow-2026-05-25-dataset-v5-large-compact-b-r02-currencyservice-unavailable-major-20260526T015333Z",
+          "shadow-2026-05-25-dataset-v5-large-compact-b-r04-currencyservice-unavailable-major-20260526T033342Z",
+          "shadow-2026-05-25-dataset-v5-large-compact-b-r05-currencyservice-unavailable-major-20260526T042414Z"
+        ],
+        "is_novel": null,
+        "confidence": 1.0,
+        "evidence_used": [
+          "tool_results"
+        ],
+        "cost": {
+          "llm_tokens": 0,
+          "wall_seconds": 0.00789906200952828,
+          "usd": 0.0,
+          "n_calls": 0
+        },
+        "extra": {
+          "alpha": 0.4,
+          "n_evidence_tokens": 77,
+          "n_top_k_swaps": 4,
+          "per_candidate_scores": [
+            {
+              "rank_in_l2": 2,
+              "overlap": 39,
+              "overlap_for_score": 39
+            },
+            {
+              "rank_in_l2": 3,
+              "overlap": 39,
+              "overlap_for_score": 39
+            },
+            {
+              "rank_in_l2": 4,
+              "overlap": 39,
+              "overlap_for_score": 39
+            },
+            {
+              "rank_in_l2": 1,
+              "overlap": 38,
+              "overlap_for_score": 38
+            },
+            {
+              "rank_in_l2": 5,
+              "overlap": 38,
+              "overlap_for_score": 38
+            }
+          ]
+        }
+      },
+      "error": null,
+      "budget_snapshot": {
+        "max_llm_tokens": 100000,
+        "max_wall_seconds": 90.0,
+        "max_usd_equivalent": 0.5,
+        "max_skill_calls": 12,
+        "spent_tokens": 0,
+        "spent_seconds": 0.04534820101121441,
+        "spent_usd": 0.0,
+        "spent_calls": 8
+      },
+      "notes": {}
+    },
+    {
+      "ts": "2026-06-28T08:32:27.000+00:00",
+      "kind": "skill_start",
+      "skill": "compose_triage",
+      "skill_version": "1.0.0",
+      "duration_ms": null,
+      "output": null,
+      "error": null,
+      "budget_snapshot": {
+        "max_llm_tokens": 100000,
+        "max_wall_seconds": 90.0,
+        "max_usd_equivalent": 0.5,
+        "max_skill_calls": 12,
+        "spent_tokens": 0,
+        "spent_seconds": 0.04534820101121441,
+        "spent_usd": 0.0,
+        "spent_calls": 8
+      },
+      "notes": {}
+    },
+    {
+      "ts": "2026-06-28T08:32:27.000+00:00",
+      "kind": "skill_end",
+      "skill": "compose_triage",
+      "skill_version": "1.0.0",
+      "duration_ms": 0.023,
+      "output": {
+        "skill": "compose_triage",
+        "skill_version": "1.0.0",
+        "triage_score": 0.956070819259247,
+        "triage_decision": "ticket_worthy",
+        "matched_issue_ids": [],
+        "is_novel": null,
+        "confidence": 0.956070819259247,
+        "evidence_used": [
+          "retrieve_dense",
+          "retrieve_hybrid_fusion",
+          "retrieve_hybrid_fusion_llm",
+          "retrieve_knowledge_graph",
+          "retrieve_log_sequence",
+          "triage_numeric"
+        ],
+        "cost": {
+          "llm_tokens": 0,
+          "wall_seconds": 0.0001,
+          "usd": 0.0,
+          "n_calls": 1
+        },
+        "extra": {
+          "mode": "fallback_max",
+          "n_features_present": 2,
+          "threshold": 0.5
+        }
+      },
+      "error": null,
+      "budget_snapshot": {
+        "max_llm_tokens": 100000,
+        "max_wall_seconds": 90.0,
+        "max_usd_equivalent": 0.5,
+        "max_skill_calls": 12,
+        "spent_tokens": 0,
+        "spent_seconds": 0.04544820101121441,
+        "spent_usd": 0.0,
+        "spent_calls": 9
+      },
+      "notes": {}
+    },
+    {
+      "ts": "2026-06-28T08:32:27.000+00:00",
+      "kind": "skill_start",
+      "skill": "compose_novelty",
+      "skill_version": "1.0.0",
+      "duration_ms": null,
+      "output": null,
+      "error": null,
+      "budget_snapshot": {
+        "max_llm_tokens": 100000,
+        "max_wall_seconds": 90.0,
+        "max_usd_equivalent": 0.5,
+        "max_skill_calls": 12,
+        "spent_tokens": 0,
+        "spent_seconds": 0.04544820101121441,
+        "spent_usd": 0.0,
+        "spent_calls": 9
+      },
+      "notes": {}
+    },
+    {
+      "ts": "2026-06-28T08:32:27.000+00:00",
+      "kind": "skill_end",
+      "skill": "compose_novelty",
+      "skill_version": "1.0.0",
+      "duration_ms": 0.012,
+      "output": {
+        "skill": "compose_novelty",
+        "skill_version": "1.0.0",
+        "triage_score": null,
+        "triage_decision": null,
+        "matched_issue_ids": [],
+        "is_novel": true,
+        "confidence": 1.0,
+        "evidence_used": [],
+        "cost": {
+          "llm_tokens": 0,
+          "wall_seconds": 0.0001,
+          "usd": 0.0,
+          "n_calls": 1
+        },
+        "extra": {
+          "agent_novel": false,
+          "free_signal": true,
+          "free_signal_max_conf": 0.4673093392954093,
+          "learned_signal": false,
+          "learned_novelty_prob": 0.0
+        }
+      },
+      "error": null,
+      "budget_snapshot": {
+        "max_llm_tokens": 100000,
+        "max_wall_seconds": 90.0,
+        "max_usd_equivalent": 0.5,
+        "max_skill_calls": 12,
+        "spent_tokens": 0,
+        "spent_seconds": 0.045548201011214415,
+        "spent_usd": 0.0,
+        "spent_calls": 10
+      },
+      "notes": {}
+    },
+    {
+      "ts": "2026-06-28T08:32:27.000+00:00",
+      "kind": "plan_end",
+      "skill": null,
+      "skill_version": null,
+      "duration_ms": null,
+      "output": null,
+      "error": null,
+      "budget_snapshot": {
+        "max_llm_tokens": 100000,
+        "max_wall_seconds": 90.0,
+        "max_usd_equivalent": 0.5,
+        "max_skill_calls": 12,
+        "spent_tokens": 0,
+        "spent_seconds": 0.045548201011214415,
+        "spent_usd": 0.0,
+        "spent_calls": 10
+      },
+      "notes": {
+        "aborted": false,
+        "n_skill_calls": 11,
+        "had_error": false
+      }
+    }
+  ],
+  "final_decision": {
+    "bundle_id": "2026-05-25-dataset-v5-large-compact-b-r07-currencyservice-unavailable-major-20260526T060401Z-active_fault-checkoutservice",
+    "triage_decision": "ticket_worthy",
+    "triage_score": 0.956070819259247,
+    "matched_issue_ids": [
+      "shadow-2026-05-25-dataset-v5-large-compact-b-r01-currencyservice-unavailable-major-20260526T010226Z",
+      "shadow-2026-05-25-dataset-v5-large-compact-b-r03-currencyservice-unavailable-major-20260526T024422Z",
+      "shadow-2026-05-25-dataset-v5-large-compact-b-r02-currencyservice-unavailable-major-20260526T015333Z",
+      "shadow-2026-05-25-dataset-v5-large-compact-b-r04-currencyservice-unavailable-major-20260526T033342Z",
+      "shadow-2026-05-25-dataset-v5-large-compact-b-r05-currencyservice-unavailable-major-20260526T042414Z"
+    ],
+    "is_novel": true,
+    "confidence": 0.956070819259247,
+    "evaluation_mode": "telemetry_diagnosis",
+    "plan_id": "plan_34246ccf6299",
+    "skills_invoked": [
+      "triage_numeric",
+      "retrieve_dense",
+      "compose_l2",
+      "reformulate_query",
+      "request_pod_events",
+      "request_extended_trace_window",
+      "request_pod_metrics",
+      "request_similar_incident_window",
+      "rerank_with_evidence",
+      "compose_triage",
+      "compose_novelty"
+    ],
+    "cost": {
+      "llm_tokens": 0,
+      "wall_seconds": 0.045548201011214415,
+      "usd": 0.0,
+      "n_calls": 10
+    },
+    "trace_path": "paper-results/agent-end-to-end/online-boutique/traces/fulltest-2026-05-25-dataset-v5-large-global/2026-05-25-dataset-v5-large-compact-b-r07-currencyservice-unavailable-major-20260526T060401Z-active_fault-checkoutservice.json",
+    "ts": "2026-06-28T08:32:27.000+00:00"
+  }
+}

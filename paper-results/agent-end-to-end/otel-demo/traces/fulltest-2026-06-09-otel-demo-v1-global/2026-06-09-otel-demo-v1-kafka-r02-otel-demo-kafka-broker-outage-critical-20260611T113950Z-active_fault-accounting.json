@@ -1,0 +1,1253 @@
+{
+  "bundle_id": "2026-06-09-otel-demo-v1-kafka-r02-otel-demo-kafka-broker-outage-critical-20260611T113950Z-active_fault-accounting",
+  "plan_id": "plan_34246ccf6299",
+  "started_at": "2026-06-28T08:32:17.078+00:00",
+  "finished_at": "2026-06-28T08:32:17.121+00:00",
+  "n_events": 25,
+  "events": [
+    {
+      "ts": "2026-06-28T08:32:17.078+00:00",
+      "kind": "plan_start",
+      "skill": null,
+      "skill_version": null,
+      "duration_ms": null,
+      "output": null,
+      "error": null,
+      "budget_snapshot": {
+        "max_llm_tokens": 100000,
+        "max_wall_seconds": 90.0,
+        "max_usd_equivalent": 0.5,
+        "max_skill_calls": 12,
+        "spent_tokens": 0,
+        "spent_seconds": 0.0,
+        "spent_usd": 0.0,
+        "spent_calls": 0
+      },
+      "notes": {
+        "plan_id": "plan_34246ccf6299",
+        "controller": "capability_aware_rule:active_fault",
+        "n_invocations": 12,
+        "dataset": "otel_demo",
+        "ablation": ""
+      }
+    },
+    {
+      "ts": "2026-06-28T08:32:17.078+00:00",
+      "kind": "skill_start",
+      "skill": "triage_numeric",
+      "skill_version": "1.0.0",
+      "duration_ms": null,
+      "output": null,
+      "error": null,
+      "budget_snapshot": {
+        "max_llm_tokens": 100000,
+        "max_wall_seconds": 90.0,
+        "max_usd_equivalent": 0.5,
+        "max_skill_calls": 12,
+        "spent_tokens": 0,
+        "spent_seconds": 0.0,
+        "spent_usd": 0.0,
+        "spent_calls": 0
+      },
+      "notes": {}
+    },
+    {
+      "ts": "2026-06-28T08:32:17.078+00:00",
+      "kind": "skill_end",
+      "skill": "triage_numeric",
+      "skill_version": "1.0.0",
+      "duration_ms": 0.015,
+      "output": {
+        "skill": "triage_numeric",
+        "skill_version": "1.0.0",
+        "triage_score": 0.9999666614497684,
+        "triage_decision": "ticket_worthy",
+        "matched_issue_ids": [],
+        "is_novel": null,
+        "confidence": 0.9999666614497684,
+        "evidence_used": [
+          "NUMERIC_FEATURES"
+        ],
+        "cost": {
+          "llm_tokens": 0,
+          "wall_seconds": 0.0,
+          "usd": 0.0,
+          "n_calls": 1
+        },
+        "extra": {
+          "gold_label": "ticket_worthy",
+          "gold_is_novel": false,
+          "gold_matched_issue_ids": [
+            "shadow-2026-06-09-otel-demo-v1-kafka-r01-otel-demo-kafka-broker-outage-critical-20260611T103246Z",
+            "shadow-2026-06-09-otel-demo-v1-kafka-r01-otel-demo-kafka-consumer-lag-major-20260611T104823Z"
+          ],
+          "scenario_family": "kafka-broker-outage",
+          "service_name": "accounting",
+          "window_type": "active_fault",
+          "is_hard_case": false,
+          "triage_reason_class": "outage"
+        }
+      },
+      "error": null,
+      "budget_snapshot": {
+        "max_llm_tokens": 100000,
+        "max_wall_seconds": 90.0,
+        "max_usd_equivalent": 0.5,
+        "max_skill_calls": 12,
+        "spent_tokens": 0,
+        "spent_seconds": 0.0,
+        "spent_usd": 0.0,
+        "spent_calls": 1
+      },
+      "notes": {}
+    },
+    {
+      "ts": "2026-06-28T08:32:17.078+00:00",
+      "kind": "skill_start",
+      "skill": "retrieve_dense",
+      "skill_version": "1.0.0",
+      "duration_ms": null,
+      "output": null,
+      "error": null,
+      "budget_snapshot": {
+        "max_llm_tokens": 100000,
+        "max_wall_seconds": 90.0,
+        "max_usd_equivalent": 0.5,
+        "max_skill_calls": 12,
+        "spent_tokens": 0,
+        "spent_seconds": 0.0,
+        "spent_usd": 0.0,
+        "spent_calls": 1
+      },
+      "notes": {}
+    },
+    {
+      "ts": "2026-06-28T08:32:17.078+00:00",
+      "kind": "skill_end",
+      "skill": "retrieve_dense",
+      "skill_version": "1.0.0",
+      "duration_ms": 0.01,
+      "output": {
+        "skill": "retrieve_dense",
+        "skill_version": "1.0.0",
+        "triage_score": 0.4860715837707718,
+        "triage_decision": "noise",
+        "matched_issue_ids": [
+          "shadow-2026-06-09-otel-demo-v1-kafka-r01-otel-demo-kafka-consumer-lag-major-20260611T104823Z",
+          "shadow-2026-06-09-otel-demo-v1-kafka-r01-otel-demo-kafka-broker-outage-critical-20260611T103246Z",
+          "shadow-2026-06-09-otel-demo-v1-l1-compact-r02-otel-demo-third-party-image-slow-minor-20260611T023141Z",
+          "shadow-2026-06-09-otel-demo-v1-l1-compact-r03-otel-demo-payment-failure-50pct-major-20260611T034733Z",
+          "shadow-2026-06-09-otel-demo-v1-l1-compact-r02-otel-demo-payment-failure-50pct-major-20260610T203240Z"
+        ],
+        "is_novel": null,
+        "confidence": 0.4860715837707718,
+        "evidence_used": [
+          "MEMORY_TEXT",
+          "TEXT_EVIDENCE"
+        ],
+        "cost": {
+          "llm_tokens": 0,
+          "wall_seconds": 0.0,
+          "usd": 0.0,
+          "n_calls": 1
+        },
+        "extra": {
+          "gold_label": "ticket_worthy",
+          "gold_is_novel": false,
+          "gold_matched_issue_ids": [
+            "shadow-2026-06-09-otel-demo-v1-kafka-r01-otel-demo-kafka-broker-outage-critical-20260611T103246Z",
+            "shadow-2026-06-09-otel-demo-v1-kafka-r01-otel-demo-kafka-consumer-lag-major-20260611T104823Z"
+          ],
+          "scenario_family": "kafka-broker-outage",
+          "service_name": "accounting",
+          "window_type": "active_fault",
+          "is_hard_case": false,
+          "triage_reason_class": "outage"
+        }
+      },
+      "error": null,
+      "budget_snapshot": {
+        "max_llm_tokens": 100000,
+        "max_wall_seconds": 90.0,
+        "max_usd_equivalent": 0.5,
+        "max_skill_calls": 12,
+        "spent_tokens": 0,
+        "spent_seconds": 0.0,
+        "spent_usd": 0.0,
+        "spent_calls": 2
+      },
+      "notes": {}
+    },
+    {
+      "ts": "2026-06-28T08:32:17.078+00:00",
+      "kind": "skill_skipped_by_gate",
+      "skill": "retrieve_hybrid_fusion",
+      "skill_version": "1.0.0",
+      "duration_ms": null,
+      "output": null,
+      "error": null,
+      "budget_snapshot": null,
+      "notes": {
+        "reason": "gate_closed"
+      }
+    },
+    {
+      "ts": "2026-06-28T08:32:17.078+00:00",
+      "kind": "skill_start",
+      "skill": "compose_l2",
+      "skill_version": "1.0.0",
+      "duration_ms": null,
+      "output": null,
+      "error": null,
+      "budget_snapshot": {
+        "max_llm_tokens": 100000,
+        "max_wall_seconds": 90.0,
+        "max_usd_equivalent": 0.5,
+        "max_skill_calls": 12,
+        "spent_tokens": 0,
+        "spent_seconds": 0.0,
+        "spent_usd": 0.0,
+        "spent_calls": 2
+      },
+      "notes": {}
+    },
+    {
+      "ts": "2026-06-28T08:32:17.078+00:00",
+      "kind": "skill_end",
+      "skill": "compose_l2",
+      "skill_version": "1.0.0",
+      "duration_ms": 0.018,
+      "output": {
+        "skill": "compose_l2",
+        "skill_version": "1.0.0",
+        "triage_score": null,
+        "triage_decision": null,
+        "matched_issue_ids": [
+          "shadow-2026-06-09-otel-demo-v1-kafka-r01-otel-demo-kafka-consumer-lag-major-20260611T104823Z",
+          "shadow-2026-06-09-otel-demo-v1-kafka-r01-otel-demo-kafka-broker-outage-critical-20260611T103246Z",
+          "shadow-2026-06-09-otel-demo-v1-l1-compact-r02-otel-demo-third-party-image-slow-minor-20260611T023141Z",
+          "shadow-2026-06-09-otel-demo-v1-l1-compact-r03-otel-demo-payment-failure-50pct-major-20260611T034733Z",
+          "shadow-2026-06-09-otel-demo-v1-l1-compact-r02-otel-demo-payment-failure-50pct-major-20260610T203240Z"
+        ],
+        "is_novel": null,
+        "confidence": 1.0,
+        "evidence_used": [
+          "retrieve_dense"
+        ],
+        "cost": {
+          "llm_tokens": 0,
+          "wall_seconds": 0.001,
+          "usd": 0.0,
+          "n_calls": 1
+        },
+        "extra": {
+          "anchor_skill": "retrieve_dense",
+          "n_retrievers_seen": 1,
+          "rrf_k": 60.0
+        }
+      },
+      "error": null,
+      "budget_snapshot": {
+        "max_llm_tokens": 100000,
+        "max_wall_seconds": 90.0,
+        "max_usd_equivalent": 0.5,
+        "max_skill_calls": 12,
+        "spent_tokens": 0,
+        "spent_seconds": 0.001,
+        "spent_usd": 0.0,
+        "spent_calls": 3
+      },
+      "notes": {}
+    },
+    {
+      "ts": "2026-06-28T08:32:17.078+00:00",
+      "kind": "skill_start",
+      "skill": "reformulate_query",
+      "skill_version": "1.0.0",
+      "duration_ms": null,
+      "output": null,
+      "error": null,
+      "budget_snapshot": {
+        "max_llm_tokens": 100000,
+        "max_wall_seconds": 90.0,
+        "max_usd_equivalent": 0.5,
+        "max_skill_calls": 12,
+        "spent_tokens": 0,
+        "spent_seconds": 0.001,
+        "spent_usd": 0.0,
+        "spent_calls": 3
+      },
+      "notes": {}
+    },
+    {
+      "ts": "2026-06-28T08:32:17.078+00:00",
+      "kind": "skill_end",
+      "skill": "reformulate_query",
+      "skill_version": "1.0.0",
+      "duration_ms": 0.032,
+      "output": {
+        "skill": "reformulate_query",
+        "skill_version": "1.0.0",
+        "triage_score": null,
+        "triage_decision": null,
+        "matched_issue_ids": [],
+        "is_novel": null,
+        "confidence": 1.0,
+        "evidence_used": [
+          "TEXT_EVIDENCE"
+        ],
+        "cost": {
+          "llm_tokens": 0,
+          "wall_seconds": 0.0001,
+          "usd": 0.0,
+          "n_calls": 1
+        },
+        "extra": {
+          "reformulated_query": "SERVICE accounting TRACES total_spans=2583 error_spans=23 p50_ms=4.0 p95_ms=50.5 root=user_browse_product count=48 root=user_add_to_cart count=33 root=POST count=21 root=image-provider count=18 root=user_get_ads count=15",
+          "original_query": "SERVICE accounting\nTRACES total_spans=2583 error_spans=23 p50_ms=4.0 p95_ms=50.5\n  root=user_browse_product count=48\n  root=user_add_to_cart count=33\n  root=POST count=21\n  root=image-provider count=18\n  root=user_get_ads count=15",
+          "action_applied": {
+            "action": "drop_token",
+            "argument": "error",
+            "reason": "stub_drop_generic_token"
+          },
+          "retry_count": 1,
+          "n_previous_matches": 5
+        }
+      },
+      "error": null,
+      "budget_snapshot": {
+        "max_llm_tokens": 100000,
+        "max_wall_seconds": 90.0,
+        "max_usd_equivalent": 0.5,
+        "max_skill_calls": 12,
+        "spent_tokens": 0,
+        "spent_seconds": 0.0011,
+        "spent_usd": 0.0,
+        "spent_calls": 4
+      },
+      "notes": {}
+    },
+    {
+      "ts": "2026-06-28T08:32:17.078+00:00",
+      "kind": "skill_start",
+      "skill": "request_pod_events",
+      "skill_version": "1.0.0",
+      "duration_ms": null,
+      "output": null,
+      "error": null,
+      "budget_snapshot": {
+        "max_llm_tokens": 100000,
+        "max_wall_seconds": 90.0,
+        "max_usd_equivalent": 0.5,
+        "max_skill_calls": 12,
+        "spent_tokens": 0,
+        "spent_seconds": 0.0011,
+        "spent_usd": 0.0,
+        "spent_calls": 4
+      },
+      "notes": {}
+    },
+    {
+      "ts": "2026-06-28T08:32:17.080+00:00",
+      "kind": "skill_end",
+      "skill": "request_pod_events",
+      "skill_version": "1.0.0",
+      "duration_ms": 1.757,
+      "output": {
+        "skill": "request_pod_events",
+        "skill_version": "1.0.0",
+        "triage_score": null,
+        "triage_decision": null,
+        "matched_issue_ids": [],
+        "is_novel": null,
+        "confidence": 0.0,
+        "evidence_used": [
+          "request_pod_events"
+        ],
+        "cost": {
+          "llm_tokens": 0,
+          "wall_seconds": 0.0016449799877591431,
+          "usd": 0.0,
+          "n_calls": 1
+        },
+        "extra": {
+          "tool_result": {
+            "tool_name": "request_pod_events",
+            "args": {
+              "window_id": "2026-06-09-otel-demo-v1-kafka-r02-otel-demo-kafka-broker-outage-critical-20260611T113950Z-active_fault-accounting"
+            },
+            "result": {
+              "events": [
+                {
+                  "timestamp": "2026-06-11T11:49:51Z",
+                  "type": "Normal",
+                  "reason": "Created",
+                  "message": "Container created",
+                  "pod": "kafka-66df8bdf76-72bhh",
+                  "kind": "Pod",
+                  "count": 1
+                },
+                {
+                  "timestamp": "2026-06-11T11:49:51Z",
+                  "type": "Normal",
+                  "reason": "Started",
+                  "message": "Container started",
+                  "pod": "kafka-66df8bdf76-72bhh",
+                  "kind": "Pod",
+                  "count": 1
+                },
+                {
+                  "timestamp": "2026-06-11T11:49:50Z",
+                  "type": "Normal",
+                  "reason": "Scheduled",
+                  "message": "Successfully assigned otel-demo-research/kafka-66df8bdf76-72bhh to jira-telemetry-lab-worker",
+                  "pod": "kafka-66df8bdf76-72bhh",
+                  "kind": "Pod",
+                  "count": 1
+                },
+                {
+                  "timestamp": "2026-06-11T11:49:50Z",
+                  "type": "Normal",
+                  "reason": "Pulled",
+                  "message": "Container image \"ghcr.io/open-telemetry/demo:2.2.0-kafka\" already present on machine and can be accessed by the pod",
+                  "pod": "kafka-66df8bdf76-72bhh",
+                  "kind": "Pod",
+                  "count": 1
+                },
+                {
+                  "timestamp": "2026-06-11T11:49:50Z",
+                  "type": "Normal",
+                  "reason": "SuccessfulCreate",
+                  "message": "Created pod: kafka-66df8bdf76-72bhh",
+                  "pod": "kafka-66df8bdf76",
+                  "kind": "ReplicaSet",
+                  "count": 1
+                },
+                {
+                  "timestamp": "2026-06-11T11:49:50Z",
+                  "type": "Normal",
+                  "reason": "ScalingReplicaSet",
+                  "message": "Scaled up replica set kafka-66df8bdf76 from 0 to 1",
+                  "pod": "kafka",
+                  "kind": "Deployment",
+                  "count": 2
+                },
+                {
+                  "timestamp": "2026-06-11T11:39:50Z",
+                  "type": "Normal",
+                  "reason": "Killing",
+                  "message": "Stopping container kafka",
+                  "pod": "kafka-66df8bdf76-gtlrs",
+                  "kind": "Pod",
+                  "count": 1
+                },
+                {
+                  "timestamp": "2026-06-11T11:39:50Z",
+                  "type": "Normal",
+                  "reason": "SuccessfulDelete",
+                  "message": "Deleted pod: kafka-66df8bdf76-gtlrs",
+                  "pod": "kafka-66df8bdf76",
+                  "kind": "ReplicaSet",
+                  "count": 1
+                },
+                {
+                  "timestamp": "2026-06-11T11:39:50Z",
+                  "type": "Normal",
+                  "reason": "ScalingReplicaSet",
+                  "message": "Scaled down replica set kafka-66df8bdf76 from 1 to 0",
+                  "pod": "kafka",
+                  "kind": "Deployment",
+                  "count": 2
+                },
+                {
+                  "timestamp": "2026-06-11T11:18:23Z",
+                  "type": "Normal",
+                  "reason": "Pulled",
+                  "message": "Container image \"ghcr.io/open-telemetry/demo:2.2.0-kafka\" already present on machine and can be accessed by the pod",
+                  "pod": "kafka-66df8bdf76-gtlrs",
+                  "kind": "Pod",
+                  "count": 1
+                },
+                {
+                  "timestamp": "2026-06-11T11:18:23Z",
+                  "type": "Normal",
+                  "reason": "Created",
+                  "message": "Container created",
+                  "pod": "kafka-66df8bdf76-gtlrs",
+                  "kind": "Pod",
+                  "count": 1
+                },
+                {
+                  "timestamp": "2026-06-11T11:18:23Z",
+                  "type": "Normal",
+                  "reason": "Started",
+                  "message": "Container started",
+                  "pod": "kafka-66df8bdf76-gtlrs",
+                  "kind": "Pod",
+                  "count": 1
+                },
+                {
+                  "timestamp": "2026-06-11T11:18:22Z",
+                  "type": "Normal",
+                  "reason": "Killing",
+                  "message": "Stopping container kafka",
+                  "pod": "kafka-66df8bdf76-7s7nw",
+                  "kind": "Pod",
+                  "count": 1
+                },
+                {
+                  "timestamp": "2026-06-11T11:18:22Z",
+                  "type": "Normal",
+                  "reason": "Scheduled",
+                  "message": "Successfully assigned otel-demo-research/kafka-66df8bdf76-gtlrs to jira-telemetry-lab-worker",
+                  "pod": "kafka-66df8bdf76-gtlrs",
+                  "kind": "Pod",
+                  "count": 1
+                },
+                {
+                  "timestamp": "2026-06-11T11:18:22Z",
+                  "type": "Normal",
+                  "reason": "SuccessfulCreate",
+                  "message": "Created pod: kafka-66df8bdf76-gtlrs",
+                  "pod": "kafka-66df8bdf76",
+                  "kind": "ReplicaSet",
+                  "count": 1
+                },
+                {
+                  "timestamp": "2026-06-11T11:13:48Z",
+                  "type": "Normal",
+                  "reason": "Pulled",
+                  "message": "Container image \"ghcr.io/open-telemetry/demo:2.2.0-fraud-detection\" already present on machine and can be accessed by the pod",
+                  "pod": "fraud-detection-7b5657fc77-vbvh6",
+                  "kind": "Pod",
+                  "count": 1
+                },
+                {
+                  "timestamp": "2026-06-11T11:13:48Z",
+                  "type": "Normal",
+                  "reason": "Created",
+                  "message": "Container created",
+                  "pod": "fraud-detection-7b5657fc77-vbvh6",
+                  "kind": "Pod",
+                  "count": 1
+                },
+                {
+                  "timestamp": "2026-06-11T11:13:48Z",
+                  "type": "Normal",
+                  "reason": "Started",
+                  "message": "Container started",
+                  "pod": "fraud-detection-7b5657fc77-vbvh6",
+                  "kind": "Pod",
+                  "count": 1
+                },
+                {
+                  "timestamp": "2026-06-11T11:13:47Z",
+                  "type": "Normal",
+                  "reason": "Pulled",
+                  "message": "Successfully pulled image \"busybox:latest\" in 315ms (316ms including waiting). Image size: 2236931 bytes.",
+                  "pod": "fraud-detection-7b5657fc77-vbvh6",
+                  "kind": "Pod",
+                  "count": 1
+                },
+                {
+                  "timestamp": "2026-06-11T11:13:47Z",
+                  "type": "Normal",
+                  "reason": "Created",
+                  "message": "Container created",
+                  "pod": "fraud-detection-7b5657fc77-vbvh6",
+                  "kind": "Pod",
+                  "count": 1
+                },
+                {
+                  "timestamp": "2026-06-11T11:13:47Z",
+                  "type": "Normal",
+                  "reason": "Started",
+                  "message": "Container started",
+                  "pod": "fraud-detection-7b5657fc77-vbvh6",
+                  "kind": "Pod",
+                  "count": 1
+                },
+                {
+                  "timestamp": "2026-06-11T11:13:46Z",
+                  "type": "Normal",
+                  "reason": "Scheduled",
+                  "message": "Successfully assigned otel-demo-research/fraud-detection-7b5657fc77-vbvh6 to jira-telemetry-lab-worker",
+                  "pod": "fraud-detection-7b5657fc77-vbvh6",
+                  "kind": "Pod",
+                  "count": 1
+                },
+                {
+                  "timestamp": "2026-06-11T11:13:46Z",
+                  "type": "Normal",
+                  "reason": "Pulling",
+                  "message": "Pulling image \"busybox:latest\"",
+                  "pod": "fraud-detection-7b5657fc77-vbvh6",
+                  "kind": "Pod",
+                  "count": 1
+                },
+                {
+                  "timestamp": "2026-06-11T11:13:46Z",
+                  "type": "Normal",
+                  "reason": "SuccessfulCreate",
+                  "message": "Created pod: fraud-detection-7b5657fc77-vbvh6",
+                  "pod": "fraud-detection-7b5657fc77",
+                  "kind": "ReplicaSet",
+                  "count": 1
+                },
+                {
+                  "timestamp": "2026-06-11T11:13:46Z",
+                  "type": "Normal",
+                  "reason": "ScalingReplicaSet",
+                  "message": "Scaled up replica set fraud-detection-7b5657fc77 from 0 to 1",
+                  "pod": "fraud-detection",
+                  "kind": "Deployment",
+                  "count": 1
+                },
+                {
+                  "timestamp": "2026-06-11T11:11:03Z",
+                  "type": "Normal",
+                  "reason": "Started",
+                  "message": "Container started",
+                  "pod": "accounting-cd665bc67-l9cn2",
+                  "kind": "Pod",
+                  "count": 27
+                },
+                {
+                  "timestamp": "2026-06-11T11:11:02Z",
+                  "type": "Normal",
+                  "reason": "Pulled",
+                  "message": "Container image \"ghcr.io/open-telemetry/demo:2.2.0-accounting\" already present on machine and can be accessed by the pod",
+                  "pod": "accounting-cd665bc67-l9cn2",
+                  "kind": "Pod",
+                  "count": 27
+                },
+                {
+                  "timestamp": "2026-06-11T11:11:02Z",
+                  "type": "Normal",
+                  "reason": "Created",
+                  "message": "Container created",
+                  "pod": "accounting-cd665bc67-l9cn2",
+                  "kind": "Pod",
+                  "count": 27
+                },
+                {
+                  "timestamp": "2026-06-11T11:03:46Z",
+                  "type": "Normal",
+                  "reason": "Killing",
+                  "message": "Stopping container fraud-detection",
+                  "pod": "fraud-detection-7b5657fc77-gl48k",
+                  "kind": "Pod",
+                  "count": 1
+                },
+                {
+                  "timestamp": "2026-06-11T11:03:46Z",
+                  "type": "Normal",
+                  "reason": "SuccessfulDelete",
+                  "message": "Deleted pod: fraud-detection-7b5657fc77-gl48k",
+                  "pod": "fraud-detection-7b5657fc77",
+                  "kind": "ReplicaSet",
+                  "count": 1
+                },
+                {
+                  "timestamp": "2026-06-11T11:03:46Z",
+                  "type": "Normal",
+                  "reason": "ScalingReplicaSet",
+                  "message": "Scaled down replica set fraud-detection-7b5657fc77 from 1 to 0",
+                  "pod": "fraud-detection",
+                  "kind": "Deployment",
+                  "count": 1
+                }
+              ],
+              "n_events": 31,
+              "source_path": "data\\otel-demo-runs\\2026-06-09-otel-demo-v1-kafka-r02\\raw\\kubernetes\\2026-06-09-otel-demo-v1-kafka-r02-otel-demo-kafka-broker-outage-critical-20260611T113950Z-active_fault-accounting.json",
+              "window": {
+                "start_time": "2026-06-11T11:39:50.0000000+00:00",
+                "end_time": "2026-06-11T11:49:51.0000000+00:00",
+                "padded_start_time": "2026-06-11T11:34:50.0000000+00:00",
+                "padded_end_time": "2026-06-11T11:54:51.0000000+00:00"
+              },
+              "service_name": "accounting",
+              "warning_count": 0
+            },
+            "cost_actual_ms": 1.6449799877591431,
+            "bytes_returned": 7021,
+            "cache_hit": true,
+            "error": null,
+            "failure_mode": "tool_returned_empty"
+          },
+          "is_useful": false,
+          "failure_mode": "tool_returned_empty"
+        }
+      },
+      "error": null,
+      "budget_snapshot": {
+        "max_llm_tokens": 100000,
+        "max_wall_seconds": 90.0,
+        "max_usd_equivalent": 0.5,
+        "max_skill_calls": 12,
+        "spent_tokens": 0,
+        "spent_seconds": 0.0027449799877591434,
+        "spent_usd": 0.0,
+        "spent_calls": 5
+      },
+      "notes": {}
+    },
+    {
+      "ts": "2026-06-28T08:32:17.080+00:00",
+      "kind": "skill_start",
+      "skill": "request_extended_trace_window",
+      "skill_version": "1.0.0",
+      "duration_ms": null,
+      "output": null,
+      "error": null,
+      "budget_snapshot": {
+        "max_llm_tokens": 100000,
+        "max_wall_seconds": 90.0,
+        "max_usd_equivalent": 0.5,
+        "max_skill_calls": 12,
+        "spent_tokens": 0,
+        "spent_seconds": 0.0027449799877591434,
+        "spent_usd": 0.0,
+        "spent_calls": 5
+      },
+      "notes": {}
+    },
+    {
+      "ts": "2026-06-28T08:32:17.081+00:00",
+      "kind": "skill_end",
+      "skill": "request_extended_trace_window",
+      "skill_version": "1.0.0",
+      "duration_ms": 1.459,
+      "output": {
+        "skill": "request_extended_trace_window",
+        "skill_version": "1.0.0",
+        "triage_score": null,
+        "triage_decision": null,
+        "matched_issue_ids": [],
+        "is_novel": null,
+        "confidence": 1.0,
+        "evidence_used": [
+          "request_extended_trace_window"
+        ],
+        "cost": {
+          "llm_tokens": 0,
+          "wall_seconds": 0.0014185110048856586,
+          "usd": 0.0,
+          "n_calls": 1
+        },
+        "extra": {
+          "tool_result": {
+            "tool_name": "request_extended_trace_window",
+            "args": {
+              "window_id": "2026-06-09-otel-demo-v1-kafka-r02-otel-demo-kafka-broker-outage-critical-20260611T113950Z-active_fault-accounting"
+            },
+            "result": {
+              "n_traces": 200,
+              "n_error_traces": 0,
+              "services_seen": [
+                "ad",
+                "cart",
+                "checkout",
+                "currency",
+                "email",
+                "flagd",
+                "fraud-detection",
+                "frontend",
+                "frontend-proxy",
+                "image-provider",
+                "load-generator",
+                "payment",
+                "product-catalog",
+                "product-reviews",
+                "quote",
+                "recommendation",
+                "shipping"
+              ],
+              "error_span_names": [],
+              "source_path": "data\\otel-demo-runs\\2026-06-09-otel-demo-v1-kafka-r02\\raw\\tempo\\2026-06-09-otel-demo-v1-kafka-r02-otel-demo-kafka-broker-outage-critical-20260611T113950Z-active_fault-accounting.json"
+            },
+            "cost_actual_ms": 1.4185110048856586,
+            "bytes_returned": 516,
+            "cache_hit": true,
+            "error": null,
+            "failure_mode": null
+          },
+          "is_useful": true,
+          "failure_mode": null
+        }
+      },
+      "error": null,
+      "budget_snapshot": {
+        "max_llm_tokens": 100000,
+        "max_wall_seconds": 90.0,
+        "max_usd_equivalent": 0.5,
+        "max_skill_calls": 12,
+        "spent_tokens": 0,
+        "spent_seconds": 0.004163490992644802,
+        "spent_usd": 0.0,
+        "spent_calls": 6
+      },
+      "notes": {}
+    },
+    {
+      "ts": "2026-06-28T08:32:17.081+00:00",
+      "kind": "skill_start",
+      "skill": "request_pod_metrics",
+      "skill_version": "1.0.0",
+      "duration_ms": null,
+      "output": null,
+      "error": null,
+      "budget_snapshot": {
+        "max_llm_tokens": 100000,
+        "max_wall_seconds": 90.0,
+        "max_usd_equivalent": 0.5,
+        "max_skill_calls": 12,
+        "spent_tokens": 0,
+        "spent_seconds": 0.004163490992644802,
+        "spent_usd": 0.0,
+        "spent_calls": 6
+      },
+      "notes": {}
+    },
+    {
+      "ts": "2026-06-28T08:32:17.085+00:00",
+      "kind": "skill_end",
+      "skill": "request_pod_metrics",
+      "skill_version": "1.0.0",
+      "duration_ms": 3.26,
+      "output": {
+        "skill": "request_pod_metrics",
+        "skill_version": "1.0.0",
+        "triage_score": null,
+        "triage_decision": null,
+        "matched_issue_ids": [],
+        "is_novel": null,
+        "confidence": 1.0,
+        "evidence_used": [
+          "request_pod_metrics"
+        ],
+        "cost": {
+          "llm_tokens": 0,
+          "wall_seconds": 0.0032178120163735002,
+          "usd": 0.0,
+          "n_calls": 1
+        },
+        "extra": {
+          "tool_result": {
+            "tool_name": "request_pod_metrics",
+            "args": {
+              "window_id": "2026-06-09-otel-demo-v1-kafka-r02-otel-demo-kafka-broker-outage-critical-20260611T113950Z-active_fault-accounting"
+            },
+            "result": {
+              "restart_delta": 0,
+              "restart_total_latest": 88.0,
+              "cpu_max": 14.460421,
+              "cpu_mean": 13.28064531707317,
+              "mem_max": 117235712.0,
+              "mem_mean": 116995946.14634146,
+              "n_alerts_firing": 5,
+              "source_path": "data\\otel-demo-runs\\2026-06-09-otel-demo-v1-kafka-r02\\raw\\prometheus\\2026-06-09-otel-demo-v1-kafka-r02-otel-demo-kafka-broker-outage-critical-20260611T113950Z-active_fault-accounting.json"
+            },
+            "cost_actual_ms": 3.2178120163735002,
+            "bytes_returned": 392,
+            "cache_hit": true,
+            "error": null,
+            "failure_mode": null
+          },
+          "is_useful": true,
+          "failure_mode": null
+        }
+      },
+      "error": null,
+      "budget_snapshot": {
+        "max_llm_tokens": 100000,
+        "max_wall_seconds": 90.0,
+        "max_usd_equivalent": 0.5,
+        "max_skill_calls": 12,
+        "spent_tokens": 0,
+        "spent_seconds": 0.007381303009018302,
+        "spent_usd": 0.0,
+        "spent_calls": 7
+      },
+      "notes": {}
+    },
+    {
+      "ts": "2026-06-28T08:32:17.085+00:00",
+      "kind": "skill_start",
+      "skill": "request_similar_incident_window",
+      "skill_version": "1.0.0",
+      "duration_ms": null,
+      "output": null,
+      "error": null,
+      "budget_snapshot": {
+        "max_llm_tokens": 100000,
+        "max_wall_seconds": 90.0,
+        "max_usd_equivalent": 0.5,
+        "max_skill_calls": 12,
+        "spent_tokens": 0,
+        "spent_seconds": 0.007381303009018302,
+        "spent_usd": 0.0,
+        "spent_calls": 7
+      },
+      "notes": {}
+    },
+    {
+      "ts": "2026-06-28T08:32:17.108+00:00",
+      "kind": "skill_end",
+      "skill": "request_similar_incident_window",
+      "skill_version": "1.0.0",
+      "duration_ms": 23.91,
+      "output": {
+        "skill": "request_similar_incident_window",
+        "skill_version": "1.0.0",
+        "triage_score": null,
+        "triage_decision": null,
+        "matched_issue_ids": [],
+        "is_novel": null,
+        "confidence": 1.0,
+        "evidence_used": [
+          "request_similar_incident_window"
+        ],
+        "cost": {
+          "llm_tokens": 0,
+          "wall_seconds": 0.023849425982916728,
+          "usd": 0.0,
+          "n_calls": 1
+        },
+        "extra": {
+          "tool_result": {
+            "tool_name": "request_similar_incident_window",
+            "args": {
+              "scenario_family": "kafka-broker-outage",
+              "exclude_episode_id": "2026-06-09-otel-demo-v1-kafka-r02-otel-demo-kafka-broker-outage-critical-20260611T113950Z",
+              "global_dir": "data/derived/global/2026-06-09-otel-demo-v1-global",
+              "top_k": 3
+            },
+            "result": {
+              "peers": [
+                {
+                  "issue_id": "shadow-2026-06-09-otel-demo-v1-kafka-r01-otel-demo-kafka-broker-outage-critical-20260611T103246Z",
+                  "episode_id": "2026-06-09-otel-demo-v1-kafka-r01-otel-demo-kafka-broker-outage-critical-20260611T103246Z",
+                  "scenario_family": "kafka-broker-outage",
+                  "memory_text_head": "Summary: [CRITICAL] accounting, checkout, checkoutservice, fraud-detection, frontend, kafka outage during otel-demo-kafka-broker-outage-critical\nComponents: accounting, checkout, checkoutservice, fraud-detection, frontend, kafka\nLabels: customer-impact, incident, p0, production\nDescription: Observed outage on accounting. Investigating root cause.\nComment 1: Picked up by on-call. Looking at recent deploys and dependency health."
+                },
+                {
+                  "issue_id": "shadow-2026-06-09-otel-demo-v1-kafka-r03-otel-demo-kafka-broker-outage-critical-20260611T124700Z",
+                  "episode_id": "2026-06-09-otel-demo-v1-kafka-r03-otel-demo-kafka-broker-outage-critical-20260611T124700Z",
+                  "scenario_family": "kafka-broker-outage",
+                  "memory_text_head": "Summary: [CRITICAL] accounting, checkout, checkoutservice, fraud-detection, frontend, kafka outage during otel-demo-kafka-broker-outage-critical\nComponents: accounting, checkout, checkoutservice, fraud-detection, frontend, kafka\nLabels: customer-impact, incident, p0, production\nDescription: Observed outage on accounting. Investigating root cause.\nComment 1: Picked up by on-call. Looking at recent deploys and dependency health."
+                }
+              ],
+              "n_peers": 2,
+              "scenario_family": "kafka-broker-outage"
+            },
+            "cost_actual_ms": 23.849425982916728,
+            "bytes_returned": 1509,
+            "cache_hit": false,
+            "error": null,
+            "failure_mode": null
+          },
+          "is_useful": true,
+          "failure_mode": null
+        }
+      },
+      "error": null,
+      "budget_snapshot": {
+        "max_llm_tokens": 100000,
+        "max_wall_seconds": 90.0,
+        "max_usd_equivalent": 0.5,
+        "max_skill_calls": 12,
+        "spent_tokens": 0,
+        "spent_seconds": 0.03123072899193503,
+        "spent_usd": 0.0,
+        "spent_calls": 8
+      },
+      "notes": {}
+    },
+    {
+      "ts": "2026-06-28T08:32:17.109+00:00",
+      "kind": "skill_start",
+      "skill": "rerank_with_evidence",
+      "skill_version": "1.0.0",
+      "duration_ms": null,
+      "output": null,
+      "error": null,
+      "budget_snapshot": {
+        "max_llm_tokens": 100000,
+        "max_wall_seconds": 90.0,
+        "max_usd_equivalent": 0.5,
+        "max_skill_calls": 12,
+        "spent_tokens": 0,
+        "spent_seconds": 0.03123072899193503,
+        "spent_usd": 0.0,
+        "spent_calls": 8
+      },
+      "notes": {}
+    },
+    {
+      "ts": "2026-06-28T08:32:17.109+00:00",
+      "kind": "skill_end",
+      "skill": "rerank_with_evidence",
+      "skill_version": "1.0.0",
+      "duration_ms": 0.162,
+      "output": {
+        "skill": "rerank_with_evidence",
+        "skill_version": "1.0.0",
+        "triage_score": null,
+        "triage_decision": null,
+        "matched_issue_ids": [
+          "shadow-2026-06-09-otel-demo-v1-kafka-r01-otel-demo-kafka-consumer-lag-major-20260611T104823Z",
+          "shadow-2026-06-09-otel-demo-v1-kafka-r01-otel-demo-kafka-broker-outage-critical-20260611T103246Z",
+          "shadow-2026-06-09-otel-demo-v1-l1-compact-r02-otel-demo-third-party-image-slow-minor-20260611T023141Z",
+          "shadow-2026-06-09-otel-demo-v1-l1-compact-r03-otel-demo-payment-failure-50pct-major-20260611T034733Z",
+          "shadow-2026-06-09-otel-demo-v1-l1-compact-r02-otel-demo-payment-failure-50pct-major-20260610T203240Z"
+        ],
+        "is_novel": null,
+        "confidence": 1.0,
+        "evidence_used": [
+          "tool_results"
+        ],
+        "cost": {
+          "llm_tokens": 0,
+          "wall_seconds": 6.89999433234334e-06,
+          "usd": 0.0,
+          "n_calls": 0
+        },
+        "extra": {
+          "alpha": 0.4,
+          "n_evidence_tokens": 65,
+          "n_top_k_swaps": 0,
+          "per_candidate_scores": [
+            {
+              "rank_in_l2": 1,
+              "overlap": 0,
+              "overlap_for_score": 0
+            },
+            {
+              "rank_in_l2": 2,
+              "overlap": 0,
+              "overlap_for_score": 0
+            },
+            {
+              "rank_in_l2": 3,
+              "overlap": 0,
+              "overlap_for_score": 0
+            },
+            {
+              "rank_in_l2": 4,
+              "overlap": 0,
+              "overlap_for_score": 0
+            },
+            {
+              "rank_in_l2": 5,
+              "overlap": 0,
+              "overlap_for_score": 0
+            }
+          ]
+        }
+      },
+      "error": null,
+      "budget_snapshot": {
+        "max_llm_tokens": 100000,
+        "max_wall_seconds": 90.0,
+        "max_usd_equivalent": 0.5,
+        "max_skill_calls": 12,
+        "spent_tokens": 0,
+        "spent_seconds": 0.031237628986267373,
+        "spent_usd": 0.0,
+        "spent_calls": 8
+      },
+      "notes": {}
+    },
+    {
+      "ts": "2026-06-28T08:32:17.109+00:00",
+      "kind": "skill_start",
+      "skill": "compose_triage",
+      "skill_version": "1.0.0",
+      "duration_ms": null,
+      "output": null,
+      "error": null,
+      "budget_snapshot": {
+        "max_llm_tokens": 100000,
+        "max_wall_seconds": 90.0,
+        "max_usd_equivalent": 0.5,
+        "max_skill_calls": 12,
+        "spent_tokens": 0,
+        "spent_seconds": 0.031237628986267373,
+        "spent_usd": 0.0,
+        "spent_calls": 8
+      },
+      "notes": {}
+    },
+    {
+      "ts": "2026-06-28T08:32:17.109+00:00",
+      "kind": "skill_end",
+      "skill": "compose_triage",
+      "skill_version": "1.0.0",
+      "duration_ms": 0.02,
+      "output": {
+        "skill": "compose_triage",
+        "skill_version": "1.0.0",
+        "triage_score": 0.9999666614497684,
+        "triage_decision": "ticket_worthy",
+        "matched_issue_ids": [],
+        "is_novel": null,
+        "confidence": 0.9999666614497684,
+        "evidence_used": [
+          "retrieve_dense",
+          "retrieve_hybrid_fusion",
+          "retrieve_hybrid_fusion_llm",
+          "retrieve_knowledge_graph",
+          "retrieve_log_sequence",
+          "triage_numeric"
+        ],
+        "cost": {
+          "llm_tokens": 0,
+          "wall_seconds": 0.0001,
+          "usd": 0.0,
+          "n_calls": 1
+        },
+        "extra": {
+          "mode": "fallback_max",
+          "n_features_present": 2,
+          "threshold": 0.5
+        }
+      },
+      "error": null,
+      "budget_snapshot": {
+        "max_llm_tokens": 100000,
+        "max_wall_seconds": 90.0,
+        "max_usd_equivalent": 0.5,
+        "max_skill_calls": 12,
+        "spent_tokens": 0,
+        "spent_seconds": 0.03133762898626737,
+        "spent_usd": 0.0,
+        "spent_calls": 9
+      },
+      "notes": {}
+    },
+    {
+      "ts": "2026-06-28T08:32:17.109+00:00",
+      "kind": "skill_start",
+      "skill": "compose_novelty",
+      "skill_version": "1.0.0",
+      "duration_ms": null,
+      "output": null,
+      "error": null,
+      "budget_snapshot": {
+        "max_llm_tokens": 100000,
+        "max_wall_seconds": 90.0,
+        "max_usd_equivalent": 0.5,
+        "max_skill_calls": 12,
+        "spent_tokens": 0,
+        "spent_seconds": 0.03133762898626737,
+        "spent_usd": 0.0,
+        "spent_calls": 9
+      },
+      "notes": {}
+    },
+    {
+      "ts": "2026-06-28T08:32:17.109+00:00",
+      "kind": "skill_end",
+      "skill": "compose_novelty",
+      "skill_version": "1.0.0",
+      "duration_ms": 0.011,
+      "output": {
+        "skill": "compose_novelty",
+        "skill_version": "1.0.0",
+        "triage_score": null,
+        "triage_decision": null,
+        "matched_issue_ids": [],
+        "is_novel": true,
+        "confidence": 1.0,
+        "evidence_used": [],
+        "cost": {
+          "llm_tokens": 0,
+          "wall_seconds": 0.0001,
+          "usd": 0.0,
+          "n_calls": 1
+        },
+        "extra": {
+          "agent_novel": false,
+          "free_signal": true,
+          "free_signal_max_conf": 0.4860715837707718,
+          "learned_signal": false,
+          "learned_novelty_prob": 0.0
+        }
+      },
+      "error": null,
+      "budget_snapshot": {
+        "max_llm_tokens": 100000,
+        "max_wall_seconds": 90.0,
+        "max_usd_equivalent": 0.5,
+        "max_skill_calls": 12,
+        "spent_tokens": 0,
+        "spent_seconds": 0.031437628986267376,
+        "spent_usd": 0.0,
+        "spent_calls": 10
+      },
+      "notes": {}
+    },
+    {
+      "ts": "2026-06-28T08:32:17.109+00:00",
+      "kind": "plan_end",
+      "skill": null,
+      "skill_version": null,
+      "duration_ms": null,
+      "output": null,
+      "error": null,
+      "budget_snapshot": {
+        "max_llm_tokens": 100000,
+        "max_wall_seconds": 90.0,
+        "max_usd_equivalent": 0.5,
+        "max_skill_calls": 12,
+        "spent_tokens": 0,
+        "spent_seconds": 0.031437628986267376,
+        "spent_usd": 0.0,
+        "spent_calls": 10
+      },
+      "notes": {
+        "aborted": false,
+        "n_skill_calls": 11,
+        "had_error": false
+      }
+    }
+  ],
+  "final_decision": {
+    "bundle_id": "2026-06-09-otel-demo-v1-kafka-r02-otel-demo-kafka-broker-outage-critical-20260611T113950Z-active_fault-accounting",
+    "triage_decision": "ticket_worthy",
+    "triage_score": 0.9999666614497684,
+    "matched_issue_ids": [
+      "shadow-2026-06-09-otel-demo-v1-kafka-r01-otel-demo-kafka-consumer-lag-major-20260611T104823Z",
+      "shadow-2026-06-09-otel-demo-v1-kafka-r01-otel-demo-kafka-broker-outage-critical-20260611T103246Z",
+      "shadow-2026-06-09-otel-demo-v1-l1-compact-r02-otel-demo-third-party-image-slow-minor-20260611T023141Z",
+      "shadow-2026-06-09-otel-demo-v1-l1-compact-r03-otel-demo-payment-failure-50pct-major-20260611T034733Z",
+      "shadow-2026-06-09-otel-demo-v1-l1-compact-r02-otel-demo-payment-failure-50pct-major-20260610T203240Z"
+    ],
+    "is_novel": true,
+    "confidence": 0.9999666614497684,
+    "evaluation_mode": "telemetry_diagnosis",
+    "plan_id": "plan_34246ccf6299",
+    "skills_invoked": [
+      "triage_numeric",
+      "retrieve_dense",
+      "compose_l2",
+      "reformulate_query",
+      "request_pod_events",
+      "request_extended_trace_window",
+      "request_pod_metrics",
+      "request_similar_incident_window",
+      "rerank_with_evidence",
+      "compose_triage",
+      "compose_novelty"
+    ],
+    "cost": {
+      "llm_tokens": 0,
+      "wall_seconds": 0.031437628986267376,
+      "usd": 0.0,
+      "n_calls": 10
+    },
+    "trace_path": "paper-results/agent-end-to-end/otel-demo/traces/fulltest-2026-06-09-otel-demo-v1-global/2026-06-09-otel-demo-v1-kafka-r02-otel-demo-kafka-broker-outage-critical-20260611T113950Z-active_fault-accounting.json",
+    "ts": "2026-06-28T08:32:17.109+00:00"
+  }
+}

@@ -1,0 +1,1086 @@
+{
+  "bundle_id": "2026-06-09-otel-demo-v1-network-r03-otel-demo-compound-saturation-network-latency-20260612T025730Z-active_fault-checkout",
+  "plan_id": "plan_34246ccf6299",
+  "started_at": "2026-06-28T08:32:20.798+00:00",
+  "finished_at": "2026-06-28T08:32:20.840+00:00",
+  "n_events": 25,
+  "events": [
+    {
+      "ts": "2026-06-28T08:32:20.798+00:00",
+      "kind": "plan_start",
+      "skill": null,
+      "skill_version": null,
+      "duration_ms": null,
+      "output": null,
+      "error": null,
+      "budget_snapshot": {
+        "max_llm_tokens": 100000,
+        "max_wall_seconds": 90.0,
+        "max_usd_equivalent": 0.5,
+        "max_skill_calls": 12,
+        "spent_tokens": 0,
+        "spent_seconds": 0.0,
+        "spent_usd": 0.0,
+        "spent_calls": 0
+      },
+      "notes": {
+        "plan_id": "plan_34246ccf6299",
+        "controller": "capability_aware_rule:active_fault",
+        "n_invocations": 12,
+        "dataset": "otel_demo",
+        "ablation": ""
+      }
+    },
+    {
+      "ts": "2026-06-28T08:32:20.798+00:00",
+      "kind": "skill_start",
+      "skill": "triage_numeric",
+      "skill_version": "1.0.0",
+      "duration_ms": null,
+      "output": null,
+      "error": null,
+      "budget_snapshot": {
+        "max_llm_tokens": 100000,
+        "max_wall_seconds": 90.0,
+        "max_usd_equivalent": 0.5,
+        "max_skill_calls": 12,
+        "spent_tokens": 0,
+        "spent_seconds": 0.0,
+        "spent_usd": 0.0,
+        "spent_calls": 0
+      },
+      "notes": {}
+    },
+    {
+      "ts": "2026-06-28T08:32:20.798+00:00",
+      "kind": "skill_end",
+      "skill": "triage_numeric",
+      "skill_version": "1.0.0",
+      "duration_ms": 0.014,
+      "output": {
+        "skill": "triage_numeric",
+        "skill_version": "1.0.0",
+        "triage_score": 0.9999620554135578,
+        "triage_decision": "ticket_worthy",
+        "matched_issue_ids": [],
+        "is_novel": null,
+        "confidence": 0.9999620554135578,
+        "evidence_used": [
+          "NUMERIC_FEATURES"
+        ],
+        "cost": {
+          "llm_tokens": 0,
+          "wall_seconds": 0.0,
+          "usd": 0.0,
+          "n_calls": 1
+        },
+        "extra": {
+          "gold_label": "ticket_worthy",
+          "gold_is_novel": false,
+          "gold_matched_issue_ids": [
+            "shadow-2026-06-09-otel-demo-v1-l1-compact-r01-otel-demo-ad-outage-major-20260609T223359Z",
+            "shadow-2026-06-09-otel-demo-v1-l1-compact-r01-otel-demo-ad-gc-pressure-minor-20260609T230418Z",
+            "shadow-2026-06-09-otel-demo-v1-l1-compact-r02-otel-demo-ad-outage-major-20260610T230050Z",
+            "shadow-2026-06-09-otel-demo-v1-l1-compact-r02-otel-demo-ad-gc-pressure-minor-20260610T233025Z",
+            "shadow-2026-06-09-otel-demo-v1-l1-compact-r03-otel-demo-ad-outage-major-20260611T061544Z",
+            "shadow-2026-06-09-otel-demo-v1-l1-compact-r03-otel-demo-ad-gc-pressure-minor-20260611T064512Z",
+            "shadow-2026-06-09-otel-demo-v1-network-r01-otel-demo-compound-saturation-network-latency-20260612T002151Z",
+            "shadow-2026-06-09-otel-demo-v1-network-r02-otel-demo-compound-saturation-network-latency-20260612T014017Z"
+          ],
+          "scenario_family": "compound-saturation-network-latency",
+          "service_name": "checkout",
+          "window_type": "active_fault",
+          "is_hard_case": false,
+          "triage_reason_class": "latency_regression"
+        }
+      },
+      "error": null,
+      "budget_snapshot": {
+        "max_llm_tokens": 100000,
+        "max_wall_seconds": 90.0,
+        "max_usd_equivalent": 0.5,
+        "max_skill_calls": 12,
+        "spent_tokens": 0,
+        "spent_seconds": 0.0,
+        "spent_usd": 0.0,
+        "spent_calls": 1
+      },
+      "notes": {}
+    },
+    {
+      "ts": "2026-06-28T08:32:20.798+00:00",
+      "kind": "skill_start",
+      "skill": "retrieve_dense",
+      "skill_version": "1.0.0",
+      "duration_ms": null,
+      "output": null,
+      "error": null,
+      "budget_snapshot": {
+        "max_llm_tokens": 100000,
+        "max_wall_seconds": 90.0,
+        "max_usd_equivalent": 0.5,
+        "max_skill_calls": 12,
+        "spent_tokens": 0,
+        "spent_seconds": 0.0,
+        "spent_usd": 0.0,
+        "spent_calls": 1
+      },
+      "notes": {}
+    },
+    {
+      "ts": "2026-06-28T08:32:20.798+00:00",
+      "kind": "skill_end",
+      "skill": "retrieve_dense",
+      "skill_version": "1.0.0",
+      "duration_ms": 0.012,
+      "output": {
+        "skill": "retrieve_dense",
+        "skill_version": "1.0.0",
+        "triage_score": 0.4955185099367438,
+        "triage_decision": "noise",
+        "matched_issue_ids": [
+          "shadow-2026-06-09-otel-demo-v1-l1-compact-r01-otel-demo-payment-failure-100pct-critical-20260609T194936Z",
+          "shadow-2026-06-09-otel-demo-v1-network-r01-otel-demo-network-latency-major-20260611T232040Z",
+          "shadow-2026-06-09-otel-demo-v1-network-r01-otel-demo-dns-outage-critical-20260612T000700Z",
+          "shadow-2026-06-09-otel-demo-v1-network-r02-otel-demo-network-latency-major-20260612T003913Z",
+          "shadow-2026-06-09-otel-demo-v1-multifault-r04-otel-demo-cascade-kafka-broker-checkout-20260611T221806Z"
+        ],
+        "is_novel": null,
+        "confidence": 0.4955185099367438,
+        "evidence_used": [
+          "MEMORY_TEXT",
+          "TEXT_EVIDENCE"
+        ],
+        "cost": {
+          "llm_tokens": 0,
+          "wall_seconds": 0.0,
+          "usd": 0.0,
+          "n_calls": 1
+        },
+        "extra": {
+          "gold_label": "ticket_worthy",
+          "gold_is_novel": false,
+          "gold_matched_issue_ids": [
+            "shadow-2026-06-09-otel-demo-v1-l1-compact-r01-otel-demo-ad-outage-major-20260609T223359Z",
+            "shadow-2026-06-09-otel-demo-v1-l1-compact-r01-otel-demo-ad-gc-pressure-minor-20260609T230418Z",
+            "shadow-2026-06-09-otel-demo-v1-l1-compact-r02-otel-demo-ad-outage-major-20260610T230050Z",
+            "shadow-2026-06-09-otel-demo-v1-l1-compact-r02-otel-demo-ad-gc-pressure-minor-20260610T233025Z",
+            "shadow-2026-06-09-otel-demo-v1-l1-compact-r03-otel-demo-ad-outage-major-20260611T061544Z",
+            "shadow-2026-06-09-otel-demo-v1-l1-compact-r03-otel-demo-ad-gc-pressure-minor-20260611T064512Z",
+            "shadow-2026-06-09-otel-demo-v1-network-r01-otel-demo-compound-saturation-network-latency-20260612T002151Z",
+            "shadow-2026-06-09-otel-demo-v1-network-r02-otel-demo-compound-saturation-network-latency-20260612T014017Z"
+          ],
+          "scenario_family": "compound-saturation-network-latency",
+          "service_name": "checkout",
+          "window_type": "active_fault",
+          "is_hard_case": false,
+          "triage_reason_class": "latency_regression"
+        }
+      },
+      "error": null,
+      "budget_snapshot": {
+        "max_llm_tokens": 100000,
+        "max_wall_seconds": 90.0,
+        "max_usd_equivalent": 0.5,
+        "max_skill_calls": 12,
+        "spent_tokens": 0,
+        "spent_seconds": 0.0,
+        "spent_usd": 0.0,
+        "spent_calls": 2
+      },
+      "notes": {}
+    },
+    {
+      "ts": "2026-06-28T08:32:20.798+00:00",
+      "kind": "skill_skipped_by_gate",
+      "skill": "retrieve_hybrid_fusion",
+      "skill_version": "1.0.0",
+      "duration_ms": null,
+      "output": null,
+      "error": null,
+      "budget_snapshot": null,
+      "notes": {
+        "reason": "gate_closed"
+      }
+    },
+    {
+      "ts": "2026-06-28T08:32:20.798+00:00",
+      "kind": "skill_start",
+      "skill": "compose_l2",
+      "skill_version": "1.0.0",
+      "duration_ms": null,
+      "output": null,
+      "error": null,
+      "budget_snapshot": {
+        "max_llm_tokens": 100000,
+        "max_wall_seconds": 90.0,
+        "max_usd_equivalent": 0.5,
+        "max_skill_calls": 12,
+        "spent_tokens": 0,
+        "spent_seconds": 0.0,
+        "spent_usd": 0.0,
+        "spent_calls": 2
+      },
+      "notes": {}
+    },
+    {
+      "ts": "2026-06-28T08:32:20.798+00:00",
+      "kind": "skill_end",
+      "skill": "compose_l2",
+      "skill_version": "1.0.0",
+      "duration_ms": 0.023,
+      "output": {
+        "skill": "compose_l2",
+        "skill_version": "1.0.0",
+        "triage_score": null,
+        "triage_decision": null,
+        "matched_issue_ids": [
+          "shadow-2026-06-09-otel-demo-v1-l1-compact-r01-otel-demo-payment-failure-100pct-critical-20260609T194936Z",
+          "shadow-2026-06-09-otel-demo-v1-network-r01-otel-demo-network-latency-major-20260611T232040Z",
+          "shadow-2026-06-09-otel-demo-v1-network-r01-otel-demo-dns-outage-critical-20260612T000700Z",
+          "shadow-2026-06-09-otel-demo-v1-network-r02-otel-demo-network-latency-major-20260612T003913Z",
+          "shadow-2026-06-09-otel-demo-v1-multifault-r04-otel-demo-cascade-kafka-broker-checkout-20260611T221806Z"
+        ],
+        "is_novel": null,
+        "confidence": 1.0,
+        "evidence_used": [
+          "retrieve_dense"
+        ],
+        "cost": {
+          "llm_tokens": 0,
+          "wall_seconds": 0.001,
+          "usd": 0.0,
+          "n_calls": 1
+        },
+        "extra": {
+          "anchor_skill": "retrieve_dense",
+          "n_retrievers_seen": 1,
+          "rrf_k": 60.0
+        }
+      },
+      "error": null,
+      "budget_snapshot": {
+        "max_llm_tokens": 100000,
+        "max_wall_seconds": 90.0,
+        "max_usd_equivalent": 0.5,
+        "max_skill_calls": 12,
+        "spent_tokens": 0,
+        "spent_seconds": 0.001,
+        "spent_usd": 0.0,
+        "spent_calls": 3
+      },
+      "notes": {}
+    },
+    {
+      "ts": "2026-06-28T08:32:20.798+00:00",
+      "kind": "skill_start",
+      "skill": "reformulate_query",
+      "skill_version": "1.0.0",
+      "duration_ms": null,
+      "output": null,
+      "error": null,
+      "budget_snapshot": {
+        "max_llm_tokens": 100000,
+        "max_wall_seconds": 90.0,
+        "max_usd_equivalent": 0.5,
+        "max_skill_calls": 12,
+        "spent_tokens": 0,
+        "spent_seconds": 0.001,
+        "spent_usd": 0.0,
+        "spent_calls": 3
+      },
+      "notes": {}
+    },
+    {
+      "ts": "2026-06-28T08:32:20.798+00:00",
+      "kind": "skill_end",
+      "skill": "reformulate_query",
+      "skill_version": "1.0.0",
+      "duration_ms": 0.025,
+      "output": {
+        "skill": "reformulate_query",
+        "skill_version": "1.0.0",
+        "triage_score": null,
+        "triage_decision": null,
+        "matched_issue_ids": [],
+        "is_novel": null,
+        "confidence": 1.0,
+        "evidence_used": [
+          "TEXT_EVIDENCE"
+        ],
+        "cost": {
+          "llm_tokens": 0,
+          "wall_seconds": 0.0001,
+          "usd": 0.0,
+          "n_calls": 1
+        },
+        "extra": {
+          "reformulated_query": "SERVICE checkout TRACES total_spans=2372 error_spans=1 p50_ms=4.2 p95_ms=1237.2 root=user_browse_product count=46 root=user_add_to_cart count=22 root=POST count=21 root=image-provider count=16 root=user_get_recommendations count=15",
+          "original_query": "SERVICE checkout\nTRACES total_spans=2372 error_spans=1 p50_ms=4.2 p95_ms=1237.2\n  root=user_browse_product count=46\n  root=user_add_to_cart count=22\n  root=POST count=21\n  root=image-provider count=16\n  root=user_get_recommendations count=15",
+          "action_applied": {
+            "action": "drop_token",
+            "argument": "error",
+            "reason": "stub_drop_generic_token"
+          },
+          "retry_count": 1,
+          "n_previous_matches": 5
+        }
+      },
+      "error": null,
+      "budget_snapshot": {
+        "max_llm_tokens": 100000,
+        "max_wall_seconds": 90.0,
+        "max_usd_equivalent": 0.5,
+        "max_skill_calls": 12,
+        "spent_tokens": 0,
+        "spent_seconds": 0.0011,
+        "spent_usd": 0.0,
+        "spent_calls": 4
+      },
+      "notes": {}
+    },
+    {
+      "ts": "2026-06-28T08:32:20.798+00:00",
+      "kind": "skill_start",
+      "skill": "request_pod_events",
+      "skill_version": "1.0.0",
+      "duration_ms": null,
+      "output": null,
+      "error": null,
+      "budget_snapshot": {
+        "max_llm_tokens": 100000,
+        "max_wall_seconds": 90.0,
+        "max_usd_equivalent": 0.5,
+        "max_skill_calls": 12,
+        "spent_tokens": 0,
+        "spent_seconds": 0.0011,
+        "spent_usd": 0.0,
+        "spent_calls": 4
+      },
+      "notes": {}
+    },
+    {
+      "ts": "2026-06-28T08:32:20.801+00:00",
+      "kind": "skill_end",
+      "skill": "request_pod_events",
+      "skill_version": "1.0.0",
+      "duration_ms": 3.212,
+      "output": {
+        "skill": "request_pod_events",
+        "skill_version": "1.0.0",
+        "triage_score": null,
+        "triage_decision": null,
+        "matched_issue_ids": [],
+        "is_novel": null,
+        "confidence": 0.0,
+        "evidence_used": [
+          "request_pod_events"
+        ],
+        "cost": {
+          "llm_tokens": 0,
+          "wall_seconds": 0.0031335660023614764,
+          "usd": 0.0,
+          "n_calls": 1
+        },
+        "extra": {
+          "tool_result": {
+            "tool_name": "request_pod_events",
+            "args": {
+              "window_id": "2026-06-09-otel-demo-v1-network-r03-otel-demo-compound-saturation-network-latency-20260612T025730Z-active_fault-checkout"
+            },
+            "result": {
+              "events": [
+                {
+                  "timestamp": "2026-06-12T03:07:39Z",
+                  "type": "Normal",
+                  "reason": "Updated",
+                  "message": "Successfully update ObservedGeneration and FailedMessage of resource",
+                  "pod": "shipping-5f6f679464-nxzq4",
+                  "kind": "PodNetworkChaos",
+                  "count": 1
+                },
+                {
+                  "timestamp": "2026-06-12T02:57:34Z",
+                  "type": "Normal",
+                  "reason": "Updated",
+                  "message": "Successfully update ObservedGeneration and FailedMessage of resource",
+                  "pod": "shipping-5f6f679464-nxzq4",
+                  "kind": "PodNetworkChaos",
+                  "count": 1
+                },
+                {
+                  "timestamp": "2026-06-12T02:57:14Z",
+                  "type": "Normal",
+                  "reason": "Pulled",
+                  "message": "Container image \"ghcr.io/open-telemetry/demo:2.2.0-accounting\" already present on machine and can be accessed by the pod",
+                  "pod": "accounting-cd665bc67-l9cn2",
+                  "kind": "Pod",
+                  "count": 52
+                },
+                {
+                  "timestamp": "2026-06-12T02:57:14Z",
+                  "type": "Normal",
+                  "reason": "Created",
+                  "message": "Container created",
+                  "pod": "accounting-cd665bc67-l9cn2",
+                  "kind": "Pod",
+                  "count": 52
+                },
+                {
+                  "timestamp": "2026-06-12T02:57:14Z",
+                  "type": "Normal",
+                  "reason": "Started",
+                  "message": "Container started",
+                  "pod": "accounting-cd665bc67-l9cn2",
+                  "kind": "Pod",
+                  "count": 52
+                },
+                {
+                  "timestamp": "2026-06-12T02:37:13Z",
+                  "type": "Normal",
+                  "reason": "Updated",
+                  "message": "Successfully update ObservedGeneration and FailedMessage of resource",
+                  "pod": "cart-7c7496d7f-52lcx",
+                  "kind": "PodNetworkChaos",
+                  "count": 1
+                },
+                {
+                  "timestamp": "2026-06-12T02:37:13Z",
+                  "type": "Normal",
+                  "reason": "Updated",
+                  "message": "Successfully update ObservedGeneration and FailedMessage of resource",
+                  "pod": "valkey-cart-5c986c984d-mhtrg",
+                  "kind": "PodNetworkChaos",
+                  "count": 1
+                },
+                {
+                  "timestamp": "2026-06-12T02:27:09Z",
+                  "type": "Normal",
+                  "reason": "Updated",
+                  "message": "Successfully update ObservedGeneration and FailedMessage of resource",
+                  "pod": "valkey-cart-5c986c984d-mhtrg",
+                  "kind": "PodNetworkChaos",
+                  "count": 1
+                },
+                {
+                  "timestamp": "2026-06-12T02:27:08Z",
+                  "type": "Normal",
+                  "reason": "Updated",
+                  "message": "Successfully update ObservedGeneration and FailedMessage of resource",
+                  "pod": "cart-7c7496d7f-52lcx",
+                  "kind": "PodNetworkChaos",
+                  "count": 1
+                },
+                {
+                  "timestamp": "2026-06-12T02:22:29Z",
+                  "type": "Normal",
+                  "reason": "Updated",
+                  "message": "Successfully update ObservedGeneration and FailedMessage of resource",
+                  "pod": "frontend-b78bf7696-lnkqm",
+                  "kind": "PodNetworkChaos",
+                  "count": 1
+                },
+                {
+                  "timestamp": "2026-06-12T02:12:24Z",
+                  "type": "Normal",
+                  "reason": "Updated",
+                  "message": "Successfully update ObservedGeneration and FailedMessage of resource",
+                  "pod": "frontend-b78bf7696-lnkqm",
+                  "kind": "PodNetworkChaos",
+                  "count": 1
+                }
+              ],
+              "n_events": 11,
+              "source_path": "data\\otel-demo-runs\\2026-06-09-otel-demo-v1-network-r03\\raw\\kubernetes\\2026-06-09-otel-demo-v1-network-r03-otel-demo-compound-saturation-network-latency-20260612T025730Z-active_fault-checkout.json",
+              "window": {
+                "start_time": "2026-06-12T02:57:30.0000000+00:00",
+                "end_time": "2026-06-12T03:07:42.0000000+00:00",
+                "padded_start_time": "2026-06-12T02:52:30.0000000+00:00",
+                "padded_end_time": "2026-06-12T03:12:42.0000000+00:00"
+              },
+              "service_name": "checkout",
+              "warning_count": 0
+            },
+            "cost_actual_ms": 3.1335660023614764,
+            "bytes_returned": 3031,
+            "cache_hit": true,
+            "error": null,
+            "failure_mode": "tool_returned_empty"
+          },
+          "is_useful": false,
+          "failure_mode": "tool_returned_empty"
+        }
+      },
+      "error": null,
+      "budget_snapshot": {
+        "max_llm_tokens": 100000,
+        "max_wall_seconds": 90.0,
+        "max_usd_equivalent": 0.5,
+        "max_skill_calls": 12,
+        "spent_tokens": 0,
+        "spent_seconds": 0.004233566002361477,
+        "spent_usd": 0.0,
+        "spent_calls": 5
+      },
+      "notes": {}
+    },
+    {
+      "ts": "2026-06-28T08:32:20.801+00:00",
+      "kind": "skill_start",
+      "skill": "request_extended_trace_window",
+      "skill_version": "1.0.0",
+      "duration_ms": null,
+      "output": null,
+      "error": null,
+      "budget_snapshot": {
+        "max_llm_tokens": 100000,
+        "max_wall_seconds": 90.0,
+        "max_usd_equivalent": 0.5,
+        "max_skill_calls": 12,
+        "spent_tokens": 0,
+        "spent_seconds": 0.004233566002361477,
+        "spent_usd": 0.0,
+        "spent_calls": 5
+      },
+      "notes": {}
+    },
+    {
+      "ts": "2026-06-28T08:32:20.803+00:00",
+      "kind": "skill_end",
+      "skill": "request_extended_trace_window",
+      "skill_version": "1.0.0",
+      "duration_ms": 1.534,
+      "output": {
+        "skill": "request_extended_trace_window",
+        "skill_version": "1.0.0",
+        "triage_score": null,
+        "triage_decision": null,
+        "matched_issue_ids": [],
+        "is_novel": null,
+        "confidence": 1.0,
+        "evidence_used": [
+          "request_extended_trace_window"
+        ],
+        "cost": {
+          "llm_tokens": 0,
+          "wall_seconds": 0.0014919009990990162,
+          "usd": 0.0,
+          "n_calls": 1
+        },
+        "extra": {
+          "tool_result": {
+            "tool_name": "request_extended_trace_window",
+            "args": {
+              "window_id": "2026-06-09-otel-demo-v1-network-r03-otel-demo-compound-saturation-network-latency-20260612T025730Z-active_fault-checkout"
+            },
+            "result": {
+              "n_traces": 200,
+              "n_error_traces": 0,
+              "services_seen": [
+                "accounting",
+                "ad",
+                "cart",
+                "checkout",
+                "currency",
+                "email",
+                "flagd",
+                "fraud-detection",
+                "frontend",
+                "frontend-proxy",
+                "image-provider",
+                "load-generator",
+                "payment",
+                "product-catalog",
+                "product-reviews",
+                "quote",
+                "recommendation",
+                "shipping"
+              ],
+              "error_span_names": [],
+              "source_path": "data\\otel-demo-runs\\2026-06-09-otel-demo-v1-network-r03\\raw\\tempo\\2026-06-09-otel-demo-v1-network-r03-otel-demo-compound-saturation-network-latency-20260612T025730Z-active_fault-checkout.json"
+            },
+            "cost_actual_ms": 1.4919009990990162,
+            "bytes_returned": 539,
+            "cache_hit": true,
+            "error": null,
+            "failure_mode": null
+          },
+          "is_useful": true,
+          "failure_mode": null
+        }
+      },
+      "error": null,
+      "budget_snapshot": {
+        "max_llm_tokens": 100000,
+        "max_wall_seconds": 90.0,
+        "max_usd_equivalent": 0.5,
+        "max_skill_calls": 12,
+        "spent_tokens": 0,
+        "spent_seconds": 0.005725467001460493,
+        "spent_usd": 0.0,
+        "spent_calls": 6
+      },
+      "notes": {}
+    },
+    {
+      "ts": "2026-06-28T08:32:20.803+00:00",
+      "kind": "skill_start",
+      "skill": "request_pod_metrics",
+      "skill_version": "1.0.0",
+      "duration_ms": null,
+      "output": null,
+      "error": null,
+      "budget_snapshot": {
+        "max_llm_tokens": 100000,
+        "max_wall_seconds": 90.0,
+        "max_usd_equivalent": 0.5,
+        "max_skill_calls": 12,
+        "spent_tokens": 0,
+        "spent_seconds": 0.005725467001460493,
+        "spent_usd": 0.0,
+        "spent_calls": 6
+      },
+      "notes": {}
+    },
+    {
+      "ts": "2026-06-28T08:32:20.804+00:00",
+      "kind": "skill_end",
+      "skill": "request_pod_metrics",
+      "skill_version": "1.0.0",
+      "duration_ms": 1.554,
+      "output": {
+        "skill": "request_pod_metrics",
+        "skill_version": "1.0.0",
+        "triage_score": null,
+        "triage_decision": null,
+        "matched_issue_ids": [],
+        "is_novel": null,
+        "confidence": 1.0,
+        "evidence_used": [
+          "request_pod_metrics"
+        ],
+        "cost": {
+          "llm_tokens": 0,
+          "wall_seconds": 0.0015128619852475822,
+          "usd": 0.0,
+          "n_calls": 1
+        },
+        "extra": {
+          "tool_result": {
+            "tool_name": "request_pod_metrics",
+            "args": {
+              "window_id": "2026-06-09-otel-demo-v1-network-r03-otel-demo-compound-saturation-network-latency-20260612T025730Z-active_fault-checkout"
+            },
+            "result": {
+              "restart_delta": 0,
+              "restart_total_latest": 0.0,
+              "cpu_max": 1280.161972,
+              "cpu_mean": 1273.1098555853657,
+              "mem_max": 16281600.0,
+              "mem_mean": 13755566.829268293,
+              "n_alerts_firing": 5,
+              "source_path": "data\\otel-demo-runs\\2026-06-09-otel-demo-v1-network-r03\\raw\\prometheus\\2026-06-09-otel-demo-v1-network-r03-otel-demo-compound-saturation-network-latency-20260612T025730Z-active_fault-checkout.json"
+            },
+            "cost_actual_ms": 1.5128619852475822,
+            "bytes_returned": 402,
+            "cache_hit": true,
+            "error": null,
+            "failure_mode": null
+          },
+          "is_useful": true,
+          "failure_mode": null
+        }
+      },
+      "error": null,
+      "budget_snapshot": {
+        "max_llm_tokens": 100000,
+        "max_wall_seconds": 90.0,
+        "max_usd_equivalent": 0.5,
+        "max_skill_calls": 12,
+        "spent_tokens": 0,
+        "spent_seconds": 0.007238328986708075,
+        "spent_usd": 0.0,
+        "spent_calls": 7
+      },
+      "notes": {}
+    },
+    {
+      "ts": "2026-06-28T08:32:20.804+00:00",
+      "kind": "skill_start",
+      "skill": "request_similar_incident_window",
+      "skill_version": "1.0.0",
+      "duration_ms": null,
+      "output": null,
+      "error": null,
+      "budget_snapshot": {
+        "max_llm_tokens": 100000,
+        "max_wall_seconds": 90.0,
+        "max_usd_equivalent": 0.5,
+        "max_skill_calls": 12,
+        "spent_tokens": 0,
+        "spent_seconds": 0.007238328986708075,
+        "spent_usd": 0.0,
+        "spent_calls": 7
+      },
+      "notes": {}
+    },
+    {
+      "ts": "2026-06-28T08:32:20.828+00:00",
+      "kind": "skill_end",
+      "skill": "request_similar_incident_window",
+      "skill_version": "1.0.0",
+      "duration_ms": 23.933,
+      "output": {
+        "skill": "request_similar_incident_window",
+        "skill_version": "1.0.0",
+        "triage_score": null,
+        "triage_decision": null,
+        "matched_issue_ids": [],
+        "is_novel": null,
+        "confidence": 1.0,
+        "evidence_used": [
+          "request_similar_incident_window"
+        ],
+        "cost": {
+          "llm_tokens": 0,
+          "wall_seconds": 0.02387523400830105,
+          "usd": 0.0,
+          "n_calls": 1
+        },
+        "extra": {
+          "tool_result": {
+            "tool_name": "request_similar_incident_window",
+            "args": {
+              "scenario_family": "compound-saturation-network-latency",
+              "exclude_episode_id": "2026-06-09-otel-demo-v1-network-r03-otel-demo-compound-saturation-network-latency-20260612T025730Z",
+              "global_dir": "data/derived/global/2026-06-09-otel-demo-v1-global",
+              "top_k": 3
+            },
+            "result": {
+              "peers": [
+                {
+                  "issue_id": "shadow-2026-06-09-otel-demo-v1-network-r01-otel-demo-compound-saturation-network-latency-20260612T002151Z",
+                  "episode_id": "2026-06-09-otel-demo-v1-network-r01-otel-demo-compound-saturation-network-latency-20260612T002151Z",
+                  "scenario_family": "compound-saturation-network-latency",
+                  "memory_text_head": "Summary: [CRITICAL] ad, ad+shipping, checkout, checkoutservice, frontend, shipping degradation during otel-demo-compound-saturation-network-latency\nComponents: ad, ad+shipping, checkout, checkoutservice, frontend, shipping\nLabels: customer-impact, incident, p0, production\nDescription: Observed degradation on ad. Investigating root cause.\nComment 1: Picked up by on-call. Looking at recent deploys and dependency health."
+                },
+                {
+                  "issue_id": "shadow-2026-06-09-otel-demo-v1-network-r02-otel-demo-compound-saturation-network-latency-20260612T014017Z",
+                  "episode_id": "2026-06-09-otel-demo-v1-network-r02-otel-demo-compound-saturation-network-latency-20260612T014017Z",
+                  "scenario_family": "compound-saturation-network-latency",
+                  "memory_text_head": "Summary: [CRITICAL] ad, ad+shipping, checkout, checkoutservice, frontend, shipping degradation during otel-demo-compound-saturation-network-latency\nComponents: ad, ad+shipping, checkout, checkoutservice, frontend, shipping\nLabels: customer-impact, incident, p0, production\nDescription: Observed degradation on ad. Investigating root cause.\nComment 1: Picked up by on-call. Looking at recent deploys and dependency health."
+                }
+              ],
+              "n_peers": 2,
+              "scenario_family": "compound-saturation-network-latency"
+            },
+            "cost_actual_ms": 23.87523400830105,
+            "bytes_returned": 1575,
+            "cache_hit": false,
+            "error": null,
+            "failure_mode": null
+          },
+          "is_useful": true,
+          "failure_mode": null
+        }
+      },
+      "error": null,
+      "budget_snapshot": {
+        "max_llm_tokens": 100000,
+        "max_wall_seconds": 90.0,
+        "max_usd_equivalent": 0.5,
+        "max_skill_calls": 12,
+        "spent_tokens": 0,
+        "spent_seconds": 0.031113562995009125,
+        "spent_usd": 0.0,
+        "spent_calls": 8
+      },
+      "notes": {}
+    },
+    {
+      "ts": "2026-06-28T08:32:20.828+00:00",
+      "kind": "skill_start",
+      "skill": "rerank_with_evidence",
+      "skill_version": "1.0.0",
+      "duration_ms": null,
+      "output": null,
+      "error": null,
+      "budget_snapshot": {
+        "max_llm_tokens": 100000,
+        "max_wall_seconds": 90.0,
+        "max_usd_equivalent": 0.5,
+        "max_skill_calls": 12,
+        "spent_tokens": 0,
+        "spent_seconds": 0.031113562995009125,
+        "spent_usd": 0.0,
+        "spent_calls": 8
+      },
+      "notes": {}
+    },
+    {
+      "ts": "2026-06-28T08:32:20.829+00:00",
+      "kind": "skill_end",
+      "skill": "rerank_with_evidence",
+      "skill_version": "1.0.0",
+      "duration_ms": 0.14,
+      "output": {
+        "skill": "rerank_with_evidence",
+        "skill_version": "1.0.0",
+        "triage_score": null,
+        "triage_decision": null,
+        "matched_issue_ids": [
+          "shadow-2026-06-09-otel-demo-v1-l1-compact-r01-otel-demo-payment-failure-100pct-critical-20260609T194936Z",
+          "shadow-2026-06-09-otel-demo-v1-network-r01-otel-demo-network-latency-major-20260611T232040Z",
+          "shadow-2026-06-09-otel-demo-v1-network-r01-otel-demo-dns-outage-critical-20260612T000700Z",
+          "shadow-2026-06-09-otel-demo-v1-network-r02-otel-demo-network-latency-major-20260612T003913Z",
+          "shadow-2026-06-09-otel-demo-v1-multifault-r04-otel-demo-cascade-kafka-broker-checkout-20260611T221806Z"
+        ],
+        "is_novel": null,
+        "confidence": 1.0,
+        "evidence_used": [
+          "tool_results"
+        ],
+        "cost": {
+          "llm_tokens": 0,
+          "wall_seconds": 6.1699829529970884e-06,
+          "usd": 0.0,
+          "n_calls": 0
+        },
+        "extra": {
+          "alpha": 0.4,
+          "n_evidence_tokens": 69,
+          "n_top_k_swaps": 0,
+          "per_candidate_scores": [
+            {
+              "rank_in_l2": 1,
+              "overlap": 0,
+              "overlap_for_score": 0
+            },
+            {
+              "rank_in_l2": 2,
+              "overlap": 0,
+              "overlap_for_score": 0
+            },
+            {
+              "rank_in_l2": 3,
+              "overlap": 0,
+              "overlap_for_score": 0
+            },
+            {
+              "rank_in_l2": 4,
+              "overlap": 0,
+              "overlap_for_score": 0
+            },
+            {
+              "rank_in_l2": 5,
+              "overlap": 0,
+              "overlap_for_score": 0
+            }
+          ]
+        }
+      },
+      "error": null,
+      "budget_snapshot": {
+        "max_llm_tokens": 100000,
+        "max_wall_seconds": 90.0,
+        "max_usd_equivalent": 0.5,
+        "max_skill_calls": 12,
+        "spent_tokens": 0,
+        "spent_seconds": 0.03111973297796212,
+        "spent_usd": 0.0,
+        "spent_calls": 8
+      },
+      "notes": {}
+    },
+    {
+      "ts": "2026-06-28T08:32:20.829+00:00",
+      "kind": "skill_start",
+      "skill": "compose_triage",
+      "skill_version": "1.0.0",
+      "duration_ms": null,
+      "output": null,
+      "error": null,
+      "budget_snapshot": {
+        "max_llm_tokens": 100000,
+        "max_wall_seconds": 90.0,
+        "max_usd_equivalent": 0.5,
+        "max_skill_calls": 12,
+        "spent_tokens": 0,
+        "spent_seconds": 0.03111973297796212,
+        "spent_usd": 0.0,
+        "spent_calls": 8
+      },
+      "notes": {}
+    },
+    {
+      "ts": "2026-06-28T08:32:20.829+00:00",
+      "kind": "skill_end",
+      "skill": "compose_triage",
+      "skill_version": "1.0.0",
+      "duration_ms": 0.018,
+      "output": {
+        "skill": "compose_triage",
+        "skill_version": "1.0.0",
+        "triage_score": 0.9999620554135578,
+        "triage_decision": "ticket_worthy",
+        "matched_issue_ids": [],
+        "is_novel": null,
+        "confidence": 0.9999620554135578,
+        "evidence_used": [
+          "retrieve_dense",
+          "retrieve_hybrid_fusion",
+          "retrieve_hybrid_fusion_llm",
+          "retrieve_knowledge_graph",
+          "retrieve_log_sequence",
+          "triage_numeric"
+        ],
+        "cost": {
+          "llm_tokens": 0,
+          "wall_seconds": 0.0001,
+          "usd": 0.0,
+          "n_calls": 1
+        },
+        "extra": {
+          "mode": "fallback_max",
+          "n_features_present": 2,
+          "threshold": 0.5
+        }
+      },
+      "error": null,
+      "budget_snapshot": {
+        "max_llm_tokens": 100000,
+        "max_wall_seconds": 90.0,
+        "max_usd_equivalent": 0.5,
+        "max_skill_calls": 12,
+        "spent_tokens": 0,
+        "spent_seconds": 0.03121973297796212,
+        "spent_usd": 0.0,
+        "spent_calls": 9
+      },
+      "notes": {}
+    },
+    {
+      "ts": "2026-06-28T08:32:20.829+00:00",
+      "kind": "skill_start",
+      "skill": "compose_novelty",
+      "skill_version": "1.0.0",
+      "duration_ms": null,
+      "output": null,
+      "error": null,
+      "budget_snapshot": {
+        "max_llm_tokens": 100000,
+        "max_wall_seconds": 90.0,
+        "max_usd_equivalent": 0.5,
+        "max_skill_calls": 12,
+        "spent_tokens": 0,
+        "spent_seconds": 0.03121973297796212,
+        "spent_usd": 0.0,
+        "spent_calls": 9
+      },
+      "notes": {}
+    },
+    {
+      "ts": "2026-06-28T08:32:20.829+00:00",
+      "kind": "skill_end",
+      "skill": "compose_novelty",
+      "skill_version": "1.0.0",
+      "duration_ms": 0.011,
+      "output": {
+        "skill": "compose_novelty",
+        "skill_version": "1.0.0",
+        "triage_score": null,
+        "triage_decision": null,
+        "matched_issue_ids": [],
+        "is_novel": true,
+        "confidence": 1.0,
+        "evidence_used": [],
+        "cost": {
+          "llm_tokens": 0,
+          "wall_seconds": 0.0001,
+          "usd": 0.0,
+          "n_calls": 1
+        },
+        "extra": {
+          "agent_novel": false,
+          "free_signal": true,
+          "free_signal_max_conf": 0.4955185099367438,
+          "learned_signal": false,
+          "learned_novelty_prob": 0.0
+        }
+      },
+      "error": null,
+      "budget_snapshot": {
+        "max_llm_tokens": 100000,
+        "max_wall_seconds": 90.0,
+        "max_usd_equivalent": 0.5,
+        "max_skill_calls": 12,
+        "spent_tokens": 0,
+        "spent_seconds": 0.031319732977962124,
+        "spent_usd": 0.0,
+        "spent_calls": 10
+      },
+      "notes": {}
+    },
+    {
+      "ts": "2026-06-28T08:32:20.829+00:00",
+      "kind": "plan_end",
+      "skill": null,
+      "skill_version": null,
+      "duration_ms": null,
+      "output": null,
+      "error": null,
+      "budget_snapshot": {
+        "max_llm_tokens": 100000,
+        "max_wall_seconds": 90.0,
+        "max_usd_equivalent": 0.5,
+        "max_skill_calls": 12,
+        "spent_tokens": 0,
+        "spent_seconds": 0.031319732977962124,
+        "spent_usd": 0.0,
+        "spent_calls": 10
+      },
+      "notes": {
+        "aborted": false,
+        "n_skill_calls": 11,
+        "had_error": false
+      }
+    }
+  ],
+  "final_decision": {
+    "bundle_id": "2026-06-09-otel-demo-v1-network-r03-otel-demo-compound-saturation-network-latency-20260612T025730Z-active_fault-checkout",
+    "triage_decision": "ticket_worthy",
+    "triage_score": 0.9999620554135578,
+    "matched_issue_ids": [
+      "shadow-2026-06-09-otel-demo-v1-l1-compact-r01-otel-demo-payment-failure-100pct-critical-20260609T194936Z",
+      "shadow-2026-06-09-otel-demo-v1-network-r01-otel-demo-network-latency-major-20260611T232040Z",
+      "shadow-2026-06-09-otel-demo-v1-network-r01-otel-demo-dns-outage-critical-20260612T000700Z",
+      "shadow-2026-06-09-otel-demo-v1-network-r02-otel-demo-network-latency-major-20260612T003913Z",
+      "shadow-2026-06-09-otel-demo-v1-multifault-r04-otel-demo-cascade-kafka-broker-checkout-20260611T221806Z"
+    ],
+    "is_novel": true,
+    "confidence": 0.9999620554135578,
+    "evaluation_mode": "telemetry_diagnosis",
+    "plan_id": "plan_34246ccf6299",
+    "skills_invoked": [
+      "triage_numeric",
+      "retrieve_dense",
+      "compose_l2",
+      "reformulate_query",
+      "request_pod_events",
+      "request_extended_trace_window",
+      "request_pod_metrics",
+      "request_similar_incident_window",
+      "rerank_with_evidence",
+      "compose_triage",
+      "compose_novelty"
+    ],
+    "cost": {
+      "llm_tokens": 0,
+      "wall_seconds": 0.031319732977962124,
+      "usd": 0.0,
+      "n_calls": 10
+    },
+    "trace_path": "paper-results/agent-end-to-end/otel-demo/traces/fulltest-2026-06-09-otel-demo-v1-global/2026-06-09-otel-demo-v1-network-r03-otel-demo-compound-saturation-network-latency-20260612T025730Z-active_fault-checkout.json",
+    "ts": "2026-06-28T08:32:20.829+00:00"
+  }
+}
