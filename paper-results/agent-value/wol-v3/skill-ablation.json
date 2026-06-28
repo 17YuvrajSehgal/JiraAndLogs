@@ -1,0 +1,130 @@
+{
+  "dataset": "wol",
+  "dataset_id": "2026-06-17-wol-real-v3-global",
+  "split": "test",
+  "n_cases": 13388,
+  "n_evaluable": 5150,
+  "baseline": {
+    "hit_at_1": 0.8588349514563107,
+    "hit_at_5": 0.9633009708737864,
+    "mrr": 0.9022135922330097
+  },
+  "rows": [
+    {
+      "cell": "baseline",
+      "skip": [],
+      "description": "",
+      "n_cases": 13388,
+      "n_evaluable": 5150,
+      "hit_at_1": 0.8588349514563107,
+      "hit_at_5": 0.9633009708737864,
+      "hit_at_10": 0.9633009708737864,
+      "mrr": 0.9022135922330097,
+      "triage_accuracy": 0.5056020316701524,
+      "novel_recall": 0.10659272951324707,
+      "novel_precision": 0.061565836298932385,
+      "n_distinct_plan_ids": 2,
+      "wall_seconds": 8.975
+    },
+    {
+      "cell": "no_kg",
+      "skip": [
+        "retrieve_knowledge_graph"
+      ],
+      "description": "drop KG-retrieval",
+      "n_cases": 13388,
+      "n_evaluable": 5150,
+      "hit_at_1": 0.8588349514563107,
+      "hit_at_5": 0.9633009708737864,
+      "hit_at_10": 0.9633009708737864,
+      "mrr": 0.9022135922330097,
+      "triage_accuracy": 0.5056020316701524,
+      "novel_recall": 0.10659272951324707,
+      "novel_precision": 0.061565836298932385,
+      "n_distinct_plan_ids": 2,
+      "wall_seconds": 7.654
+    },
+    {
+      "cell": "no_hybrid",
+      "skip": [
+        "retrieve_hybrid_fusion"
+      ],
+      "description": "drop Hybrid-RRF; BiEncoder + KG only",
+      "n_cases": 13388,
+      "n_evaluable": 5150,
+      "hit_at_1": 0.8551456310679612,
+      "hit_at_5": 0.9040776699029126,
+      "hit_at_10": 0.9040776699029126,
+      "mrr": 0.8728349514563107,
+      "triage_accuracy": 0.5002240812668061,
+      "novel_recall": 0.678373382624769,
+      "novel_precision": 0.10089809384164222,
+      "n_distinct_plan_ids": 2,
+      "wall_seconds": 1749.283
+    },
+    {
+      "cell": "no_log_sequence",
+      "skip": [
+        "retrieve_log_sequence"
+      ],
+      "description": "drop LogSeq2Vec (already weak on WoL Mode 3 \u00a73.5)",
+      "n_cases": 13388,
+      "n_evaluable": 5150,
+      "hit_at_1": 0.8588349514563107,
+      "hit_at_5": 0.9633009708737864,
+      "hit_at_10": 0.9633009708737864,
+      "mrr": 0.9022135922330097,
+      "triage_accuracy": 0.5056020316701524,
+      "novel_recall": 0.10659272951324707,
+      "novel_precision": 0.061565836298932385,
+      "n_distinct_plan_ids": 2,
+      "wall_seconds": 8.316
+    },
+    {
+      "cell": "dense_only",
+      "skip": [
+        "retrieve_hybrid_fusion",
+        "retrieve_knowledge_graph",
+        "retrieve_log_sequence"
+      ],
+      "description": "BiEncoder only",
+      "n_cases": 13388,
+      "n_evaluable": 5150,
+      "hit_at_1": 0.8551456310679612,
+      "hit_at_5": 0.9040776699029126,
+      "hit_at_10": 0.9040776699029126,
+      "mrr": 0.8728349514563107,
+      "triage_accuracy": 0.5002240812668061,
+      "novel_recall": 0.678373382624769,
+      "novel_precision": 0.10089809384164222,
+      "n_distinct_plan_ids": 2,
+      "wall_seconds": 18.309
+    },
+    {
+      "cell": "no_react",
+      "skip": [
+        "request_similar_incident_window",
+        "rerank_with_evidence"
+      ],
+      "description": "disable peers-only ReAct on WoL",
+      "n_cases": 13388,
+      "n_evaluable": 5150,
+      "hit_at_1": 0.8588349514563107,
+      "hit_at_5": 0.9633009708737864,
+      "hit_at_10": 0.9633009708737864,
+      "mrr": 0.9022135922330097,
+      "triage_accuracy": 0.5056020316701524,
+      "novel_recall": 0.10659272951324707,
+      "novel_precision": 0.061565836298932385,
+      "n_distinct_plan_ids": 2,
+      "wall_seconds": 4.272
+    }
+  ],
+  "ranked_by_damage": [
+    "no_hybrid",
+    "dense_only",
+    "no_kg",
+    "no_log_sequence",
+    "no_react"
+  ]
+}
