@@ -29,7 +29,7 @@ export HF_HOME="/scratch/${USER}/hf_cache" HF_HUB_OFFLINE=1 TRANSFORMERS_OFFLINE
 export OMP_NUM_THREADS="${SLURM_CPUS_PER_TASK:-24}"
 echo "=== triage-leaderboard [$LABEL] on $(hostname) $(date -u +%FT%TZ) ==="
 python -u -m comparison.cli --global-dir "$GLOBAL_DIR" \
-  --pipelines hgb,rf,logistic_sklearn,bm25_retrieval,bi_encoder_hybrid \
+  --pipelines "${PIPELINES:-hgb,rf,logistic_sklearn,bm25_retrieval,bi_encoder_hybrid}" \
   --no-ensemble --n-bootstrap 1000 --target-fpr 0.05 \
   --runs-root "/scratch/${USER}/cmp-runs/${LABEL}" \
   --output-dir "$OUT" || { echo "FAILED triage-leaderboard"; exit 1; }
