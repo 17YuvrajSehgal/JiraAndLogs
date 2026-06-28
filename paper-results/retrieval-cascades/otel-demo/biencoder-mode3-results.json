@@ -1,0 +1,285 @@
+{
+  "config": {
+    "global_dir": "data/derived/global/2026-06-09-otel-demo-v1-global",
+    "humanized_root": "jira-shadow-humanized-v2",
+    "humanized_subdir": "bulk-20260531",
+    "n_hard_negs": 2,
+    "n_random_negs": 1,
+    "use_all_golds": false,
+    "finetune_epochs": 5,
+    "max_chars": 512,
+    "seed": 42
+  },
+  "metadata": {
+    "n_predictions": 247,
+    "fit_seconds": 25.375948905944824,
+    "predict_seconds": 0.0001361370086669922,
+    "wall_seconds": 31.981595277786255,
+    "train_n": 1150,
+    "val_n": 246,
+    "test_n": 247,
+    "n_memory": 147,
+    "n_finetune_pairs": 689,
+    "backbone": "sentence-transformers/all-MiniLM-L6-v2",
+    "embed_dim": 384,
+    "device": "cuda",
+    "retrieval": "bi_encoder_dense"
+  },
+  "coarse": {
+    "label": "coarse",
+    "n_with_gold": 119,
+    "hit_at_1": 0.44537815126050423,
+    "hit_at_5": 0.680672268907563,
+    "mrr": 0.5485994397759106,
+    "per_project": {
+      "kafka-dead-letter-spike": {
+        "n": 2,
+        "hit_at_1": 1.0,
+        "hit_at_5": 1.0,
+        "mrr": 1.0
+      },
+      "kafka-broker-outage": {
+        "n": 3,
+        "hit_at_1": 0.6666666666666666,
+        "hit_at_5": 1.0,
+        "mrr": 0.8333333333333334
+      },
+      "kafka-consumer-lag": {
+        "n": 4,
+        "hit_at_1": 0.5,
+        "hit_at_5": 0.75,
+        "mrr": 0.5833333333333333
+      },
+      "kafka-consumer-crash": {
+        "n": 3,
+        "hit_at_1": 0.0,
+        "hit_at_5": 1.0,
+        "mrr": 0.4166666666666667
+      },
+      "payment-outage": {
+        "n": 2,
+        "hit_at_1": 0.0,
+        "hit_at_5": 0.0,
+        "mrr": 0.0
+      },
+      "payment-unreachable": {
+        "n": 2,
+        "hit_at_1": 0.5,
+        "hit_at_5": 1.0,
+        "mrr": 0.75
+      },
+      "cart-redis-degradation": {
+        "n": 3,
+        "hit_at_1": 0.3333333333333333,
+        "hit_at_5": 0.3333333333333333,
+        "mrr": 0.3333333333333333
+      },
+      "cart-failure": {
+        "n": 1,
+        "hit_at_1": 0.0,
+        "hit_at_5": 0.0,
+        "mrr": 0.0
+      },
+      "currency-outage": {
+        "n": 2,
+        "hit_at_1": 0.0,
+        "hit_at_5": 0.0,
+        "mrr": 0.0
+      },
+      "shipping-slowdown-10sec": {
+        "n": 5,
+        "hit_at_1": 1.0,
+        "hit_at_5": 1.0,
+        "mrr": 1.0
+      },
+      "recommendation-cache-failure": {
+        "n": 2,
+        "hit_at_1": 1.0,
+        "hit_at_5": 1.0,
+        "mrr": 1.0
+      },
+      "ad-outage": {
+        "n": 1,
+        "hit_at_1": 0.0,
+        "hit_at_5": 0.0,
+        "mrr": 0.0
+      },
+      "ad-high-cpu": {
+        "n": 2,
+        "hit_at_1": 0.5,
+        "hit_at_5": 0.5,
+        "mrr": 0.5
+      },
+      "ad-gc-pressure": {
+        "n": 3,
+        "hit_at_1": 0.0,
+        "hit_at_5": 0.3333333333333333,
+        "mrr": 0.16666666666666666
+      },
+      "productcatalog-targeted-failure": {
+        "n": 2,
+        "hit_at_1": 1.0,
+        "hit_at_5": 1.0,
+        "mrr": 1.0
+      },
+      "email-outage": {
+        "n": 3,
+        "hit_at_1": 0.0,
+        "hit_at_5": 0.0,
+        "mrr": 0.0
+      },
+      "email-memory-leak-1000x": {
+        "n": 2,
+        "hit_at_1": 1.0,
+        "hit_at_5": 1.0,
+        "mrr": 1.0
+      },
+      "third-party-image-slow": {
+        "n": 2,
+        "hit_at_1": 1.0,
+        "hit_at_5": 1.0,
+        "mrr": 1.0
+      },
+      "llm-inaccurate": {
+        "n": 1,
+        "hit_at_1": 1.0,
+        "hit_at_5": 1.0,
+        "mrr": 1.0
+      },
+      "payment-failure-100pct": {
+        "n": 2,
+        "hit_at_1": 0.0,
+        "hit_at_5": 0.5,
+        "mrr": 0.25
+      },
+      "payment-failure-50pct": {
+        "n": 2,
+        "hit_at_1": 0.5,
+        "hit_at_5": 1.0,
+        "mrr": 0.75
+      },
+      "shipping-outage": {
+        "n": 1,
+        "hit_at_1": 0.0,
+        "hit_at_5": 0.0,
+        "mrr": 0.0
+      },
+      "recommendation-outage": {
+        "n": 1,
+        "hit_at_1": 0.0,
+        "hit_at_5": 0.0,
+        "mrr": 0.0
+      },
+      "email-memory-leak-100x": {
+        "n": 1,
+        "hit_at_1": 1.0,
+        "hit_at_5": 1.0,
+        "mrr": 1.0
+      },
+      "flapping-pod-cart": {
+        "n": 1,
+        "hit_at_1": 0.0,
+        "hit_at_5": 0.0,
+        "mrr": 0.0
+      },
+      "frontend-traffic-pressure": {
+        "n": 1,
+        "hit_at_1": 0.0,
+        "hit_at_5": 0.0,
+        "mrr": 0.0
+      },
+      "llm-rate-limit": {
+        "n": 1,
+        "hit_at_1": 1.0,
+        "hit_at_5": 1.0,
+        "mrr": 1.0
+      },
+      "concurrent-payment-cart-redis": {
+        "n": 8,
+        "hit_at_1": 0.5,
+        "hit_at_5": 0.75,
+        "mrr": 0.5833333333333333
+      },
+      "concurrent-currency-shipping": {
+        "n": 7,
+        "hit_at_1": 0.42857142857142855,
+        "hit_at_5": 1.0,
+        "mrr": 0.7142857142857143
+      },
+      "concurrent-kafka-lag-payment-outage": {
+        "n": 3,
+        "hit_at_1": 0.6666666666666666,
+        "hit_at_5": 1.0,
+        "mrr": 0.7333333333333334
+      },
+      "cascade-kafka-broker-checkout": {
+        "n": 4,
+        "hit_at_1": 0.5,
+        "hit_at_5": 0.5,
+        "mrr": 0.5
+      },
+      "cascade-productcatalog-latency-recommendation-timeout": {
+        "n": 6,
+        "hit_at_1": 0.6666666666666666,
+        "hit_at_5": 0.8333333333333334,
+        "mrr": 0.75
+      },
+      "concurrent-ad-recommendation": {
+        "n": 6,
+        "hit_at_1": 0.3333333333333333,
+        "hit_at_5": 0.3333333333333333,
+        "mrr": 0.3333333333333333
+      },
+      "cascade-valkey-cart-checkout": {
+        "n": 5,
+        "hit_at_1": 0.0,
+        "hit_at_5": 0.4,
+        "mrr": 0.16666666666666666
+      },
+      "concurrent-productcatalog-latency-flapping-pod": {
+        "n": 1,
+        "hit_at_1": 0.0,
+        "hit_at_5": 0.0,
+        "mrr": 0.0
+      },
+      "network-packet-loss": {
+        "n": 6,
+        "hit_at_1": 0.0,
+        "hit_at_5": 1.0,
+        "mrr": 0.4444444444444444
+      },
+      "network-partition": {
+        "n": 4,
+        "hit_at_1": 0.5,
+        "hit_at_5": 0.5,
+        "mrr": 0.5
+      },
+      "compound-saturation-network-latency": {
+        "n": 6,
+        "hit_at_1": 0.3333333333333333,
+        "hit_at_5": 0.5,
+        "mrr": 0.38888888888888884
+      },
+      "network-latency": {
+        "n": 7,
+        "hit_at_1": 0.7142857142857143,
+        "hit_at_5": 1.0,
+        "mrr": 0.8571428571428571
+      },
+      "dns-outage": {
+        "n": 1,
+        "hit_at_1": 1.0,
+        "hit_at_5": 1.0,
+        "mrr": 1.0
+      }
+    }
+  },
+  "strong": {
+    "label": "strong",
+    "n_with_gold": 0,
+    "hit_at_1": 0.0,
+    "hit_at_5": 0.0,
+    "mrr": 0.0,
+    "per_project": {}
+  }
+}
