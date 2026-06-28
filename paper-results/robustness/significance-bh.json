@@ -4,7 +4,7 @@
   "seed": 42,
   "alpha": 0.05,
   "correction": "benjamini-hochberg",
-  "n_tests": 15,
+  "n_tests": 16,
   "results": [
     {
       "n_paired": 331,
@@ -17,7 +17,7 @@
       "a_hit5": 0.5589123867069486,
       "b_hit5": 0.6344410876132931,
       "comparison": "online-boutique: Hybrid vs BiEncoder",
-      "q_value_bh": 0.026666666666666665,
+      "q_value_bh": 0.0256,
       "significant_bh": true
     },
     {
@@ -59,7 +59,7 @@
       "a_hit5": 0.5589123867069486,
       "b_hit5": 0.4652567975830816,
       "comparison": "online-boutique: Hybrid vs KG",
-      "q_value_bh": 0.00375,
+      "q_value_bh": 0.0035555555555555557,
       "significant_bh": true
     },
     {
@@ -87,7 +87,7 @@
       "a_hit5": 0.5589123867069486,
       "b_hit5": 0.5921450151057401,
       "comparison": "online-boutique: KG-effect (Hybrid vs no-graph)",
-      "q_value_bh": 0.20181818181818179,
+      "q_value_bh": 0.19733333333333333,
       "significant_bh": false
     },
     {
@@ -115,7 +115,7 @@
       "a_hit5": 0.6722689075630253,
       "b_hit5": 0.5966386554621849,
       "comparison": "otel-demo: Hybrid vs BM25(fair)",
-      "q_value_bh": 0.096,
+      "q_value_bh": 0.0930909090909091,
       "significant_bh": false
     },
     {
@@ -157,7 +157,7 @@
       "a_hit5": 0.6722689075630253,
       "b_hit5": 0.6386554621848739,
       "comparison": "otel-demo: Hybrid vs LLM-RAG",
-      "q_value_bh": 0.555,
+      "q_value_bh": 0.5464615384615384,
       "significant_bh": false
     },
     {
@@ -199,6 +199,20 @@
       "a_hit5": 0.9700970873786408,
       "b_hit5": 0.8287378640776699,
       "comparison": "wol-v3: Hybrid vs BGE-dense",
+      "q_value_bh": 0.0,
+      "significant_bh": true
+    },
+    {
+      "n_paired": 5150,
+      "delta_hit5": 0.6625242718446602,
+      "ci95": [
+        0.6504805825242718,
+        0.6774757281553399
+      ],
+      "p_value": 0.0,
+      "a_hit5": 0.9700970873786408,
+      "b_hit5": 0.3075728155339806,
+      "comparison": "wol-v3: Hybrid vs KG",
       "q_value_bh": 0.0,
       "significant_bh": true
     },
