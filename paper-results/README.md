@@ -10,6 +10,7 @@ Fresh, publishable results (clean of `data/` and the old `results/`). See `DOCS/
 - [`robustness/SUMMARY.md`](robustness/SUMMARY.md)
 - [`agent-end-to-end/SUMMARY.md`](agent-end-to-end/SUMMARY.md)
 - [`agent-value/SUMMARY.md`](agent-value/SUMMARY.md)
+- [`triage-leaderboard/SUMMARY.md`](triage-leaderboard/SUMMARY.md)
 - `agent-value/` — cost@iso-accuracy + skill/tool/budget ablations (per-dataset JSON)
 - `provenance/` — env freeze, config (seeds/epochs/splits), git SHA
 
