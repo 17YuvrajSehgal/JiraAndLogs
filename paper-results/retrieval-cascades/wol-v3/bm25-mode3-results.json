@@ -1,0 +1,56 @@
+{
+  "config": {
+    "global_dir": "data/derived/global/2026-06-17-wol-real-v3-global",
+    "synthesized_post_hoc": true,
+    "note": "Results JSON synthesized from bm25-predictions.jsonl because run_bm25_wol_mode3.py does not write a headline-metrics file. Metric computation mirrors run_biencoder_wol_mode3.py."
+  },
+  "metadata": {
+    "n_predictions": 13388,
+    "retrieval": "bm25_retrieval_only",
+    "fit_seconds": null,
+    "predict_seconds": null,
+    "wall_seconds": null
+  },
+  "coarse": {
+    "label": "coarse",
+    "n_with_gold": 5150,
+    "hit_at_1": 0.014563106796116505,
+    "hit_at_5": 0.7266019417475729,
+    "mrr": 0.32934627831715135,
+    "per_project": {
+      "wol-kafka": {
+        "n": 803,
+        "hit_at_1": 0.0049813200498132005,
+        "hit_at_5": 0.6662515566625156,
+        "mrr": 0.2820464923204652
+      },
+      "wol-mariadb-server": {
+        "n": 4347,
+        "hit_at_1": 0.01633310328962503,
+        "hit_at_5": 0.7377501725327812,
+        "mrr": 0.33808373590982255
+      }
+    }
+  },
+  "strong": {
+    "label": "strong",
+    "n_with_gold": 4362,
+    "hit_at_1": 0.014672168729940394,
+    "hit_at_5": 0.7397982576799633,
+    "mrr": 0.33154516276937174,
+    "per_project": {
+      "wol-kafka": {
+        "n": 672,
+        "hit_at_1": 0.005952380952380952,
+        "hit_at_5": 0.7068452380952381,
+        "mrr": 0.2963789682539684
+      },
+      "wol-mariadb-server": {
+        "n": 3690,
+        "hit_at_1": 0.016260162601626018,
+        "hit_at_5": 0.7457994579945799,
+        "mrr": 0.33794941282746216
+      }
+    }
+  }
+}
