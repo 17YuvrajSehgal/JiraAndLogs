@@ -1,0 +1,218 @@
+{
+  "method": "llm-rag",
+  "model": "Qwen/Qwen2.5-7B-Instruct",
+  "candidates_from": "paper-results/baselines/sota-dense/otel-demo/bge-predictions.jsonl",
+  "global_dir": "data/derived/global/2026-06-09-otel-demo-v1-global",
+  "subset_n": 119,
+  "seed": 42,
+  "cand_k": 10,
+  "elapsed_s": 37.263542890548706,
+  "coarse": {
+    "n_with_gold": 119,
+    "hit_at_1": 0.3697478991596639,
+    "hit_at_5": 0.6386554621848739,
+    "mrr": 0.5011537948512739,
+    "per_project": {
+      "cascade-kafka-broker-checkout": {
+        "n": 4,
+        "hit_at_1": 0.0,
+        "hit_at_5": 0.0
+      },
+      "concurrent-payment-cart-redis": {
+        "n": 8,
+        "hit_at_1": 0.375,
+        "hit_at_5": 0.5
+      },
+      "cascade-productcatalog-latency-recommendation-timeout": {
+        "n": 6,
+        "hit_at_1": 1.0,
+        "hit_at_5": 1.0
+      },
+      "third-party-image-slow": {
+        "n": 2,
+        "hit_at_1": 1.0,
+        "hit_at_5": 1.0
+      },
+      "cart-redis-degradation": {
+        "n": 3,
+        "hit_at_1": 0.0,
+        "hit_at_5": 0.0
+      },
+      "email-memory-leak-1000x": {
+        "n": 2,
+        "hit_at_1": 0.0,
+        "hit_at_5": 1.0
+      },
+      "concurrent-currency-shipping": {
+        "n": 7,
+        "hit_at_1": 0.5714285714285714,
+        "hit_at_5": 0.8571428571428571
+      },
+      "compound-saturation-network-latency": {
+        "n": 6,
+        "hit_at_1": 0.3333333333333333,
+        "hit_at_5": 0.5
+      },
+      "network-packet-loss": {
+        "n": 6,
+        "hit_at_1": 0.3333333333333333,
+        "hit_at_5": 1.0
+      },
+      "email-outage": {
+        "n": 3,
+        "hit_at_1": 0.6666666666666666,
+        "hit_at_5": 1.0
+      },
+      "ad-high-cpu": {
+        "n": 2,
+        "hit_at_1": 0.0,
+        "hit_at_5": 0.5
+      },
+      "kafka-consumer-crash": {
+        "n": 3,
+        "hit_at_1": 0.6666666666666666,
+        "hit_at_5": 1.0
+      },
+      "flapping-pod-cart": {
+        "n": 1,
+        "hit_at_1": 0.0,
+        "hit_at_5": 0.0
+      },
+      "cascade-valkey-cart-checkout": {
+        "n": 5,
+        "hit_at_1": 0.4,
+        "hit_at_5": 1.0
+      },
+      "email-memory-leak-100x": {
+        "n": 1,
+        "hit_at_1": 0.0,
+        "hit_at_5": 1.0
+      },
+      "ad-gc-pressure": {
+        "n": 3,
+        "hit_at_1": 0.6666666666666666,
+        "hit_at_5": 1.0
+      },
+      "payment-failure-50pct": {
+        "n": 2,
+        "hit_at_1": 0.0,
+        "hit_at_5": 1.0
+      },
+      "concurrent-ad-recommendation": {
+        "n": 6,
+        "hit_at_1": 0.3333333333333333,
+        "hit_at_5": 0.3333333333333333
+      },
+      "kafka-broker-outage": {
+        "n": 3,
+        "hit_at_1": 0.3333333333333333,
+        "hit_at_5": 0.3333333333333333
+      },
+      "shipping-slowdown-10sec": {
+        "n": 5,
+        "hit_at_1": 0.8,
+        "hit_at_5": 1.0
+      },
+      "kafka-consumer-lag": {
+        "n": 4,
+        "hit_at_1": 0.25,
+        "hit_at_5": 0.5
+      },
+      "concurrent-productcatalog-latency-flapping-pod": {
+        "n": 1,
+        "hit_at_1": 0.0,
+        "hit_at_5": 0.0
+      },
+      "recommendation-cache-failure": {
+        "n": 2,
+        "hit_at_1": 0.5,
+        "hit_at_5": 1.0
+      },
+      "network-latency": {
+        "n": 7,
+        "hit_at_1": 0.0,
+        "hit_at_5": 0.0
+      },
+      "network-partition": {
+        "n": 4,
+        "hit_at_1": 0.25,
+        "hit_at_5": 0.5
+      },
+      "ad-outage": {
+        "n": 1,
+        "hit_at_1": 0.0,
+        "hit_at_5": 0.0
+      },
+      "currency-outage": {
+        "n": 2,
+        "hit_at_1": 0.5,
+        "hit_at_5": 0.5
+      },
+      "shipping-outage": {
+        "n": 1,
+        "hit_at_1": 1.0,
+        "hit_at_5": 1.0
+      },
+      "payment-failure-100pct": {
+        "n": 2,
+        "hit_at_1": 0.0,
+        "hit_at_5": 0.0
+      },
+      "payment-unreachable": {
+        "n": 2,
+        "hit_at_1": 0.0,
+        "hit_at_5": 1.0
+      },
+      "concurrent-kafka-lag-payment-outage": {
+        "n": 3,
+        "hit_at_1": 0.6666666666666666,
+        "hit_at_5": 1.0
+      },
+      "recommendation-outage": {
+        "n": 1,
+        "hit_at_1": 0.0,
+        "hit_at_5": 0.0
+      },
+      "payment-outage": {
+        "n": 2,
+        "hit_at_1": 0.0,
+        "hit_at_5": 0.5
+      },
+      "kafka-dead-letter-spike": {
+        "n": 2,
+        "hit_at_1": 0.5,
+        "hit_at_5": 1.0
+      },
+      "frontend-traffic-pressure": {
+        "n": 1,
+        "hit_at_1": 0.0,
+        "hit_at_5": 0.0
+      },
+      "productcatalog-targeted-failure": {
+        "n": 2,
+        "hit_at_1": 0.5,
+        "hit_at_5": 1.0
+      },
+      "dns-outage": {
+        "n": 1,
+        "hit_at_1": 0.0,
+        "hit_at_5": 0.0
+      },
+      "llm-rate-limit": {
+        "n": 1,
+        "hit_at_1": 1.0,
+        "hit_at_5": 1.0
+      },
+      "cart-failure": {
+        "n": 1,
+        "hit_at_1": 0.0,
+        "hit_at_5": 1.0
+      },
+      "llm-inaccurate": {
+        "n": 1,
+        "hit_at_1": 0.0,
+        "hit_at_5": 1.0
+      }
+    }
+  }
+}
