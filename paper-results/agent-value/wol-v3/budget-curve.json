@@ -1,0 +1,78 @@
+{
+  "dataset_id": "2026-06-17-wol-real-v3-global",
+  "split": "test",
+  "n_cases": 13388,
+  "n_evaluable": 5150,
+  "rows": [
+    {
+      "max_tool_calls": 0,
+      "n_cases": 13388,
+      "n_evaluable": 5150,
+      "hit_at_1": 0.8588349514563107,
+      "hit_at_5": 0.9633009708737864,
+      "hit_at_10": 0.9633009708737864,
+      "mrr": 0.9022135922330097,
+      "triage_accuracy": 0.5056020316701524,
+      "novel_recall": 0.10659272951324707,
+      "novel_precision": 0.061565836298932385,
+      "n_distinct_plan_ids": 2,
+      "wall_seconds": 4.968
+    },
+    {
+      "max_tool_calls": 1,
+      "n_cases": 13388,
+      "n_evaluable": 5150,
+      "hit_at_1": 0.8588349514563107,
+      "hit_at_5": 0.9633009708737864,
+      "hit_at_10": 0.9633009708737864,
+      "mrr": 0.9022135922330097,
+      "triage_accuracy": 0.5056020316701524,
+      "novel_recall": 0.10659272951324707,
+      "novel_precision": 0.061565836298932385,
+      "n_distinct_plan_ids": 2,
+      "wall_seconds": 8.306
+    },
+    {
+      "max_tool_calls": 2,
+      "n_cases": 13388,
+      "n_evaluable": 5150,
+      "hit_at_1": 0.8588349514563107,
+      "hit_at_5": 0.9633009708737864,
+      "hit_at_10": 0.9633009708737864,
+      "mrr": 0.9022135922330097,
+      "triage_accuracy": 0.5056020316701524,
+      "novel_recall": 0.10659272951324707,
+      "novel_precision": 0.061565836298932385,
+      "n_distinct_plan_ids": 2,
+      "wall_seconds": 8.674
+    },
+    {
+      "max_tool_calls": 3,
+      "n_cases": 13388,
+      "n_evaluable": 5150,
+      "hit_at_1": 0.8588349514563107,
+      "hit_at_5": 0.9633009708737864,
+      "hit_at_10": 0.9633009708737864,
+      "mrr": 0.9022135922330097,
+      "triage_accuracy": 0.5056020316701524,
+      "novel_recall": 0.10659272951324707,
+      "novel_precision": 0.061565836298932385,
+      "n_distinct_plan_ids": 2,
+      "wall_seconds": 9.041
+    },
+    {
+      "max_tool_calls": 4,
+      "n_cases": 13388,
+      "n_evaluable": 5150,
+      "hit_at_1": 0.8588349514563107,
+      "hit_at_5": 0.9633009708737864,
+      "hit_at_10": 0.9633009708737864,
+      "mrr": 0.9022135922330097,
+      "triage_accuracy": 0.5056020316701524,
+      "novel_recall": 0.10659272951324707,
+      "novel_precision": 0.061565836298932385,
+      "n_distinct_plan_ids": 2,
+      "wall_seconds": 7.942
+    }
+  ]
+}

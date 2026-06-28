@@ -9,6 +9,7 @@ Fresh, publishable results (clean of `data/` and the old `results/`). See `DOCS/
 - [`gold-validation/SUMMARY.md`](gold-validation/SUMMARY.md)
 - [`robustness/SUMMARY.md`](robustness/SUMMARY.md)
 - [`agent-end-to-end/SUMMARY.md`](agent-end-to-end/SUMMARY.md)
+- [`agent-value/SUMMARY.md`](agent-value/SUMMARY.md)
 - `agent-value/` — cost@iso-accuracy + skill/tool/budget ablations (per-dataset JSON)
 - `provenance/` — env freeze, config (seeds/epochs/splits), git SHA
 

@@ -1,0 +1,32 @@
+{
+  "online-boutique": {
+    "n": 331,
+    "biencoder_hit5": 0.6344410876132931,
+    "kg_hit5": 0.4652567975830816,
+    "bm25_hit5": 0.08761329305135952,
+    "kg_correct_dense_wrong_pct": 14.19939577039275,
+    "dense_correct_kg_wrong_pct": 31.117824773413897,
+    "kg_unique_vs_both_pct": 13.595166163141993,
+    "union_coverage_hit5": 0.7794561933534743
+  },
+  "otel-demo": {
+    "n": 119,
+    "biencoder_hit5": 0.680672268907563,
+    "kg_hit5": 0.4117647058823529,
+    "bm25_hit5": 0.5630252100840336,
+    "kg_correct_dense_wrong_pct": 10.084033613445378,
+    "dense_correct_kg_wrong_pct": 36.97478991596638,
+    "kg_unique_vs_both_pct": 4.201680672268908,
+    "union_coverage_hit5": 0.7899159663865546
+  },
+  "wol-v3": {
+    "n": 5150,
+    "biencoder_hit5": 0.9050485436893204,
+    "kg_hit5": 0.3075728155339806,
+    "bm25_hit5": 0.7266019417475729,
+    "kg_correct_dense_wrong_pct": 1.6310679611650485,
+    "dense_correct_kg_wrong_pct": 61.37864077669903,
+    "kg_unique_vs_both_pct": 0.4854368932038835,
+    "union_coverage_hit5": 0.9739805825242719
+  }
+}

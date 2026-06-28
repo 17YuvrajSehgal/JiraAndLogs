@@ -115,7 +115,47 @@ def robustness() -> str:
         present = [v for v in vals.values() if v is not None]
         m = f"{statistics.mean(present):.3f}" if present else "—"
         sd = f"{statistics.pstdev(present):.3f}" if len(present) > 1 else "—"
-        out.append(f"| {ds} | {vals[42] or '—'} | {vals.get(1) or '—'} | {vals.get(2) or '—'} | {m} | {sd} |")
+        f = lambda v: f"{v:.3f}" if v is not None else "—"
+        out.append(f"| {ds} | {f(vals[42])} | {f(vals.get(1))} | {f(vals.get(2))} | {m} | {sd} |")
+    return "\n".join(out) + "\n"
+
+
+def agent_value() -> str:
+    out = ["# Agent value — SUMMARY", "",
+           "What the controller adds: cost saved vs always-run-everything (cascade "
+           "counterfactual) at iso-accuracy, plus skill/tool/budget ablations.", "",
+           "## Cost vs cascade-counterfactual (controller gating)",
+           "| dataset | wall saved % | tokens saved % | $ saved % | n_windows |",
+           "|---|---|---|---|---|"]
+    for ds in DATASETS:
+        r = _load(ROOT / "agent-value" / ds / "cost-vs-cascade.json")
+        s = (r or {}).get("summary", {})
+        sp = s.get("savings_pct", {})
+        out.append(f"| {ds} | {_c(sp,'wall')} | {_c(sp,'tokens')} | {_c(sp,'usd')} | {s.get('n_windows','—')} |")
+    out += ["", "## Most damaging skill (ablation) + tool/budget headroom",
+            "| dataset | top-damage skill (ΔHit@1) | tool best vs none Hit@1 | budget Hit@5 (min→max) |",
+            "|---|---|---|---|"]
+    for ds in DATASETS:
+        sk = _load(ROOT / "agent-value" / ds / "skill-ablation.json")
+        tl = _load(ROOT / "agent-value" / ds / "tool-ablation.json")
+        bc = _load(ROOT / "agent-value" / ds / "budget-curve.json")
+        skill_cell = "—"
+        if sk and sk.get("ranked_by_damage") and sk.get("rows") and sk.get("baseline"):
+            top_name = sk["ranked_by_damage"][0]
+            base_h1 = sk["baseline"].get("hit_at_1")
+            row = next((r for r in sk["rows"] if r.get("cell") == top_name), None)
+            if row and isinstance(base_h1, (int, float)):
+                skill_cell = f"{top_name} ({row['hit_at_1'] - base_h1:+.3f})"
+            else:
+                skill_cell = str(top_name)
+        tool_cell = "—"
+        if tl and isinstance(tl.get("baseline_hit_at_1"), (int, float)):
+            tool_cell = f"{tl.get('best_hit_at_1', tl['baseline_hit_at_1']):.3f} vs {tl['baseline_hit_at_1']:.3f}"
+        bud_cell = "—"
+        if bc and bc.get("rows"):
+            rs = bc["rows"]
+            bud_cell = f"{rs[0]['hit_at_5']:.3f} → {rs[-1]['hit_at_5']:.3f}"
+        out.append(f"| {ds} | {skill_cell} | {tool_cell} | {bud_cell} |")
     return "\n".join(out) + "\n"
 
 
@@ -145,6 +185,7 @@ def main():
         "retrieval-cascades": cascades, "baselines": baselines,
         "kg-usefulness": kg_usefulness, "gold-validation": gold_validation,
         "robustness": robustness, "agent-end-to-end": agent_e2e,
+        "agent-value": agent_value,
     }
     for name, fn in cats.items():
         try:
