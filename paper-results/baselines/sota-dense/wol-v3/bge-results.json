@@ -1,0 +1,49 @@
+{
+  "method": "bge",
+  "model": "BAAI/bge-large-en-v1.5",
+  "global_dir": "data/derived/global/2026-06-17-wol-real-v3-global",
+  "split": "test",
+  "n_memory": 38642,
+  "n_test": 13388,
+  "elapsed_s": 598.5216617584229,
+  "coarse": {
+    "label": "coarse",
+    "n_with_gold": 5150,
+    "hit_at_1": 0.6229126213592233,
+    "hit_at_5": 0.8287378640776699,
+    "hit_at_10": 0.8836893203883495,
+    "mrr": 0.7099282632146724,
+    "per_project": {
+      "wol-kafka": {
+        "n": 803,
+        "hit_at_1": 0.47571606475716066,
+        "hit_at_5": 0.726027397260274
+      },
+      "wol-mariadb-server": {
+        "n": 4347,
+        "hit_at_1": 0.650103519668737,
+        "hit_at_5": 0.8477110651023695
+      }
+    }
+  },
+  "strong": {
+    "label": "strong",
+    "n_with_gold": 4362,
+    "hit_at_1": 0.47386519944979366,
+    "hit_at_5": 0.7056396148555708,
+    "hit_at_10": 0.776249426868409,
+    "mrr": 0.5737452966820229,
+    "per_project": {
+      "wol-kafka": {
+        "n": 672,
+        "hit_at_1": 0.40476190476190477,
+        "hit_at_5": 0.6473214285714286
+      },
+      "wol-mariadb-server": {
+        "n": 3690,
+        "hit_at_1": 0.48644986449864497,
+        "hit_at_5": 0.7162601626016261
+      }
+    }
+  }
+}

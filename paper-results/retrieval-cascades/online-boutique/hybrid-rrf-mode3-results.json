@@ -1,0 +1,168 @@
+{
+  "config": {
+    "global_dir": "data/derived/global/2026-05-25-dataset-v5-large-global",
+    "humanized_root": "jira-shadow-humanized-v2",
+    "humanized_subdir": "bulk-20260531",
+    "biencoder_finetune_epochs": 5,
+    "skip_window_extraction": true,
+    "skip_graph": false,
+    "seed": 42
+  },
+  "metadata": {
+    "n_predictions": 1008,
+    "fit_seconds": 121.73828959465027,
+    "predict_seconds": 0.003148794174194336,
+    "wall_seconds": 124.46218705177307,
+    "train_n": 4701,
+    "val_n": 1011,
+    "test_n": 1008,
+    "n_memory": 347,
+    "rrf_k": 60.0,
+    "retriever_weights": {
+      "splade": 1.0,
+      "biencoder": 1.0,
+      "graph": 1.0
+    },
+    "splade_model": "naver/splade-cocondenser-ensembledistil",
+    "biencoder_backbone": "sentence-transformers/all-MiniLM-L6-v2",
+    "graph_enabled": true,
+    "retrieval": "hybrid_rrf"
+  },
+  "coarse": {
+    "label": "coarse",
+    "n_with_gold": 331,
+    "hit_at_1": 0.41389728096676737,
+    "hit_at_5": 0.5589123867069486,
+    "mrr": 0.46112789526686815,
+    "per_project": {
+      "payment-outage": {
+        "n": 15,
+        "hit_at_1": 0.9333333333333333,
+        "hit_at_5": 1.0,
+        "mrr": 0.9555555555555555
+      },
+      "cart-redis": {
+        "n": 68,
+        "hit_at_1": 0.27941176470588236,
+        "hit_at_5": 0.36764705882352944,
+        "mrr": 0.31299019607843137
+      },
+      "productcatalog-latency": {
+        "n": 23,
+        "hit_at_1": 0.5652173913043478,
+        "hit_at_5": 0.8260869565217391,
+        "mrr": 0.6811594202898551
+      },
+      "checkout-restart": {
+        "n": 15,
+        "hit_at_1": 0.3333333333333333,
+        "hit_at_5": 0.7333333333333333,
+        "mrr": 0.46222222222222226
+      },
+      "productcatalog-outage": {
+        "n": 31,
+        "hit_at_1": 0.06451612903225806,
+        "hit_at_5": 0.3870967741935484,
+        "mrr": 0.1424731182795699
+      },
+      "checkout-outage": {
+        "n": 16,
+        "hit_at_1": 0.375,
+        "hit_at_5": 0.4375,
+        "mrr": 0.3875
+      },
+      "currency-outage": {
+        "n": 21,
+        "hit_at_1": 0.9047619047619048,
+        "hit_at_5": 0.9523809523809523,
+        "mrr": 0.9285714285714286
+      },
+      "recommendation-outage": {
+        "n": 14,
+        "hit_at_1": 0.7142857142857143,
+        "hit_at_5": 0.7142857142857143,
+        "mrr": 0.7142857142857143
+      },
+      "frontend-restart": {
+        "n": 13,
+        "hit_at_1": 0.7692307692307693,
+        "hit_at_5": 1.0,
+        "mrr": 0.8269230769230769
+      },
+      "shipping-outage": {
+        "n": 19,
+        "hit_at_1": 0.6842105263157895,
+        "hit_at_5": 0.6842105263157895,
+        "mrr": 0.6842105263157895
+      },
+      "slow-leak-saturation": {
+        "n": 9,
+        "hit_at_1": 0.2222222222222222,
+        "hit_at_5": 0.4444444444444444,
+        "mrr": 0.27222222222222225
+      },
+      "third-party-blip": {
+        "n": 9,
+        "hit_at_1": 0.3333333333333333,
+        "hit_at_5": 0.4444444444444444,
+        "mrr": 0.35555555555555557
+      },
+      "recovered-in-window": {
+        "n": 12,
+        "hit_at_1": 0.75,
+        "hit_at_5": 0.75,
+        "mrr": 0.75
+      },
+      "flapping-pod": {
+        "n": 14,
+        "hit_at_1": 0.21428571428571427,
+        "hit_at_5": 0.35714285714285715,
+        "mrr": 0.2619047619047619
+      },
+      "latency-near-miss-partial-recovery": {
+        "n": 8,
+        "hit_at_1": 0.0,
+        "hit_at_5": 0.375,
+        "mrr": 0.09166666666666667
+      },
+      "dns-outage": {
+        "n": 11,
+        "hit_at_1": 0.09090909090909091,
+        "hit_at_5": 0.36363636363636365,
+        "mrr": 0.18181818181818182
+      },
+      "network-partition": {
+        "n": 12,
+        "hit_at_1": 0.08333333333333333,
+        "hit_at_5": 0.25,
+        "mrr": 0.16666666666666666
+      },
+      "network-latency": {
+        "n": 9,
+        "hit_at_1": 0.7777777777777778,
+        "hit_at_5": 0.7777777777777778,
+        "mrr": 0.7777777777777778
+      },
+      "resource-saturation": {
+        "n": 9,
+        "hit_at_1": 0.0,
+        "hit_at_5": 0.0,
+        "mrr": 0.0
+      },
+      "network-packet-loss": {
+        "n": 3,
+        "hit_at_1": 0.0,
+        "hit_at_5": 0.3333333333333333,
+        "mrr": 0.16666666666666666
+      }
+    }
+  },
+  "strong": {
+    "label": "strong",
+    "n_with_gold": 0,
+    "hit_at_1": 0.0,
+    "hit_at_5": 0.0,
+    "mrr": 0.0,
+    "per_project": {}
+  }
+}
