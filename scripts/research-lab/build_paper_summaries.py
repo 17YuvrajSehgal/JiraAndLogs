@@ -180,12 +180,44 @@ def agent_e2e() -> str:
     return "\n".join(out) + "\n"
 
 
+def triage_leaderboard() -> str:
+    out = ["# Triage-quality leaderboard — SUMMARY", "",
+           "Triage classification (ticket-worthy vs noise) + retrieval, from the "
+           "comparison harness (offline-safe pipelines, seed 42, n_bootstrap=1000). "
+           "PR-AUC / ECE (calibration) / precision@FPR=5% are the operating-point "
+           "metrics raw accuracy can't capture.", ""]
+    mets = [("triage.pr_auc", "PR-AUC"), ("triage.roc_auc", "ROC-AUC"),
+            ("triage.ece", "ECE↓"), ("triage.precision_at_fpr_5pct", "P@FPR5"),
+            ("triage.recall_at_fpr_5pct", "R@FPR5"), ("retrieval.recall_at_5", "Rec@5"),
+            ("retrieval.mrr", "MRR")]
+    for ds in DATASETS:
+        # report json: find the one with a 'headline' dict
+        d = None
+        ddir = ROOT / "triage-leaderboard" / ds
+        for p in sorted(ddir.glob("*.json")) if ddir.is_dir() else []:
+            j = _load(p)
+            if isinstance(j, dict) and "headline" in j:
+                d = j; break
+        out.append(f"## {ds}")
+        if not d:
+            out.append("_pending_\n"); continue
+        h = d["headline"]
+        out.append("| pipeline | " + " | ".join(m[1] for m in mets) + " |")
+        out.append("|---|" + "|".join(["---"] * len(mets)) + "|")
+        for pname, pm in h.items():
+            row = [(f"{pm[k]:.3f}" if isinstance(pm.get(k), (int, float)) else "—") for k, _ in mets]
+            out.append(f"| {pname} | " + " | ".join(row) + " |")
+        out.append("")
+    return "\n".join(out) + "\n"
+
+
 def main():
     cats = {
         "retrieval-cascades": cascades, "baselines": baselines,
         "kg-usefulness": kg_usefulness, "gold-validation": gold_validation,
         "robustness": robustness, "agent-end-to-end": agent_e2e,
         "agent-value": agent_value,
+        "triage-leaderboard": triage_leaderboard,
     }
     for name, fn in cats.items():
         try:
