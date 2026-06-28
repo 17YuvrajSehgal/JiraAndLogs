@@ -1,0 +1,13 @@
+{
+  "seed": 42,
+  "datasets": {
+    "online-boutique": {"global_dir": "2026-05-25-dataset-v5-large-global", "humanized_subdir": "bulk-20260531", "test_n": 1008, "split_manifest": "triage-split-manifest-v2-resplit.json"},
+    "otel-demo":       {"global_dir": "2026-06-09-otel-demo-v1-global",     "humanized_subdir": "bulk-20260531", "test_n": 247,  "split_manifest": "triage-split-manifest-v2-resplit.json"},
+    "wol-v3":          {"global_dir": "2026-06-17-wol-real-v3-global",      "humanized_subdir": "bulk-20260617", "test_n": 13388, "split_manifest": "triage-split-manifest.json"}
+  },
+  "biencoder": {"finetune_epochs": 5, "use_all_golds": false, "n_hard_negs": 2, "n_random_negs": 1},
+  "hybrid_rrf": {"biencoder_finetune_epochs": 5, "retrievers": ["splade", "biencoder", "graph"], "triage_score_sample_trainval": 5000},
+  "llm": {"model": "Qwen/Qwen2.5-7B-Instruct", "decoding": "greedy", "runtime": "transformers (offline)"},
+  "bootstrap": {"n_resamples": 1000, "seed": 42, "multiple_comparison": "benjamini-hochberg"},
+  "baselines": {"dense": ["bge-large-en-v1.5", "e5-large-v2", "all-mpnet-base-v2"], "lexical": ["tfidf", "bm25-okapi (humanized)"], "rerank": "ms-marco-MiniLM-L-6-v2", "llm_rag_subset_n": 500}
+}

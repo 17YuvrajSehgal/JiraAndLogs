@@ -1,0 +1,6 @@
+git_sha: 3fbc07a4b633116a7f43090142e1ea432b96219b
+git_branch: master
+collected_utc: 2026-06-28
+cluster: Trillium (SciNet/Alliance), H100 GPU nodes, account def-naser2
+python: Python 3.12.4
+modules: python/3.12 arrow/21.0.0
