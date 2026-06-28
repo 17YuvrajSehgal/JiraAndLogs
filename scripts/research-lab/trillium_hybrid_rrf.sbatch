@@ -6,7 +6,7 @@
 #SBATCH --ntasks=1
 #SBATCH --gpus-per-node=1
 #SBATCH --cpus-per-task=24
-#SBATCH --time=23:00:00
+#SBATCH --time=12:00:00
 #SBATCH --output=logs/slurm-%x-%j.out
 # ---------------------------------------------------------------------------
 # WoL v3 Hybrid-RRF cascade on Trillium GPU subcluster (submit from trig-login01).
@@ -32,7 +32,7 @@ REPO="/scratch/${USER}/JiraAndLogs_scratch/JiraAndLogs"
 GLOBAL_DIR="data/derived/global/2026-06-17-wol-real-v3-global"
 OUT_DIR="${GLOBAL_DIR}/tch-lite-refit"
 HUMANIZED_SUB="bulk-20260617"
-BIENC_EPOCHS=3
+BIENC_EPOCHS=5
 
 cd "$REPO"
 mkdir -p logs "$OUT_DIR"
@@ -48,10 +48,15 @@ echo ">>> live log: $LOGFILE"
 echo ">>> stable:   ${REPO}/logs/v3_hybrid_rrf.log  (tail -f this)"
 
 # ---- environment ----
-module load python/3.12
+# arrow/21.0.0 provides pyarrow (+ scipy-stack's pandas), required by
+# sentence-transformers' datasets-backed fine-tune trainer. pyarrow cannot be
+# pip-installed here (Alliance forces the pyarrow-noinstall stub), so it MUST
+# come from the module. The venv's own numpy/scipy/sklearn/torch still win.
+module load python/3.12 arrow/21.0.0
 source .venv/bin/activate
 
-export PYTHONPATH="src"
+# APPEND src — do NOT clobber the module-provided PYTHONPATH (pyarrow/pandas).
+export PYTHONPATH="src:${PYTHONPATH:-}"
 export PYTHONUNBUFFERED=1
 export PYTHONIOENCODING=utf-8
 export PYTHONUTF8=1
@@ -65,6 +70,12 @@ export TRANSFORMERS_OFFLINE=1
 export BIENC_BM25_JOBS="${SLURM_CPUS_PER_TASK:-24}"
 export OMP_NUM_THREADS="${SLURM_CPUS_PER_TASK:-24}"
 export TOKENIZERS_PARALLELISM=false
+
+# Cap the train/val windows scored ONLY to fit the triage logistic head.
+# The Hit@K test rankings come from the FULL test split and are unchanged.
+# Without this, scoring ~61k train windows (per-window SPLADE+graph) ran >6h
+# and risked the walltime; 5000 is ample for a 3-feature logistic head.
+export HYBRID_TRIAGE_SCORE_SAMPLE="${HYBRID_TRIAGE_SCORE_SAMPLE:-5000}"
 
 # Neo4j (Apptainer) — single DB "neo4j"; force reload into it so the pipeline
 # (which connects to the default db) and the loader agree on Community Edition.

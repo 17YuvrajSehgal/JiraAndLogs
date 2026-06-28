@@ -33,18 +33,29 @@ PIDFILE="$NEO4J_BASE/neo4j.pid"
 
 start() {
     mkdir -p "$NEO4J_BASE/data" "$NEO4J_BASE/logs" "$NEO4J_BASE/import"
+    # Writable+exec temp dir bound to the container's /tmp. On compute nodes the
+    # host /tmp is restricted, so neo4j's JNA fails to extract libjnidispatch.so
+    # ("Failed to create temporary file ...: Permission denied"). Use SCRATCH:
+    # it is writable AND exec. (Do NOT use $SLURM_TMPDIR — on Trillium GPU nodes
+    # it is /dev/shm, which apptainer special-cases so a bind-to-/tmp there is
+    # not writable inside the container.)
+    NEO4J_TMP="${NEO4J_TMP:-$NEO4J_BASE/jtmp}"
+    mkdir -p "$NEO4J_TMP"
     echo "[neo4j] launching from sandbox $NEO4J_SANDBOX"
     echo "[neo4j] data dir: $NEO4J_BASE/data (heap=$NEO4J_HEAP pagecache=$NEO4J_PAGECACHE)"
+    echo "[neo4j] container /tmp -> $NEO4J_TMP"
     # --cleanenv is REQUIRED: without it apptainer forwards the host's NEO4J_*
     # vars (NEO4J_URI / NEO4J_DATABASE / NEO4J_BASE / NEO4J_HEAP / ...) into the
     # container, where neo4j's entrypoint parses every NEO4J_* var as a config
     # setting and aborts ("No declared setting with name: ..."). With cleanenv
     # only the explicit --env settings below reach neo4j.
     apptainer run --cleanenv --writable-tmpfs \
+        --bind "$NEO4J_TMP:/tmp" \
         --bind "$NEO4J_BASE/data:/data" \
         --bind "$NEO4J_BASE/logs:/logs" \
         --bind "$NEO4J_BASE/import:/import" \
         --env NEO4J_AUTH="neo4j/${NEO4J_PASSWORD}" \
+        --env JAVA_OPTS="-Djava.io.tmpdir=/tmp -Djna.tmpdir=/tmp -Djna.nounpack=false" \
         --env NEO4J_server_default__listen__address=127.0.0.1 \
         --env NEO4J_server_bolt_listen__address=127.0.0.1:7687 \
         --env NEO4J_server_http_listen__address=127.0.0.1:7474 \
@@ -59,7 +70,14 @@ start() {
 
 wait_ready() {
     echo "[neo4j] waiting for bolt on 127.0.0.1:7687 ..."
+    local pid=""; [[ -f "$PIDFILE" ]] && pid=$(cat "$PIDFILE")
     for i in $(seq 1 120); do   # up to ~10 min
+        # Fast-fail: if the neo4j process already died, stop waiting.
+        if [[ -n "$pid" ]] && ! kill -0 "$pid" 2>/dev/null; then
+            echo "[neo4j] ERROR: process $pid exited before bolt came up. Console tail:" >&2
+            tail -40 "$NEO4J_BASE/logs/console.out" 2>/dev/null >&2 || true
+            return 1
+        fi
         if python - <<PY 2>/dev/null
 import sys
 from neo4j import GraphDatabase

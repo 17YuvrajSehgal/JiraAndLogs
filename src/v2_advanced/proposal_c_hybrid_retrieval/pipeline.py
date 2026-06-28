@@ -67,10 +67,17 @@ class HybridRRFRetrievalPipeline(PipelineRunner):
         humanized_root: str = "jira-shadow-humanized-v2",
         # SPLADE config
         splade_model: str = "naver/splade-cocondenser-ensembledistil",
-        # BiEncoder config — reuses the Phase G fine-tuned model if available
+        # BiEncoder config — kept identical to the standalone v3 BiEncoder
+        # (run_biencoder_wol_mode3.py defaults) so the dense retriever fused
+        # here is the SAME model. use_all_golds=True would explode to millions
+        # of (window, gold) pairs on v3's generous coarse matching (~11h
+        # fine-tune); the standalone uses one example per window.
         biencoder_backbone: str = "sentence-transformers/all-MiniLM-L6-v2",
-        biencoder_finetune_epochs: int = 3,
+        biencoder_finetune_epochs: int = 5,
         biencoder_finetune_batch_size: int = 32,
+        biencoder_use_all_golds: bool = False,
+        biencoder_n_hard_negs: int = 2,
+        biencoder_n_random_negs: int = 1,
         # Graph config
         neo4j_uri: str = "neo4j://127.0.0.1:7687",
         neo4j_user: str = "neo4j",
@@ -95,6 +102,9 @@ class HybridRRFRetrievalPipeline(PipelineRunner):
         self.biencoder_backbone = biencoder_backbone
         self.biencoder_finetune_epochs = biencoder_finetune_epochs
         self.biencoder_finetune_batch_size = biencoder_finetune_batch_size
+        self.biencoder_use_all_golds = biencoder_use_all_golds
+        self.biencoder_n_hard_negs = biencoder_n_hard_negs
+        self.biencoder_n_random_negs = biencoder_n_random_negs
         self.neo4j_uri = neo4j_uri
         self.neo4j_user = neo4j_user
         self.neo4j_password = neo4j_password
@@ -148,6 +158,27 @@ class HybridRRFRetrievalPipeline(PipelineRunner):
                 memory=len(memory_issues),
             )
 
+            # Optional cap on the train/val windows scored ONLY to fit the
+            # triage logistic head (the score_train / score_val loops below).
+            # The Hit@K test rankings come from score_test, which is NEVER
+            # subsampled, so retrieval metrics are unchanged; only the triage
+            # threshold sees fewer (still representative) samples. At v3 scale
+            # (~61k train windows) the per-window SPLADE+graph scoring is the
+            # dominant cost, so this is the lever that keeps the run tractable.
+            # Set HYBRID_TRIAGE_SCORE_SAMPLE>0 to enable (default 0 = full).
+            import os as _os
+            import random as _rnd
+            _samp = int(_os.environ.get("HYBRID_TRIAGE_SCORE_SAMPLE", "0") or "0")
+            if _samp > 0:
+                _r = _rnd.Random(self.seed)
+                if len(train_w) > _samp:
+                    train_w = _r.sample(train_w, _samp)
+                _vsamp = max(1, _samp // 3)
+                if len(val_w) > _vsamp:
+                    val_w = _r.sample(val_w, _vsamp)
+                log.info("triage-score subsample applied",
+                         train=len(train_w), val=len(val_w), test=len(test_w))
+
         # 2) Fit BiEncoder (reuses the Phase G code path)
         with log_step(log, "fit_biencoder"):
             from neural_models.bi_encoder import BiEncoderRetrievalPipeline
@@ -160,6 +191,9 @@ class HybridRRFRetrievalPipeline(PipelineRunner):
                 top_k=self.top_k_per_retriever,
                 max_chars=self.max_chars,
                 seed=self.seed,
+                use_all_golds=self.biencoder_use_all_golds,
+                n_hard_negs=self.biencoder_n_hard_negs,
+                n_random_negs=self.biencoder_n_random_negs,
             )
             # Run BiEncoder pipeline up to its predict step; we want both
             # its top-K rankings AND its similarity features for triage.

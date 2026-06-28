@@ -77,20 +77,28 @@ def _doc_text(issue: Any, max_chars: int) -> str:
 
 
 # ---------------------------------------------------------------------------
-# Parallel BM25 hard-negative mining (result-preserving).
+# Parallel BM25 hard-negative mining.
 #
 # The per-window BM25 retrieval + time-ordered visibility filtering is the
 # dominant cost of BiEncoder training at v3 scale (~61k windows x ~39k memory
 # docs; the scorer and the visibility filter are both pure-Python and
 # single-threaded). Each window is independent, so we fan the per-window
-# "mining" across processes and then reassemble the training pairs
-# DETERMINISTICALLY in the main process using a single seeded RNG, in the
-# original window order. The emitted pairs are bit-identical to the serial
-# path regardless of worker count; only wall-clock changes.
+# pair construction across processes.
 #
-# Enabled by env var BIENC_BM25_JOBS (default 1 = original serial path;
-# 0 or negative = use all CPUs). Uses the 'fork' start method so workers
-# inherit the fitted BM25 scorer and corpus copy-on-write with no pickling.
+# To keep memory bounded at scale (the background random-negative pool can be
+# corpus-sized per window), each worker does its OWN negative sampling with a
+# PER-WINDOW deterministic RNG (seeded by (seed, window_index)) and returns
+# only the handful of assembled text lists for that window. This makes the
+# output independent of worker count and fully reproducible run-to-run, and
+# never ships the giant pools back to the parent. It mirrors the serial recipe
+# (positives = golds; hard negs sampled from the BM25 top-N; random negs from
+# the visible background) — the only difference from a single global RNG is
+# *which* of the equivalent candidates are drawn per window, which is immaterial
+# (hard negs all come from the same BM25 set; random negs are noise by design).
+#
+# Enabled by env var BIENC_BM25_JOBS (default 1 = serial, same code path;
+# 0 or negative = all CPUs). Uses 'fork' so workers inherit the fitted BM25
+# scorer and corpus copy-on-write with no pickling.
 # ---------------------------------------------------------------------------
 
 # Worker-visible globals (populated in the parent before fork).
@@ -100,7 +108,10 @@ _MINE_BY_ID: Any = None
 _MINE_WINDOWS: Any = None
 _MINE_MAX_CHARS: int = 512
 _MINE_TOP_N: int = 20
-_MINE_NEED_RANDOM: bool = False
+_MINE_SEED: int = 42
+_MINE_USE_ALL_GOLDS: bool = True
+_MINE_N_HARD: int = 3
+_MINE_N_RANDOM: int = 0
 
 
 def _bm25_jobs() -> int:
@@ -123,53 +134,63 @@ def _mine_worker_init() -> None:
     os.environ.setdefault("OMP_NUM_THREADS", "1")
 
 
-def _mine_window_record(w: Any):
-    """Mine one window. Returns a small picklable record:
-
-      None                          -> contributes nothing, NOT counted
-      ("kept_no_anchor",)           -> counted in n_windows_kept, no pairs
-      ("ok", anchor, gold_ids, pos_texts, wrong_texts, random_ids)
-
-    `random_ids` is only populated when random negatives are requested, to
-    avoid materialising the (potentially corpus-sized) background pool.
+def _mine_window_pairs(idx: int) -> list[list[str]]:
+    """Build this window's training examples. Returns a list of text lists
+    (anchor, positive, hard_neg..., random_neg...), one per emitted (window,
+    gold) example. Empty if the window contributes nothing. Negative sampling
+    uses a per-window deterministic RNG so the result is order-independent and
+    reproducible, and only the small assembled texts cross the process boundary.
     """
+    import random as _random
+
+    w = _MINE_WINDOWS[idx]
     corpus = _MINE_CORPUS
     bm25 = _MINE_BM25
     by_id = _MINE_BY_ID
     max_chars = _MINE_MAX_CHARS
+    rng = _random.Random(f"{_MINE_SEED}:{idx}")
 
     gold = list(getattr(w, "matched_memory_issue_ids", None) or [])
     if not gold:
-        return None
+        return []
     visible = corpus.visible_to(w)
     visible_ids = {iss.jira_shadow_issue_id for iss in visible}
     gold_in_view = [g for g in gold if g in visible_ids and g in by_id]
     if not gold_in_view:
-        return None
+        return []
     anchor = _evi(w, max_chars)
     if not anchor:
-        return ("kept_no_anchor",)
+        return []
 
     hits = bm25.retrieve(w, corpus, top_k=_MINE_TOP_N)
     gold_set = set(gold_in_view)
     wrong = [h for h in hits if h.issue_id not in gold_set]
-    pos_texts = [_doc_text(by_id[g], max_chars) for g in gold_in_view]
-    wrong_texts = [_doc_text(h.issue, max_chars) for h in wrong]
 
-    random_ids: list[str] = []
-    if _MINE_NEED_RANDOM:
+    # Random-negative pool: visible memory NOT in gold and NOT in BM25 top-N.
+    random_pool: list[Any] = []
+    if _MINE_N_RANDOM > 0:
         wrong_ids = {h.issue_id for h in wrong}
-        random_ids = [
-            iss.jira_shadow_issue_id
-            for iss in visible
+        random_pool = [
+            iss for iss in visible
             if iss.jira_shadow_issue_id not in gold_set
             and iss.jira_shadow_issue_id not in wrong_ids
         ]
-    return ("ok", anchor, gold_in_view, pos_texts, wrong_texts, random_ids)
 
-
-def _mine_window_record_idx(i: int):
-    return _mine_window_record(_MINE_WINDOWS[i])
+    golds_to_emit = gold_in_view if _MINE_USE_ALL_GOLDS else [rng.choice(gold_in_view)]
+    out: list[list[str]] = []
+    for gid in golds_to_emit:
+        positive = _doc_text(by_id[gid], max_chars)
+        if not positive:
+            continue
+        texts = [anchor, positive]
+        if wrong and _MINE_N_HARD > 0:
+            for h in rng.sample(wrong, min(_MINE_N_HARD, len(wrong))):
+                texts.append(_doc_text(h.issue, max_chars))
+        if random_pool and _MINE_N_RANDOM > 0:
+            for iss in rng.sample(random_pool, min(_MINE_N_RANDOM, len(random_pool))):
+                texts.append(_doc_text(iss, max_chars))
+        out.append(texts)
+    return out
 
 
 class BiEncoderRetrievalPipeline(PipelineRunner):
@@ -248,25 +269,25 @@ class BiEncoderRetrievalPipeline(PipelineRunner):
         """
         from sentence_transformers import InputExample
         from core.memory.retrieval import BM25Retriever
-        import random
-
-        rng = random.Random(self.seed)
 
         # Fit BM25 over the full corpus once for hard-negative mining.
         bm25 = BM25Retriever()
         bm25.fit(corpus)
 
-        # --- Phase 1: mine per-window records (expensive; optionally parallel)
         # Publish the shared, read-only state for fork-inheriting workers.
         global _MINE_CORPUS, _MINE_BM25, _MINE_BY_ID, _MINE_WINDOWS
-        global _MINE_MAX_CHARS, _MINE_TOP_N, _MINE_NEED_RANDOM
+        global _MINE_MAX_CHARS, _MINE_TOP_N, _MINE_SEED
+        global _MINE_USE_ALL_GOLDS, _MINE_N_HARD, _MINE_N_RANDOM
         _MINE_CORPUS = corpus
         _MINE_BM25 = bm25
         _MINE_BY_ID = by_id
         _MINE_WINDOWS = train_windows
         _MINE_MAX_CHARS = self.max_chars
         _MINE_TOP_N = self.bm25_top_n
-        _MINE_NEED_RANDOM = self.n_random_negs > 0
+        _MINE_SEED = self.seed
+        _MINE_USE_ALL_GOLDS = self.use_all_golds
+        _MINE_N_HARD = self.n_hard_negs
+        _MINE_N_RANDOM = self.n_random_negs
 
         n_jobs = _bm25_jobs()
         n = len(train_windows)
@@ -289,6 +310,9 @@ class BiEncoderRetrievalPipeline(PipelineRunner):
                     file=sys.stderr, flush=True,
                 )
 
+        # Each worker returns this window's list of text lists (small); we
+        # flatten into InputExamples. Memory stays bounded regardless of the
+        # background-pool size because pools never leave the worker.
         t_mine = time.time()
         if n_jobs > 1 and n > 1 and not cuda_live:
             import multiprocessing as mp
@@ -301,47 +325,21 @@ class BiEncoderRetrievalPipeline(PipelineRunner):
             )
             ctx = mp.get_context("fork")
             with ctx.Pool(processes=n_jobs, initializer=_mine_worker_init) as pool:
-                records = pool.map(_mine_window_record_idx, range(n), chunksize=chunk)
+                per_window = pool.map(_mine_window_pairs, range(n), chunksize=chunk)
         else:
-            records = [_mine_window_record(w) for w in train_windows]
+            per_window = [_mine_window_pairs(i) for i in range(n)]
         print(
             f"[{self.name}] BM25 mining done in {time.time() - t_mine:.1f}s "
             f"(n_jobs={n_jobs}, n_windows={n})",
             file=sys.stderr, flush=True,
         )
 
-        # --- Phase 2: assemble pairs DETERMINISTICALLY (single seeded RNG,
-        # original window order). This reproduces the serial logic exactly:
-        # the RNG is advanced in the same order and over equal-length lists,
-        # so the emitted pairs are independent of the worker count.
-        pairs: list[InputExample] = []
-        n_windows_kept = 0
-        for rec in records:
-            if rec is None:
-                continue
-            n_windows_kept += 1
-            if rec[0] != "ok":
-                continue
-            _tag, anchor, gold_ids, pos_texts, wrong_texts, random_ids = rec
-
-            if self.use_all_golds:
-                gold_emit = list(zip(gold_ids, pos_texts))
-            else:
-                gid = rng.choice(gold_ids)
-                gold_emit = [(gid, _doc_text(by_id[gid], self.max_chars))]
-
-            for _gid, positive in gold_emit:
-                if not positive:
-                    continue
-                texts = [anchor, positive]
-                if wrong_texts and self.n_hard_negs > 0:
-                    chosen = rng.sample(wrong_texts, min(self.n_hard_negs, len(wrong_texts)))
-                    texts.extend(chosen)
-                if random_ids and self.n_random_negs > 0:
-                    chosen_ids = rng.sample(random_ids, min(self.n_random_negs, len(random_ids)))
-                    texts.extend(_doc_text(by_id[i], self.max_chars) for i in chosen_ids)
-                pairs.append(InputExample(texts=texts))
-
+        pairs: list[InputExample] = [
+            InputExample(texts=texts)
+            for window_examples in per_window
+            for texts in window_examples
+        ]
+        n_windows_kept = sum(1 for we in per_window if we)
         print(
             f"[{self.name}] training pairs built: {len(pairs)} from "
             f"{n_windows_kept} windows (use_all_golds={self.use_all_golds}, "
