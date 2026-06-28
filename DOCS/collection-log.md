@@ -115,3 +115,20 @@ provenance (env freeze, seeds); threats-to-validity draft (gap #3).
 
 **Key headline so far (WoL real data, coarse Hit@5):**
 Hybrid-RRF **0.970** > BiEncoder 0.905 > LLM-RAG 0.856 > BM25 0.727 > KG (re-running) — fusion wins on real Jira data.
+
+---
+
+## Finalization — 2026-06-28
+
+- ✅ **WoL KG-alone** re-collected leak-free: Hit@5 **0.308** (weak retriever, as
+  documented in negative-results — its value is via fusion, not standalone).
+- ⚠️ **WoL fair-bm25**: standalone rank_bm25 over 38.6k docs **timed out** (>1h).
+  Covered by the **cascade-BM25 = 0.727** (WoL raw≈humanized text, so fair-BM25 ≈
+  cascade-BM25) + tfidf-humanized 0.766. Not re-run (redundant).
+- ▶ **WoL KG ±graph ablation** (no-graph hybrid) still running — last cell.
+- ✅ Significance + BH refreshed: **16 tests, 10 significant** after correction.
+
+**Result set is essentially final.** Categories complete: baselines, retrieval-
+cascades, kg-usefulness (OB/OTel + WoL pending), agent-end-to-end, agent-value,
+gold-validation, robustness (multi-seed + BH significance + negative-results),
+provenance. Bulky predictions/traces gitignored (ship as archive).
