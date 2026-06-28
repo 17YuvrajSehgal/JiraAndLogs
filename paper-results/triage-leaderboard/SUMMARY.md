@@ -21,5 +21,10 @@ Triage classification (ticket-worthy vs noise) + retrieval, from the comparison 
 | bi_encoder_hybrid | 1.000 | 1.000 | 0.047 | 0.895 | 1.000 | 0.000 | 0.000 |
 
 ## wol-v3
-_pending_
+| pipeline | PR-AUC | ROC-AUC | ECE↓ | P@FPR5 | R@FPR5 | Rec@5 | MRR |
+|---|---|---|---|---|---|---|---|
+| hist_gradient_boosting_numeric | 0.506 | 0.500 | 0.006 | 0.954 | 1.000 | 0.000 | 0.000 |
+| calibrated_random_forest_numeric | 0.506 | 0.500 | 0.033 | 0.954 | 1.000 | 0.000 | 0.000 |
+| logistic_numeric_sklearn | 0.506 | 0.500 | 0.006 | 0.954 | 1.000 | 0.000 | 0.000 |
+| bi_encoder_hybrid | 0.535 | 0.541 | 0.059 | 0.552 | 0.060 | 0.000 | 0.000 |
 
