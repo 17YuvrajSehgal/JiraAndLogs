@@ -1,7 +1,156 @@
 {
   "trace_root": "paper-results/agent-end-to-end/online-boutique/traces",
   "summary": {
-    "n_windows": 0
+    "n_windows": 1008,
+    "actual_wall_ms": {
+      "mean": 60.6696,
+      "median": 3.5,
+      "p95": 328.5,
+      "max": 328.5,
+      "total": 61155.0
+    },
+    "counterfactual_wall_ms": {
+      "mean": 101.0709,
+      "median": 3.5,
+      "p95": 328.5,
+      "max": 328.5,
+      "total": 101879.5
+    },
+    "savings_wall_ms": {
+      "mean": 40.4013,
+      "median": 0.0,
+      "p95": 325.0,
+      "max": 325.0,
+      "total": 40724.5
+    },
+    "actual_tokens": {
+      "mean": 71.0317,
+      "median": 0.0,
+      "p95": 400.0,
+      "max": 400,
+      "total": 71600
+    },
+    "counterfactual_tokens": {
+      "mean": 120.6349,
+      "median": 0.0,
+      "p95": 400.0,
+      "max": 400,
+      "total": 121600
+    },
+    "savings_tokens": {
+      "mean": 49.6032,
+      "median": 0.0,
+      "p95": 400.0,
+      "max": 400,
+      "total": 50000
+    },
+    "actual_usd": {
+      "mean": 0.0,
+      "median": 0.0,
+      "p95": 0.0001,
+      "max": 0.0001,
+      "total": 0.0179
+    },
+    "counterfactual_usd": {
+      "mean": 0.0,
+      "median": 0.0,
+      "p95": 0.0001,
+      "max": 0.0001,
+      "total": 0.0304
+    },
+    "savings_usd": {
+      "mean": 0.0,
+      "median": 0.0,
+      "p95": 0.0001,
+      "max": 0.0001,
+      "total": 0.0125
+    },
+    "totals": {
+      "actual_wall_seconds": 61.155,
+      "cascade_wall_seconds": 101.879,
+      "actual_llm_tokens": 71600,
+      "cascade_llm_tokens": 121600,
+      "actual_usd": 0.0179,
+      "cascade_usd": 0.0304
+    },
+    "savings_pct": {
+      "wall": 39.97,
+      "tokens": 41.12,
+      "usd": 41.12
+    }
   },
-  "per_skill": {}
+  "per_skill": {
+    "compose_l2": {
+      "invoked": 678,
+      "skipped_by_gate": 31,
+      "would_have_run": 709,
+      "save_rate_pct": 4.37
+    },
+    "compose_novelty": {
+      "invoked": 1008,
+      "skipped_by_gate": 0,
+      "would_have_run": 1008,
+      "save_rate_pct": 0.0
+    },
+    "compose_triage": {
+      "invoked": 1008,
+      "skipped_by_gate": 0,
+      "would_have_run": 1008,
+      "save_rate_pct": 0.0
+    },
+    "reformulate_query": {
+      "invoked": 179,
+      "skipped_by_gate": 125,
+      "would_have_run": 304,
+      "save_rate_pct": 41.12
+    },
+    "request_extended_trace_window": {
+      "invoked": 179,
+      "skipped_by_gate": 125,
+      "would_have_run": 304,
+      "save_rate_pct": 41.12
+    },
+    "request_pod_events": {
+      "invoked": 179,
+      "skipped_by_gate": 125,
+      "would_have_run": 304,
+      "save_rate_pct": 41.12
+    },
+    "request_pod_metrics": {
+      "invoked": 179,
+      "skipped_by_gate": 125,
+      "would_have_run": 304,
+      "save_rate_pct": 41.12
+    },
+    "request_similar_incident_window": {
+      "invoked": 179,
+      "skipped_by_gate": 125,
+      "would_have_run": 304,
+      "save_rate_pct": 41.12
+    },
+    "rerank_with_evidence": {
+      "invoked": 179,
+      "skipped_by_gate": 125,
+      "would_have_run": 304,
+      "save_rate_pct": 41.12
+    },
+    "retrieve_dense": {
+      "invoked": 709,
+      "skipped_by_gate": 0,
+      "would_have_run": 709,
+      "save_rate_pct": 0.0
+    },
+    "retrieve_hybrid_fusion": {
+      "invoked": 95,
+      "skipped_by_gate": 209,
+      "would_have_run": 304,
+      "save_rate_pct": 68.75
+    },
+    "triage_numeric": {
+      "invoked": 1008,
+      "skipped_by_gate": 0,
+      "would_have_run": 1008,
+      "save_rate_pct": 0.0
+    }
+  }
 }

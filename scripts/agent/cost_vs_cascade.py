@@ -81,7 +81,7 @@ def _aggregate_per_window(trace_dir: Path) -> dict[str, Any]:
     n_traces = 0
     per_window_rows: list[dict] = []
 
-    for tf in sorted(trace_dir.glob("*.json")):
+    for tf in sorted(trace_dir.rglob("*.json")):
         try:
             with open(tf, encoding="utf-8") as f:
                 trace = json.load(f)
@@ -208,7 +208,7 @@ def _per_skill_breakdown(trace_dir: Path) -> dict[str, dict[str, int]]:
     """Per-skill invoked/skipped counts across all traces."""
     invoked = Counter()
     skipped = Counter()
-    for tf in trace_dir.glob("*.json"):
+    for tf in trace_dir.rglob("*.json"):
         with open(tf, encoding="utf-8") as f:
             trace = json.load(f)
         for ev in trace.get("events") or []:

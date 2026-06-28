@@ -1,7 +1,156 @@
 {
   "trace_root": "paper-results/agent-end-to-end/otel-demo/traces",
   "summary": {
-    "n_windows": 0
+    "n_windows": 247,
+    "actual_wall_ms": {
+      "mean": 35.8077,
+      "median": 3.5,
+      "p95": 327.5,
+      "max": 328.5,
+      "total": 8844.5
+    },
+    "counterfactual_wall_ms": {
+      "mean": 97.7449,
+      "median": 3.5,
+      "p95": 328.5,
+      "max": 328.5,
+      "total": 24143.0
+    },
+    "savings_wall_ms": {
+      "mean": 61.9372,
+      "median": 0.0,
+      "p95": 325.0,
+      "max": 325.0,
+      "total": 15298.5
+    },
+    "actual_tokens": {
+      "mean": 40.4858,
+      "median": 0,
+      "p95": 400.0,
+      "max": 400,
+      "total": 10000
+    },
+    "counterfactual_tokens": {
+      "mean": 116.5992,
+      "median": 0,
+      "p95": 400.0,
+      "max": 400,
+      "total": 28800
+    },
+    "savings_tokens": {
+      "mean": 76.1134,
+      "median": 0,
+      "p95": 400.0,
+      "max": 400,
+      "total": 18800
+    },
+    "actual_usd": {
+      "mean": 0.0,
+      "median": 0.0,
+      "p95": 0.0001,
+      "max": 0.0001,
+      "total": 0.0025
+    },
+    "counterfactual_usd": {
+      "mean": 0.0,
+      "median": 0.0,
+      "p95": 0.0001,
+      "max": 0.0001,
+      "total": 0.0072
+    },
+    "savings_usd": {
+      "mean": 0.0,
+      "median": 0.0,
+      "p95": 0.0001,
+      "max": 0.0001,
+      "total": 0.0047
+    },
+    "totals": {
+      "actual_wall_seconds": 8.845,
+      "cascade_wall_seconds": 24.143,
+      "actual_llm_tokens": 10000,
+      "cascade_llm_tokens": 28800,
+      "actual_usd": 0.0025,
+      "cascade_usd": 0.0072
+    },
+    "savings_pct": {
+      "wall": 63.37,
+      "tokens": 65.28,
+      "usd": 65.28
+    }
   },
-  "per_skill": {}
+  "per_skill": {
+    "compose_l2": {
+      "invoked": 129,
+      "skipped_by_gate": 37,
+      "would_have_run": 166,
+      "save_rate_pct": 22.29
+    },
+    "compose_novelty": {
+      "invoked": 247,
+      "skipped_by_gate": 0,
+      "would_have_run": 247,
+      "save_rate_pct": 0.0
+    },
+    "compose_triage": {
+      "invoked": 247,
+      "skipped_by_gate": 0,
+      "would_have_run": 247,
+      "save_rate_pct": 0.0
+    },
+    "reformulate_query": {
+      "invoked": 25,
+      "skipped_by_gate": 47,
+      "would_have_run": 72,
+      "save_rate_pct": 65.28
+    },
+    "request_extended_trace_window": {
+      "invoked": 25,
+      "skipped_by_gate": 47,
+      "would_have_run": 72,
+      "save_rate_pct": 65.28
+    },
+    "request_pod_events": {
+      "invoked": 25,
+      "skipped_by_gate": 47,
+      "would_have_run": 72,
+      "save_rate_pct": 65.28
+    },
+    "request_pod_metrics": {
+      "invoked": 25,
+      "skipped_by_gate": 47,
+      "would_have_run": 72,
+      "save_rate_pct": 65.28
+    },
+    "request_similar_incident_window": {
+      "invoked": 25,
+      "skipped_by_gate": 47,
+      "would_have_run": 72,
+      "save_rate_pct": 65.28
+    },
+    "rerank_with_evidence": {
+      "invoked": 25,
+      "skipped_by_gate": 47,
+      "would_have_run": 72,
+      "save_rate_pct": 65.28
+    },
+    "retrieve_dense": {
+      "invoked": 166,
+      "skipped_by_gate": 0,
+      "would_have_run": 166,
+      "save_rate_pct": 0.0
+    },
+    "retrieve_hybrid_fusion": {
+      "invoked": 20,
+      "skipped_by_gate": 52,
+      "would_have_run": 72,
+      "save_rate_pct": 72.22
+    },
+    "triage_numeric": {
+      "invoked": 247,
+      "skipped_by_gate": 0,
+      "would_have_run": 247,
+      "save_rate_pct": 0.0
+    }
+  }
 }
