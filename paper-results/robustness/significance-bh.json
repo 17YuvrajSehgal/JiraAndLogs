@@ -1,0 +1,220 @@
+{
+  "method": "paired bootstrap Hit@5, two-sided",
+  "n_resamples": 1000,
+  "seed": 42,
+  "alpha": 0.05,
+  "correction": "benjamini-hochberg",
+  "n_tests": 15,
+  "results": [
+    {
+      "n_paired": 331,
+      "delta_hit5": -0.07552870090634445,
+      "ci95": [
+        -0.13595166163141992,
+        -0.01812688821752262
+      ],
+      "p_value": 0.016,
+      "a_hit5": 0.5589123867069486,
+      "b_hit5": 0.6344410876132931,
+      "comparison": "online-boutique: Hybrid vs BiEncoder",
+      "q_value_bh": 0.026666666666666665,
+      "significant_bh": true
+    },
+    {
+      "n_paired": 331,
+      "delta_hit5": 0.20241691842900306,
+      "ci95": [
+        0.1358761329305136,
+        0.27492447129909364
+      ],
+      "p_value": 0.0,
+      "a_hit5": 0.5589123867069486,
+      "b_hit5": 0.3564954682779456,
+      "comparison": "online-boutique: Hybrid vs BM25(fair)",
+      "q_value_bh": 0.0,
+      "significant_bh": true
+    },
+    {
+      "n_paired": 331,
+      "delta_hit5": 0.21752265861027192,
+      "ci95": [
+        0.16306646525679755,
+        0.2749244712990937
+      ],
+      "p_value": 0.0,
+      "a_hit5": 0.5589123867069486,
+      "b_hit5": 0.3413897280966767,
+      "comparison": "online-boutique: Hybrid vs BGE-dense",
+      "q_value_bh": 0.0,
+      "significant_bh": true
+    },
+    {
+      "n_paired": 331,
+      "delta_hit5": 0.09365558912386707,
+      "ci95": [
+        0.0332326283987916,
+        0.15105740181268884
+      ],
+      "p_value": 0.002,
+      "a_hit5": 0.5589123867069486,
+      "b_hit5": 0.4652567975830816,
+      "comparison": "online-boutique: Hybrid vs KG",
+      "q_value_bh": 0.00375,
+      "significant_bh": true
+    },
+    {
+      "n_paired": 331,
+      "delta_hit5": 0.21450151057401812,
+      "ci95": [
+        0.1570996978851964,
+        0.2719033232628399
+      ],
+      "p_value": 0.0,
+      "a_hit5": 0.5589123867069486,
+      "b_hit5": 0.34441087613293053,
+      "comparison": "online-boutique: Hybrid vs LLM-RAG",
+      "q_value_bh": 0.0,
+      "significant_bh": true
+    },
+    {
+      "n_paired": 331,
+      "delta_hit5": -0.033232628398791486,
+      "ci95": [
+        -0.07552870090634434,
+        0.006042296072507614
+      ],
+      "p_value": 0.148,
+      "a_hit5": 0.5589123867069486,
+      "b_hit5": 0.5921450151057401,
+      "comparison": "online-boutique: KG-effect (Hybrid vs no-graph)",
+      "q_value_bh": 0.20181818181818179,
+      "significant_bh": false
+    },
+    {
+      "n_paired": 119,
+      "delta_hit5": -0.008403361344537785,
+      "ci95": [
+        -0.0756302521008404,
+        0.05882352941176472
+      ],
+      "p_value": 0.938,
+      "a_hit5": 0.6722689075630253,
+      "b_hit5": 0.680672268907563,
+      "comparison": "otel-demo: Hybrid vs BiEncoder",
+      "q_value_bh": 0.942,
+      "significant_bh": false
+    },
+    {
+      "n_paired": 119,
+      "delta_hit5": 0.0756302521008404,
+      "ci95": [
+        0.0,
+        0.15966386554621848
+      ],
+      "p_value": 0.064,
+      "a_hit5": 0.6722689075630253,
+      "b_hit5": 0.5966386554621849,
+      "comparison": "otel-demo: Hybrid vs BM25(fair)",
+      "q_value_bh": 0.096,
+      "significant_bh": false
+    },
+    {
+      "n_paired": 119,
+      "delta_hit5": 0.008403361344537896,
+      "ci95": [
+        -0.05882352941176472,
+        0.07563025210084029
+      ],
+      "p_value": 0.942,
+      "a_hit5": 0.6722689075630253,
+      "b_hit5": 0.6638655462184874,
+      "comparison": "otel-demo: Hybrid vs BGE-dense",
+      "q_value_bh": 0.942,
+      "significant_bh": false
+    },
+    {
+      "n_paired": 119,
+      "delta_hit5": 0.26050420168067234,
+      "ci95": [
+        0.15105042016806725,
+        0.36974789915966383
+      ],
+      "p_value": 0.0,
+      "a_hit5": 0.6722689075630253,
+      "b_hit5": 0.4117647058823529,
+      "comparison": "otel-demo: Hybrid vs KG",
+      "q_value_bh": 0.0,
+      "significant_bh": true
+    },
+    {
+      "n_paired": 119,
+      "delta_hit5": 0.03361344537815136,
+      "ci95": [
+        -0.033823529411764794,
+        0.10084033613445387
+      ],
+      "p_value": 0.444,
+      "a_hit5": 0.6722689075630253,
+      "b_hit5": 0.6386554621848739,
+      "comparison": "otel-demo: Hybrid vs LLM-RAG",
+      "q_value_bh": 0.555,
+      "significant_bh": false
+    },
+    {
+      "n_paired": 119,
+      "delta_hit5": -0.008403361344537785,
+      "ci95": [
+        -0.05882352941176472,
+        0.04201680672268915
+      ],
+      "p_value": 0.886,
+      "a_hit5": 0.6722689075630253,
+      "b_hit5": 0.680672268907563,
+      "comparison": "otel-demo: KG-effect (Hybrid vs no-graph)",
+      "q_value_bh": 0.942,
+      "significant_bh": false
+    },
+    {
+      "n_paired": 5150,
+      "delta_hit5": 0.06504854368932034,
+      "ci95": [
+        0.05786407766990298,
+        0.07281553398058249
+      ],
+      "p_value": 0.0,
+      "a_hit5": 0.9700970873786408,
+      "b_hit5": 0.9050485436893204,
+      "comparison": "wol-v3: Hybrid vs BiEncoder",
+      "q_value_bh": 0.0,
+      "significant_bh": true
+    },
+    {
+      "n_paired": 5150,
+      "delta_hit5": 0.14135922330097084,
+      "ci95": [
+        0.131257281553398,
+        0.15184466019417475
+      ],
+      "p_value": 0.0,
+      "a_hit5": 0.9700970873786408,
+      "b_hit5": 0.8287378640776699,
+      "comparison": "wol-v3: Hybrid vs BGE-dense",
+      "q_value_bh": 0.0,
+      "significant_bh": true
+    },
+    {
+      "n_paired": 500,
+      "delta_hit5": 0.122,
+      "ci95": [
+        0.09399999999999997,
+        0.15200000000000002
+      ],
+      "p_value": 0.0,
+      "a_hit5": 0.978,
+      "b_hit5": 0.856,
+      "comparison": "wol-v3: Hybrid vs LLM-RAG",
+      "q_value_bh": 0.0,
+      "significant_bh": true
+    }
+  ]
+}
