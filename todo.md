@@ -1,14 +1,56 @@
 # WoL v3 (80K Dataset) — Status & Remaining Work
 
-*Last updated: 2026-06-26 (BM25 complete; only Hybrid-RRF + agent eval remaining)*
+*Last updated: 2026-06-28 — **ALL RESULT COLLECTION COMPLETE.** Everything below
+this banner is the historical WoL-pipeline log (still accurate as provenance);
+the authoritative current status is the banner.*
+
+---
+
+## ✅ FINAL STATUS — 2026-06-28 (Trillium HPC; everything collected)
+
+**Source of truth for paper numbers is now [`paper-results/`](paper-results/README.md)**
+(categorized, committed, with per-category `SUMMARY.md`). The old
+`DOCS/docs8/*` and `RESEARH-PAPER/ICSE/sections/` references below **do not exist
+in this repo** — paper integration (LaTeX) is the author's downstream step;
+the numbers are ready. Reproduction: [`DOCS/REPRODUCE.md`](DOCS/REPRODUCE.md).
+Provenance log: [`DOCS/collection-log.md`](DOCS/collection-log.md).
+
+| Result family → `paper-results/` | Status | Headline (WoL real / OB / OTel) |
+|---|---|---|
+| `retrieval-cascades/` (BiEncoder, BM25, KG, **Hybrid-RRF**) | ✅ | Hybrid Hit@5 **0.970** / 0.559 / 0.672 |
+| `baselines/` (bge, e5, mpnet, tfidf, bm25-fair, cross-encoder, **LLM-RAG**) | ✅ | our Hybrid > all baselines |
+| `agent-end-to-end/` (full agent, all 3) | ✅ | Hit@5 **0.963** / 0.758 / 0.756 |
+| `agent-value/` (cost@iso-accuracy, skill/tool/budget ablations) | ✅ | controller saves 78% / 40% / 63% |
+| `kg-usefulness/` (±graph ablation + complementarity) | ✅ | KG aids Hit@1, +14% unique hits (OB) |
+| `gold-validation/` (LLM-as-judge) | ✅ | gold≫random, WoL gap 1.24 |
+| `triage-leaderboard/` (PR-AUC/ECE/precision@FPR) | ✅ | synthetic saturated; **WoL at-chance** |
+| `robustness/` (multi-seed + BH significance + negative-results) | ✅ | 17 tests, 10 sig after BH |
+| `provenance/` + README + threats-to-validity + REPRODUCE + PUBLICATION | ✅ | seeds/env/config; release archives built |
+
+**Scope note.** This file originally tracked only the WoL retrieval pipeline. The
+final artifact is much broader: an ICSE-review-driven expansion (prior-art +
+LLM-RAG baselines, KG-usefulness, gold validation, triage leaderboard,
+agent-value, robustness/significance) — see [`DOCS/review-sol.md`](DOCS/review-sol.md).
+
+**Corrections to the historical notes below** (superseded — kept for provenance):
+- **Hybrid-RRF used `--biencoder-finetune-epochs 5`** (apples-to-apples), NOT the
+  1-epoch shortcut recommended in Task 1.3 below.
+- **Environment is Trillium/Slurm + Apptainer Neo4j**, not local Docker. See the
+  `scripts/research-lab/trillium_*.sbatch` jobs.
+- **WoL KG was re-run leak-free** (Hit@5 0.308) after fixing a temporal-leakage
+  bug; the §4 number below (0.2806) is the old leaky run. See `DOCS/audit-findings.md`.
+- **All audit bugs fixed** (12 total incl. split-honoring, KG leakage, pr_auc ties,
+  seed consistency) — `DOCS/audit-findings.md`.
+
+**Nothing further to collect for the paper.** Optional, documented extras (LLM
+explanation-judge, WoL multi-seed, gold-judge prompt tuning) remain non-blocking.
+
+---
+
+## 📜 Historical WoL-pipeline log (provenance — accurate as of 2026-06-26)
 
 **Dataset under measurement.** `data/derived/global/2026-06-17-wol-real-v3-global/`
 (Option C — 24 distributed-systems Apache projects, no quality filters, 78,140 query rows).
-
-**Source-of-truth files for paper numbers.**
-- `DOCS/docs8/PAPER-FINDINGS.md` — current paper claims sourced from v2
-- `DOCS/docs8/RQ-CLOSURE-TABLE.md` — master RQ status
-- `RESEARH-PAPER/ICSE/sections/` — LaTeX sections that need v3 number updates
 
 ---
 

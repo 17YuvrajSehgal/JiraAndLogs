@@ -284,7 +284,12 @@ The current derived corpus is **WoL v3** (locked 2026-06-20):
 - **Multi-ticket incident clusters** (2,456) extracted via Jira `is duplicate of` / `Cloners` / `Cause` link analysis.
 - **KG entity extractions** (memory + window side) via OpenAI gpt-4o-mini (~$36 total; 55 of 38,642 memory items failed extraction, 99.86% success rate).
 
-> **Note for paper readers**: all WoL results currently published in the paper use the **WoL v2** corpus (9,341 rows, 2,000 memory items). WoL v3 cascade re-measurement is in progress; partial v3 results are available in `DOCS/docs8/PAPER-FINDINGS.md`.
+> **Note for paper readers (updated 2026-06-28)**: WoL **v3** is now the
+> measured corpus (38,642 memory items / 13,388 test windows, 24 Apache
+> projects). The complete, leak-free v3 results are in
+> [`paper-results/`](../paper-results/README.md) — this is the source of truth.
+> (The earlier `DOCS/docs8/PAPER-FINDINGS.md` reference is obsolete; that file is
+> not part of this repository.)
 
 Unlike the OB and OTel Demo datasets, WoL has no associated telemetry — it contributes the **memory corpus** side of the retrieval evaluation: given a new incident description, can the system find the most relevant past ticket? All `triage_feature_*` numeric columns are zero-filled in WoL.
 

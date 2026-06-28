@@ -67,7 +67,9 @@ Validation: **439/439 agent tests pass**; all edited modules import. (commit `10
 ---
 
 ## 3. Decisions
-- LLM = **Qwen2.5-7B-Instruct** via vLLM (offline, one H100) for LLM-RAG + judge.
+- LLM = **Qwen2.5-7B-Instruct** via **transformers** (offline, one H100) for
+  LLM-RAG + judge. (Planned vLLM; switched to transformers — vLLM isn't installed
+  and would conflict with the `transformers` version the cascade BiEncoder pins.)
 - Gold validation via **LLM-as-judge** this cycle (+ human-kit for later κ).
 - Clean dir `paper-results/` only; large `*-predictions.jsonl` gitignored, shipped as a release archive.
 - WoL: keep the valid Hybrid (620673) + BiEncoder; re-synth BM25 (C3); **re-run KG (C2)**.

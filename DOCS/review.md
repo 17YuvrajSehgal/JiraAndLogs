@@ -3,6 +3,16 @@
 *An honest, thorough self-review of the agentic incident-triage work toward an
 ICSE submission. Written 2026-06-28.*
 
+> **STATUS (2026-06-28): all identified gaps addressed.** The fix plan and its
+> completed outcomes are in [`review-sol.md`](review-sol.md); the resulting fresh
+> results are in [`paper-results/`](../paper-results/README.md). Summary of
+> closure: prior-art + LLM-RAG baselines ✅, agent marginal-value (cost@iso-acc)
+> ✅, KG-usefulness (±graph ablation + complementarity) ✅, gold validation
+> (LLM-as-judge) ✅, multi-seed + multiple-comparison (BH) + negative-results ✅,
+> triage leaderboard (PR-AUC/ECE/precision@FPR) ✅. Synthetic-only agentic
+> validation (gap #3) remains a scoped limitation, partially mitigated on real
+> WoL data + documented in [`threats-to-validity.md`](threats-to-validity.md).
+
 > **Caveat on scope of this review.** The actual paper draft (`RESEARH-PAPER/`,
 > `DOCS/docs7`, `DOCS/docs8`) is not present in the repository at review time, so
 > this critique is grounded in the *system design* (`DOCS/agentic-system.md`),
@@ -88,8 +98,9 @@ with cost/latency + CIs across all three datasets and an explicit
 - **Multiple-comparison correction** across the many RQ bootstrap tests (none
   apparent).
 - **Negative results need framing, not burying.** Cross-corpus Hit@5 = 0.05 and
-  KG-retrieval Hit@5 = 0.28 are weak; turn them into honest analysis of *when and
-  why* graph/cross-corpus retrieval fails.
+  KG-retrieval Hit@5 ≈ 0.31 (leak-free WoL) are weak; turn them into honest
+  analysis of *when and why* graph/cross-corpus retrieval fails. *(Done — see
+  `paper-results/robustness/negative-results.md`.)*
 - **LLM reproducibility caveat** (gpt-4o-mini drift). Already noted by the team;
   reviewers will want extracted artifacts + prompts shipped (mostly done).
 

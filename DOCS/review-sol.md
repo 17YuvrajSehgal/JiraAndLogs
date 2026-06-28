@@ -3,10 +3,19 @@
 *How each limitation in [`review.md`](review.md) will be addressed before the
 deadline (2 days, no new data collection). Written 2026-06-28.*
 
+> **STATUS (2026-06-28): COMPLETE.** Every gap below was addressed and the
+> results are in [`paper-results/`](../paper-results/README.md) (see each
+> category's `SUMMARY.md`). Full provenance: [`collection-log.md`](collection-log.md).
+> One implementation change from the plan: the LLM ran via **transformers**
+> (offline, cached weights), **not vLLM** — vLLM isn't installed and would have
+> conflicted with the `transformers` version the cascade BiEncoder pins, so it
+> was avoided. Qwen2.5-7B loaded fine and finished each subset in minutes.
+
 Decisions taken with the author:
 - **LLM for RAG-baseline + LLM-as-judge:** `Qwen2.5-7B-Instruct`, served
-  **offline via vLLM on one H100** (Apache-2.0, fits a single GPU, fast). The
-  codebase already has a `vllm_provider` in the LLM layer.
+  **offline via the `transformers` library on one H100** (Apache-2.0, fits a
+  single GPU, fast; cached weights, `HF_HUB_OFFLINE=1`). *(Plan originally said
+  vLLM; switched to transformers — see status banner.)*
 - **Gold validation:** lean on **LLM-as-judge** (no multi-annotator human study
   this cycle); ship a human-annotation kit for an optional later κ.
 - **No new datasets.** Everything runs on the three existing global dirs.
