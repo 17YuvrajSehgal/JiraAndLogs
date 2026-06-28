@@ -6,7 +6,7 @@
 #SBATCH --ntasks=1
 #SBATCH --gpus-per-node=1
 #SBATCH --cpus-per-task=24
-#SBATCH --time=06:00:00
+#SBATCH --time=08:00:00
 #SBATCH --output=logs/slurm-%x-%j.out
 # ---------------------------------------------------------------------------
 # KG-usefulness ablation: Hybrid-RRF WITHOUT the graph retriever (SPLADE +
@@ -31,6 +31,7 @@ source .venv/bin/activate
 export PYTHONPATH="src:${PYTHONPATH:-}" PYTHONUNBUFFERED=1 PYTHONUTF8=1
 export HF_HOME="/scratch/${USER}/hf_cache" HF_HUB_OFFLINE=1 TRANSFORMERS_OFFLINE=1
 export BIENC_BM25_JOBS="${SLURM_CPUS_PER_TASK:-24}" OMP_NUM_THREADS="${SLURM_CPUS_PER_TASK:-24}"
+export HYBRID_TRIAGE_SCORE_SAMPLE=5000   # subsample train/val triage scoring (test Hit@K unaffected) — avoids the score_train timeout
 export TOKENIZERS_PARALLELISM=false
 
 echo "=== KG-ablation [$LABEL] (hybrid --skip-graph) on $(hostname) $(date -u +%FT%TZ) ==="
