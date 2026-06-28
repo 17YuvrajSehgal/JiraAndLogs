@@ -3,8 +3,8 @@
     {
       "name": "hist_gradient_boosting_numeric",
       "threshold": 0.000652765444566095,
-      "fit_seconds": 3.101257562637329,
-      "predict_seconds": 0.004774332046508789,
+      "fit_seconds": 2.977120876312256,
+      "predict_seconds": 0.004693508148193359,
       "metadata": {
         "train_n": 1150,
         "val_n": 246,
@@ -16,8 +16,8 @@
     {
       "name": "calibrated_random_forest_numeric",
       "threshold": 0.07017543859649122,
-      "fit_seconds": 1.073709487915039,
-      "predict_seconds": 0.11379384994506836,
+      "fit_seconds": 1.106574296951294,
+      "predict_seconds": 0.11536741256713867,
       "metadata": {
         "train_n": 1150,
         "val_n": 246,
@@ -29,8 +29,8 @@
     {
       "name": "logistic_numeric_sklearn",
       "threshold": 0.3402035508145014,
-      "fit_seconds": 0.008094310760498047,
-      "predict_seconds": 0.0008099079132080078,
+      "fit_seconds": 0.00831151008605957,
+      "predict_seconds": 0.0008072853088378906,
       "metadata": {
         "train_n": 1150,
         "val_n": 246,
@@ -42,8 +42,8 @@
     {
       "name": "bm25_retrieval_only",
       "threshold": 1.0,
-      "fit_seconds": 0.007454872131347656,
-      "predict_seconds": 0.10134220123291016,
+      "fit_seconds": 0.002645254135131836,
+      "predict_seconds": 0.10593652725219727,
       "metadata": {
         "train_n": 1150,
         "val_n": 246,
@@ -55,8 +55,8 @@
     {
       "name": "bi_encoder_hybrid",
       "threshold": 0.3077705863841343,
-      "fit_seconds": 10.87858247756958,
-      "predict_seconds": 0.00017261505126953125,
+      "fit_seconds": 10.812988758087158,
+      "predict_seconds": 0.0001704692840576172,
       "metadata": {
         "train_n": 1150,
         "val_n": 246,
@@ -93,7 +93,7 @@
     "calibrated_random_forest_numeric": {
       "triage.pr_auc": 1.0,
       "triage.roc_auc": 1.0,
-      "triage.ece": 0.002674045651126753,
+      "triage.ece": 0.0026740456511267596,
       "triage.precision_at_fpr_5pct": 0.8947368421052632,
       "triage.recall_at_fpr_5pct": 1.0,
       "triage.f1_at_fpr_5pct": 0.9444444444444444,
@@ -131,7 +131,7 @@
       "retrieval.n_novelty": 0
     },
     "bm25_retrieval_only": {
-      "triage.pr_auc": 0.3013806765184472,
+      "triage.pr_auc": 0.27368298471012537,
       "triage.roc_auc": 0.49597436740059153,
       "triage.ece": 0.6819525681735251,
       "triage.precision_at_fpr_5pct": 0.42857142857142855,
@@ -179,9 +179,9 @@
         "hi": 1.0
       },
       "bm25_retrieval_only": {
-        "point": 0.3013806765184472,
-        "lo": 0.20865468800610137,
-        "hi": 0.3701837279153603
+        "point": 0.27368298471012537,
+        "lo": 0.21600637390111074,
+        "hi": 0.3302771514756853
       },
       "calibrated_random_forest_numeric": {
         "point": 1.0,
@@ -314,9 +314,9 @@
         "metric": "pr_auc",
         "a": "bi_encoder_hybrid",
         "b": "bm25_retrieval_only",
-        "delta": -0.6986193234815528,
-        "ci_lo": -0.7913453119938987,
-        "ci_hi": -0.6298162720846396,
+        "delta": -0.7263170152898746,
+        "ci_lo": -0.7839936260988892,
+        "ci_hi": -0.6697228485243147,
         "p_value": 0.0
       },
       {
@@ -350,27 +350,27 @@
         "metric": "pr_auc",
         "a": "bm25_retrieval_only",
         "b": "calibrated_random_forest_numeric",
-        "delta": 0.6986193234815528,
-        "ci_lo": 0.6298162720846396,
-        "ci_hi": 0.7913453119938987,
+        "delta": 0.7263170152898746,
+        "ci_lo": 0.6697228485243147,
+        "ci_hi": 0.7839936260988892,
         "p_value": 0.0
       },
       {
         "metric": "pr_auc",
         "a": "bm25_retrieval_only",
         "b": "hist_gradient_boosting_numeric",
-        "delta": 0.6986193234815528,
-        "ci_lo": 0.6298162720846396,
-        "ci_hi": 0.7913453119938987,
+        "delta": 0.7263170152898746,
+        "ci_lo": 0.6697228485243147,
+        "ci_hi": 0.7839936260988892,
         "p_value": 0.0
       },
       {
         "metric": "pr_auc",
         "a": "bm25_retrieval_only",
         "b": "logistic_numeric_sklearn",
-        "delta": 0.6986193234815528,
-        "ci_lo": 0.6298162720846396,
-        "ci_hi": 0.7913453119938987,
+        "delta": 0.7263170152898746,
+        "ci_lo": 0.6697228485243147,
+        "ci_hi": 0.7839936260988892,
         "p_value": 0.0
       },
       {
@@ -3424,7 +3424,7 @@
       "triage": {
         "pr_auc": 1.0,
         "roc_auc": 1.0,
-        "ece": 0.013204598060131412,
+        "ece": 0.013204598060131629,
         "precision_at_fpr_5pct": 1.0,
         "recall_at_fpr_5pct": 1.0,
         "f1_at_fpr_5pct": 1.0,
@@ -3532,7 +3532,7 @@
       "triage": {
         "pr_auc": 1.0,
         "roc_auc": 1.0,
-        "ece": 0.005600580557163073,
+        "ece": 0.005600580557163049,
         "precision_at_fpr_5pct": 1.0,
         "recall_at_fpr_5pct": 1.0,
         "f1_at_fpr_5pct": 1.0,
@@ -4693,7 +4693,7 @@
       "triage": {
         "pr_auc": 1.0,
         "roc_auc": 1.0,
-        "ece": 0.00283743210311247,
+        "ece": 0.0028374321031124773,
         "precision_at_fpr_5pct": 0.8771929824561403,
         "recall_at_fpr_5pct": 1.0,
         "f1_at_fpr_5pct": 0.9345794392523363,
@@ -4828,7 +4828,7 @@
       "triage": {
         "pr_auc": 1.0,
         "roc_auc": 1.0,
-        "ece": 0.002963550454866958,
+        "ece": 0.0029635504548669537,
         "precision_at_fpr_5pct": 0.9375,
         "recall_at_fpr_5pct": 1.0,
         "f1_at_fpr_5pct": 0.967741935483871,
@@ -4855,7 +4855,7 @@
       "triage": {
         "pr_auc": 1.0,
         "roc_auc": 1.0,
-        "ece": 0.01162293069328626,
+        "ece": 0.011622930693286404,
         "precision_at_fpr_5pct": 1.0,
         "recall_at_fpr_5pct": 1.0,
         "f1_at_fpr_5pct": 1.0,
@@ -4909,7 +4909,7 @@
       "triage": {
         "pr_auc": 1.0,
         "roc_auc": 1.0,
-        "ece": 0.002674045651126753,
+        "ece": 0.0026740456511267596,
         "precision_at_fpr_5pct": 0.8947368421052632,
         "recall_at_fpr_5pct": 1.0,
         "f1_at_fpr_5pct": 0.9444444444444444,
@@ -5098,7 +5098,7 @@
       "triage": {
         "pr_auc": 1.0,
         "roc_auc": 1.0,
-        "ece": 0.003168168843387693,
+        "ece": 0.003168168843387717,
         "precision_at_fpr_5pct": 0.9130434782608695,
         "recall_at_fpr_5pct": 1.0,
         "f1_at_fpr_5pct": 0.9545454545454545,
@@ -5638,7 +5638,7 @@
       "triage": {
         "pr_auc": 1.0,
         "roc_auc": 1.0,
-        "ece": 0.003796777089016817,
+        "ece": 0.0037967770890168367,
         "precision_at_fpr_5pct": 0.9428571428571428,
         "recall_at_fpr_5pct": 1.0,
         "f1_at_fpr_5pct": 0.9705882352941176,
@@ -8309,7 +8309,7 @@
       "strata_key": "family=ad-gc-pressure",
       "n": 6,
       "triage": {
-        "pr_auc": 0.5833333333333333,
+        "pr_auc": 0.5,
         "roc_auc": 0.75,
         "ece": 0.34114520247136415,
         "precision_at_fpr_5pct": 0.0,
@@ -8336,7 +8336,7 @@
       "strata_key": "family=ad-high-cpu",
       "n": 5,
       "triage": {
-        "pr_auc": 0.5,
+        "pr_auc": 0.2,
         "roc_auc": 0.5,
         "ece": 0.8,
         "precision_at_fpr_5pct": 0.0,
@@ -8363,7 +8363,7 @@
       "strata_key": "family=ad-outage",
       "n": 2,
       "triage": {
-        "pr_auc": 1.0,
+        "pr_auc": 0.5,
         "roc_auc": 0.5,
         "ece": 0.5,
         "precision_at_fpr_5pct": 1.0,
@@ -8444,7 +8444,7 @@
       "strata_key": "family=cart-redis-degradation",
       "n": 8,
       "triage": {
-        "pr_auc": 0.6333333333333333,
+        "pr_auc": 0.375,
         "roc_auc": 0.5,
         "ece": 0.625,
         "precision_at_fpr_5pct": 1.0,
@@ -8498,7 +8498,7 @@
       "strata_key": "family=cascade-kafka-broker-checkout",
       "n": 8,
       "triage": {
-        "pr_auc": 0.5,
+        "pr_auc": 0.125,
         "roc_auc": 0.5,
         "ece": 0.875,
         "precision_at_fpr_5pct": 0.0,
@@ -8525,7 +8525,7 @@
       "strata_key": "family=cascade-productcatalog-latency-recommendation-timeout",
       "n": 7,
       "triage": {
-        "pr_auc": 0.41666666666666663,
+        "pr_auc": 0.2857142857142857,
         "roc_auc": 0.5,
         "ece": 0.7142857142857143,
         "precision_at_fpr_5pct": 0.0,
@@ -8552,7 +8552,7 @@
       "strata_key": "family=cascade-valkey-cart-checkout",
       "n": 8,
       "triage": {
-        "pr_auc": 0.3666666666666667,
+        "pr_auc": 0.25,
         "roc_auc": 0.5,
         "ece": 0.75,
         "precision_at_fpr_5pct": 0.0,
@@ -8606,7 +8606,7 @@
       "strata_key": "family=compound-saturation-network-latency",
       "n": 7,
       "triage": {
-        "pr_auc": 0.5,
+        "pr_auc": 0.42857142857142855,
         "roc_auc": 0.5,
         "ece": 0.5714285714285714,
         "precision_at_fpr_5pct": 0.0,
@@ -8633,7 +8633,7 @@
       "strata_key": "family=concurrent-ad-recommendation",
       "n": 9,
       "triage": {
-        "pr_auc": 0.5099206349206349,
+        "pr_auc": 0.4325396825396825,
         "roc_auc": 0.475,
         "ece": 0.5502423335346696,
         "precision_at_fpr_5pct": 0.0,
@@ -8660,7 +8660,7 @@
       "strata_key": "family=concurrent-currency-shipping",
       "n": 8,
       "triage": {
-        "pr_auc": 0.25,
+        "pr_auc": 0.19642857142857142,
         "roc_auc": 0.25,
         "ece": 0.8721297855332252,
         "precision_at_fpr_5pct": 0.0,
@@ -8714,7 +8714,7 @@
       "strata_key": "family=concurrent-payment-cart-redis",
       "n": 12,
       "triage": {
-        "pr_auc": 0.6242424242424243,
+        "pr_auc": 0.4166666666666667,
         "roc_auc": 0.5,
         "ece": 0.5833333333333333,
         "precision_at_fpr_5pct": 1.0,
@@ -8822,7 +8822,7 @@
       "strata_key": "family=email-memory-leak-1000x",
       "n": 4,
       "triage": {
-        "pr_auc": 0.3333333333333333,
+        "pr_auc": 0.25,
         "roc_auc": 0.5,
         "ece": 0.75,
         "precision_at_fpr_5pct": 0.0,
@@ -8849,7 +8849,7 @@
       "strata_key": "family=email-memory-leak-100x",
       "n": 3,
       "triage": {
-        "pr_auc": 1.0,
+        "pr_auc": 0.3333333333333333,
         "roc_auc": 0.5,
         "ece": 0.6666666666666667,
         "precision_at_fpr_5pct": 1.0,
@@ -8876,7 +8876,7 @@
       "strata_key": "family=email-outage",
       "n": 5,
       "triage": {
-        "pr_auc": 1.0,
+        "pr_auc": 0.25,
         "roc_auc": 0.625,
         "ece": 0.6045923431468397,
         "precision_at_fpr_5pct": 1.0,
@@ -8957,7 +8957,7 @@
       "strata_key": "family=frontend-traffic-pressure",
       "n": 3,
       "triage": {
-        "pr_auc": 1.0,
+        "pr_auc": 0.3333333333333333,
         "roc_auc": 0.5,
         "ece": 0.6666666666666667,
         "precision_at_fpr_5pct": 1.0,
@@ -8984,7 +8984,7 @@
       "strata_key": "family=kafka-broker-outage",
       "n": 8,
       "triage": {
-        "pr_auc": 0.41666666666666663,
+        "pr_auc": 0.25,
         "roc_auc": 0.5,
         "ece": 0.75,
         "precision_at_fpr_5pct": 0.0,
@@ -9011,7 +9011,7 @@
       "strata_key": "family=kafka-consumer-crash",
       "n": 5,
       "triage": {
-        "pr_auc": 0.3666666666666667,
+        "pr_auc": 0.4,
         "roc_auc": 0.5,
         "ece": 0.6,
         "precision_at_fpr_5pct": 0.0,
@@ -9038,7 +9038,7 @@
       "strata_key": "family=kafka-consumer-lag",
       "n": 6,
       "triage": {
-        "pr_auc": 0.6388888888888888,
+        "pr_auc": 0.5,
         "roc_auc": 0.5,
         "ece": 0.5,
         "precision_at_fpr_5pct": 0.0,
@@ -9065,7 +9065,7 @@
       "strata_key": "family=kafka-dead-letter-spike",
       "n": 3,
       "triage": {
-        "pr_auc": 0.5,
+        "pr_auc": 0.3333333333333333,
         "roc_auc": 0.5,
         "ece": 0.6666666666666667,
         "precision_at_fpr_5pct": 0.0,
@@ -9200,7 +9200,7 @@
       "strata_key": "family=network-latency",
       "n": 9,
       "triage": {
-        "pr_auc": 0.16666666666666666,
+        "pr_auc": 0.1111111111111111,
         "roc_auc": 0.5,
         "ece": 0.8888888888888888,
         "precision_at_fpr_5pct": 0.0,
@@ -9227,7 +9227,7 @@
       "strata_key": "family=network-packet-loss",
       "n": 8,
       "triage": {
-        "pr_auc": 0.9166666666666666,
+        "pr_auc": 0.375,
         "roc_auc": 0.5,
         "ece": 0.625,
         "precision_at_fpr_5pct": 1.0,
@@ -9254,7 +9254,7 @@
       "strata_key": "family=network-partition",
       "n": 9,
       "triage": {
-        "pr_auc": 0.22619047619047616,
+        "pr_auc": 0.2222222222222222,
         "roc_auc": 0.5,
         "ece": 0.7777777777777778,
         "precision_at_fpr_5pct": 0.0,
@@ -9281,7 +9281,7 @@
       "strata_key": "family=payment-failure-100pct",
       "n": 9,
       "triage": {
-        "pr_auc": 0.5,
+        "pr_auc": 0.25,
         "roc_auc": 0.5714285714285714,
         "ece": 0.6693232776771096,
         "precision_at_fpr_5pct": 0.0,
@@ -9308,7 +9308,7 @@
       "strata_key": "family=payment-failure-50pct",
       "n": 4,
       "triage": {
-        "pr_auc": 1.0,
+        "pr_auc": 0.3333333333333333,
         "roc_auc": 0.6666666666666666,
         "ece": 0.5057404289335495,
         "precision_at_fpr_5pct": 1.0,
@@ -9335,7 +9335,7 @@
       "strata_key": "family=payment-outage",
       "n": 4,
       "triage": {
-        "pr_auc": 1.0,
+        "pr_auc": 0.75,
         "roc_auc": 0.5,
         "ece": 0.25,
         "precision_at_fpr_5pct": 1.0,
@@ -9416,7 +9416,7 @@
       "strata_key": "family=productcatalog-targeted-failure",
       "n": 4,
       "triage": {
-        "pr_auc": 0.8333333333333333,
+        "pr_auc": 0.6666666666666666,
         "roc_auc": 0.75,
         "ece": 0.25574042893354954,
         "precision_at_fpr_5pct": 1.0,
@@ -9443,7 +9443,7 @@
       "strata_key": "family=recommendation-cache-failure",
       "n": 4,
       "triage": {
-        "pr_auc": 0.3333333333333333,
+        "pr_auc": 0.25,
         "roc_auc": 0.5,
         "ece": 0.75,
         "precision_at_fpr_5pct": 0.0,
@@ -9470,7 +9470,7 @@
       "strata_key": "family=recommendation-outage",
       "n": 2,
       "triage": {
-        "pr_auc": 1.0,
+        "pr_auc": 0.5,
         "roc_auc": 0.5,
         "ece": 0.5,
         "precision_at_fpr_5pct": 1.0,
@@ -9524,7 +9524,7 @@
       "strata_key": "family=shipping-outage",
       "n": 4,
       "triage": {
-        "pr_auc": 0.3333333333333333,
+        "pr_auc": 0.25,
         "roc_auc": 0.16666666666666666,
         "ece": 0.7385191421329009,
         "precision_at_fpr_5pct": 0.0,
@@ -9551,7 +9551,7 @@
       "strata_key": "family=shipping-slowdown-10sec",
       "n": 9,
       "triage": {
-        "pr_auc": 0.3416666666666667,
+        "pr_auc": 0.375,
         "roc_auc": 0.5833333333333334,
         "ece": 0.5581068573037998,
         "precision_at_fpr_5pct": 0.0,
@@ -9659,7 +9659,7 @@
       "strata_key": "is_hard_case=false",
       "n": 158,
       "triage": {
-        "pr_auc": 0.44126677357768845,
+        "pr_auc": 0.4380977709423598,
         "roc_auc": 0.5148692810457516,
         "ece": 0.5351774727904526,
         "precision_at_fpr_5pct": 0.3333333333333333,
@@ -9713,7 +9713,7 @@
       "strata_key": "is_novel=known",
       "n": 197,
       "triage": {
-        "pr_auc": 0.2733645444814081,
+        "pr_auc": 0.2555307750542149,
         "roc_auc": 0.5046258503401361,
         "ece": 0.6984924687766504,
         "precision_at_fpr_5pct": 0.36363636363636365,
@@ -9767,7 +9767,7 @@
       "strata_key": "is_novel=unscored",
       "n": 48,
       "triage": {
-        "pr_auc": 0.36044225951349174,
+        "pr_auc": 0.3201219512195122,
         "roc_auc": 0.46875,
         "ece": 0.6424847497887627,
         "precision_at_fpr_5pct": 0.0,
@@ -9794,7 +9794,7 @@
       "strata_key": "n_prior_family=0",
       "n": 128,
       "triage": {
-        "pr_auc": 0.23022531468615143,
+        "pr_auc": 0.13504464285714285,
         "roc_auc": 0.4727272727272727,
         "ece": 0.7783501673032318,
         "precision_at_fpr_5pct": 0.2857142857142857,
@@ -9821,7 +9821,7 @@
       "strata_key": "n_prior_family=1-2",
       "n": 20,
       "triage": {
-        "pr_auc": 0.8807701070858966,
+        "pr_auc": 0.5873909372361386,
         "roc_auc": 0.5707070707070707,
         "ece": 0.3964609643038914,
         "precision_at_fpr_5pct": 1.0,
@@ -9848,7 +9848,7 @@
       "strata_key": "n_prior_family=21+",
       "n": 40,
       "triage": {
-        "pr_auc": 0.45706211959238396,
+        "pr_auc": 0.368859649122807,
         "roc_auc": 0.4866666666666667,
         "ece": 0.6238519142132901,
         "precision_at_fpr_5pct": 0.5,
@@ -9875,7 +9875,7 @@
       "strata_key": "n_prior_family=3-5",
       "n": 12,
       "triage": {
-        "pr_auc": 0.28809523809523807,
+        "pr_auc": 0.3333333333333333,
         "roc_auc": 0.5,
         "ece": 0.6666666666666667,
         "precision_at_fpr_5pct": 0.0,
@@ -9902,7 +9902,7 @@
       "strata_key": "n_prior_family=6-20",
       "n": 47,
       "triage": {
-        "pr_auc": 0.43413359829715437,
+        "pr_auc": 0.4105695250376102,
         "roc_auc": 0.46944444444444444,
         "ece": 0.5942588738178215,
         "precision_at_fpr_5pct": 0.0,
@@ -9929,7 +9929,7 @@
       "strata_key": "overall",
       "n": 247,
       "triage": {
-        "pr_auc": 0.3013806765184472,
+        "pr_auc": 0.27368298471012537,
         "roc_auc": 0.49597436740059153,
         "ece": 0.6819525681735251,
         "precision_at_fpr_5pct": 0.42857142857142855,
@@ -9983,7 +9983,7 @@
       "strata_key": "service=ad",
       "n": 4,
       "triage": {
-        "pr_auc": 0.5,
+        "pr_auc": 0.25,
         "roc_auc": 0.5,
         "ece": 0.75,
         "precision_at_fpr_5pct": 0.0,
@@ -10064,7 +10064,7 @@
       "strata_key": "service=cart",
       "n": 8,
       "triage": {
-        "pr_auc": 0.45,
+        "pr_auc": 0.25,
         "roc_auc": 0.5,
         "ece": 0.75,
         "precision_at_fpr_5pct": 0.0,
@@ -10091,7 +10091,7 @@
       "strata_key": "service=checkout",
       "n": 17,
       "triage": {
-        "pr_auc": 0.33958333333333335,
+        "pr_auc": 0.23529411764705882,
         "roc_auc": 0.5,
         "ece": 0.7647058823529411,
         "precision_at_fpr_5pct": 0.0,
@@ -10118,7 +10118,7 @@
       "strata_key": "service=checkoutservice",
       "n": 70,
       "triage": {
-        "pr_auc": 0.4230485509372709,
+        "pr_auc": 0.3014361300075586,
         "roc_auc": 0.5034013605442177,
         "ece": 0.6547519072334584,
         "precision_at_fpr_5pct": 0.6,
@@ -10199,7 +10199,7 @@
       "strata_key": "service=email",
       "n": 4,
       "triage": {
-        "pr_auc": 0.5,
+        "pr_auc": 0.25,
         "roc_auc": 0.5,
         "ece": 0.75,
         "precision_at_fpr_5pct": 0.0,
@@ -10253,7 +10253,7 @@
       "strata_key": "service=frontend",
       "n": 73,
       "triage": {
-        "pr_auc": 0.24751587495930782,
+        "pr_auc": 0.252703677000721,
         "roc_auc": 0.47953216374269003,
         "ece": 0.6384883675687483,
         "precision_at_fpr_5pct": 0.0,
@@ -10280,7 +10280,7 @@
       "strata_key": "service=frontend-proxy",
       "n": 3,
       "triage": {
-        "pr_auc": 0.5,
+        "pr_auc": 0.3333333333333333,
         "roc_auc": 0.5,
         "ece": 0.6666666666666667,
         "precision_at_fpr_5pct": 0.0,
@@ -10334,7 +10334,7 @@
       "strata_key": "service=kafka",
       "n": 9,
       "triage": {
-        "pr_auc": 0.9166666666666666,
+        "pr_auc": 0.3333333333333333,
         "roc_auc": 0.5,
         "ece": 0.6666666666666667,
         "precision_at_fpr_5pct": 1.0,
@@ -10415,7 +10415,7 @@
       "strata_key": "service=load-generator",
       "n": 5,
       "triage": {
-        "pr_auc": 1.0,
+        "pr_auc": 0.2,
         "roc_auc": 0.5,
         "ece": 0.8,
         "precision_at_fpr_5pct": 1.0,
@@ -10442,7 +10442,7 @@
       "strata_key": "service=payment",
       "n": 8,
       "triage": {
-        "pr_auc": 0.5873015873015873,
+        "pr_auc": 0.375,
         "roc_auc": 0.5,
         "ece": 0.625,
         "precision_at_fpr_5pct": 1.0,
@@ -10496,7 +10496,7 @@
       "strata_key": "service=product-catalog",
       "n": 7,
       "triage": {
-        "pr_auc": 0.26785714285714285,
+        "pr_auc": 0.2857142857142857,
         "roc_auc": 0.5,
         "ece": 0.7142857142857143,
         "precision_at_fpr_5pct": 0.0,
@@ -10631,7 +10631,7 @@
       "strata_key": "triage_reason_class=latency_regression",
       "n": 78,
       "triage": {
-        "pr_auc": 0.5560200630595963,
+        "pr_auc": 0.4440763997906855,
         "roc_auc": 0.4920265780730897,
         "ece": 0.5489027013770107,
         "precision_at_fpr_5pct": 0.6666666666666666,
@@ -10658,7 +10658,7 @@
       "strata_key": "triage_reason_class=outage",
       "n": 75,
       "triage": {
-        "pr_auc": 0.49746796720423536,
+        "pr_auc": 0.42412291933418694,
         "roc_auc": 0.4653679653679654,
         "ece": 0.5854294047160455,
         "precision_at_fpr_5pct": 0.5,
@@ -10712,7 +10712,7 @@
       "strata_key": "window_type=active_fault",
       "n": 72,
       "triage": {
-        "pr_auc": 0.9480999283712425,
+        "pr_auc": 0.9389554865191388,
         "roc_auc": 0.4485294117647059,
         "ece": 0.1505190614325144,
         "precision_at_fpr_5pct": 1.0,
@@ -13657,9 +13657,9 @@
           "hi": 1.0
         },
         "bm25_retrieval_only": {
-          "point": 0.23022531468615143,
-          "lo": 0.07906703577476863,
-          "hi": 0.28286340157515594
+          "point": 0.13504464285714285,
+          "lo": 0.08078992357200322,
+          "hi": 0.19872159090909092
         },
         "calibrated_random_forest_numeric": {
           "point": 1.0,
@@ -13684,9 +13684,9 @@
           "hi": 1.0
         },
         "bm25_retrieval_only": {
-          "point": 0.45706211959238396,
-          "lo": 0.24207438585177135,
-          "hi": 0.6338837880645857
+          "point": 0.368859649122807,
+          "lo": 0.22777777777777777,
+          "hi": 0.5262531328320802
         },
         "calibrated_random_forest_numeric": {
           "point": 1.0,
@@ -13711,9 +13711,9 @@
           "hi": 1.0
         },
         "bm25_retrieval_only": {
-          "point": 0.8807701070858966,
-          "lo": 0.3707000334451315,
-          "hi": 0.8972008985166879
+          "point": 0.5873909372361386,
+          "lo": 0.35,
+          "hi": 0.83125
         },
         "calibrated_random_forest_numeric": {
           "point": 1.0,
@@ -13738,9 +13738,9 @@
           "hi": 1.0
         },
         "bm25_retrieval_only": {
-          "point": 0.28809523809523807,
-          "lo": 0.1111111111111111,
-          "hi": 0.8541666666666666
+          "point": 0.3333333333333333,
+          "lo": 0.08333333333333333,
+          "hi": 0.5833333333333334
         },
         "calibrated_random_forest_numeric": {
           "point": 1.0,
@@ -13765,9 +13765,9 @@
           "hi": 1.0
         },
         "bm25_retrieval_only": {
-          "point": 0.43413359829715437,
-          "lo": 0.27085841404673805,
-          "hi": 0.6446939142025513
+          "point": 0.4105695250376102,
+          "lo": 0.26303038871074497,
+          "hi": 0.5577589159974118
         },
         "calibrated_random_forest_numeric": {
           "point": 1.0,
@@ -14468,7 +14468,7 @@
       "strata_key": "family=kafka-broker-outage",
       "n": 8,
       "triage": {
-        "pr_auc": 0.7392857142857143,
+        "pr_auc": 0.75,
         "roc_auc": 0.4,
         "ece": 0.37499252113658377,
         "precision_at_fpr_5pct": 1.0,
@@ -14522,7 +14522,7 @@
       "strata_key": "family=kafka-consumer-lag",
       "n": 6,
       "triage": {
-        "pr_auc": 0.9266666666666666,
+        "pr_auc": 0.9333333333333333,
         "roc_auc": 0.6,
         "ece": 0.3333423269441267,
         "precision_at_fpr_5pct": 1.0,
@@ -14684,7 +14684,7 @@
       "strata_key": "family=network-latency",
       "n": 9,
       "triage": {
-        "pr_auc": 0.7798185941043084,
+        "pr_auc": 0.7837868480725624,
         "roc_auc": 0.35714285714285715,
         "ece": 0.666638660068094,
         "precision_at_fpr_5pct": 1.0,
@@ -14792,7 +14792,7 @@
       "strata_key": "family=payment-failure-50pct",
       "n": 4,
       "triage": {
-        "pr_auc": 0.8055555555555556,
+        "pr_auc": 0.8333333333333333,
         "roc_auc": 0.3333333333333333,
         "ece": 0.49998079970595344,
         "precision_at_fpr_5pct": 1.0,
@@ -15035,7 +15035,7 @@
       "strata_key": "family=shipping-slowdown-10sec",
       "n": 9,
       "triage": {
-        "pr_auc": 0.8801587301587301,
+        "pr_auc": 0.8841269841269841,
         "roc_auc": 0.5714285714285714,
         "ece": 0.44444502902553457,
         "precision_at_fpr_5pct": 1.0,
@@ -15170,7 +15170,7 @@
       "strata_key": "is_hard_case=true",
       "n": 89,
       "triage": {
-        "pr_auc": 0.872734012073875,
+        "pr_auc": 0.8729016906110058,
         "roc_auc": 0.04411764705882353,
         "ece": 0.9548029374151885,
         "precision_at_fpr_5pct": 0.0,
@@ -15197,7 +15197,7 @@
       "strata_key": "is_novel=known",
       "n": 197,
       "triage": {
-        "pr_auc": 0.8686230676542535,
+        "pr_auc": 0.8687575193176439,
         "roc_auc": 0.766855154414963,
         "ece": 0.36033518786190605,
         "precision_at_fpr_5pct": 0.9523809523809523,
@@ -15251,7 +15251,7 @@
       "strata_key": "is_novel=unscored",
       "n": 48,
       "triage": {
-        "pr_auc": 0.866732219981614,
+        "pr_auc": 0.8675416556892921,
         "roc_auc": 0.725925925925926,
         "ece": 0.29139968950314754,
         "precision_at_fpr_5pct": 1.0,
@@ -15278,7 +15278,7 @@
       "strata_key": "n_prior_family=0",
       "n": 128,
       "triage": {
-        "pr_auc": 0.704049995884287,
+        "pr_auc": 0.704562914306249,
         "roc_auc": 0.7146433041301627,
         "ece": 0.12484364678182282,
         "precision_at_fpr_5pct": 0.8181818181818182,
@@ -15413,7 +15413,7 @@
       "strata_key": "overall",
       "n": 247,
       "triage": {
-        "pr_auc": 0.8691902477975506,
+        "pr_auc": 0.8693986765321051,
         "roc_auc": 0.7601863440411626,
         "ece": 0.34402144870512336,
         "precision_at_fpr_5pct": 0.9459459459459459,
@@ -15602,7 +15602,7 @@
       "strata_key": "service=checkoutservice",
       "n": 70,
       "triage": {
-        "pr_auc": 0.8914102379390899,
+        "pr_auc": 0.8915820850368698,
         "roc_auc": 0.7298347910592808,
         "ece": 0.39992958015604113,
         "precision_at_fpr_5pct": 0.9642857142857143,
@@ -16277,7 +16277,7 @@
       "strata_key": "window_type=recovery_window",
       "n": 92,
       "triage": {
-        "pr_auc": 0.9282005968078844,
+        "pr_auc": 0.9284192078875709,
         "roc_auc": 0.5579831932773109,
         "ece": 0.9237797090514913,
         "precision_at_fpr_5pct": 1.0,
@@ -16304,7 +16304,7 @@
       "strata_key": "family=ad-gc-pressure",
       "n": 6,
       "triage": {
-        "pr_auc": 1.0,
+        "pr_auc": 0.9166666666666666,
         "roc_auc": 0.875,
         "ece": 0.3323232323232323,
         "precision_at_fpr_5pct": 1.0,
@@ -16439,9 +16439,9 @@
       "strata_key": "family=cart-redis-degradation",
       "n": 8,
       "triage": {
-        "pr_auc": 0.9761904761904762,
+        "pr_auc": 0.9166666666666666,
         "roc_auc": 0.8333333333333334,
-        "ece": 0.3617954019398686,
+        "ece": 0.36179540193986837,
         "precision_at_fpr_5pct": 1.0,
         "recall_at_fpr_5pct": 0.8333333333333334,
         "f1_at_fpr_5pct": 0.9090909090909091,
@@ -16493,7 +16493,7 @@
       "strata_key": "family=cascade-kafka-broker-checkout",
       "n": 8,
       "triage": {
-        "pr_auc": 0.7928571428571429,
+        "pr_auc": 0.75,
         "roc_auc": 0.75,
         "ece": 0.3715277777777778,
         "precision_at_fpr_5pct": 1.0,
@@ -16520,7 +16520,7 @@
       "strata_key": "family=cascade-productcatalog-latency-recommendation-timeout",
       "n": 7,
       "triage": {
-        "pr_auc": 0.9761904761904762,
+        "pr_auc": 0.9523809523809523,
         "roc_auc": 0.8333333333333334,
         "ece": 0.5634920634920636,
         "precision_at_fpr_5pct": 1.0,
@@ -16547,7 +16547,7 @@
       "strata_key": "family=cascade-valkey-cart-checkout",
       "n": 8,
       "triage": {
-        "pr_auc": 0.8583333333333334,
+        "pr_auc": 0.85,
         "roc_auc": 0.8,
         "ece": 0.36939941944283694,
         "precision_at_fpr_5pct": 1.0,
@@ -16601,7 +16601,7 @@
       "strata_key": "family=compound-saturation-network-latency",
       "n": 7,
       "triage": {
-        "pr_auc": 0.9761904761904762,
+        "pr_auc": 0.9523809523809523,
         "roc_auc": 0.8333333333333334,
         "ece": 0.4277056277056277,
         "precision_at_fpr_5pct": 1.0,
@@ -16628,7 +16628,7 @@
       "strata_key": "family=concurrent-ad-recommendation",
       "n": 9,
       "triage": {
-        "pr_auc": 0.9617346938775511,
+        "pr_auc": 0.9047619047619048,
         "roc_auc": 0.7857142857142857,
         "ece": 0.3333333333333333,
         "precision_at_fpr_5pct": 1.0,
@@ -16655,7 +16655,7 @@
       "strata_key": "family=concurrent-currency-shipping",
       "n": 8,
       "triage": {
-        "pr_auc": 1.0,
+        "pr_auc": 0.9642857142857143,
         "roc_auc": 0.8571428571428571,
         "ece": 0.6227272727272728,
         "precision_at_fpr_5pct": 1.0,
@@ -16682,7 +16682,7 @@
       "strata_key": "family=concurrent-kafka-lag-payment-outage",
       "n": 5,
       "triage": {
-        "pr_auc": 0.5888888888888888,
+        "pr_auc": 0.6,
         "roc_auc": 0.5,
         "ece": 0.6,
         "precision_at_fpr_5pct": 0.0,
@@ -16709,7 +16709,7 @@
       "strata_key": "family=concurrent-payment-cart-redis",
       "n": 12,
       "triage": {
-        "pr_auc": 0.9293650793650793,
+        "pr_auc": 0.875,
         "roc_auc": 0.8125,
         "ece": 0.25,
         "precision_at_fpr_5pct": 1.0,
@@ -16763,7 +16763,7 @@
       "strata_key": "family=currency-outage",
       "n": 5,
       "triage": {
-        "pr_auc": 0.9166666666666666,
+        "pr_auc": 0.7333333333333334,
         "roc_auc": 0.6666666666666666,
         "ece": 0.4,
         "precision_at_fpr_5pct": 1.0,
@@ -16817,7 +16817,7 @@
       "strata_key": "family=email-memory-leak-1000x",
       "n": 4,
       "triage": {
-        "pr_auc": 1.0,
+        "pr_auc": 0.9166666666666666,
         "roc_auc": 0.8333333333333334,
         "ece": 0.4984848484848484,
         "precision_at_fpr_5pct": 1.0,
@@ -16871,7 +16871,7 @@
       "strata_key": "family=email-outage",
       "n": 5,
       "triage": {
-        "pr_auc": 1.0,
+        "pr_auc": 0.7333333333333334,
         "roc_auc": 0.6666666666666666,
         "ece": 0.4,
         "precision_at_fpr_5pct": 1.0,
@@ -16979,7 +16979,7 @@
       "strata_key": "family=kafka-broker-outage",
       "n": 8,
       "triage": {
-        "pr_auc": 0.8350000000000001,
+        "pr_auc": 0.775,
         "roc_auc": 0.7,
         "ece": 0.375,
         "precision_at_fpr_5pct": 1.0,
@@ -17006,7 +17006,7 @@
       "strata_key": "family=kafka-consumer-crash",
       "n": 5,
       "triage": {
-        "pr_auc": 0.9166666666666666,
+        "pr_auc": 0.8666666666666667,
         "roc_auc": 0.8333333333333334,
         "ece": 0.19999999999999998,
         "precision_at_fpr_5pct": 1.0,
@@ -17033,7 +17033,7 @@
       "strata_key": "family=kafka-consumer-lag",
       "n": 6,
       "triage": {
-        "pr_auc": 0.9266666666666666,
+        "pr_auc": 0.9333333333333333,
         "roc_auc": 0.8,
         "ece": 0.3333333333333333,
         "precision_at_fpr_5pct": 1.0,
@@ -17195,7 +17195,7 @@
       "strata_key": "family=network-latency",
       "n": 9,
       "triage": {
-        "pr_auc": 0.8801587301587301,
+        "pr_auc": 0.873015873015873,
         "roc_auc": 0.7142857142857143,
         "ece": 0.6653198653198653,
         "precision_at_fpr_5pct": 1.0,
@@ -17222,7 +17222,7 @@
       "strata_key": "family=network-packet-loss",
       "n": 8,
       "triage": {
-        "pr_auc": 0.8773809523809524,
+        "pr_auc": 0.875,
         "roc_auc": 0.75,
         "ece": 0.375,
         "precision_at_fpr_5pct": 1.0,
@@ -17249,7 +17249,7 @@
       "strata_key": "family=network-partition",
       "n": 9,
       "triage": {
-        "pr_auc": 0.775,
+        "pr_auc": 0.7222222222222222,
         "roc_auc": 0.75,
         "ece": 0.2222222222222222,
         "precision_at_fpr_5pct": 1.0,
@@ -17276,7 +17276,7 @@
       "strata_key": "family=payment-failure-100pct",
       "n": 9,
       "triage": {
-        "pr_auc": 0.7611111111111112,
+        "pr_auc": 0.7333333333333334,
         "roc_auc": 0.7,
         "ece": 0.3333333333333333,
         "precision_at_fpr_5pct": 1.0,
@@ -17303,7 +17303,7 @@
       "strata_key": "family=payment-failure-50pct",
       "n": 4,
       "triage": {
-        "pr_auc": 0.8055555555555556,
+        "pr_auc": 0.8333333333333333,
         "roc_auc": 0.6666666666666666,
         "ece": 0.5,
         "precision_at_fpr_5pct": 1.0,
@@ -17357,7 +17357,7 @@
       "strata_key": "family=payment-unreachable",
       "n": 4,
       "triage": {
-        "pr_auc": 1.0,
+        "pr_auc": 0.9166666666666666,
         "roc_auc": 0.8333333333333334,
         "ece": 0.746969696969697,
         "precision_at_fpr_5pct": 1.0,
@@ -17438,7 +17438,7 @@
       "strata_key": "family=recommendation-cache-failure",
       "n": 4,
       "triage": {
-        "pr_auc": 1.0,
+        "pr_auc": 0.8333333333333333,
         "roc_auc": 0.6666666666666666,
         "ece": 0.5,
         "precision_at_fpr_5pct": 1.0,
@@ -17519,7 +17519,7 @@
       "strata_key": "family=shipping-outage",
       "n": 4,
       "triage": {
-        "pr_auc": 0.9166666666666666,
+        "pr_auc": 0.8333333333333333,
         "roc_auc": 0.6666666666666666,
         "ece": 0.5,
         "precision_at_fpr_5pct": 1.0,
@@ -17546,7 +17546,7 @@
       "strata_key": "family=shipping-slowdown-10sec",
       "n": 9,
       "triage": {
-        "pr_auc": 0.9087301587301587,
+        "pr_auc": 0.873015873015873,
         "roc_auc": 0.7142857142857143,
         "ece": 0.4444444444444444,
         "precision_at_fpr_5pct": 1.0,
@@ -17681,9 +17681,9 @@
       "strata_key": "is_hard_case=true",
       "n": 89,
       "triage": {
-        "pr_auc": 0.8909294126799288,
+        "pr_auc": 0.9220526862430365,
         "roc_auc": 0.1676470588235294,
-        "ece": 0.948843668334241,
+        "ece": 0.9488436683342409,
         "precision_at_fpr_5pct": 1.0,
         "recall_at_fpr_5pct": 0.011764705882352941,
         "f1_at_fpr_5pct": 0.023255813953488372,
@@ -17708,9 +17708,9 @@
       "strata_key": "is_novel=known",
       "n": 197,
       "triage": {
-        "pr_auc": 0.8616396005124597,
+        "pr_auc": 0.8236420642928686,
         "roc_auc": 0.7635384949978251,
-        "ece": 0.3575686592674459,
+        "ece": 0.35756865926744585,
         "precision_at_fpr_5pct": 0.9491525423728814,
         "recall_at_fpr_5pct": 0.4628099173553719,
         "f1_at_fpr_5pct": 0.6222222222222222,
@@ -17762,7 +17762,7 @@
       "strata_key": "is_novel=unscored",
       "n": 48,
       "triage": {
-        "pr_auc": 0.8802729961866277,
+        "pr_auc": 0.825,
         "roc_auc": 0.7277777777777777,
         "ece": 0.28955176767676766,
         "precision_at_fpr_5pct": 1.0,
@@ -17789,7 +17789,7 @@
       "strata_key": "n_prior_family=0",
       "n": 128,
       "triage": {
-        "pr_auc": 0.7740578739329274,
+        "pr_auc": 0.6544117647058824,
         "roc_auc": 0.7471839799749687,
         "ece": 0.12278272029505581,
         "precision_at_fpr_5pct": 0.8181818181818182,
@@ -17924,7 +17924,7 @@
       "strata_key": "overall",
       "n": 247,
       "triage": {
-        "pr_auc": 0.8672608869421277,
+        "pr_auc": 0.8256119179542132,
         "roc_auc": 0.7578222778473092,
         "ece": 0.3414555090047437,
         "precision_at_fpr_5pct": 0.9466666666666667,
@@ -18059,7 +18059,7 @@
       "strata_key": "service=cart",
       "n": 8,
       "triage": {
-        "pr_auc": 0.8333333333333333,
+        "pr_auc": 0.7916666666666666,
         "roc_auc": 0.8,
         "ece": 0.11597222222222221,
         "precision_at_fpr_5pct": 1.0,
@@ -18086,7 +18086,7 @@
       "strata_key": "service=checkout",
       "n": 17,
       "triage": {
-        "pr_auc": 0.8569017138535855,
+        "pr_auc": 0.7754010695187166,
         "roc_auc": 0.6818181818181818,
         "ece": 0.41176470588235287,
         "precision_at_fpr_5pct": 1.0,
@@ -18113,9 +18113,9 @@
       "strata_key": "service=checkoutservice",
       "n": 70,
       "triage": {
-        "pr_auc": 0.9384341041976592,
+        "pr_auc": 0.8653061224489795,
         "roc_auc": 0.7755102040816326,
-        "ece": 0.3968318311566123,
+        "ece": 0.39683183115661225,
         "precision_at_fpr_5pct": 0.9705882352941176,
         "recall_at_fpr_5pct": 0.673469387755102,
         "f1_at_fpr_5pct": 0.7951807228915663,
@@ -18194,7 +18194,7 @@
       "strata_key": "service=email",
       "n": 4,
       "triage": {
-        "pr_auc": 1.0,
+        "pr_auc": 0.9166666666666666,
         "roc_auc": 0.8333333333333334,
         "ece": 0.4984848484848484,
         "precision_at_fpr_5pct": 1.0,
@@ -18221,7 +18221,7 @@
       "strata_key": "service=fraud-detection",
       "n": 4,
       "triage": {
-        "pr_auc": 0.9166666666666666,
+        "pr_auc": 0.8333333333333333,
         "roc_auc": 0.6666666666666666,
         "ece": 0.5,
         "precision_at_fpr_5pct": 1.0,
@@ -18248,7 +18248,7 @@
       "strata_key": "service=frontend",
       "n": 73,
       "triage": {
-        "pr_auc": 0.8037063033101941,
+        "pr_auc": 0.7901293494343946,
         "roc_auc": 0.7324695121951219,
         "ece": 0.29860282711760716,
         "precision_at_fpr_5pct": 0.95,
@@ -18329,7 +18329,7 @@
       "strata_key": "service=kafka",
       "n": 9,
       "triage": {
-        "pr_auc": 0.885,
+        "pr_auc": 0.8222222222222222,
         "roc_auc": 0.8,
         "ece": 0.2222222222222222,
         "precision_at_fpr_5pct": 1.0,
@@ -18437,7 +18437,7 @@
       "strata_key": "service=payment",
       "n": 8,
       "triage": {
-        "pr_auc": 0.9305555555555556,
+        "pr_auc": 0.9166666666666666,
         "roc_auc": 0.8333333333333334,
         "ece": 0.3742424242424242,
         "precision_at_fpr_5pct": 1.0,
@@ -18572,7 +18572,7 @@
       "strata_key": "service=shipping",
       "n": 4,
       "triage": {
-        "pr_auc": 0.8055555555555556,
+        "pr_auc": 0.8333333333333333,
         "roc_auc": 0.6666666666666666,
         "ece": 0.5,
         "precision_at_fpr_5pct": 1.0,
@@ -18599,9 +18599,9 @@
       "strata_key": "service=valkey-cart",
       "n": 10,
       "triage": {
-        "pr_auc": 0.6644444444444445,
+        "pr_auc": 0.6000000000000001,
         "roc_auc": 0.6,
-        "ece": 0.49551953555426953,
+        "ece": 0.4955195355542696,
         "precision_at_fpr_5pct": 1.0,
         "recall_at_fpr_5pct": 0.2,
         "f1_at_fpr_5pct": 0.33333333333333337,
@@ -18788,7 +18788,7 @@
       "strata_key": "window_type=recovery_window",
       "n": 92,
       "triage": {
-        "pr_auc": 0.9135710930763435,
+        "pr_auc": 0.9325952348902948,
         "roc_auc": 0.5394957983193277,
         "ece": 0.9197528469602602,
         "precision_at_fpr_5pct": 1.0,
@@ -21353,7 +21353,7 @@
       "strata_key": "family=ad-high-cpu",
       "n": 5,
       "triage": {
-        "pr_auc": 0.5333333333333333,
+        "pr_auc": 0.6,
         "roc_auc": 0.5,
         "ece": 0.4,
         "precision_at_fpr_5pct": 0.0,
@@ -21461,7 +21461,7 @@
       "strata_key": "family=cart-redis-degradation",
       "n": 8,
       "triage": {
-        "pr_auc": 0.8734126984126983,
+        "pr_auc": 0.75,
         "roc_auc": 0.5,
         "ece": 0.25,
         "precision_at_fpr_5pct": 1.0,
@@ -21515,7 +21515,7 @@
       "strata_key": "family=cascade-kafka-broker-checkout",
       "n": 8,
       "triage": {
-        "pr_auc": 0.5178571428571428,
+        "pr_auc": 0.5,
         "roc_auc": 0.5,
         "ece": 0.5,
         "precision_at_fpr_5pct": 0.0,
@@ -21542,7 +21542,7 @@
       "strata_key": "family=cascade-productcatalog-latency-recommendation-timeout",
       "n": 7,
       "triage": {
-        "pr_auc": 0.9484126984126984,
+        "pr_auc": 0.8571428571428571,
         "roc_auc": 0.5,
         "ece": 0.1428571428571429,
         "precision_at_fpr_5pct": 1.0,
@@ -21569,7 +21569,7 @@
       "strata_key": "family=cascade-valkey-cart-checkout",
       "n": 8,
       "triage": {
-        "pr_auc": 0.5449999999999999,
+        "pr_auc": 0.625,
         "roc_auc": 0.5,
         "ece": 0.375,
         "precision_at_fpr_5pct": 0.0,
@@ -21623,7 +21623,7 @@
       "strata_key": "family=compound-saturation-network-latency",
       "n": 7,
       "triage": {
-        "pr_auc": 0.9484126984126984,
+        "pr_auc": 0.8571428571428571,
         "roc_auc": 0.5,
         "ece": 0.1428571428571429,
         "precision_at_fpr_5pct": 1.0,
@@ -21650,7 +21650,7 @@
       "strata_key": "family=concurrent-ad-recommendation",
       "n": 9,
       "triage": {
-        "pr_auc": 0.9478458049886621,
+        "pr_auc": 0.8458049886621315,
         "roc_auc": 0.6785714285714286,
         "ece": 0.2169090002013363,
         "precision_at_fpr_5pct": 1.0,
@@ -21677,7 +21677,7 @@
       "strata_key": "family=concurrent-currency-shipping",
       "n": 8,
       "triage": {
-        "pr_auc": 0.9617346938775511,
+        "pr_auc": 0.8596938775510203,
         "roc_auc": 0.42857142857142855,
         "ece": 0.2471297855332253,
         "precision_at_fpr_5pct": 1.0,
@@ -21704,7 +21704,7 @@
       "strata_key": "family=concurrent-kafka-lag-payment-outage",
       "n": 5,
       "triage": {
-        "pr_auc": 0.5888888888888888,
+        "pr_auc": 0.6,
         "roc_auc": 0.5,
         "ece": 0.4,
         "precision_at_fpr_5pct": 0.0,
@@ -21731,7 +21731,7 @@
       "strata_key": "family=concurrent-payment-cart-redis",
       "n": 12,
       "triage": {
-        "pr_auc": 0.7565836940836941,
+        "pr_auc": 0.6666666666666666,
         "roc_auc": 0.5,
         "ece": 0.33333333333333337,
         "precision_at_fpr_5pct": 1.0,
@@ -21839,7 +21839,7 @@
       "strata_key": "family=email-memory-leak-1000x",
       "n": 4,
       "triage": {
-        "pr_auc": 0.8055555555555556,
+        "pr_auc": 0.75,
         "roc_auc": 0.5,
         "ece": 0.25,
         "precision_at_fpr_5pct": 1.0,
@@ -21866,7 +21866,7 @@
       "strata_key": "family=email-memory-leak-100x",
       "n": 3,
       "triage": {
-        "pr_auc": 0.8333333333333333,
+        "pr_auc": 0.6666666666666666,
         "roc_auc": 0.5,
         "ece": 0.33333333333333337,
         "precision_at_fpr_5pct": 1.0,
@@ -21893,7 +21893,7 @@
       "strata_key": "family=email-outage",
       "n": 5,
       "triage": {
-        "pr_auc": 1.0,
+        "pr_auc": 0.75,
         "roc_auc": 0.75,
         "ece": 0.20459234314683966,
         "precision_at_fpr_5pct": 1.0,
@@ -21974,7 +21974,7 @@
       "strata_key": "family=frontend-traffic-pressure",
       "n": 3,
       "triage": {
-        "pr_auc": 0.8333333333333333,
+        "pr_auc": 0.6666666666666666,
         "roc_auc": 0.5,
         "ece": 0.33333333333333337,
         "precision_at_fpr_5pct": 1.0,
@@ -22001,7 +22001,7 @@
       "strata_key": "family=kafka-broker-outage",
       "n": 8,
       "triage": {
-        "pr_auc": 0.6683333333333333,
+        "pr_auc": 0.625,
         "roc_auc": 0.5,
         "ece": 0.375,
         "precision_at_fpr_5pct": 0.0,
@@ -22028,7 +22028,7 @@
       "strata_key": "family=kafka-consumer-crash",
       "n": 5,
       "triage": {
-        "pr_auc": 0.5888888888888888,
+        "pr_auc": 0.6,
         "roc_auc": 0.5,
         "ece": 0.4,
         "precision_at_fpr_5pct": 0.0,
@@ -22055,7 +22055,7 @@
       "strata_key": "family=kafka-consumer-lag",
       "n": 6,
       "triage": {
-        "pr_auc": 0.71,
+        "pr_auc": 0.8333333333333334,
         "roc_auc": 0.5,
         "ece": 0.16666666666666663,
         "precision_at_fpr_5pct": 0.0,
@@ -22082,7 +22082,7 @@
       "strata_key": "family=kafka-dead-letter-spike",
       "n": 3,
       "triage": {
-        "pr_auc": 0.5833333333333333,
+        "pr_auc": 0.6666666666666666,
         "roc_auc": 0.5,
         "ece": 0.33333333333333337,
         "precision_at_fpr_5pct": 0.0,
@@ -22217,7 +22217,7 @@
       "strata_key": "family=network-latency",
       "n": 9,
       "triage": {
-        "pr_auc": 0.6679138321995465,
+        "pr_auc": 0.7777777777777778,
         "roc_auc": 0.5,
         "ece": 0.2222222222222222,
         "precision_at_fpr_5pct": 0.0,
@@ -22244,7 +22244,7 @@
       "strata_key": "family=network-packet-loss",
       "n": 8,
       "triage": {
-        "pr_auc": 0.8357142857142856,
+        "pr_auc": 0.75,
         "roc_auc": 0.5,
         "ece": 0.25,
         "precision_at_fpr_5pct": 1.0,
@@ -22271,7 +22271,7 @@
       "strata_key": "family=network-partition",
       "n": 9,
       "triage": {
-        "pr_auc": 0.3988095238095238,
+        "pr_auc": 0.4444444444444444,
         "roc_auc": 0.5,
         "ece": 0.5555555555555556,
         "precision_at_fpr_5pct": 0.0,
@@ -22298,7 +22298,7 @@
       "strata_key": "family=payment-failure-100pct",
       "n": 9,
       "triage": {
-        "pr_auc": 0.5944444444444444,
+        "pr_auc": 0.5111111111111111,
         "roc_auc": 0.4,
         "ece": 0.5528989445451126,
         "precision_at_fpr_5pct": 0.0,
@@ -22325,7 +22325,7 @@
       "strata_key": "family=payment-failure-50pct",
       "n": 4,
       "triage": {
-        "pr_auc": 0.8055555555555556,
+        "pr_auc": 0.6944444444444444,
         "roc_auc": 0.3333333333333333,
         "ece": 0.49425957106645046,
         "precision_at_fpr_5pct": 1.0,
@@ -22352,7 +22352,7 @@
       "strata_key": "family=payment-outage",
       "n": 4,
       "triage": {
-        "pr_auc": 1.0,
+        "pr_auc": 0.75,
         "roc_auc": 0.5,
         "ece": 0.25,
         "precision_at_fpr_5pct": 1.0,
@@ -22379,7 +22379,7 @@
       "strata_key": "family=payment-unreachable",
       "n": 4,
       "triage": {
-        "pr_auc": 1.0,
+        "pr_auc": 0.75,
         "roc_auc": 0.5,
         "ece": 0.25,
         "precision_at_fpr_5pct": 1.0,
@@ -22433,7 +22433,7 @@
       "strata_key": "family=productcatalog-targeted-failure",
       "n": 4,
       "triage": {
-        "pr_auc": 0.8055555555555556,
+        "pr_auc": 0.6944444444444444,
         "roc_auc": 0.3333333333333333,
         "ece": 0.49425957106645046,
         "precision_at_fpr_5pct": 1.0,
@@ -22460,7 +22460,7 @@
       "strata_key": "family=recommendation-cache-failure",
       "n": 4,
       "triage": {
-        "pr_auc": 1.0,
+        "pr_auc": 0.75,
         "roc_auc": 0.5,
         "ece": 0.25,
         "precision_at_fpr_5pct": 1.0,
@@ -22541,7 +22541,7 @@
       "strata_key": "family=shipping-outage",
       "n": 4,
       "triage": {
-        "pr_auc": 1.0,
+        "pr_auc": 0.9166666666666666,
         "roc_auc": 0.8333333333333334,
         "ece": 0.2385191421329009,
         "precision_at_fpr_5pct": 1.0,
@@ -22568,7 +22568,7 @@
       "strata_key": "family=shipping-slowdown-10sec",
       "n": 9,
       "triage": {
-        "pr_auc": 0.8736394557823128,
+        "pr_auc": 0.875,
         "roc_auc": 0.75,
         "ece": 0.11366241285935536,
         "precision_at_fpr_5pct": 1.0,
@@ -22676,7 +22676,7 @@
       "strata_key": "is_hard_case=false",
       "n": 158,
       "triage": {
-        "pr_auc": 0.44126677357768845,
+        "pr_auc": 0.4380977709423598,
         "roc_auc": 0.5148692810457516,
         "ece": 0.5351774727904526,
         "precision_at_fpr_5pct": 0.3333333333333333,
@@ -22703,7 +22703,7 @@
       "strata_key": "is_hard_case=true",
       "n": 89,
       "triage": {
-        "pr_auc": 0.9480881108262393,
+        "pr_auc": 0.9525134363064458,
         "roc_auc": 0.47058823529411764,
         "ece": 0.09982296222437331,
         "precision_at_fpr_5pct": 1.0,
@@ -22730,7 +22730,7 @@
       "strata_key": "is_novel=known",
       "n": 197,
       "triage": {
-        "pr_auc": 0.5913840415194559,
+        "pr_auc": 0.6270323755833184,
         "roc_auc": 0.5258808177468465,
         "ece": 0.3786955144619295,
         "precision_at_fpr_5pct": 0.25,
@@ -22784,7 +22784,7 @@
       "strata_key": "is_novel=unscored",
       "n": 48,
       "triage": {
-        "pr_auc": 0.6348484000968161,
+        "pr_auc": 0.6329268292682928,
         "roc_auc": 0.5166666666666667,
         "ece": 0.39248474978876274,
         "precision_at_fpr_5pct": 0.0,
@@ -22811,7 +22811,7 @@
       "strata_key": "n_prior_family=0",
       "n": 128,
       "triage": {
-        "pr_auc": 0.4133268235440828,
+        "pr_auc": 0.26759453781512604,
         "roc_auc": 0.5025031289111389,
         "ece": 0.6689751673032318,
         "precision_at_fpr_5pct": 0.42857142857142855,
@@ -22946,7 +22946,7 @@
       "strata_key": "overall",
       "n": 247,
       "triage": {
-        "pr_auc": 0.6017467843849784,
+        "pr_auc": 0.6314093204098257,
         "roc_auc": 0.5241969128076762,
         "ece": 0.37830884347716887,
         "precision_at_fpr_5pct": 0.42857142857142855,
@@ -23000,7 +23000,7 @@
       "strata_key": "service=ad",
       "n": 4,
       "triage": {
-        "pr_auc": 0.6388888888888888,
+        "pr_auc": 0.75,
         "roc_auc": 0.5,
         "ece": 0.25,
         "precision_at_fpr_5pct": 0.0,
@@ -23081,7 +23081,7 @@
       "strata_key": "service=cart",
       "n": 8,
       "triage": {
-        "pr_auc": 0.4666666666666667,
+        "pr_auc": 0.375,
         "roc_auc": 0.5,
         "ece": 0.625,
         "precision_at_fpr_5pct": 0.0,
@@ -23108,7 +23108,7 @@
       "strata_key": "service=checkout",
       "n": 17,
       "triage": {
-        "pr_auc": 0.729376461328333,
+        "pr_auc": 0.6470588235294118,
         "roc_auc": 0.5,
         "ece": 0.3529411764705882,
         "precision_at_fpr_5pct": 1.0,
@@ -23135,7 +23135,7 @@
       "strata_key": "service=checkoutservice",
       "n": 70,
       "triage": {
-        "pr_auc": 0.7979190828455331,
+        "pr_auc": 0.7283122772918691,
         "roc_auc": 0.564625850340136,
         "ece": 0.2833233358048871,
         "precision_at_fpr_5pct": 0.9285714285714286,
@@ -23162,7 +23162,7 @@
       "strata_key": "service=currency",
       "n": 4,
       "triage": {
-        "pr_auc": 0.41666666666666663,
+        "pr_auc": 0.5,
         "roc_auc": 0.5,
         "ece": 0.5,
         "precision_at_fpr_5pct": 0.0,
@@ -23216,7 +23216,7 @@
       "strata_key": "service=email",
       "n": 4,
       "triage": {
-        "pr_auc": 1.0,
+        "pr_auc": 0.75,
         "roc_auc": 0.5,
         "ece": 0.25,
         "precision_at_fpr_5pct": 1.0,
@@ -23243,7 +23243,7 @@
       "strata_key": "service=fraud-detection",
       "n": 4,
       "triage": {
-        "pr_auc": 0.8055555555555556,
+        "pr_auc": 0.75,
         "roc_auc": 0.5,
         "ece": 0.25,
         "precision_at_fpr_5pct": 1.0,
@@ -23270,7 +23270,7 @@
       "strata_key": "service=frontend",
       "n": 73,
       "triage": {
-        "pr_auc": 0.4847062839755781,
+        "pr_auc": 0.5692807025917617,
         "roc_auc": 0.5152439024390244,
         "ece": 0.4467075456509401,
         "precision_at_fpr_5pct": 0.0,
@@ -23297,7 +23297,7 @@
       "strata_key": "service=frontend-proxy",
       "n": 3,
       "triage": {
-        "pr_auc": 0.5833333333333333,
+        "pr_auc": 0.6666666666666666,
         "roc_auc": 0.5,
         "ece": 0.33333333333333337,
         "precision_at_fpr_5pct": 0.0,
@@ -23351,7 +23351,7 @@
       "strata_key": "service=kafka",
       "n": 9,
       "triage": {
-        "pr_auc": 0.8350000000000001,
+        "pr_auc": 0.5555555555555556,
         "roc_auc": 0.5,
         "ece": 0.4444444444444444,
         "precision_at_fpr_5pct": 1.0,
@@ -23432,7 +23432,7 @@
       "strata_key": "service=load-generator",
       "n": 5,
       "triage": {
-        "pr_auc": 1.0,
+        "pr_auc": 0.2,
         "roc_auc": 0.5,
         "ece": 0.8,
         "precision_at_fpr_5pct": 1.0,
@@ -23459,7 +23459,7 @@
       "strata_key": "service=payment",
       "n": 8,
       "triage": {
-        "pr_auc": 0.7579365079365079,
+        "pr_auc": 0.75,
         "roc_auc": 0.5,
         "ece": 0.25,
         "precision_at_fpr_5pct": 1.0,
@@ -23513,7 +23513,7 @@
       "strata_key": "service=product-catalog",
       "n": 7,
       "triage": {
-        "pr_auc": 0.4303571428571428,
+        "pr_auc": 0.5714285714285714,
         "roc_auc": 0.5,
         "ece": 0.4285714285714286,
         "precision_at_fpr_5pct": 0.0,
@@ -23594,7 +23594,7 @@
       "strata_key": "service=shipping",
       "n": 4,
       "triage": {
-        "pr_auc": 0.6388888888888888,
+        "pr_auc": 0.75,
         "roc_auc": 0.5,
         "ece": 0.25,
         "precision_at_fpr_5pct": 0.0,
@@ -23621,7 +23621,7 @@
       "strata_key": "service=valkey-cart",
       "n": 10,
       "triage": {
-        "pr_auc": 0.5311111111111111,
+        "pr_auc": 0.5,
         "roc_auc": 0.5,
         "ece": 0.5,
         "precision_at_fpr_5pct": 0.0,
@@ -23729,7 +23729,7 @@
       "strata_key": "window_type=active_fault",
       "n": 72,
       "triage": {
-        "pr_auc": 0.9480999283712425,
+        "pr_auc": 0.9389554865191388,
         "roc_auc": 0.4485294117647059,
         "ece": 0.1505190614325144,
         "precision_at_fpr_5pct": 1.0,
@@ -23810,7 +23810,7 @@
       "strata_key": "window_type=recovery_window",
       "n": 92,
       "triage": {
-        "pr_auc": 0.8650090595104619,
+        "pr_auc": 0.9299446036215818,
         "roc_auc": 0.5428571428571428,
         "ece": 0.11805741219820678,
         "precision_at_fpr_5pct": 1.0,
@@ -26356,7 +26356,7 @@
         "scheduled-job-spike",
         "single-pod-restart-cart"
       ],
-      "macro_pr_auc": 0.9943176895917916,
+      "macro_pr_auc": 0.9943570720744633,
       "macro_roc_auc": 0.995336822329576,
       "folds": [
         {
@@ -26411,7 +26411,7 @@
           "family": "cascade-currency-frontend-errors",
           "n_windows": 36,
           "n_positives": 12,
-          "pr_auc": 0.8872909698996656,
+          "pr_auc": 0.889102564102564,
           "roc_auc": 0.9027777777777778,
           "skipped": null
         },
@@ -26796,7 +26796,7 @@
         "scheduled-job-spike",
         "single-pod-restart-cart"
       ],
-      "macro_pr_auc": 0.9935377933928659,
+      "macro_pr_auc": 0.9912775093934514,
       "macro_roc_auc": 0.9932903918411166,
       "folds": [
         {
@@ -27043,7 +27043,7 @@
           "family": "latency-near-miss-partial-recovery",
           "n_windows": 27,
           "n_positives": 9,
-          "pr_auc": 0.7027384960718294,
+          "pr_auc": 0.5987654320987654,
           "roc_auc": 0.691358024691358,
           "skipped": null
         },

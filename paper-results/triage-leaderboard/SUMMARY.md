@@ -8,7 +8,7 @@ Triage classification (ticket-worthy vs noise) + retrieval, from the comparison 
 | hist_gradient_boosting_numeric | 1.000 | 1.000 | 0.012 | 0.848 | 1.000 | 0.000 | 0.000 |
 | calibrated_random_forest_numeric | 0.986 | 0.996 | 0.059 | 0.846 | 0.982 | 0.000 | 0.000 |
 | logistic_numeric_sklearn | 0.764 | 0.916 | 0.109 | 0.766 | 0.587 | 0.000 | 0.000 |
-| bm25_retrieval_only | 0.206 | 0.500 | 0.784 | 0.250 | 0.060 | 0.038 | 0.054 |
+| bm25_retrieval_only | 0.216 | 0.500 | 0.784 | 0.250 | 0.060 | 0.038 | 0.054 |
 | bi_encoder_hybrid | 0.769 | 0.921 | 0.108 | 0.777 | 0.624 | 0.000 | 0.000 |
 
 ## otel-demo
@@ -17,7 +17,7 @@ Triage classification (ticket-worthy vs noise) + retrieval, from the comparison 
 | hist_gradient_boosting_numeric | 1.000 | 1.000 | 0.000 | 0.895 | 1.000 | 0.000 | 0.000 |
 | calibrated_random_forest_numeric | 1.000 | 1.000 | 0.003 | 0.895 | 1.000 | 0.000 | 0.000 |
 | logistic_numeric_sklearn | 1.000 | 1.000 | 0.048 | 0.895 | 1.000 | 0.000 | 0.000 |
-| bm25_retrieval_only | 0.301 | 0.496 | 0.682 | 0.429 | 0.088 | 0.108 | 0.440 |
+| bm25_retrieval_only | 0.274 | 0.496 | 0.682 | 0.429 | 0.088 | 0.108 | 0.440 |
 | bi_encoder_hybrid | 1.000 | 1.000 | 0.047 | 0.895 | 1.000 | 0.000 | 0.000 |
 
 ## wol-v3

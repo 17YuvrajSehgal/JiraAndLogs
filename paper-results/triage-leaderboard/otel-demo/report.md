@@ -1,11 +1,11 @@
 # Comparison Report
 
 Pipelines:
-- `hist_gradient_boosting_numeric` (threshold=0.0007, fit=3.1s, predict=0.0s)
+- `hist_gradient_boosting_numeric` (threshold=0.0007, fit=3.0s, predict=0.0s)
 - `calibrated_random_forest_numeric` (threshold=0.0702, fit=1.1s, predict=0.1s)
 - `logistic_numeric_sklearn` (threshold=0.3402, fit=0.0s, predict=0.0s)
 - `bm25_retrieval_only` (threshold=1.0000, fit=0.0s, predict=0.1s)
-- `bi_encoder_hybrid` (threshold=0.3078, fit=10.9s, predict=0.0s)
+- `bi_encoder_hybrid` (threshold=0.3078, fit=10.8s, predict=0.0s)
 
 ## Orphan-detection recall gap (D12.6)
 
@@ -25,7 +25,7 @@ Pipelines:
 | pipeline | pr_auc | 95% CI |
 | --- | ---: | --- |
 | bi_encoder_hybrid | 1.0000 | [1.0000, 1.0000] |
-| bm25_retrieval_only | 0.3014 | [0.2087, 0.3702] |
+| bm25_retrieval_only | 0.2737 | [0.2160, 0.3303] |
 | calibrated_random_forest_numeric | 1.0000 | [1.0000, 1.0000] |
 | hist_gradient_boosting_numeric | 1.0000 | [1.0000, 1.0000] |
 | logistic_numeric_sklearn | 1.0000 | [1.0000, 1.0000] |
@@ -71,13 +71,13 @@ Pipelines:
 ### pr_auc
 | metric | a | b | delta (b-a) | 95% CI | p-value | significant? |
 | --- | --- | --- | ---: | --- | ---: | :---: |
-| pr_auc | bi_encoder_hybrid | bm25_retrieval_only | -0.6986 | [-0.7913, -0.6298] | 0.000 | yes |
+| pr_auc | bi_encoder_hybrid | bm25_retrieval_only | -0.7263 | [-0.7840, -0.6697] | 0.000 | yes |
 | pr_auc | bi_encoder_hybrid | calibrated_random_forest_numeric | +0.0000 | [+0.0000, +0.0000] | 1.000 | no |
 | pr_auc | bi_encoder_hybrid | hist_gradient_boosting_numeric | +0.0000 | [+0.0000, +0.0000] | 1.000 | no |
 | pr_auc | bi_encoder_hybrid | logistic_numeric_sklearn | +0.0000 | [+0.0000, +0.0000] | 1.000 | no |
-| pr_auc | bm25_retrieval_only | calibrated_random_forest_numeric | +0.6986 | [+0.6298, +0.7913] | 0.000 | yes |
-| pr_auc | bm25_retrieval_only | hist_gradient_boosting_numeric | +0.6986 | [+0.6298, +0.7913] | 0.000 | yes |
-| pr_auc | bm25_retrieval_only | logistic_numeric_sklearn | +0.6986 | [+0.6298, +0.7913] | 0.000 | yes |
+| pr_auc | bm25_retrieval_only | calibrated_random_forest_numeric | +0.7263 | [+0.6697, +0.7840] | 0.000 | yes |
+| pr_auc | bm25_retrieval_only | hist_gradient_boosting_numeric | +0.7263 | [+0.6697, +0.7840] | 0.000 | yes |
+| pr_auc | bm25_retrieval_only | logistic_numeric_sklearn | +0.7263 | [+0.6697, +0.7840] | 0.000 | yes |
 | pr_auc | calibrated_random_forest_numeric | hist_gradient_boosting_numeric | +0.0000 | [+0.0000, +0.0000] | 1.000 | no |
 | pr_auc | calibrated_random_forest_numeric | logistic_numeric_sklearn | +0.0000 | [+0.0000, +0.0000] | 1.000 | no |
 | pr_auc | hist_gradient_boosting_numeric | logistic_numeric_sklearn | +0.0000 | [+0.0000, +0.0000] | 1.000 | no |
@@ -113,53 +113,53 @@ Pipelines:
 ## Per-family PR-AUC
 | strata | n | hist_gradient_boosting_numeric | calibrated_random_forest_numeric | logistic_numeric_sklearn | bm25_retrieval_only | bi_encoder_hybrid |
 | --- | --- | --- | --- | --- | --- | --- |
-| family=ad-gc-pressure | 6 | 1.000 | 1.000 | 1.000 | 0.583 | 1.000 |
-| family=ad-high-cpu | 5 | 1.000 | 1.000 | 1.000 | 0.500 | 1.000 |
-| family=ad-outage | 2 | 1.000 | 1.000 | 1.000 | 1.000 | 1.000 |
+| family=ad-gc-pressure | 6 | 1.000 | 1.000 | 1.000 | 0.500 | 1.000 |
+| family=ad-high-cpu | 5 | 1.000 | 1.000 | 1.000 | 0.200 | 1.000 |
+| family=ad-outage | 2 | 1.000 | 1.000 | 1.000 | 0.500 | 1.000 |
 | family=baseline-normal-traffic | 2 | 0.000 | 0.000 | 0.000 | 0.000 | 0.000 |
 | family=cart-failure | 4 | 1.000 | 1.000 | 1.000 | 0.500 | 1.000 |
-| family=cart-redis-degradation | 8 | 1.000 | 1.000 | 1.000 | 0.633 | 1.000 |
+| family=cart-redis-degradation | 8 | 1.000 | 1.000 | 1.000 | 0.375 | 1.000 |
 | family=cascade-currency-frontend-errors | 1 | 0.000 | 0.000 | 0.000 | 0.000 | 0.000 |
-| family=cascade-kafka-broker-checkout | 8 | 1.000 | 1.000 | 1.000 | 0.500 | 1.000 |
-| family=cascade-productcatalog-latency-recommendation-timeout | 7 | 1.000 | 1.000 | 1.000 | 0.417 | 1.000 |
-| family=cascade-valkey-cart-checkout | 8 | 1.000 | 1.000 | 1.000 | 0.367 | 1.000 |
+| family=cascade-kafka-broker-checkout | 8 | 1.000 | 1.000 | 1.000 | 0.125 | 1.000 |
+| family=cascade-productcatalog-latency-recommendation-timeout | 7 | 1.000 | 1.000 | 1.000 | 0.286 | 1.000 |
+| family=cascade-valkey-cart-checkout | 8 | 1.000 | 1.000 | 1.000 | 0.250 | 1.000 |
 | family=checkout-restart | 1 | 0.000 | 0.000 | 0.000 | 0.000 | 0.000 |
-| family=compound-saturation-network-latency | 7 | 1.000 | 1.000 | 1.000 | 0.500 | 1.000 |
-| family=concurrent-ad-recommendation | 9 | 1.000 | 1.000 | 1.000 | 0.510 | 1.000 |
-| family=concurrent-currency-shipping | 8 | 1.000 | 1.000 | 1.000 | 0.250 | 1.000 |
+| family=compound-saturation-network-latency | 7 | 1.000 | 1.000 | 1.000 | 0.429 | 1.000 |
+| family=concurrent-ad-recommendation | 9 | 1.000 | 1.000 | 1.000 | 0.433 | 1.000 |
+| family=concurrent-currency-shipping | 8 | 1.000 | 1.000 | 1.000 | 0.196 | 1.000 |
 | family=concurrent-kafka-lag-payment-outage | 5 | 0.000 | 0.000 | 0.000 | 0.000 | 0.000 |
-| family=concurrent-payment-cart-redis | 12 | 1.000 | 1.000 | 1.000 | 0.624 | 1.000 |
+| family=concurrent-payment-cart-redis | 12 | 1.000 | 1.000 | 1.000 | 0.417 | 1.000 |
 | family=concurrent-productcatalog-latency-flapping-pod | 3 | 1.000 | 1.000 | 1.000 | 0.333 | 1.000 |
 | family=currency-outage | 5 | 1.000 | 1.000 | 1.000 | 0.333 | 1.000 |
 | family=dns-outage | 4 | 1.000 | 1.000 | 1.000 | 0.250 | 1.000 |
-| family=email-memory-leak-1000x | 4 | 1.000 | 1.000 | 1.000 | 0.333 | 1.000 |
-| family=email-memory-leak-100x | 3 | 1.000 | 1.000 | 1.000 | 1.000 | 1.000 |
-| family=email-outage | 5 | 1.000 | 1.000 | 1.000 | 1.000 | 1.000 |
+| family=email-memory-leak-1000x | 4 | 1.000 | 1.000 | 1.000 | 0.250 | 1.000 |
+| family=email-memory-leak-100x | 3 | 1.000 | 1.000 | 1.000 | 0.333 | 1.000 |
+| family=email-outage | 5 | 1.000 | 1.000 | 1.000 | 0.250 | 1.000 |
 | family=flapping-pod-cart | 2 | 0.000 | 0.000 | 0.000 | 0.000 | 0.000 |
 | family=frontend-restart | 1 | 0.000 | 0.000 | 0.000 | 0.000 | 0.000 |
-| family=frontend-traffic-pressure | 3 | 1.000 | 1.000 | 1.000 | 1.000 | 1.000 |
-| family=kafka-broker-outage | 8 | 1.000 | 1.000 | 1.000 | 0.417 | 1.000 |
-| family=kafka-consumer-crash | 5 | 1.000 | 1.000 | 1.000 | 0.367 | 1.000 |
-| family=kafka-consumer-lag | 6 | 1.000 | 1.000 | 1.000 | 0.639 | 1.000 |
-| family=kafka-dead-letter-spike | 3 | 1.000 | 1.000 | 1.000 | 0.500 | 1.000 |
+| family=frontend-traffic-pressure | 3 | 1.000 | 1.000 | 1.000 | 0.333 | 1.000 |
+| family=kafka-broker-outage | 8 | 1.000 | 1.000 | 1.000 | 0.250 | 1.000 |
+| family=kafka-consumer-crash | 5 | 1.000 | 1.000 | 1.000 | 0.400 | 1.000 |
+| family=kafka-consumer-lag | 6 | 1.000 | 1.000 | 1.000 | 0.500 | 1.000 |
+| family=kafka-dead-letter-spike | 3 | 1.000 | 1.000 | 1.000 | 0.333 | 1.000 |
 | family=kafka-partition-rebalance | 6 | 0.000 | 0.000 | 0.000 | 0.000 | 0.000 |
 | family=latency-near-miss-partial-recovery | 3 | 0.000 | 0.000 | 0.000 | 0.000 | 0.000 |
 | family=llm-inaccurate | 2 | 0.000 | 0.000 | 0.000 | 0.000 | 0.000 |
 | family=llm-rate-limit | 3 | 1.000 | 1.000 | 1.000 | 0.333 | 1.000 |
-| family=network-latency | 9 | 1.000 | 1.000 | 1.000 | 0.167 | 1.000 |
-| family=network-packet-loss | 8 | 1.000 | 1.000 | 1.000 | 0.917 | 1.000 |
-| family=network-partition | 9 | 1.000 | 1.000 | 1.000 | 0.226 | 1.000 |
-| family=payment-failure-100pct | 9 | 1.000 | 1.000 | 1.000 | 0.500 | 1.000 |
-| family=payment-failure-50pct | 4 | 1.000 | 1.000 | 1.000 | 1.000 | 1.000 |
-| family=payment-outage | 4 | 1.000 | 1.000 | 1.000 | 1.000 | 1.000 |
+| family=network-latency | 9 | 1.000 | 1.000 | 1.000 | 0.111 | 1.000 |
+| family=network-packet-loss | 8 | 1.000 | 1.000 | 1.000 | 0.375 | 1.000 |
+| family=network-partition | 9 | 1.000 | 1.000 | 1.000 | 0.222 | 1.000 |
+| family=payment-failure-100pct | 9 | 1.000 | 1.000 | 1.000 | 0.250 | 1.000 |
+| family=payment-failure-50pct | 4 | 1.000 | 1.000 | 1.000 | 0.333 | 1.000 |
+| family=payment-outage | 4 | 1.000 | 1.000 | 1.000 | 0.750 | 1.000 |
 | family=payment-unreachable | 4 | 0.000 | 0.000 | 0.000 | 0.000 | 0.000 |
 | family=productcatalog-latency | 2 | 0.000 | 0.000 | 0.000 | 0.000 | 0.000 |
-| family=productcatalog-targeted-failure | 4 | 1.000 | 1.000 | 1.000 | 0.833 | 1.000 |
-| family=recommendation-cache-failure | 4 | 1.000 | 1.000 | 1.000 | 0.333 | 1.000 |
-| family=recommendation-outage | 2 | 1.000 | 1.000 | 1.000 | 1.000 | 1.000 |
+| family=productcatalog-targeted-failure | 4 | 1.000 | 1.000 | 1.000 | 0.667 | 1.000 |
+| family=recommendation-cache-failure | 4 | 1.000 | 1.000 | 1.000 | 0.250 | 1.000 |
+| family=recommendation-outage | 2 | 1.000 | 1.000 | 1.000 | 0.500 | 1.000 |
 | family=scheduled-job-spike | 6 | 0.000 | 0.000 | 0.000 | 0.000 | 0.000 |
-| family=shipping-outage | 4 | 1.000 | 1.000 | 1.000 | 0.333 | 1.000 |
-| family=shipping-slowdown-10sec | 9 | 1.000 | 1.000 | 1.000 | 0.342 | 1.000 |
+| family=shipping-outage | 4 | 1.000 | 1.000 | 1.000 | 0.250 | 1.000 |
+| family=shipping-slowdown-10sec | 9 | 1.000 | 1.000 | 1.000 | 0.375 | 1.000 |
 | family=shipping-slowdown-5sec | 2 | 0.000 | 0.000 | 0.000 | 0.000 | 0.000 |
 | family=single-pod-restart-cart | 3 | 0.000 | 0.000 | 0.000 | 0.000 | 0.000 |
 | family=third-party-image-slow | 5 | 1.000 | 1.000 | 1.000 | 0.950 | 1.000 |
@@ -221,7 +221,7 @@ Pipelines:
 ## Per-window-type PR-AUC
 | strata | n | hist_gradient_boosting_numeric | calibrated_random_forest_numeric | logistic_numeric_sklearn | bm25_retrieval_only | bi_encoder_hybrid |
 | --- | --- | --- | --- | --- | --- | --- |
-| window_type=active_fault | 72 | 1.000 | 1.000 | 1.000 | 0.948 | 1.000 |
+| window_type=active_fault | 72 | 1.000 | 1.000 | 1.000 | 0.939 | 1.000 |
 | window_type=observation_window | 2 | 0.000 | 0.000 | 0.000 | 0.000 | 0.000 |
 | window_type=pre_fault_baseline | 81 | 0.000 | 0.000 | 0.000 | 0.000 | 0.000 |
 | window_type=recovery_window | 92 | 0.000 | 0.000 | 0.000 | 0.000 | 0.000 |
@@ -241,8 +241,8 @@ Per fault category — `outage`, `latency_regression`, `restart_with_impact`, et
 
 | strata | n | hist_gradient_boosting_numeric | calibrated_random_forest_numeric | logistic_numeric_sklearn | bm25_retrieval_only | bi_encoder_hybrid |
 | --- | --- | --- | --- | --- | --- | --- |
-| triage_reason_class=latency_regression | 78 | 1.000 | 1.000 | 1.000 | 0.556 | 1.000 |
-| triage_reason_class=outage | 75 | 1.000 | 1.000 | 1.000 | 0.497 | 1.000 |
+| triage_reason_class=latency_regression | 78 | 1.000 | 1.000 | 1.000 | 0.444 | 1.000 |
+| triage_reason_class=outage | 75 | 1.000 | 1.000 | 1.000 | 0.424 | 1.000 |
 | triage_reason_class=unknown | 94 | 0.000 | 0.000 | 0.000 | 0.000 | 0.000 |
 
 ## Stratified by is_novel (true = no matching past Jira; false = match exists; unscored = not ticket_worthy)
@@ -251,9 +251,9 @@ Novel incidents are the product axis where Jira pattern matching fundamentally c
 
 | strata | n | hist_gradient_boosting_numeric | calibrated_random_forest_numeric | logistic_numeric_sklearn | bm25_retrieval_only | bi_encoder_hybrid |
 | --- | --- | --- | --- | --- | --- | --- |
-| is_novel=known | 197 | 1.000 | 1.000 | 1.000 | 0.273 | 1.000 |
+| is_novel=known | 197 | 1.000 | 1.000 | 1.000 | 0.256 | 1.000 |
 | is_novel=novel | 2 | 0.000 | 0.000 | 0.000 | 0.000 | 0.000 |
-| is_novel=unscored | 48 | 1.000 | 1.000 | 1.000 | 0.360 | 1.000 |
+| is_novel=unscored | 48 | 1.000 | 1.000 | 1.000 | 0.320 | 1.000 |
 
 ## Inclusive borderline handling (borderline counted as positive)
 
@@ -263,10 +263,10 @@ The strict variant above is the headline. This inclusive variant rewards pipelin
 
 | Pipeline | PR-AUC | ROC-AUC | ECE | Precision@FPR=5% |
 | --- | ---: | ---: | ---: | ---: |
-| `hist_gradient_boosting_numeric` | 0.8692 | 0.7602 | 0.3440 | 0.9459 |
-| `calibrated_random_forest_numeric` | 0.8673 | 0.7578 | 0.3415 | 0.9467 |
+| `hist_gradient_boosting_numeric` | 0.8694 | 0.7602 | 0.3440 | 0.9459 |
+| `calibrated_random_forest_numeric` | 0.8256 | 0.7578 | 0.3415 | 0.9467 |
 | `logistic_numeric_sklearn` | 0.7547 | 0.4937 | 0.3759 | 0.9444 |
-| `bm25_retrieval_only` | 0.6017 | 0.5242 | 0.3783 | 0.4286 |
+| `bm25_retrieval_only` | 0.6314 | 0.5242 | 0.3783 | 0.4286 |
 | `bi_encoder_hybrid` | 0.7548 | 0.4942 | 0.3729 | 0.9444 |
 
 ## Leave-one-family-out macros (numeric pipelines)
@@ -279,8 +279,8 @@ Each family is held out as the test set; train uses all other families pooled ac
 
 | Pipeline | Folds scored | Macro PR-AUC | Macro ROC-AUC |
 | --- | ---: | ---: | ---: |
-| `hist_gradient_boosting_numeric` | 46 | 0.9943 | 0.9953 |
-| `calibrated_random_forest_numeric` | 46 | 0.9935 | 0.9933 |
+| `hist_gradient_boosting_numeric` | 46 | 0.9944 | 0.9953 |
+| `calibrated_random_forest_numeric` | 46 | 0.9913 | 0.9933 |
 | `logistic_numeric_sklearn` | 46 | 0.9707 | 0.9784 |
 
 ### Per-family LOFO PR-AUC
@@ -293,7 +293,7 @@ Each family is held out as the test set; train uses all other families pooled ac
 | baseline-normal-traffic | 8 | 0 | skip | skip | skip |
 | cart-failure | 27 | 9 | 1.0000 | 1.0000 | 1.0000 |
 | cart-redis-degradation | 45 | 15 | 1.0000 | 1.0000 | 1.0000 |
-| cascade-currency-frontend-errors | 36 | 12 | 0.8873 | 1.0000 | 0.9653 |
+| cascade-currency-frontend-errors | 36 | 12 | 0.8891 | 1.0000 | 0.9653 |
 | cascade-kafka-broker-checkout | 48 | 16 | 1.0000 | 1.0000 | 1.0000 |
 | cascade-productcatalog-latency-recommendation-timeout | 36 | 12 | 1.0000 | 1.0000 | 1.0000 |
 | cascade-valkey-cart-checkout | 36 | 12 | 1.0000 | 1.0000 | 1.0000 |
@@ -317,7 +317,7 @@ Each family is held out as the test set; train uses all other families pooled ac
 | kafka-consumer-lag | 45 | 15 | 1.0000 | 1.0000 | 1.0000 |
 | kafka-dead-letter-spike | 27 | 9 | 1.0000 | 1.0000 | 1.0000 |
 | kafka-partition-rebalance | 18 | 0 | skip | skip | skip |
-| latency-near-miss-partial-recovery | 27 | 9 | 0.8513 | 0.7027 | 0.4625 |
+| latency-near-miss-partial-recovery | 27 | 9 | 0.8513 | 0.5988 | 0.4625 |
 | llm-inaccurate | 27 | 9 | 1.0000 | 1.0000 | 0.9556 |
 | llm-rate-limit | 27 | 9 | 1.0000 | 1.0000 | 1.0000 |
 | network-latency | 36 | 12 | 1.0000 | 1.0000 | 1.0000 |
