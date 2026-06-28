@@ -45,7 +45,19 @@ def load_window_memory_matchings(
 
 def load_split_manifest(global_dir: Path) -> SplitManifest:
     with (global_dir / "triage-split-manifest.json").open("r", encoding="utf-8") as fh:
-        return SplitManifest.from_row(json.load(fh))
+        manifest = SplitManifest.from_row(json.load(fh))
+    # Prefer the per-window v2-resplit (OB/OTel). WoL ships no resplit, so it
+    # keeps the family-based split. This makes the cascades/comparison evaluate
+    # on the SAME per-window split the agent loaders + the paper use.
+    resplit = global_dir / "triage-split-manifest-v2-resplit.json"
+    if resplit.exists():
+        try:
+            wa = json.loads(resplit.read_text(encoding="utf-8")).get("window_assignment")
+            if wa:
+                manifest.window_assignment = {str(k): str(v) for k, v in wa.items()}
+        except (OSError, json.JSONDecodeError, KeyError):
+            pass  # fall back to family-based split
+    return manifest
 
 
 def load_feature_columns(global_dir: Path) -> list[str]:

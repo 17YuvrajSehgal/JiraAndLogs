@@ -421,3 +421,27 @@ def bootstrap_eval_report(
         n_resamples=n_resamples, seed=seed, confidence=confidence,
         metrics=metrics,
     )
+
+
+def benjamini_hochberg(pvalues: list[float], alpha: float = 0.05) -> dict:
+    """Benjamini-Hochberg FDR correction over a family of p-values.
+
+    Returns {"rejected": [bool,...], "qvalues": [float,...], "alpha": alpha,
+    "n": len(pvalues)} in the ORIGINAL order. Use when reporting many RQ
+    bootstrap tests together so the paper controls the false-discovery rate
+    rather than reporting uncorrected per-test significance.
+    """
+    n = len(pvalues)
+    if n == 0:
+        return {"rejected": [], "qvalues": [], "alpha": alpha, "n": 0}
+    order = sorted(range(n), key=lambda i: pvalues[i])
+    q = [0.0] * n
+    prev = 1.0
+    # step-up: iterate from largest p to smallest, enforce monotonic q
+    for rank in range(n, 0, -1):
+        i = order[rank - 1]
+        val = pvalues[i] * n / rank
+        prev = min(prev, val)
+        q[i] = min(prev, 1.0)
+    rejected = [q[i] <= alpha for i in range(n)]
+    return {"rejected": rejected, "qvalues": q, "alpha": alpha, "n": n}

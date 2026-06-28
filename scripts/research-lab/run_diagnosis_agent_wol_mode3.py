@@ -20,6 +20,10 @@ Outputs:
 from __future__ import annotations
 
 import argparse
+import logging
+logging.basicConfig(level=logging.INFO,
+    format="[%(asctime)s] %(levelname)s %(name)s: %(message)s",
+    datefmt="%H:%M:%S", force=True)
 import json
 import os
 import sys

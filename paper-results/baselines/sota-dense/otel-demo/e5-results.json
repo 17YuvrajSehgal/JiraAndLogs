@@ -1,0 +1,220 @@
+{
+  "method": "e5",
+  "model": "intfloat/e5-large-v2",
+  "global_dir": "data/derived/global/2026-06-09-otel-demo-v1-global",
+  "split": "test",
+  "n_memory": 147,
+  "n_test": 247,
+  "elapsed_s": 9.124857425689697,
+  "coarse": {
+    "label": "coarse",
+    "n_with_gold": 119,
+    "hit_at_1": 0.4789915966386555,
+    "hit_at_5": 0.5378151260504201,
+    "hit_at_10": 0.6218487394957983,
+    "mrr": 0.5090336134453783,
+    "per_project": {
+      "kafka-dead-letter-spike": {
+        "n": 2,
+        "hit_at_1": 1.0,
+        "hit_at_5": 1.0
+      },
+      "kafka-broker-outage": {
+        "n": 3,
+        "hit_at_1": 0.0,
+        "hit_at_5": 0.0
+      },
+      "kafka-consumer-lag": {
+        "n": 4,
+        "hit_at_1": 0.25,
+        "hit_at_5": 0.5
+      },
+      "kafka-consumer-crash": {
+        "n": 3,
+        "hit_at_1": 1.0,
+        "hit_at_5": 1.0
+      },
+      "payment-outage": {
+        "n": 2,
+        "hit_at_1": 0.0,
+        "hit_at_5": 0.0
+      },
+      "payment-unreachable": {
+        "n": 2,
+        "hit_at_1": 1.0,
+        "hit_at_5": 1.0
+      },
+      "cart-redis-degradation": {
+        "n": 3,
+        "hit_at_1": 0.0,
+        "hit_at_5": 0.0
+      },
+      "cart-failure": {
+        "n": 1,
+        "hit_at_1": 0.0,
+        "hit_at_5": 0.0
+      },
+      "currency-outage": {
+        "n": 2,
+        "hit_at_1": 0.0,
+        "hit_at_5": 0.0
+      },
+      "shipping-slowdown-10sec": {
+        "n": 5,
+        "hit_at_1": 1.0,
+        "hit_at_5": 1.0
+      },
+      "recommendation-cache-failure": {
+        "n": 2,
+        "hit_at_1": 1.0,
+        "hit_at_5": 1.0
+      },
+      "ad-outage": {
+        "n": 1,
+        "hit_at_1": 0.0,
+        "hit_at_5": 0.0
+      },
+      "ad-high-cpu": {
+        "n": 2,
+        "hit_at_1": 0.0,
+        "hit_at_5": 0.0
+      },
+      "ad-gc-pressure": {
+        "n": 3,
+        "hit_at_1": 0.3333333333333333,
+        "hit_at_5": 0.3333333333333333
+      },
+      "productcatalog-targeted-failure": {
+        "n": 2,
+        "hit_at_1": 1.0,
+        "hit_at_5": 1.0
+      },
+      "email-outage": {
+        "n": 3,
+        "hit_at_1": 0.0,
+        "hit_at_5": 0.0
+      },
+      "email-memory-leak-1000x": {
+        "n": 2,
+        "hit_at_1": 1.0,
+        "hit_at_5": 1.0
+      },
+      "third-party-image-slow": {
+        "n": 2,
+        "hit_at_1": 1.0,
+        "hit_at_5": 1.0
+      },
+      "llm-inaccurate": {
+        "n": 1,
+        "hit_at_1": 1.0,
+        "hit_at_5": 1.0
+      },
+      "payment-failure-100pct": {
+        "n": 2,
+        "hit_at_1": 0.0,
+        "hit_at_5": 0.0
+      },
+      "payment-failure-50pct": {
+        "n": 2,
+        "hit_at_1": 1.0,
+        "hit_at_5": 1.0
+      },
+      "shipping-outage": {
+        "n": 1,
+        "hit_at_1": 0.0,
+        "hit_at_5": 0.0
+      },
+      "recommendation-outage": {
+        "n": 1,
+        "hit_at_1": 0.0,
+        "hit_at_5": 0.0
+      },
+      "email-memory-leak-100x": {
+        "n": 1,
+        "hit_at_1": 1.0,
+        "hit_at_5": 1.0
+      },
+      "flapping-pod-cart": {
+        "n": 1,
+        "hit_at_1": 0.0,
+        "hit_at_5": 0.0
+      },
+      "frontend-traffic-pressure": {
+        "n": 1,
+        "hit_at_1": 0.0,
+        "hit_at_5": 0.0
+      },
+      "llm-rate-limit": {
+        "n": 1,
+        "hit_at_1": 1.0,
+        "hit_at_5": 1.0
+      },
+      "concurrent-payment-cart-redis": {
+        "n": 8,
+        "hit_at_1": 0.125,
+        "hit_at_5": 0.375
+      },
+      "concurrent-currency-shipping": {
+        "n": 7,
+        "hit_at_1": 1.0,
+        "hit_at_5": 1.0
+      },
+      "concurrent-kafka-lag-payment-outage": {
+        "n": 3,
+        "hit_at_1": 1.0,
+        "hit_at_5": 1.0
+      },
+      "cascade-kafka-broker-checkout": {
+        "n": 4,
+        "hit_at_1": 0.0,
+        "hit_at_5": 0.0
+      },
+      "cascade-productcatalog-latency-recommendation-timeout": {
+        "n": 6,
+        "hit_at_1": 1.0,
+        "hit_at_5": 1.0
+      },
+      "concurrent-ad-recommendation": {
+        "n": 6,
+        "hit_at_1": 0.16666666666666666,
+        "hit_at_5": 0.3333333333333333
+      },
+      "cascade-valkey-cart-checkout": {
+        "n": 5,
+        "hit_at_1": 1.0,
+        "hit_at_5": 1.0
+      },
+      "concurrent-productcatalog-latency-flapping-pod": {
+        "n": 1,
+        "hit_at_1": 0.0,
+        "hit_at_5": 1.0
+      },
+      "network-packet-loss": {
+        "n": 6,
+        "hit_at_1": 1.0,
+        "hit_at_5": 1.0
+      },
+      "network-partition": {
+        "n": 4,
+        "hit_at_1": 0.0,
+        "hit_at_5": 0.5
+      },
+      "compound-saturation-network-latency": {
+        "n": 6,
+        "hit_at_1": 0.16666666666666666,
+        "hit_at_5": 0.16666666666666666
+      },
+      "network-latency": {
+        "n": 7,
+        "hit_at_1": 0.0,
+        "hit_at_5": 0.0
+      },
+      "dns-outage": {
+        "n": 1,
+        "hit_at_1": 0.0,
+        "hit_at_5": 0.0
+      }
+    }
+  },
+  "strong": null
+}

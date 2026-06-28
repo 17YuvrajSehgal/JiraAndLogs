@@ -91,7 +91,7 @@ def main() -> int:
                     default=Path("data/derived/global/2026-06-15-wol-real-v2-global/tch-lite-refit"))
     ap.add_argument("--humanized-subdir", default="bulk-20260611")
     ap.add_argument("--humanized-root",   default="jira-shadow-humanized-v2")
-    ap.add_argument("--biencoder-finetune-epochs", type=int, default=3)
+    ap.add_argument("--biencoder-finetune-epochs", type=int, default=5)
     ap.add_argument("--seed", type=int, default=42)
     args = ap.parse_args()
 

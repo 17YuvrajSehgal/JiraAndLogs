@@ -1,0 +1,120 @@
+{
+  "method": "bge",
+  "model": "BAAI/bge-large-en-v1.5",
+  "global_dir": "data/derived/global/2026-05-25-dataset-v5-large-global",
+  "split": "test",
+  "n_memory": 347,
+  "n_test": 1008,
+  "elapsed_s": 9.208115100860596,
+  "coarse": {
+    "label": "coarse",
+    "n_with_gold": 331,
+    "hit_at_1": 0.17220543806646527,
+    "hit_at_5": 0.3413897280966767,
+    "hit_at_10": 0.459214501510574,
+    "mrr": 0.24381503860355835,
+    "per_project": {
+      "payment-outage": {
+        "n": 15,
+        "hit_at_1": 0.0,
+        "hit_at_5": 0.4
+      },
+      "cart-redis": {
+        "n": 68,
+        "hit_at_1": 0.20588235294117646,
+        "hit_at_5": 0.35294117647058826
+      },
+      "productcatalog-latency": {
+        "n": 23,
+        "hit_at_1": 0.08695652173913043,
+        "hit_at_5": 0.43478260869565216
+      },
+      "checkout-restart": {
+        "n": 15,
+        "hit_at_1": 1.0,
+        "hit_at_5": 1.0
+      },
+      "productcatalog-outage": {
+        "n": 31,
+        "hit_at_1": 0.0967741935483871,
+        "hit_at_5": 0.3225806451612903
+      },
+      "checkout-outage": {
+        "n": 16,
+        "hit_at_1": 0.0625,
+        "hit_at_5": 0.125
+      },
+      "currency-outage": {
+        "n": 21,
+        "hit_at_1": 0.09523809523809523,
+        "hit_at_5": 0.5714285714285714
+      },
+      "recommendation-outage": {
+        "n": 14,
+        "hit_at_1": 0.5,
+        "hit_at_5": 0.7142857142857143
+      },
+      "frontend-restart": {
+        "n": 13,
+        "hit_at_1": 0.15384615384615385,
+        "hit_at_5": 0.5384615384615384
+      },
+      "shipping-outage": {
+        "n": 19,
+        "hit_at_1": 0.15789473684210525,
+        "hit_at_5": 0.21052631578947367
+      },
+      "slow-leak-saturation": {
+        "n": 9,
+        "hit_at_1": 0.0,
+        "hit_at_5": 0.0
+      },
+      "third-party-blip": {
+        "n": 9,
+        "hit_at_1": 0.2222222222222222,
+        "hit_at_5": 0.2222222222222222
+      },
+      "recovered-in-window": {
+        "n": 12,
+        "hit_at_1": 0.08333333333333333,
+        "hit_at_5": 0.3333333333333333
+      },
+      "flapping-pod": {
+        "n": 14,
+        "hit_at_1": 0.2857142857142857,
+        "hit_at_5": 0.35714285714285715
+      },
+      "latency-near-miss-partial-recovery": {
+        "n": 8,
+        "hit_at_1": 0.0,
+        "hit_at_5": 0.125
+      },
+      "dns-outage": {
+        "n": 11,
+        "hit_at_1": 0.0,
+        "hit_at_5": 0.0
+      },
+      "network-partition": {
+        "n": 12,
+        "hit_at_1": 0.0,
+        "hit_at_5": 0.0
+      },
+      "network-latency": {
+        "n": 9,
+        "hit_at_1": 0.0,
+        "hit_at_5": 0.0
+      },
+      "resource-saturation": {
+        "n": 9,
+        "hit_at_1": 0.0,
+        "hit_at_5": 0.0
+      },
+      "network-packet-loss": {
+        "n": 3,
+        "hit_at_1": 0.3333333333333333,
+        "hit_at_5": 0.3333333333333333
+      }
+    }
+  },
+  "strong": null
+}

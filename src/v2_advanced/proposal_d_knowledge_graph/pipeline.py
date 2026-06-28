@@ -244,13 +244,13 @@ class KnowledgeGraphRetrievalPipeline(PipelineRunner):
             #    score against the graph.
             with log_step(log, "score_windows", n=len(train_w) + len(val_w) + len(test_w)):
                 train_feats, train_y = self._build_features_and_labels(
-                    train_w, lm_client, retriever, window_cache,
+                    train_w, lm_client, retriever, window_cache, corpus,
                 )
                 val_feats, val_y = self._build_features_and_labels(
-                    val_w, lm_client, retriever, window_cache,
+                    val_w, lm_client, retriever, window_cache, corpus,
                 )
                 test_feats, test_ranked, test_explanations = self._predict_test(
-                    test_w, lm_client, retriever, window_cache,
+                    test_w, lm_client, retriever, window_cache, corpus,
                 )
 
             # 7) Triage head: logistic regression on similarity features
@@ -366,13 +366,15 @@ class KnowledgeGraphRetrievalPipeline(PipelineRunner):
         )
 
     def _build_features_and_labels(
-        self, windows, lm_client, retriever, window_cache,
+        self, windows, lm_client, retriever, window_cache, corpus,
     ) -> tuple[np.ndarray, list[int]]:
         feats_rows = []
         labels = []
         for w in windows:
             ext = self._extract_window(w, lm_client, window_cache)
-            rows = retriever.retrieve(ext, top_k=self.top_k_graph)
+            rows = retriever.retrieve(ext, top_k=self.top_k_graph * 4)
+            vis = {iss.jira_shadow_issue_id for iss in corpus.visible_to(w)}
+            rows = [r for r in rows if r["ticket_id"] in vis][: self.top_k_graph]
             if rows:
                 max_score = float(rows[0]["score"])
                 mean_top5 = float(np.mean([r["score"] for r in rows[:5]]))
@@ -386,14 +388,18 @@ class KnowledgeGraphRetrievalPipeline(PipelineRunner):
         return np.asarray(feats_rows, dtype=np.float32), labels
 
     def _predict_test(
-        self, windows, lm_client, retriever, window_cache,
+        self, windows, lm_client, retriever, window_cache, corpus,
     ) -> tuple[np.ndarray, list[list[str]], list[list[dict]]]:
         feats_rows = []
         all_ids: list[list[str]] = []
         all_explanations: list[list[dict]] = []
         for w in windows:
             ext = self._extract_window(w, lm_client, window_cache)
-            rows = retriever.retrieve(ext, top_k=self.top_k_graph)
+            # Over-fetch, then enforce time-ordered visibility (no future
+            # leakage) — same contract the hybrid uses.
+            rows = retriever.retrieve(ext, top_k=self.top_k_graph * 4)
+            vis = {iss.jira_shadow_issue_id for iss in corpus.visible_to(w)}
+            rows = [r for r in rows if r["ticket_id"] in vis][: self.top_k_graph]
             if rows:
                 max_score = float(rows[0]["score"])
                 mean_top5 = float(np.mean([r["score"] for r in rows[:5]]))

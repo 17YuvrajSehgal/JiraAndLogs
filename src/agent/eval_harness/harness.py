@@ -251,7 +251,17 @@ class EvalHarness:
             rr = None
             rank = None
 
-        triage_correct = decision.triage_decision == case.gold_triage
+        # Score triage on the PRE-suppression decision. Page suppression only
+        # fires when the agent decided "ticket_worthy" (see _process_window) and
+        # then downgrades it to "borderline" for paging; that downgrade is a
+        # paging action, not a triage error, so it must not deflate triage
+        # accuracy. The suppress flag uniquely identifies these windows.
+        effective_triage = (
+            "ticket_worthy"
+            if (suppression is not None and suppression.suppress)
+            else decision.triage_decision
+        )
+        triage_correct = effective_triage == case.gold_triage
         is_novel_correct = bool(decision.is_novel) == bool(case.gold_is_novel)
 
         return CaseResult(

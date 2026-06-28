@@ -113,7 +113,7 @@ def paired_bootstrap_ci(
     metric: str,
     n_resamples: int = 1000,
     confidence: float = 0.95,
-    seed: int = 17,
+    seed: int = 42,
 ) -> tuple[dict[str, BootstrapCI], list[PairwiseDelta]]:
     """Returns (per-pipeline CIs, pairwise deltas with CI + p-values).
 

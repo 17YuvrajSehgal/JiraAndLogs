@@ -245,8 +245,14 @@ def _register_predictions_backed(
             global_dir, profile.predictions_layout, entry.path_segment,
         )
         if not preds_path.exists():
-            log.warning(
-                "skipping %s — predictions JSONL not found at %s",
+            # LOUD (error, not warning): a missing predictions file silently
+            # turns a retriever into an empty-retrieval baseline, which would
+            # understate Hit@K. The run script enforces hard fail-fast on the
+            # retrievers it knows are REQUIRED for the dataset (some skills,
+            # e.g. WoL log-sequence, are legitimately absent + capability-gated).
+            log.error(
+                "[MISSING-PREDICTIONS] skill=%s NOT registered — file absent at %s "
+                "(this retriever will be unavailable; verify this is intended)",
                 entry.skill_cls.name, preds_path,
             )
             continue

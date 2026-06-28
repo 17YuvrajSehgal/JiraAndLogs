@@ -12,9 +12,12 @@ def iter_split(
     manifest: SplitManifest,
     split: str,
 ) -> Iterator[TriageWindow]:
-    """Yield only windows in the requested split (train|validation|test)."""
+    """Yield only windows in the requested split (train|validation|test).
+
+    Uses the per-window resplit assignment when present (OB/OTel via
+    triage-split-manifest-v2-resplit.json), else the family-based split."""
     for w in windows:
-        if manifest.split_of(w.scenario_family) == split:
+        if manifest.split_of_window(w) == split:
             yield w
 
 

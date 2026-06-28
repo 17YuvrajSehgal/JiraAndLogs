@@ -20,9 +20,14 @@ from pathlib import Path
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--global-dir", type=Path, required=True)
+    ap.add_argument("--out-dir", type=Path, default=None,
+                    help="dir holding bm25-predictions.jsonl + where to write "
+                         "bm25-mode3-results.json (default <global-dir>/tch-lite-refit)")
+    ap.add_argument("--wall-seconds", type=float, default=None,
+                    help="real BM25 wall time, if known (else recorded as null)")
     args = ap.parse_args()
 
-    out_dir = args.global_dir / "tch-lite-refit"
+    out_dir = args.out_dir or (args.global_dir / "tch-lite-refit")
     preds_path = out_dir / "bm25-predictions.jsonl"
     if not preds_path.exists():
         raise SystemExit(f"missing predictions file: {preds_path}")
@@ -102,12 +107,12 @@ def main() -> int:
         "metadata": {
             "n_predictions": len(predictions),
             "retrieval":     "bm25_retrieval_only",
-            # Wall time + fit/predict seconds not available — they were
-            # printed to stdout by the original run. Sourced from the
-            # user-pasted log lines:
-            "fit_seconds":     13167.36,  # 22:07:16 → 01:46:34 = ~3h 39m
-            "predict_seconds": 56275.54,  # from log line
-            "wall_seconds":    69442.9,
+            # Timings are NOT fabricated: run_bm25_wol_mode3.py does not emit
+            # per-phase seconds, so these are null unless passed via
+            # --wall-seconds (read the real value from the run's slurm log).
+            "fit_seconds":     None,
+            "predict_seconds": None,
+            "wall_seconds":    args.wall_seconds,
         },
         "coarse": coarse,
         "strong": strong,

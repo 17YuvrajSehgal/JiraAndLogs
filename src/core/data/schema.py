@@ -167,6 +167,10 @@ class SplitManifest:
     leave_one_family_out_folds: list[str]
     global_dataset_id: str
     split_by: str
+    # Per-window override from triage-split-manifest-v2-resplit.json (OB/OTel).
+    # When set it takes precedence over the family-based split, so the pipelines
+    # evaluate on the SAME per-window split as the agent loaders / the paper.
+    window_assignment: dict[str, str] | None = None
 
     @classmethod
     def from_row(cls, row: dict[str, Any]) -> "SplitManifest":
@@ -180,3 +184,13 @@ class SplitManifest:
 
     def split_of(self, family: str) -> str:
         return self.family_assignment.get(family, "train")
+
+    def split_of_window(self, window: "TriageWindow") -> str:
+        """Split for a window: per-window resplit if present, else family-based.
+
+        Unassigned windows return a sentinel matching no split (excluded), so
+        they are not silently dumped into 'train' like the family default did
+        for unknown families."""
+        if self.window_assignment is not None:
+            return self.window_assignment.get(window.window_id, "__unassigned__")
+        return self.split_of(getattr(window, "scenario_family", None))

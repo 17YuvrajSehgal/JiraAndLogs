@@ -1,0 +1,49 @@
+{
+  "method": "tfidf",
+  "model": "tfidf",
+  "global_dir": "data/derived/global/2026-06-17-wol-real-v3-global",
+  "split": "test",
+  "n_memory": 38642,
+  "n_test": 13388,
+  "elapsed_s": 398.18145394325256,
+  "coarse": {
+    "label": "coarse",
+    "n_with_gold": 5150,
+    "hit_at_1": 0.5211650485436893,
+    "hit_at_5": 0.7662135922330097,
+    "hit_at_10": 0.8415533980582525,
+    "mrr": 0.6261891662814005,
+    "per_project": {
+      "wol-kafka": {
+        "n": 803,
+        "hit_at_1": 0.4383561643835616,
+        "hit_at_5": 0.7135740971357409
+      },
+      "wol-mariadb-server": {
+        "n": 4347,
+        "hit_at_1": 0.5364619277662755,
+        "hit_at_5": 0.7759374281113411
+      }
+    }
+  },
+  "strong": {
+    "label": "strong",
+    "n_with_gold": 4362,
+    "hit_at_1": 0.44452086198991286,
+    "hit_at_5": 0.7145804676753783,
+    "hit_at_10": 0.7925263640531867,
+    "mrr": 0.5594410238495517,
+    "per_project": {
+      "wol-kafka": {
+        "n": 672,
+        "hit_at_1": 0.41369047619047616,
+        "hit_at_5": 0.6934523809523809
+      },
+      "wol-mariadb-server": {
+        "n": 3690,
+        "hit_at_1": 0.45013550135501357,
+        "hit_at_5": 0.7184281842818429
+      }
+    }
+  }
+}
