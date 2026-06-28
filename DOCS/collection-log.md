@@ -94,3 +94,24 @@ Validation: **439/439 agent tests pass**; all edited modules import. (commit `10
 5. ☐ agent-value (cost@iso-accuracy, skill/tool ablations)
 6. ☐ robustness (multi-seed, BH correction, negative-results)
 7. ☐ aggregate SUMMARY.md per category + paper-results/README.md + provenance
+
+---
+
+## Progress snapshot — 2026-06-28 (autonomous run)
+
+**Categories DONE → paper-results/**
+- ✅ `baselines/` — dense (bge/e5/mpnet), tfidf, **fair bm25**, ce, **llm-rag** × 3 datasets.
+  - LLM-RAG (Qwen rerank/bge-top10): WoL 0.856 / OTel 0.639 / OB 0.344 Hit@5 — below our BiEncoder/Hybrid (good).
+- ✅ `retrieval-cascades/` — OB, OTel, WoL panels (WoL KG re-running for C2).
+- ✅ `kg-usefulness/` (OB/OTel) — graph helps Hit@1 (OB 0.281→0.414), ~flat Hit@5; WoL running.
+- ✅ `agent-end-to-end/` (OB/OTel) — OB Hit@1=0.689 Hit@5=0.758 triage-acc=0.841 (resplit + H3 fix); WoL running.
+
+**In flight:** WoL KG cascade (621251), WoL kg-ablation (621277), gold-judge all-3 (621309),
+robustness multi-seed BiEncoder OB/OTel (621310), WoL agent eval (bg), agent-value OB/OTel (bg), WoL fair-bm25 (bg).
+
+**Still to do:** WoL agent eval + agent-value; robustness BH-correction + negative-results
+aggregation; gold-validation collation; per-category SUMMARY.md + paper-results/README.md +
+provenance (env freeze, seeds); threats-to-validity draft (gap #3).
+
+**Key headline so far (WoL real data, coarse Hit@5):**
+Hybrid-RRF **0.970** > BiEncoder 0.905 > LLM-RAG 0.856 > BM25 0.727 > KG (re-running) — fusion wins on real Jira data.
