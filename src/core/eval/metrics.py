@@ -21,15 +21,25 @@ def pr_auc(scores: list[float], labels: list[int]) -> float:
     fp = 0
     last_recall = 0.0
     ap = 0.0
-    for _score, lab in _pairs(scores, labels):
-        if lab == 1:
-            tp += 1
-        else:
-            fp += 1
+    pairs = _pairs(scores, labels)
+    n = len(pairs)
+    i = 0
+    while i < n:
+        # Consume the whole tied-score group together so within-group label
+        # order can't inflate precision (a constant classifier must score AP =
+        # base rate, not 1.0).
+        j = i
+        while j < n and pairs[j][0] == pairs[i][0]:
+            if pairs[j][1] == 1:
+                tp += 1
+            else:
+                fp += 1
+            j += 1
         precision = tp / (tp + fp)
         recall = tp / n_pos
         ap += precision * (recall - last_recall)
         last_recall = recall
+        i = j
     return ap
 
 
