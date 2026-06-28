@@ -123,3 +123,19 @@ Status legend: ☐ to fix · ☑ fixed · ▶ in progress · ✔ verified-OK (no
   the hybrid's internal head. Fix later if the hybrid triage cell is published.
 - M2 ensemble strat fields, M3 `training_runs` path, M5 script polish — low
   impact; address if the corresponding artifact is published.
+
+---
+
+## Bugs found DURING triage-leaderboard collection (2026-06-28) — fixed
+
+- ☑ **pr_auc tie-handling (core/eval/metrics.py).** `_pairs` is a stable sort, so
+  tied/constant scores leaked input label-order into the PR walk → a chance
+  classifier scored a spurious **AP=1.0 alongside ROC=0.5** (surfaced on WoL hgb).
+  Fixed to consume each tied-score group atomically; now matches sklearn exactly
+  on distinct AND tied scores (constant → AP=base-rate). Only affected degenerate
+  tied-score pipelines (OB/OTel distinct-score classifiers unchanged).
+  `significance._pr_auc` delegates here → fixed too. (commit ff9a5a9)
+- ☑ **sbatch --export comma-splitting.** `--export=ALL,...,PIPELINES=a,b,c` set
+  PIPELINES=a only (commas delimit --export vars) → WoL triage first ran a single
+  pipeline. Fixed by passing the pipeline list via inherited env (`export
+  PIPELINES=...; sbatch --export=ALL`).

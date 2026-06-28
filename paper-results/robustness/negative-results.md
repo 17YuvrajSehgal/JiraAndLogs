@@ -28,3 +28,14 @@ Reported explicitly (not hidden) — see `significance.md` for the BH-corrected 
    top-10 underperforms our BiEncoder/Hybrid on every dataset (WoL 0.856 vs
    0.905/0.970), indicating the gains come from domain-tuned retrieval, not from
    a general LLM reader over the same candidates.
+
+6. **Triage classification is saturated on synthetic data and at-chance on real
+   data.** Numeric classifiers reach PR-AUC≈1.0 / ROC≈1.0 on synthetic OB/OTel
+   (active-fault windows are trivially separable by telemetry features), but on
+   **real WoL data every pipeline is at chance** (ROC≈0.50, PR-AUC≈base-rate
+   0.506; bi_encoder_hybrid 0.54). Triage-classification is therefore an artifact
+   of fault-injection, not a discriminating task on real Jira incidents — the
+   meaningful tasks on real data are **retrieval** (Hit@5 up to 0.97) and the
+   **agent**. (BM25 is also a poor triage signal on synthetic: PR-AUC 0.2–0.3,
+   ECE 0.7+; omitted on WoL where its O(N²) scoring over 38.6k docs is intractable
+   and lexical retrieval is already covered by cascade-BM25.)
