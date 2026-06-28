@@ -262,57 +262,39 @@ def main() -> None:
     summary = _summarise(agg["rows"])
     per_skill = _per_skill_breakdown(args.trace_root)
 
-    print("=" * 80)
-    print(f"  RQ-A2 / B1 / B2 — cost vs cascade-counterfactual")
-    print("=" * 80)
-    print(f"  Trace root:     {args.trace_root}")
-    print(f"  n_windows:      {summary['n_windows']}")
-    print()
-    print("  Per-window means:")
-    print(f"    actual_wall_ms          {summary['actual_wall_ms']['mean']:.2f}  "
-          f"(median {summary['actual_wall_ms']['median']:.2f}, "
-          f"p95 {summary['actual_wall_ms']['p95']:.2f}, "
-          f"max {summary['actual_wall_ms']['max']:.2f})")
-    print(f"    counterfactual_wall_ms  {summary['counterfactual_wall_ms']['mean']:.2f}  "
-          f"(median {summary['counterfactual_wall_ms']['median']:.2f}, "
-          f"p95 {summary['counterfactual_wall_ms']['p95']:.2f})")
-    print(f"    savings_wall_ms         {summary['savings_wall_ms']['mean']:.2f}  "
-          f"(median {summary['savings_wall_ms']['median']:.2f}, "
-          f"p95 {summary['savings_wall_ms']['p95']:.2f})")
-    print()
-    print("  Totals across all windows:")
-    print(f"    actual    wall = {summary['totals']['actual_wall_seconds']} s, "
-          f"tokens = {summary['totals']['actual_llm_tokens']}, "
-          f"usd = ${summary['totals']['actual_usd']}")
-    print(f"    cascade   wall = {summary['totals']['cascade_wall_seconds']} s, "
-          f"tokens = {summary['totals']['cascade_llm_tokens']}, "
-          f"usd = ${summary['totals']['cascade_usd']}")
-    print(f"    SAVINGS %:  wall = {summary['savings_pct']['wall']}%  "
-          f"tokens = {summary['savings_pct']['tokens']}%  "
-          f"usd = {summary['savings_pct']['usd']}%")
-    print()
-    print("  Per-skill gate-save rates:")
-    print(f"    {'skill':<35} {'invoked':>8} {'gated':>8} {'save %':>8}")
-    for skill, counts in sorted(per_skill.items(),
-                                 key=lambda x: -x[1]["save_rate_pct"]):
-        if counts["would_have_run"] == 0:
-            continue
-        print(
-            f"    {skill:<35} {counts['invoked']:>8} "
-            f"{counts['skipped_by_gate']:>8} {counts['save_rate_pct']:>7.1f}%"
-        )
-    print("=" * 80)
-
+    # Write the JSON FIRST so a pretty-print formatting bug can never prevent
+    # the result file from being produced.
     if args.output is not None:
         args.output.parent.mkdir(parents=True, exist_ok=True)
         args.output.write_text(json.dumps({
             "trace_root": str(args.trace_root),
             "summary": summary,
             "per_skill": per_skill,
-            # Don't dump full per-window rows (would balloon to 1008 entries);
-            # keep them available via re-running.
         }, indent=2), encoding="utf-8")
-        print(f"\n[cost_vs_cascade] wrote JSON -> {args.output}")
+        print(f"[cost_vs_cascade] wrote JSON -> {args.output}")
+
+    # Human-readable summary — best-effort (never fatal; JSON is already written).
+    try:
+        print("=" * 80)
+        print("  RQ-A2 / B1 / B2 — cost vs cascade-counterfactual")
+        print(f"  Trace root: {args.trace_root}   n_windows: {summary.get('n_windows')}")
+        for k in ("actual_wall_ms", "counterfactual_wall_ms", "savings_wall_ms"):
+            s = summary.get(k)
+            if isinstance(s, dict):
+                print(f"    {k:<24} mean={s.get('mean')} median={s.get('median')} p95={s.get('p95')}")
+        if isinstance(summary.get("totals"), dict):
+            print(f"    totals: {summary['totals']}")
+        if isinstance(summary.get("savings_pct"), dict):
+            print(f"    savings_pct: {summary['savings_pct']}")
+        print("  Per-skill gate-save rates:")
+        for skill, counts in sorted(per_skill.items(), key=lambda x: -x[1].get("save_rate_pct", 0)):
+            if counts.get("would_have_run", 0) == 0:
+                continue
+            print(f"    {skill:<35} invoked={counts.get('invoked')} "
+                  f"gated={counts.get('skipped_by_gate')} save={counts.get('save_rate_pct')}%")
+        print("=" * 80)
+    except Exception as e:                                            # noqa: BLE001
+        print(f"[cost_vs_cascade] (summary print skipped: {e})")
 
 
 if __name__ == "__main__":

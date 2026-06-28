@@ -1,0 +1,214 @@
+{
+  "dataset": "ob",
+  "dataset_id": "2026-05-25-dataset-v5-large-global",
+  "split": "test",
+  "n_cases": 1008,
+  "n_evaluable": 331,
+  "baseline": {
+    "hit_at_1": 0.6888217522658611,
+    "hit_at_5": 0.7583081570996979,
+    "mrr": 0.7137965760322256
+  },
+  "rows": [
+    {
+      "cell": "baseline",
+      "skip": [],
+      "description": "full Phase-2 stack \u2014 all cascade + 4 ReAct tools + rerank",
+      "n_cases": 1008,
+      "n_evaluable": 331,
+      "hit_at_1": 0.6888217522658611,
+      "hit_at_5": 0.7583081570996979,
+      "hit_at_10": 0.7583081570996979,
+      "mrr": 0.7137965760322256,
+      "triage_accuracy": 0.8412698412698413,
+      "novel_recall": 0.5360824742268041,
+      "novel_precision": 0.11279826464208242,
+      "n_distinct_plan_ids": 4,
+      "wall_seconds": 2.476
+    },
+    {
+      "cell": "no_verifier",
+      "skip": [
+        "verify_with_llm"
+      ],
+      "description": "drop verify_with_llm (DiagnosisAgent)",
+      "n_cases": 1008,
+      "n_evaluable": 331,
+      "hit_at_1": 0.6888217522658611,
+      "hit_at_5": 0.7583081570996979,
+      "hit_at_10": 0.7583081570996979,
+      "mrr": 0.7137965760322256,
+      "triage_accuracy": 0.8412698412698413,
+      "novel_recall": 0.5360824742268041,
+      "novel_precision": 0.11279826464208242,
+      "n_distinct_plan_ids": 4,
+      "wall_seconds": 1.988
+    },
+    {
+      "cell": "no_kg",
+      "skip": [
+        "retrieve_hybrid_fusion_llm",
+        "retrieve_knowledge_graph"
+      ],
+      "description": "no knowledge-graph retrievers (rule-based + LLM-graph)",
+      "n_cases": 1008,
+      "n_evaluable": 331,
+      "hit_at_1": 0.6888217522658611,
+      "hit_at_5": 0.7583081570996979,
+      "hit_at_10": 0.7583081570996979,
+      "mrr": 0.7137965760322256,
+      "triage_accuracy": 0.8412698412698413,
+      "novel_recall": 0.5360824742268041,
+      "novel_precision": 0.11279826464208242,
+      "n_distinct_plan_ids": 4,
+      "wall_seconds": 1.983
+    },
+    {
+      "cell": "no_hybrid",
+      "skip": [
+        "retrieve_hybrid_fusion",
+        "retrieve_hybrid_fusion_llm"
+      ],
+      "description": "drop Hybrid-RRF (both rule-based and LLM-graph variants)",
+      "n_cases": 1008,
+      "n_evaluable": 331,
+      "hit_at_1": 0.6888217522658611,
+      "hit_at_5": 0.7583081570996979,
+      "hit_at_10": 0.7583081570996979,
+      "mrr": 0.7137965760322256,
+      "triage_accuracy": 0.8412698412698413,
+      "novel_recall": 0.5360824742268041,
+      "novel_precision": 0.11279826464208242,
+      "n_distinct_plan_ids": 4,
+      "wall_seconds": 2.024
+    },
+    {
+      "cell": "no_log_sequence",
+      "skip": [
+        "retrieve_log_sequence"
+      ],
+      "description": "drop LogSeq2Vec",
+      "n_cases": 1008,
+      "n_evaluable": 331,
+      "hit_at_1": 0.6888217522658611,
+      "hit_at_5": 0.7583081570996979,
+      "hit_at_10": 0.7583081570996979,
+      "mrr": 0.7137965760322256,
+      "triage_accuracy": 0.8412698412698413,
+      "novel_recall": 0.5360824742268041,
+      "novel_precision": 0.11279826464208242,
+      "n_distinct_plan_ids": 4,
+      "wall_seconds": 1.959
+    },
+    {
+      "cell": "dense_only",
+      "skip": [
+        "retrieve_hybrid_fusion",
+        "retrieve_hybrid_fusion_llm",
+        "retrieve_knowledge_graph",
+        "retrieve_log_sequence",
+        "triage_numeric",
+        "verify_with_llm"
+      ],
+      "description": "BiEncoder retrieval + composition only (lower bound)",
+      "n_cases": 1008,
+      "n_evaluable": 331,
+      "hit_at_1": 0.6888217522658611,
+      "hit_at_5": 0.7583081570996979,
+      "hit_at_10": 0.7583081570996979,
+      "mrr": 0.7137965760322256,
+      "triage_accuracy": 0.7242063492063492,
+      "novel_recall": 0.5360824742268041,
+      "novel_precision": 0.11279826464208242,
+      "n_distinct_plan_ids": 4,
+      "wall_seconds": 1.891
+    },
+    {
+      "cell": "no_triage_numeric",
+      "skip": [
+        "triage_numeric"
+      ],
+      "description": "drop HGB triage scorer (removes cheap-path gate)",
+      "n_cases": 1008,
+      "n_evaluable": 331,
+      "hit_at_1": 0.6888217522658611,
+      "hit_at_5": 0.7583081570996979,
+      "hit_at_10": 0.7583081570996979,
+      "mrr": 0.7137965760322256,
+      "triage_accuracy": 0.7242063492063492,
+      "novel_recall": 0.5360824742268041,
+      "novel_precision": 0.11279826464208242,
+      "n_distinct_plan_ids": 4,
+      "wall_seconds": 1.904
+    },
+    {
+      "cell": "no_react",
+      "skip": [
+        "request_extended_trace_window",
+        "request_pod_events",
+        "request_pod_metrics",
+        "request_similar_incident_window",
+        "rerank_with_evidence"
+      ],
+      "description": "disable all 4 ReAct tools + rerank \u2014 pre-Phase-2 baseline",
+      "n_cases": 1008,
+      "n_evaluable": 331,
+      "hit_at_1": 0.676737160120846,
+      "hit_at_5": 0.7583081570996979,
+      "hit_at_10": 0.7583081570996979,
+      "mrr": 0.7059919436052366,
+      "triage_accuracy": 0.8412698412698413,
+      "novel_recall": 0.5360824742268041,
+      "novel_precision": 0.11279826464208242,
+      "n_distinct_plan_ids": 4,
+      "wall_seconds": 0.267
+    },
+    {
+      "cell": "no_reformulate",
+      "skip": [
+        "reformulate_query"
+      ],
+      "description": "drop the reformulation skill (RQ-A3 isolation)",
+      "n_cases": 1008,
+      "n_evaluable": 331,
+      "hit_at_1": 0.6888217522658611,
+      "hit_at_5": 0.7583081570996979,
+      "hit_at_10": 0.7583081570996979,
+      "mrr": 0.7137965760322256,
+      "triage_accuracy": 0.8412698412698413,
+      "novel_recall": 0.5360824742268041,
+      "novel_precision": 0.11279826464208242,
+      "n_distinct_plan_ids": 4,
+      "wall_seconds": 2.042
+    },
+    {
+      "cell": "no_compose_novelty",
+      "skip": [
+        "compose_novelty"
+      ],
+      "description": "drop novelty disjunction (RQ-A5 / RQ-D2 link)",
+      "n_cases": 1008,
+      "n_evaluable": 331,
+      "hit_at_1": 0.6888217522658611,
+      "hit_at_5": 0.7583081570996979,
+      "hit_at_10": 0.7583081570996979,
+      "mrr": 0.7137965760322256,
+      "triage_accuracy": 0.8412698412698413,
+      "novel_recall": 0.0,
+      "novel_precision": 0.0,
+      "n_distinct_plan_ids": 4,
+      "wall_seconds": 2.279
+    }
+  ],
+  "ranked_by_damage": [
+    "no_react",
+    "no_verifier",
+    "no_kg",
+    "no_hybrid",
+    "no_log_sequence",
+    "dense_only",
+    "no_triage_numeric",
+    "no_reformulate",
+    "no_compose_novelty"
+  ]
+}

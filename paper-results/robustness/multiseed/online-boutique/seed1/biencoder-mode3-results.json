@@ -1,0 +1,165 @@
+{
+  "config": {
+    "global_dir": "data/derived/global/2026-05-25-dataset-v5-large-global",
+    "humanized_root": "jira-shadow-humanized-v2",
+    "humanized_subdir": "bulk-20260531",
+    "n_hard_negs": 2,
+    "n_random_negs": 1,
+    "use_all_golds": false,
+    "finetune_epochs": 5,
+    "max_chars": 512,
+    "seed": 1
+  },
+  "metadata": {
+    "n_predictions": 1008,
+    "fit_seconds": 41.46363425254822,
+    "predict_seconds": 0.00024509429931640625,
+    "wall_seconds": 44.66543674468994,
+    "train_n": 4701,
+    "val_n": 1011,
+    "test_n": 1008,
+    "n_memory": 347,
+    "n_finetune_pairs": 1805,
+    "backbone": "sentence-transformers/all-MiniLM-L6-v2",
+    "embed_dim": 384,
+    "device": "cuda",
+    "retrieval": "bi_encoder_dense"
+  },
+  "coarse": {
+    "label": "coarse",
+    "n_with_gold": 331,
+    "hit_at_1": 0.4169184290030212,
+    "hit_at_5": 0.649546827794562,
+    "mrr": 0.5060422960725077,
+    "per_project": {
+      "payment-outage": {
+        "n": 15,
+        "hit_at_1": 0.8666666666666667,
+        "hit_at_5": 1.0,
+        "mrr": 0.9022222222222223
+      },
+      "cart-redis": {
+        "n": 68,
+        "hit_at_1": 0.3382352941176471,
+        "hit_at_5": 0.7352941176470589,
+        "mrr": 0.4818627450980392
+      },
+      "productcatalog-latency": {
+        "n": 23,
+        "hit_at_1": 0.5652173913043478,
+        "hit_at_5": 0.6956521739130435,
+        "mrr": 0.6123188405797102
+      },
+      "checkout-restart": {
+        "n": 15,
+        "hit_at_1": 0.4,
+        "hit_at_5": 0.6666666666666666,
+        "mrr": 0.46888888888888886
+      },
+      "productcatalog-outage": {
+        "n": 31,
+        "hit_at_1": 0.0967741935483871,
+        "hit_at_5": 0.16129032258064516,
+        "mrr": 0.11559139784946236
+      },
+      "checkout-outage": {
+        "n": 16,
+        "hit_at_1": 0.6875,
+        "hit_at_5": 1.0,
+        "mrr": 0.8177083333333333
+      },
+      "currency-outage": {
+        "n": 21,
+        "hit_at_1": 0.6190476190476191,
+        "hit_at_5": 0.8571428571428571,
+        "mrr": 0.7380952380952381
+      },
+      "recommendation-outage": {
+        "n": 14,
+        "hit_at_1": 0.5714285714285714,
+        "hit_at_5": 0.7142857142857143,
+        "mrr": 0.6428571428571429
+      },
+      "frontend-restart": {
+        "n": 13,
+        "hit_at_1": 0.5384615384615384,
+        "hit_at_5": 0.9230769230769231,
+        "mrr": 0.6602564102564101
+      },
+      "shipping-outage": {
+        "n": 19,
+        "hit_at_1": 0.7894736842105263,
+        "hit_at_5": 0.8947368421052632,
+        "mrr": 0.8245614035087719
+      },
+      "slow-leak-saturation": {
+        "n": 9,
+        "hit_at_1": 0.3333333333333333,
+        "hit_at_5": 0.5555555555555556,
+        "mrr": 0.39814814814814814
+      },
+      "third-party-blip": {
+        "n": 9,
+        "hit_at_1": 0.7777777777777778,
+        "hit_at_5": 0.7777777777777778,
+        "mrr": 0.7777777777777778
+      },
+      "recovered-in-window": {
+        "n": 12,
+        "hit_at_1": 0.5,
+        "hit_at_5": 0.5833333333333334,
+        "mrr": 0.5416666666666666
+      },
+      "flapping-pod": {
+        "n": 14,
+        "hit_at_1": 0.14285714285714285,
+        "hit_at_5": 0.35714285714285715,
+        "mrr": 0.25
+      },
+      "latency-near-miss-partial-recovery": {
+        "n": 8,
+        "hit_at_1": 0.0,
+        "hit_at_5": 0.25,
+        "mrr": 0.125
+      },
+      "dns-outage": {
+        "n": 11,
+        "hit_at_1": 0.45454545454545453,
+        "hit_at_5": 0.5454545454545454,
+        "mrr": 0.4848484848484849
+      },
+      "network-partition": {
+        "n": 12,
+        "hit_at_1": 0.16666666666666666,
+        "hit_at_5": 0.3333333333333333,
+        "mrr": 0.25
+      },
+      "network-latency": {
+        "n": 9,
+        "hit_at_1": 0.0,
+        "hit_at_5": 0.5555555555555556,
+        "mrr": 0.2777777777777778
+      },
+      "resource-saturation": {
+        "n": 9,
+        "hit_at_1": 0.0,
+        "hit_at_5": 0.4444444444444444,
+        "mrr": 0.13888888888888887
+      },
+      "network-packet-loss": {
+        "n": 3,
+        "hit_at_1": 0.3333333333333333,
+        "hit_at_5": 0.3333333333333333,
+        "mrr": 0.3333333333333333
+      }
+    }
+  },
+  "strong": {
+    "label": "strong",
+    "n_with_gold": 0,
+    "hit_at_1": 0.0,
+    "hit_at_5": 0.0,
+    "mrr": 0.0,
+    "per_project": {}
+  }
+}

@@ -1,0 +1,7 @@
+{
+  "trace_root": "paper-results/agent-end-to-end/wol-v3/traces",
+  "summary": {
+    "n_windows": 0
+  },
+  "per_skill": {}
+}

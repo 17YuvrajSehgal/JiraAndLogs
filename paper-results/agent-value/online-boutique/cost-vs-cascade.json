@@ -1,0 +1,7 @@
+{
+  "trace_root": "paper-results/agent-end-to-end/online-boutique/traces",
+  "summary": {
+    "n_windows": 0
+  },
+  "per_skill": {}
+}

@@ -1,0 +1,113 @@
+{
+  "dataset": "otel_demo",
+  "dataset_id": "2026-06-09-otel-demo-v1-global",
+  "split": "test",
+  "n_cases": 247,
+  "n_evaluable": 119,
+  "baseline": {
+    "hit_at_1": 0.6470588235294118,
+    "hit_at_5": 0.7563025210084033,
+    "mrr": 0.6879551820728291
+  },
+  "rows": [
+    {
+      "cell": "baseline",
+      "skip": [],
+      "description": "",
+      "n_cases": 247,
+      "n_evaluable": 119,
+      "hit_at_1": 0.6470588235294118,
+      "hit_at_5": 0.7563025210084033,
+      "hit_at_10": 0.7563025210084033,
+      "mrr": 0.6879551820728291,
+      "triage_accuracy": 0.8461538461538461,
+      "novel_recall": 0.5,
+      "novel_precision": 0.010101010101010102,
+      "n_distinct_plan_ids": 4,
+      "wall_seconds": 0.177
+    },
+    {
+      "cell": "no_hybrid",
+      "skip": [
+        "retrieve_hybrid_fusion"
+      ],
+      "description": "drop Hybrid-RRF; BiEncoder only",
+      "n_cases": 247,
+      "n_evaluable": 119,
+      "hit_at_1": 0.6470588235294118,
+      "hit_at_5": 0.7563025210084033,
+      "hit_at_10": 0.7563025210084033,
+      "mrr": 0.6879551820728291,
+      "triage_accuracy": 0.8461538461538461,
+      "novel_recall": 0.5,
+      "novel_precision": 0.010101010101010102,
+      "n_distinct_plan_ids": 4,
+      "wall_seconds": 0.111
+    },
+    {
+      "cell": "dense_only",
+      "skip": [
+        "retrieve_hybrid_fusion",
+        "triage_numeric"
+      ],
+      "description": "BiEncoder only",
+      "n_cases": 247,
+      "n_evaluable": 119,
+      "hit_at_1": 0.6470588235294118,
+      "hit_at_5": 0.7563025210084033,
+      "hit_at_10": 0.7563025210084033,
+      "mrr": 0.6879551820728291,
+      "triage_accuracy": 0.6882591093117408,
+      "novel_recall": 0.5,
+      "novel_precision": 0.010101010101010102,
+      "n_distinct_plan_ids": 4,
+      "wall_seconds": 0.096
+    },
+    {
+      "cell": "no_triage_numeric",
+      "skip": [
+        "triage_numeric"
+      ],
+      "description": "drop HGB triage scorer",
+      "n_cases": 247,
+      "n_evaluable": 119,
+      "hit_at_1": 0.6470588235294118,
+      "hit_at_5": 0.7563025210084033,
+      "hit_at_10": 0.7563025210084033,
+      "mrr": 0.6879551820728291,
+      "triage_accuracy": 0.6882591093117408,
+      "novel_recall": 0.5,
+      "novel_precision": 0.010101010101010102,
+      "n_distinct_plan_ids": 4,
+      "wall_seconds": 0.113
+    },
+    {
+      "cell": "no_react",
+      "skip": [
+        "request_extended_trace_window",
+        "request_pod_events",
+        "request_pod_metrics",
+        "request_similar_incident_window",
+        "rerank_with_evidence"
+      ],
+      "description": "disable all 4 ReAct tools + rerank",
+      "n_cases": 247,
+      "n_evaluable": 119,
+      "hit_at_1": 0.6470588235294118,
+      "hit_at_5": 0.7563025210084033,
+      "hit_at_10": 0.7563025210084033,
+      "mrr": 0.6879551820728291,
+      "triage_accuracy": 0.8461538461538461,
+      "novel_recall": 0.5,
+      "novel_precision": 0.010101010101010102,
+      "n_distinct_plan_ids": 4,
+      "wall_seconds": 0.063
+    }
+  ],
+  "ranked_by_damage": [
+    "no_hybrid",
+    "dense_only",
+    "no_triage_numeric",
+    "no_react"
+  ]
+}

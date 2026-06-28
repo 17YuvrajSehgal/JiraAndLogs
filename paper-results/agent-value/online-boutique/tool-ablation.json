@@ -1,0 +1,253 @@
+{
+  "dataset_id": "2026-05-25-dataset-v5-large-global",
+  "split": "test",
+  "n_cases": 0,
+  "all_subsets": [
+    {
+      "subset": [],
+      "subset_label": "none",
+      "n_tools": 0,
+      "hit_at_1": 0.676737160120846,
+      "hit_at_5": 0.7583081570996979,
+      "mrr": 0.7059919436052366,
+      "triage_accuracy": 0.8412698412698413,
+      "n_distinct_plan_ids": 4,
+      "wall_seconds": 0.277
+    },
+    {
+      "subset": [
+        "request_pod_events"
+      ],
+      "subset_label": "events",
+      "n_tools": 1,
+      "hit_at_1": 0.6797583081570997,
+      "hit_at_5": 0.7583081570996979,
+      "mrr": 0.7080060422960724,
+      "triage_accuracy": 0.8412698412698413,
+      "n_distinct_plan_ids": 4,
+      "wall_seconds": 1.864
+    },
+    {
+      "subset": [
+        "request_extended_trace_window"
+      ],
+      "subset_label": "trace",
+      "n_tools": 1,
+      "hit_at_1": 0.6586102719033232,
+      "hit_at_5": 0.7583081570996979,
+      "mrr": 0.6918932527693857,
+      "triage_accuracy": 0.8412698412698413,
+      "n_distinct_plan_ids": 4,
+      "wall_seconds": 1.792
+    },
+    {
+      "subset": [
+        "request_pod_metrics"
+      ],
+      "subset_label": "metrics",
+      "n_tools": 1,
+      "hit_at_1": 0.676737160120846,
+      "hit_at_5": 0.7583081570996979,
+      "mrr": 0.7059919436052366,
+      "triage_accuracy": 0.8412698412698413,
+      "n_distinct_plan_ids": 4,
+      "wall_seconds": 1.785
+    },
+    {
+      "subset": [
+        "request_similar_incident_window"
+      ],
+      "subset_label": "peers",
+      "n_tools": 1,
+      "hit_at_1": 0.6918429003021148,
+      "hit_at_5": 0.7583081570996979,
+      "mrr": 0.7153071500503525,
+      "triage_accuracy": 0.8412698412698413,
+      "n_distinct_plan_ids": 4,
+      "wall_seconds": 1.483
+    },
+    {
+      "subset": [
+        "request_pod_events",
+        "request_extended_trace_window"
+      ],
+      "subset_label": "events+trace",
+      "n_tools": 2,
+      "hit_at_1": 0.6646525679758308,
+      "hit_at_5": 0.7583081570996979,
+      "mrr": 0.6969788519637462,
+      "triage_accuracy": 0.8412698412698413,
+      "n_distinct_plan_ids": 4,
+      "wall_seconds": 1.969
+    },
+    {
+      "subset": [
+        "request_pod_events",
+        "request_pod_metrics"
+      ],
+      "subset_label": "events+metrics",
+      "n_tools": 2,
+      "hit_at_1": 0.676737160120846,
+      "hit_at_5": 0.7583081570996979,
+      "mrr": 0.7064954682779456,
+      "triage_accuracy": 0.8412698412698413,
+      "n_distinct_plan_ids": 4,
+      "wall_seconds": 2.043
+    },
+    {
+      "subset": [
+        "request_pod_events",
+        "request_similar_incident_window"
+      ],
+      "subset_label": "events+peers",
+      "n_tools": 2,
+      "hit_at_1": 0.6918429003021148,
+      "hit_at_5": 0.7583081570996979,
+      "mrr": 0.7153071500503525,
+      "triage_accuracy": 0.8412698412698413,
+      "n_distinct_plan_ids": 4,
+      "wall_seconds": 2.077
+    },
+    {
+      "subset": [
+        "request_extended_trace_window",
+        "request_pod_metrics"
+      ],
+      "subset_label": "trace+metrics",
+      "n_tools": 2,
+      "hit_at_1": 0.6586102719033232,
+      "hit_at_5": 0.7583081570996979,
+      "mrr": 0.6918932527693857,
+      "triage_accuracy": 0.8412698412698413,
+      "n_distinct_plan_ids": 4,
+      "wall_seconds": 2.066
+    },
+    {
+      "subset": [
+        "request_extended_trace_window",
+        "request_similar_incident_window"
+      ],
+      "subset_label": "trace+peers",
+      "n_tools": 2,
+      "hit_at_1": 0.6888217522658611,
+      "hit_at_5": 0.7583081570996979,
+      "mrr": 0.7137965760322256,
+      "triage_accuracy": 0.8412698412698413,
+      "n_distinct_plan_ids": 4,
+      "wall_seconds": 1.991
+    },
+    {
+      "subset": [
+        "request_pod_metrics",
+        "request_similar_incident_window"
+      ],
+      "subset_label": "metrics+peers",
+      "n_tools": 2,
+      "hit_at_1": 0.6918429003021148,
+      "hit_at_5": 0.7583081570996979,
+      "mrr": 0.7153071500503525,
+      "triage_accuracy": 0.8412698412698413,
+      "n_distinct_plan_ids": 4,
+      "wall_seconds": 2.027
+    },
+    {
+      "subset": [
+        "request_pod_events",
+        "request_extended_trace_window",
+        "request_pod_metrics"
+      ],
+      "subset_label": "events+trace+metrics",
+      "n_tools": 3,
+      "hit_at_1": 0.6646525679758308,
+      "hit_at_5": 0.7583081570996979,
+      "mrr": 0.6969788519637462,
+      "triage_accuracy": 0.8412698412698413,
+      "n_distinct_plan_ids": 4,
+      "wall_seconds": 2.217
+    },
+    {
+      "subset": [
+        "request_pod_events",
+        "request_extended_trace_window",
+        "request_similar_incident_window"
+      ],
+      "subset_label": "events+trace+peers",
+      "n_tools": 3,
+      "hit_at_1": 0.6888217522658611,
+      "hit_at_5": 0.7583081570996979,
+      "mrr": 0.7137965760322256,
+      "triage_accuracy": 0.8412698412698413,
+      "n_distinct_plan_ids": 4,
+      "wall_seconds": 2.187
+    },
+    {
+      "subset": [
+        "request_pod_events",
+        "request_pod_metrics",
+        "request_similar_incident_window"
+      ],
+      "subset_label": "events+metrics+peers",
+      "n_tools": 3,
+      "hit_at_1": 0.6918429003021148,
+      "hit_at_5": 0.7583081570996979,
+      "mrr": 0.7153071500503525,
+      "triage_accuracy": 0.8412698412698413,
+      "n_distinct_plan_ids": 4,
+      "wall_seconds": 2.13
+    },
+    {
+      "subset": [
+        "request_extended_trace_window",
+        "request_pod_metrics",
+        "request_similar_incident_window"
+      ],
+      "subset_label": "trace+metrics+peers",
+      "n_tools": 3,
+      "hit_at_1": 0.6888217522658611,
+      "hit_at_5": 0.7583081570996979,
+      "mrr": 0.7137965760322256,
+      "triage_accuracy": 0.8412698412698413,
+      "n_distinct_plan_ids": 4,
+      "wall_seconds": 2.371
+    },
+    {
+      "subset": [
+        "request_pod_events",
+        "request_extended_trace_window",
+        "request_pod_metrics",
+        "request_similar_incident_window"
+      ],
+      "subset_label": "events+trace+metrics+peers",
+      "n_tools": 4,
+      "hit_at_1": 0.6888217522658611,
+      "hit_at_5": 0.7583081570996979,
+      "mrr": 0.7137965760322256,
+      "triage_accuracy": 0.8412698412698413,
+      "n_distinct_plan_ids": 4,
+      "wall_seconds": 2.334
+    }
+  ],
+  "ranked_by_hit_at_1": [
+    "peers",
+    "events+peers",
+    "metrics+peers",
+    "events+metrics+peers",
+    "trace+peers",
+    "events+trace+peers",
+    "trace+metrics+peers",
+    "events+trace+metrics+peers",
+    "events",
+    "events+metrics",
+    "none",
+    "metrics",
+    "events+trace",
+    "events+trace+metrics",
+    "trace",
+    "trace+metrics"
+  ],
+  "best_subset": [
+    "request_similar_incident_window"
+  ],
+  "best_hit_at_1": 0.6918429003021148,
+  "baseline_hit_at_1": 0.676737160120846
+}

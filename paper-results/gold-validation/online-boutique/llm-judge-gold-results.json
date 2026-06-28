@@ -1,0 +1,13 @@
+{
+  "model": "Qwen/Qwen2.5-7B-Instruct",
+  "seed": 42,
+  "n_windows": 300,
+  "n_gold_judged": 300,
+  "n_random_judged": 300,
+  "gold_mean_score": 2.3533333333333335,
+  "random_mean_score": 1.8866666666666667,
+  "gold_frac_relevant_ge4": 0.16333333333333333,
+  "random_frac_relevant_ge4": 0.056666666666666664,
+  "discrimination_gap": 0.4666666666666668,
+  "elapsed_s": 29.15005326271057
+}
