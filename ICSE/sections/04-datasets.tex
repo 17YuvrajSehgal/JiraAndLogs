@@ -2,21 +2,23 @@
 \section{Datasets}
 \label{sec:datasets}
 
-Evaluating incident triage faithfully requires data that spans the conditions a
-deployed system actually meets---from richly instrumented services, where logs,
-metrics, and traces are all available, to bare incident reports with nothing but
-text. We assemble three datasets along exactly this spectrum
-(Table~\ref{tab:datasets}). Two we \emph{collect and release}: instrumented
-microservice systems under controlled fault injection, pairing multi-signal
-telemetry with incident tickets and per-window ground-truth labels. The third we
-\emph{reuse}: a large corpus of real, engineer-written Apache Jira incidents that
-stresses whether methods tuned on synthetic data generalize to the field.
+A faithful evaluation of incident triage must cover the range of conditions a
+deployed system actually faces---from richly instrumented services, where logs,
+metrics, and traces are all available, down to bare incident reports that contain
+nothing but text. We therefore evaluate on three datasets positioned along this
+realism spectrum (Table~\ref{tab:datasets}). The first two we \emph{collect and
+release}: instrumented microservice systems placed under controlled fault
+injection, which let us pair multi-signal telemetry with incident tickets and
+exact per-window labels. The third we \emph{reuse}: a large corpus of real,
+engineer-written Apache Jira incidents that tests whether methods tuned on
+synthetic data hold up in the field.
 
 \begin{table}[t]
 \centering
 \caption{The three evaluation datasets, spanning fully instrumented synthetic
-incidents to real, text-only ones. Memory = past incidents available for
-retrieval; test windows are the held-out queries used in \S\ref{sec:results}.}
+incidents to real, text-only ones. \emph{Memory} is the pool of past incidents
+available for retrieval; \emph{test windows} are the held-out queries used in
+\S\ref{sec:results}.}
 \label{tab:datasets}
 \footnotesize
 \setlength{\tabcolsep}{4pt}
@@ -24,14 +26,14 @@ retrieval; test windows are the held-out queries used in \S\ref{sec:results}.}
 \toprule
  & Online Boutique & OTel Demo & World of Logs \\
 \midrule
-Origin          & collected (ours) & collected (ours) & reused~\cite{xiao2026worldoflogs} \\
-Evidence        & full telemetry   & full telemetry   & text only \\
-Scale           & 12 services      & 18 svc.\ + Kafka & 24 projects \\
-Fault scenarios & 27 families      & 49 scenarios     & real incidents \\
-Memory incidents& 347              & 147              & 38{,}642 \\
-Test windows    & 1{,}008          & 247              & 13{,}388 \\
-Split           & by family        & by family        & leave-domain-out \\
-Raw telemetry   & $\sim$35\,GB     & $\sim$11\,GB     & --- (text) \\
+Origin           & collected (ours) & collected (ours) & reused~\cite{xiao2026worldoflogs} \\
+Evidence         & full telemetry   & full telemetry   & text only \\
+Scale            & 12 services      & 18 svc.\ + Kafka & 24 projects \\
+Fault scenarios  & 27 families      & 49 scenarios     & real incidents \\
+Memory incidents & 347              & 147              & 38{,}642 \\
+Test windows     & 1{,}008          & 247              & 13{,}388 \\
+Split            & by family        & by family        & leave-domain-out \\
+Raw telemetry    & $\sim$35\,GB     & $\sim$11\,GB     & --- (text) \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -52,74 +54,81 @@ retrieval target. The labelled result is what the triage agent consumes.}
 \label{fig:collection}
 \end{figure}
 
-Our two datasets are produced by one pipeline (Figure~\ref{fig:collection}): an
-open-source microservice application is deployed in a Kubernetes cluster
-alongside a full observability stack---Prometheus for metrics, Tempo for
-distributed traces, and Loki for logs---and faults are then injected under
-controlled, labelled conditions while the platform records everything. The unit of collection is a \emph{scenario}: a
-single fault, injected for a fixed duration, with declared ground truth. Each
-scenario yields three consecutive observation windows---a fault-free baseline
-before injection, the active fault, and a recovery phase after it is
-cleared---and every window is labelled ticket-worthy, borderline, or noise. For
-each window we archive the raw telemetry it produced: the service's logs, its
-CPU, memory, and restart metric series and any firing alerts, the cluster's
-events and pod state, and a sample of distributed traces; when a scenario
-warrants attention, a synthetic incident ticket is generated and rewritten by a
-language model into engineer-voice prose---so that memory tickets read like those
-a team would actually file---and stored as the retrieval target. Because injection
-is controlled, the resulting window-to-ticket matches are exact ground truth, not
-inferred. We deliberately also collect \emph{negatives that
-resemble incidents but are not}: near-miss scenarios in which a service is
-stressed yet never crosses into failure, and ``orphan'' faults that genuinely
-occur but should produce no ticket---both essential for measuring false alarms.
+Both datasets come from a single collection pipeline (Figure~\ref{fig:collection}).
+We deploy an open-source microservice application in a Kubernetes cluster
+instrumented with a standard observability stack---Prometheus for metrics, Tempo
+for distributed traces, and Loki for logs---drive it with a synthetic load
+generator, and inject faults under controlled, fully labelled conditions. The
+unit of collection is a \emph{scenario}: one fault, injected for a fixed
+duration, with its ground truth declared in advance. Each scenario produces three
+consecutive \emph{observation windows}---a fault-free baseline just before the
+fault, the active fault itself, and a recovery phase after it is cleared---and we
+label every window with one of three classes: \textbf{ticket-worthy} (a real
+engineer would open an issue), \textbf{borderline} (recovering or marginal), or
+\textbf{noise} (normal operation). A window---a short slice of one service's
+activity---is the atomic input to the triage system throughout this paper.
+
+For each window we archive everything the platform recorded: the service's logs,
+its CPU, memory, and restart time series together with any firing alerts, the
+cluster's events and pod state, and a sample of distributed traces. When a
+scenario warrants attention, we generate the corresponding incident ticket and
+rewrite it with a language model into natural, engineer-voice prose, so that the
+memory of past tickets reads like one a team would actually file; this ticket is
+the retrieval target. Because we control the injection, the link between a window
+and its ticket is \emph{exact ground truth} rather than inferred. We are also
+careful to record realistic negatives---near-miss scenarios in which a service is
+stressed but never actually fails, and ``orphan'' faults that occur yet warrant
+no ticket---since these are what separate a useful triage system from one that
+pages constantly.
 
 The two applications are chosen to differ in \emph{architecture}, not merely in
-scale. \textbf{Online Boutique} is a twelve-service e-commerce demo spanning six
-languages; its 27 fault families cover service outages (such as scaling a service
-to zero replicas to emulate a hard down), latency and resource-pressure
-degradations (including slow memory and connection leaks), pod restarts, network
-faults injected with a chaos-engineering tool (partitions, packet loss, DNS
-failures), and deployment churn. \textbf{OpenTelemetry Demo} adds architectural
-distance: eighteen services across ten languages with a Kafka message bus and
-asynchronous downstream consumers. Its 49 scenarios range from single-service
-faults---triggered through the application's own built-in failure flags---to
-Kafka-specific failures such as broker outages and consumer lag, which have no
-Online-Boutique analogue, up to concurrent and cascading multi-fault episodes.
-Together the two yield roughly $6{,}700$ and $1{,}600$ labelled windows and tens
-of gigabytes of raw telemetry, released as self-contained archives. To our
-knowledge no public dataset couples this breadth of operational telemetry with
-incident tickets and per-window labels; the release is meant to let others study
-triage on realistic, fully observable incidents without rebuilding the collection
-infrastructure. Each dataset is partitioned by fault family so that training and
-test windows never share a scenario.
+size, so that a method cannot succeed by memorizing one system's quirks.
+\textbf{Online Boutique} is a twelve-service e-commerce demo spanning six
+languages; its 27 fault families include hard service outages (for example,
+scaling a service to zero replicas), latency and resource-pressure degradations
+such as slow memory and connection leaks, pod restarts, network faults injected
+with a chaos-engineering tool (partitions, packet loss, DNS failures), and
+deployment churn. \textbf{OpenTelemetry Demo} adds architectural distance:
+eighteen services in ten languages, organized around a Kafka message bus with
+asynchronous downstream consumers. Its 49 scenarios extend from single-service
+faults---triggered through the application's own built-in failure switches---to
+Kafka-specific failures such as broker outages and consumer lag that have no
+Online Boutique analogue, and on to concurrent and cascading multi-fault
+episodes. Together the two contribute roughly $6{,}700$ and $1{,}600$ labelled
+windows and tens of gigabytes of raw telemetry, which we release as self-contained
+archives; to our knowledge, no existing public dataset pairs operational
+telemetry with incident tickets and per-window labels at this breadth. Within
+each dataset we hold out whole fault families for testing, so test windows never
+come from a scenario seen during training.
 
 \subsection{Real-World Incidents: World of Logs}
 \label{sec:datasets-wol}
 
-To test generalization beyond synthetic faults, we reuse the \emph{World of Logs}
-collection~\cite{xiao2026worldoflogs}, itself built on a large public archive of
-Apache Jira issues~\cite{montgomery2025jira}. This dataset is \emph{not} a
-contribution of this paper; we derive an evaluation slice from it. From its
-Apache projects we take 24 distributed-systems projects---message brokers,
-datastores, stream processors, the Hadoop ecosystem, and others---yielding a
-memory corpus of $38{,}642$ resolved bug tickets and $78{,}140$ query incidents.
-The queries carry the same three-way labels as our synthetic data, assigned
-deterministically from each ticket's type and resolution: a fixed bug is
-ticket-worthy, an engaged-but-ambiguous outcome is borderline, and rejected or
-non-bug issues are noise.
+Synthetic faults, however carefully injected, cannot tell us whether a method
+survives contact with reality. For that we turn to the \emph{World of Logs}
+collection~\cite{xiao2026worldoflogs}, a large public archive of Apache Jira
+issues~\cite{montgomery2025jira}. This dataset is not a contribution of our work;
+we simply derive an evaluation slice from it. We select 24 of its
+distributed-systems projects---message brokers, datastores, stream processors,
+the Hadoop ecosystem, and others---which together provide a memory of $38{,}642$
+resolved bug reports to retrieve from and $78{,}140$ incident queries to triage.
+Each query receives the same three labels as our synthetic data, assigned
+automatically from the ticket's type and final resolution: a fixed bug is
+ticket-worthy, an engaged-but-inconclusive outcome is borderline, and a rejected
+or non-bug issue is noise.
 
-Two properties make this a demanding test. First, it is \emph{text only}---real
-engineer-written descriptions with no telemetry---so it exercises precisely the
-degraded, retrieval-driven regime to which our controller must fall back. Second,
-we evaluate under a \emph{leave-domain-out} split: two entire project families (a
-message broker and a database engine, $13{,}388$ incidents) are held out for
-testing, forcing the system to match incidents in projects it never saw during
-training. Because real incidents lack a ground-truth ``which past ticket is the
-answer'' label, we adopt the collection's inferred matching---a query and a
-memory ticket match when they share a project and at least one software
-component, with a stricter variant additionally requiring symptom-token
-overlap---and report retrieval quality under both relations. As such inferred
-labels invite scrutiny, we further validate them with an independent
-LLM-as-judge check (\S\ref{sec:results}). Only genuine bug reports carry matches;
-borderline and noise queries have none by construction and are excluded from the
-retrieval denominators.
+This corpus is deliberately the hardest of the three, for two reasons. It is
+\emph{text only}: authentic, terse, engineer-written descriptions with no
+telemetry whatsoever---exactly the degraded regime to which our controller must
+fall back. And we evaluate it under a \emph{leave-domain-out} split, holding out
+two entire project families (a message broker and a database engine, $13{,}388$
+incidents) so the system must match incidents in projects it never saw while
+training. Real incidents come with no ground-truth ``which past ticket is the
+answer,'' so we follow the collection's inferred matching: a query and a past
+ticket match when they share a project and at least one software component, with
+a stricter variant that also requires overlapping symptom terms. We report
+retrieval quality under both relations and, because inferred labels deserve
+scrutiny, separately validate them with an LLM-as-judge check
+(\S\ref{sec:results}). Only genuine bug reports have matches; borderline and
+noise queries have none by construction and are excluded from the retrieval
+measurements.
