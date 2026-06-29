@@ -1,4 +1,97 @@
 % === Introduction ===
 \section{Introduction}
 \label{sec:introduction}
-% TODO: written one section at a time.
+
+Modern cloud services emit a relentless stream of alerts, and the engineers on
+call must decide, often within minutes, which alerts signal a genuine incident
+worth investigating and which are noise. The decision is consequential in both
+directions: a missed incident becomes an outage, while a flood of low-value
+pages erodes attention and trust in the alerting system itself. What makes a
+seasoned on-call engineer effective is rarely raw signal-reading; it is
+\emph{memory}. Most incidents rhyme with something the team has resolved
+before, and the fastest path from symptom to fix is to recognize the current
+situation as ``the message-broker outage from last quarter'' and to reuse the
+diagnosis that worked then. The institutional record of how past incidents were
+resolved---typically a backlog of closed issue-tracker tickets---is therefore
+the single most valuable triage aid a team owns. Yet it is largely untapped,
+because finding the \emph{right} prior incident for a live one is itself a hard
+retrieval problem.
+
+This need has motivated a growing body of work on automated incident triage and
+AIOps that classifies alerts and surfaces related incidents.% TODO: cite AIOps / incident-management surveys in Related Work
+Two assumptions, however, limit how far those results carry into practice.
+First, evaluation is almost always conducted on \emph{synthetic} fault-injection
+telemetry: faults are scripted into a demonstration microservice application, so
+the resulting ``incidents'' are clean, balanced, and separable by construction.
+Whether methods that excel on such data transfer to the messy, imbalanced,
+free-text incidents that engineers actually file is rarely tested. Second,
+systems are typically designed for a single, rich evidence regime---full logs,
+metrics, and traces---whereas real deployments are heterogeneous: some incidents
+arrive with deep telemetry, others as little more than a terse textual report. A
+method that works only when every signal is present is brittle precisely where
+operations are hardest.
+
+We present \sys, an agentic incident-triage system organized around retrieval
+against a memory of resolved incidents. Given a window of observations
+---telemetry when available, or a textual report when not---\sys retrieves the
+most similar past incidents from the memory corpus and decides whether the
+window warrants paging an engineer. Three ideas distinguish it. \emph{Hybrid
+memory retrieval}: instead of trusting a single matcher, \sys fuses a dense
+semantic retriever, a lexical retriever, and a knowledge-graph retriever built
+over entities extracted from past tickets, combining their rankings so the
+strengths of each cover the others' blind spots. \emph{Capability-gated
+orchestration}: \sys first inspects what evidence a window actually carries and
+runs only the reasoning steps that this evidence can support, so the same system
+degrades gracefully from a full-telemetry pipeline to a lightweight text-only
+one with no reconfiguration; costly steps are invoked only when cheaper ones
+leave the decision uncertain. \emph{Incident-aware paging}: because a single
+incident spans many consecutive windows, \sys tracks its recent decisions per
+service and suppresses duplicate alerts, reporting roughly one page per incident
+rather than one per window.
+
+We evaluate \sys on three datasets of increasing realism: two synthetic
+microservice-telemetry benchmarks (Online Boutique and the OpenTelemetry Demo)
+and a large real-world corpus of 38{,}642 resolved Apache Jira incidents across
+24 projects, drawn from the publicly available World of
+Logs collection~\cite{xiao2026worldoflogs}. On the real incidents---the hardest
+and most consequential setting---hybrid retrieval places the correct prior
+incident among its top five $97\%$ of the time, outperforming our own strong
+dense retriever ($0.91$), classical lexical search ($0.73$), the graph retriever
+alone ($0.31$), and a retrieval-augmented large-language-model baseline
+($0.86$); every gap survives multiple-comparison correction. The end-to-end
+agent reaches $0.96$ while its capability gating cuts per-window triage cost by
+up to $78\%$ relative to running every step on every window, with no loss in
+retrieval quality. Most striking is a controlled comparison between synthetic and
+real data: the ticket-worthiness classification that dominates synthetic
+benchmarks is so easy there that off-the-shelf classifiers are essentially
+perfect (area under the precision--recall curve $\approx 1.0$), yet the same
+task is no better than chance on real incidents. The real difficulty does not
+lie in deciding \emph{whether} a window is an incident; it lies in retrieving
+\emph{which} past incident it resembles---a finding that reframes how
+operational-triage systems ought to be measured.
+
+\noindent\textbf{Contributions.} This paper contributes:
+\begin{itemize}
+  \item \textbf{A capability-gated agentic triage architecture} that chooses its
+  reasoning steps from the evidence available per window, escalates expensive
+  steps only under cheap-path uncertainty, and suppresses duplicate pages across
+  an incident's lifetime. The same system runs unchanged---and gracefully
+  degraded---from full telemetry to text-only incidents (\S\ref{sec:approach}).
+
+  \item \textbf{A hybrid memory-retrieval method} that fuses dense, lexical, and
+  knowledge-graph signals and that, on real engineer-written incidents,
+  significantly outperforms each constituent retriever, strong prior-art
+  baselines, and a retrieval-augmented LLM (\S\ref{sec:results}).
+
+  \item \textbf{A cross-setting empirical study} over synthetic and real data
+  whose central finding is that triage \emph{classification} is largely an
+  artifact of synthetic fault injection---saturated on synthetic data, at chance
+  on real incidents---so that \emph{retrieval} is the transferable challenge; we
+  further quantify what the agentic controller adds, isolating its cost savings
+  at equal accuracy (\S\ref{sec:results},~\S\ref{sec:discussion}).
+
+  \item \textbf{A reproducible artifact}: code, the evaluation harness, prior-art
+  and LLM baselines, ablations, a cost analysis, multiple-comparison-corrected
+  significance tests, and an LLM-as-judge validation of the matching labels, all
+  publicly released.
+\end{itemize}
