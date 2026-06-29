@@ -1,4 +1,32 @@
 % === Conclusion ===
 \section{Conclusion}
 \label{sec:conclusion}
-% TODO: written one section at a time.
+
+Incident triage is, at its core, an exercise in analogy: the fastest route from a
+new alert to a resolution is to recognize which past incident it resembles. We
+built \sys, an agentic triage system that operationalizes this view---retrieving
+similar resolved incidents from a memory of past tickets by fusing dense, sparse,
+and graph signals, adapting which reasoning steps it runs to the evidence each
+window carries, and suppressing duplicate pages across an incident's lifetime.
+Across a realism spectrum from fully instrumented synthetic services to a large
+corpus of real Apache Jira incidents, hybrid retrieval locates the right prior
+incident in its top five $97\%$ of the time on real data---outperforming strong
+dense, lexical, graph, and LLM baselines---while the capability-gated controller
+matches that quality at up to $78\%$ lower cost and degrades gracefully to
+text-only operation.
+
+Our broadest finding is a caution about evaluation. The ticket-worthiness
+classification that dominates synthetic operations benchmarks is trivially solved
+on injected faults yet unlearnable on real ones, so it measures the data rather
+than the method; the difficulty that actually transfers lies in retrieval. We
+hope the datasets, harness, and baselines we release help the community study
+triage where it is genuinely hard---on real incidents, under real evidence
+constraints.
+
+\section*{Data Availability}
+
+All source code, the evaluation harness, the two collected telemetry datasets, and
+the complete result set---including the prior-art and LLM baselines, ablations, and
+significance tests---are released to support reproduction; an anonymized artifact
+accompanies this submission for review. The World of Logs corpus is publicly
+available from its original authors under its own terms.
