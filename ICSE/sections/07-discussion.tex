@@ -20,13 +20,23 @@ from.
 evaluated retrieval only on the synthetic corpora, as is common, we would have
 concluded that fusing retrievers is useless---even mildly harmful---and shipped a
 single dense model. On the real corpus, an order of magnitude larger and spread
-across two dozen projects, the same fusion is decisively best. The reason is
-intuitive in hindsight: in a small, homogeneous memory one retriever dominates and
-blending in weaker signals only adds noise, whereas a large, diverse memory
-creates exactly the blind spots that complementary retrievers cover. Retrieval
-comparisons therefore need to be run at realistic memory scale before their
-conclusions can be trusted---one reason we release real-scale data alongside the
-synthetic.
+across two dozen projects, the same fusion is decisively best
+(Figure~\ref{fig:scale}). The reason is intuitive in hindsight: in a small,
+homogeneous memory one retriever dominates and blending in weaker signals only
+adds noise, whereas a large, diverse memory creates exactly the blind spots that
+complementary retrievers cover. Retrieval comparisons therefore need to be run at
+realistic memory scale before their conclusions can be trusted---one reason we
+release real-scale data alongside the synthetic.
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=0.92\columnwidth]{figures/fig_fusion_vs_scale.pdf}
+\caption{The benefit of fusion grows with the size of the incident memory. On the
+two small synthetic corpora the fused retriever does not improve on the
+fine-tuned dense one; on the real corpus, two orders of magnitude larger, it is
+clearly better.}
+\label{fig:scale}
+\end{figure}
 
 \noindent\textbf{Robustness comes from asking ``does this step help \emph{here}?''}
 A recurring pattern is that the right action depends on the deployment. The

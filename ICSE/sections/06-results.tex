@@ -56,7 +56,18 @@ contrast, the fine-tuned dense retriever is already so strong that fusion does
 not help, and on Online Boutique it is slightly worse ($-0.076$, $q=0.03$):
 when one retriever dominates a small memory, blending in weaker signals only adds
 noise. Fusion's advantage thus \emph{emerges with scale and diversity}---precisely
-the conditions of real operations.
+the conditions of real operations. Figure~\ref{fig:forest} summarizes every
+pairwise comparison with its bootstrap confidence interval and significance.
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=0.92\columnwidth]{figures/fig_significance_forest.pdf}
+\caption{Difference in \hit{5} between Hybrid-RRF and each alternative (paired
+bootstrap, $95\%$ CI; green = significant after Benjamini--Hochberg). Hybrid wins
+decisively on real data (WoL) and against the graph and lexical baselines, but
+does not beat the fine-tuned dense retriever on the small synthetic corpora.}
+\label{fig:forest}
+\end{figure}
 
 We further isolated the knowledge graph's contribution by comparing the full
 fusion against fusion without it. The graph does surface correct candidates the
@@ -124,7 +135,7 @@ Our most consequential finding concerns the triage \emph{classification} task
 that dominates synthetic benchmarks---deciding whether a window is ticket-worthy
 at all. On synthetic data it is trivially easy: standard classifiers over the
 telemetry features reach a near-perfect area under the precision--recall curve and
-are well calibrated (Table~\ref{tab:triage}). On the real incidents, the very same
+are well calibrated (Figure~\ref{fig:triage}). On the real incidents, the very same
 classifiers collapse to chance---an area under the precision--recall curve of
 $0.51$ against a $0.50$ random floor, and an ROC area of $0.50$---and the agent's
 own triage accuracy ($0.51$) tracks the trivial majority-class baseline. The
@@ -133,25 +144,15 @@ faults are separable from baselines by construction; on real, engineer-written
 tickets, whether an issue was ultimately deemed worth fixing is simply not
 predictable from its text alone.
 
-\begin{table}[t]
+\begin{figure}[t]
 \centering
-\caption{Triage classification (RQ4): a gradient-boosted classifier over
-telemetry features. Synthetic triage is saturated; real-world triage is at chance
-(majority-class baseline $0.495$). The transferable difficulty lies in retrieval,
-not classification.}
-\label{tab:triage}
-\footnotesize
-\setlength{\tabcolsep}{6pt}
-\begin{tabular}{lccc}
-\toprule
-Dataset & PR-AUC & ROC-AUC & ECE$\downarrow$ \\
-\midrule
-Online Boutique & 1.000 & 1.000 & 0.012 \\
-OTel Demo       & 1.000 & 1.000 & 0.000 \\
-World of Logs   & 0.506 & 0.500 & 0.006 \\
-\bottomrule
-\end{tabular}
-\end{table}
+\includegraphics[width=0.82\columnwidth]{figures/fig_triage_reframing.pdf}
+\caption{Triage classification (RQ4): a gradient-boosted classifier's PR-AUC and
+the agent's triage accuracy. Synthetic triage is saturated (PR-AUC $\approx 1$);
+real-world triage sits at the chance floor (majority-class baseline $0.495$). The
+transferable difficulty lies in retrieval, not classification.}
+\label{fig:triage}
+\end{figure}
 
 This reframes how operational triage should be measured: the part that looks
 solved on synthetic data is the part that does not transfer, while the part that
