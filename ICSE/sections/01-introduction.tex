@@ -18,7 +18,9 @@ because finding the \emph{right} prior incident for a live one is itself a hard
 retrieval problem.
 
 This need has motivated a growing body of work on automated incident triage and
-AIOps that classifies alerts and surfaces related incidents.% TODO: cite AIOps / incident-management surveys in Related Work
+AIOps~\cite{he2021survey,chen2019triage,ghosh2022incidents}, increasingly powered
+by large language models~\cite{ahmed2023rootcause,chen2024rcacopilot}, that
+classifies alerts and surfaces related incidents.
 Two assumptions, however, limit how far those results carry into practice.
 First, evaluation is almost always conducted on \emph{synthetic} fault-injection
 telemetry: faults are scripted into a demonstration microservice application, so
@@ -57,7 +59,7 @@ We evaluate \sys on three datasets of increasing realism: two
 microservice-telemetry datasets we collect and release---built on the Online
 Boutique and OpenTelemetry Demo applications---and a large real-world corpus of
 38{,}642 resolved Apache Jira incidents across 24 projects, drawn from the
-publicly available World of Logs collection~\cite{xiao2026worldoflogs}. On the real incidents---the hardest
+publicly available World of Logs collection~\cite{wang2026worldoflogs}. On the real incidents---the hardest
 and most consequential setting---hybrid retrieval places the correct prior
 incident among its top five $97\%$ of the time, outperforming our own strong
 dense retriever ($0.91$), classical lexical search ($0.73$), the graph retriever

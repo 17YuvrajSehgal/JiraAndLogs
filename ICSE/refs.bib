@@ -1,88 +1,267 @@
-% References — populated as sections are written.
+% =====================================================================
+% References — verified entries (see DOCS verification artifact).
+% Camera-ready re-checks: middle-author order of chen2019triage (IEEE doc
+% 8952483); exact pages/DOI of he2020dccnn (ACM DL).
+% =====================================================================
 
-% --- Real dataset we EVALUATE ON (external; not our contribution) ---
-@inproceedings{xiao2026worldoflogs,
-  title     = {Empirical Study Using World of Logs},
-  author    = {Xiao, Xiaohui and Yao, Kundi and Liao, Lizhi and Nie, Pengyu and Zhang, Xuan and Shang, Weiyi},
-  booktitle = {Proc. IEEE/ACM Intl. Conf. on Mining Software Repositories (MSR)},
-  year      = {2026}
-}
-
-% Upstream public Jira dataset that World of Logs itself builds on (CC BY 4.0)
-@misc{montgomery2025jira,
-  title        = {A Large-Scale Public Dataset of Jira Issues},
-  author       = {Montgomery, Lloyd and L{\"u}ders, Clara and Maalej, Walid},
-  year         = {2025},
-  howpublished = {Zenodo},
-  doi          = {10.5281/zenodo.15719919}
+% --- Real dataset we EVALUATE ON (external; verified from data/wol/Xiaohui_MSR_2026.pdf) ---
+@inproceedings{wang2026worldoflogs,
+  author    = {Wang, Xiaohui and Yao, Kundi and Liao, Lizhi and Nie, Pengyu and Zhang, Xuan and Shang, Weiyi},
+  title     = {World of Logs: A Dataset of Logs from Online Documents},
+  booktitle = {Proc. IEEE/ACM Int. Conf. on Mining Software Repositories (MSR '26)},
+  year      = {2026},
+  publisher = {ACM},
+  note      = {Dataset available on Zenodo}
 }
 
-% --- standard methods cited in the Approach ---
-@inproceedings{cormack2009rrf,
-  title     = {Reciprocal Rank Fusion Outperforms Condorcet and Individual Rank Learning Methods},
-  author    = {Cormack, Gordon V. and Clarke, Charles L. A. and B{\"u}ttcher, Stefan},
-  booktitle = {Proc. ACM SIGIR},
-  year      = {2009}
+% A related large public Jira issue dataset (verified; MSR 2022)
+@inproceedings{montgomery2022jira,
+  author    = {Montgomery, Lloyd and L\"uders, Clara and Maalej, Walid},
+  title     = {An Alternative Issue Tracking Dataset of Public {Jira} Repositories},
+  booktitle = {Proc. 19th Int. Conf. on Mining Software Repositories (MSR '22)},
+  pages     = {73--77},
+  year      = {2022},
+  publisher = {ACM},
+  doi       = {10.1145/3524842.3528486}
 }
-@article{robertson2009bm25,
-  title     = {The Probabilistic Relevance Framework: {BM25} and Beyond},
-  author    = {Robertson, Stephen and Zaragoza, Hugo},
-  journal   = {Foundations and Trends in Information Retrieval},
-  volume    = {3}, number = {4}, pages = {333--389}, year = {2009}
-}
-@inproceedings{formal2021splade,
-  title     = {{SPLADE}: Sparse Lexical and Expansion Model for First Stage Ranking},
-  author    = {Formal, Thibault and Piwowarski, Benjamin and Clinchant, St{\'e}phane},
-  booktitle = {Proc. ACM SIGIR},
-  year      = {2021}
-}
+
+% =====================================================================
+% Retrieval / embedding / agent methods (verified)
+% =====================================================================
 @inproceedings{reimers2019sbert,
-  title     = {Sentence-{BERT}: Sentence Embeddings using Siamese {BERT}-Networks},
   author    = {Reimers, Nils and Gurevych, Iryna},
-  booktitle = {Proc. EMNLP},
-  year      = {2019}
+  title     = {Sentence-{BERT}: Sentence Embeddings using {Siamese} {BERT}-Networks},
+  booktitle = {Proc. Conf. on Empirical Methods in Natural Language Processing (EMNLP-IJCNLP)},
+  pages     = {3982--3992},
+  year      = {2019},
+  publisher = {Association for Computational Linguistics},
+  doi       = {10.18653/v1/D19-1410}
 }
 @inproceedings{wang2020minilm,
-  title     = {{MiniLM}: Deep Self-Attention Distillation for Task-Agnostic Compression of Pre-Trained Transformers},
   author    = {Wang, Wenhui and Wei, Furu and Dong, Li and Bao, Hangbo and Yang, Nan and Zhou, Ming},
-  booktitle = {Proc. NeurIPS},
+  title     = {{MiniLM}: Deep Self-Attention Distillation for Task-Agnostic Compression of Pre-Trained Transformers},
+  booktitle = {Advances in Neural Information Processing Systems (NeurIPS)},
   year      = {2020}
+}
+@article{robertson2009bm25,
+  author  = {Robertson, Stephen and Zaragoza, Hugo},
+  title   = {The Probabilistic Relevance Framework: {BM25} and Beyond},
+  journal = {Foundations and Trends in Information Retrieval},
+  volume  = {3}, number = {4}, pages = {333--389}, year = {2009},
+  doi     = {10.1561/1500000019}
+}
+@inproceedings{formal2021splade,
+  author    = {Formal, Thibault and Piwowarski, Benjamin and Clinchant, St\'ephane},
+  title     = {{SPLADE}: Sparse Lexical and Expansion Model for First Stage Ranking},
+  booktitle = {Proc. ACM SIGIR},
+  pages     = {2288--2292}, year = {2021}, publisher = {ACM},
+  doi       = {10.1145/3404835.3463098}
+}
+@inproceedings{cormack2009rrf,
+  author    = {Cormack, Gordon V. and Clarke, Charles L. A. and B\"uttcher, Stefan},
+  title     = {Reciprocal Rank Fusion Outperforms {Condorcet} and Individual Rank Learning Methods},
+  booktitle = {Proc. ACM SIGIR},
+  pages     = {758--759}, year = {2009}, publisher = {ACM},
+  doi       = {10.1145/1571941.1572114}
 }
 @inproceedings{yao2023react,
-  title     = {{ReAct}: Synergizing Reasoning and Acting in Language Models},
   author    = {Yao, Shunyu and Zhao, Jeffrey and Yu, Dian and Du, Nan and Shafran, Izhak and Narasimhan, Karthik and Cao, Yuan},
-  booktitle = {Proc. ICLR},
+  title     = {{ReAct}: Synergizing Reasoning and Acting in Language Models},
+  booktitle = {Int. Conf. on Learning Representations (ICLR)},
   year      = {2023}
 }
-
-% --- baseline models (Experimental Setup); verify author lists/IDs before camera-ready ---
-@inproceedings{song2020mpnet,
-  title     = {{MPNet}: Masked and Permuted Pre-training for Language Understanding},
-  author    = {Song, Kaitao and Tan, Xu and Qin, Tao and Lu, Jianfeng and Liu, Tie-Yan},
-  booktitle = {Proc. NeurIPS},
-  year      = {2020}
+@inproceedings{xiao2024cpack,
+  author    = {Xiao, Shitao and Liu, Zheng and Zhang, Peitian and Muennighoff, Niklas and Lian, Defu and Nie, Jian-Yun},
+  title     = {{C-Pack}: Packed Resources For General {Chinese} Embeddings},
+  booktitle = {Proc. ACM SIGIR},
+  pages     = {641--649}, year = {2024}, publisher = {ACM},
+  doi       = {10.1145/3626772.3657878}
 }
 @article{wang2022e5,
-  title   = {Text Embeddings by Weakly-Supervised Contrastive Pre-training},
   author  = {Wang, Liang and Yang, Nan and Huang, Xiaolong and Jiao, Binxing and Yang, Linjun and Jiang, Daxin and Majumder, Rangan and Wei, Furu},
-  journal = {arXiv preprint},
-  year    = {2022}
+  title   = {Text Embeddings by Weakly-Supervised Contrastive Pre-training},
+  journal = {arXiv preprint arXiv:2212.03533}, year = {2022}
 }
-@inproceedings{xiao2024cpack,
-  title     = {{C-Pack}: Packed Resources for General Text Embeddings},
-  author    = {Xiao, Shitao and Liu, Zheng and Zhang, Peitian and Muennighoff, Niklas and Lian, Defu and Nie, Jian-Yun},
-  booktitle = {Proc. ACM SIGIR},
-  year      = {2024}
+@inproceedings{song2020mpnet,
+  author    = {Song, Kaitao and Tan, Xu and Qin, Tao and Lu, Jianfeng and Liu, Tie-Yan},
+  title     = {{MPNet}: Masked and Permuted Pre-training for Language Understanding},
+  booktitle = {Advances in Neural Information Processing Systems (NeurIPS)},
+  year      = {2020}
 }
 @article{nogueira2019passage,
-  title   = {Passage Re-ranking with {BERT}},
   author  = {Nogueira, Rodrigo and Cho, Kyunghyun},
-  journal = {arXiv preprint},
-  year    = {2019}
+  title   = {Passage Re-ranking with {BERT}},
+  journal = {arXiv preprint arXiv:1901.04085}, year = {2019}
 }
-@article{qwen2025,
-  title   = {{Qwen2.5} Technical Report},
-  author  = {{Qwen Team}},
-  journal = {arXiv preprint},
-  year    = {2025}
+@misc{qwen2025,
+  author = {{Qwen Team}},
+  title  = {{Qwen2.5} Technical Report},
+  year   = {2024},
+  eprint = {2412.15115}, archivePrefix = {arXiv},
+  doi    = {10.48550/arXiv.2412.15115}
+}
+@inproceedings{lewis2020rag,
+  author    = {Lewis, Patrick and Perez, Ethan and Piktus, Aleksandra and Petroni, Fabio and Karpukhin, Vladimir and Goyal, Naman and K\"uttler, Heinrich and Lewis, Mike and Yih, Wen-tau and Rockt\"aschel, Tim and Riedel, Sebastian and Kiela, Douwe},
+  title     = {Retrieval-Augmented Generation for Knowledge-Intensive {NLP} Tasks},
+  booktitle = {Advances in Neural Information Processing Systems (NeurIPS)},
+  pages     = {9459--9474}, year = {2020}
+}
+@inproceedings{karpukhin2020dpr,
+  author    = {Karpukhin, Vladimir and O\u{g}uz, Barlas and Min, Sewon and Lewis, Patrick and Wu, Ledell and Edunov, Sergey and Chen, Danqi and Yih, Wen-tau},
+  title     = {Dense Passage Retrieval for Open-Domain Question Answering},
+  booktitle = {Proc. Conf. on Empirical Methods in Natural Language Processing (EMNLP)},
+  pages     = {6769--6781}, year = {2020}, publisher = {Association for Computational Linguistics},
+  doi       = {10.18653/v1/2020.emnlp-main.550}
+}
+
+% =====================================================================
+% Incident management / AIOps / RCA (verified)
+% =====================================================================
+@article{he2021survey,
+  author  = {He, Shilin and He, Pinjia and Chen, Zhuangbin and Yang, Tianyi and Su, Yuxin and Lyu, Michael R.},
+  title   = {A Survey on Automated Log Analysis for Reliability Engineering},
+  journal = {ACM Computing Surveys},
+  volume  = {54}, number = {6}, year = {2021}, doi = {10.1145/3460345}
+}
+@inproceedings{ghosh2022incidents,
+  author    = {Ghosh, Supriyo and Shetty, Manish and Bansal, Chetan and Nath, Suman},
+  title     = {How to Fight Production Incidents? An Empirical Study on a Large-Scale Cloud Service},
+  booktitle = {Proc. ACM Symp. on Cloud Computing (SoCC)},
+  pages     = {126--141}, year = {2022}, publisher = {ACM},
+  doi       = {10.1145/3542929.3563482}
+}
+@inproceedings{chen2019triage,
+  author    = {Chen, Junjie and He, Xiaoting and Lin, Qingwei and Zhang, Hongyu and Hao, Dan and Gao, Feng and Xu, Zhangwei and Dang, Yingnong and Zhang, Dongmei},
+  title     = {Continuous Incident Triage for Large-Scale Online Service Systems},
+  booktitle = {Proc. IEEE/ACM Int. Conf. on Automated Software Engineering (ASE)},
+  pages     = {364--375}, year = {2019}, publisher = {IEEE},
+  doi       = {10.1109/ASE.2019.00042}
+}
+@inproceedings{ahmed2023rootcause,
+  author    = {Ahmed, Toufique and Ghosh, Supriyo and Bansal, Chetan and Zimmermann, Thomas and Zhang, Xuchao and Rajmohan, Saravan},
+  title     = {Recommending Root-Cause and Mitigation Steps for Cloud Incidents using Large Language Models},
+  booktitle = {Proc. IEEE/ACM Int. Conf. on Software Engineering (ICSE)},
+  pages     = {1737--1749}, year = {2023}, publisher = {IEEE},
+  doi       = {10.1109/ICSE48619.2023.00149}
+}
+@inproceedings{chen2024rcacopilot,
+  author    = {Chen, Yinfang and Xie, Huaibing and Ma, Minghua and Kang, Yu and Gao, Xin and Shi, Liu and Cao, Yunjie and Gao, Xuedong and Fan, Hao and Wen, Ming and Zeng, Jun and Ghosh, Supriyo and Zhang, Xuchao and Zhang, Chaoyun and Lin, Qingwei and Rajmohan, Saravan and Zhang, Dongmei and Xu, Tianyin},
+  title     = {Automatic Root Cause Analysis via Large Language Models for Cloud Incidents},
+  booktitle = {Proc. European Conf. on Computer Systems (EuroSys)},
+  pages     = {674--688}, year = {2024}, publisher = {ACM},
+  doi       = {10.1145/3627703.3629553}
+}
+@article{zhou2024dbot,
+  author  = {Zhou, Xuanhe and Li, Guoliang and Sun, Zhaoyan and Liu, Zhiyuan and Chen, Weize and Wu, Jianming and Liu, Jiesi and Feng, Ruohang and Zeng, Guoyang},
+  title   = {{D-Bot}: Database Diagnosis System using Large Language Models},
+  journal = {Proc. VLDB Endowment},
+  volume  = {17}, number = {10}, pages = {2514--2527}, year = {2024},
+  doi     = {10.14778/3675034.3675043}
+}
+@inproceedings{chen2025aiopslab,
+  author    = {Chen, Yinfang and Shetty, Manish and Somashekar, Gagan and Ma, Minghua and Simmhan, Yogesh and Mace, Jonathan and Bansal, Chetan and Wang, Rujia and Rajmohan, Saravan},
+  title     = {{AIOpsLab}: A Holistic Framework to Evaluate AI Agents for Enabling Autonomous Clouds},
+  booktitle = {Proc. Machine Learning and Systems (MLSys)},
+  year      = {2025}
+}
+
+% =====================================================================
+% Log anomaly detection / parsing (verified)
+% =====================================================================
+@inproceedings{du2017deeplog,
+  author    = {Du, Min and Li, Feifei and Zheng, Guineng and Srikumar, Vivek},
+  title     = {{DeepLog}: Anomaly Detection and Diagnosis from System Logs through Deep Learning},
+  booktitle = {Proc. ACM SIGSAC Conf. on Computer and Communications Security (CCS)},
+  pages     = {1285--1298}, year = {2017}, publisher = {ACM},
+  doi       = {10.1145/3133956.3134015}
+}
+@inproceedings{meng2019loganomaly,
+  author    = {Meng, Weibin and Liu, Ying and Zhu, Yichen and Zhang, Shenglin and Pei, Dan and Liu, Yuqing and Chen, Yihao and Zhang, Ruizhi and Tao, Shimin and Sun, Pei and Zhou, Rong},
+  title     = {{LogAnomaly}: Unsupervised Detection of Sequential and Quantitative Anomalies in Unstructured Logs},
+  booktitle = {Proc. Int. Joint Conf. on Artificial Intelligence (IJCAI)},
+  pages     = {4739--4745}, year = {2019}, doi = {10.24963/ijcai.2019/658}
+}
+@inproceedings{guo2021logbert,
+  author    = {Guo, Haixuan and Yuan, Shuhan and Wu, Xintao},
+  title     = {{LogBERT}: Log Anomaly Detection via {BERT}},
+  booktitle = {Proc. Int. Joint Conf. on Neural Networks (IJCNN)},
+  pages     = {1--8}, year = {2021}, publisher = {IEEE},
+  doi       = {10.1109/IJCNN52387.2021.9534113}
+}
+@inproceedings{he2017drain,
+  author    = {He, Pinjia and Zhu, Jieming and Zheng, Zibin and Lyu, Michael R.},
+  title     = {Drain: An Online Log Parsing Approach with Fixed Depth Tree},
+  booktitle = {Proc. IEEE Int. Conf. on Web Services (ICWS)},
+  pages     = {33--40}, year = {2017}, publisher = {IEEE},
+  doi       = {10.1109/ICWS.2017.13}
+}
+@inproceedings{zhu2019logparsing,
+  author    = {Zhu, Jieming and He, Shilin and Liu, Jinyang and He, Pinjia and Xie, Qi and Zheng, Zibin and Lyu, Michael R.},
+  title     = {Tools and Benchmarks for Automated Log Parsing},
+  booktitle = {Proc. IEEE/ACM Int. Conf. on Software Engineering in Practice (ICSE-SEIP)},
+  pages     = {121--130}, year = {2019}, publisher = {IEEE},
+  doi       = {10.1109/ICSE-SEIP.2019.00021}
+}
+@inproceedings{he2016experience,
+  author    = {He, Shilin and Zhu, Jieming and He, Pinjia and Lyu, Michael R.},
+  title     = {Experience Report: System Log Analysis for Anomaly Detection},
+  booktitle = {Proc. IEEE Int. Symp. on Software Reliability Engineering (ISSRE)},
+  pages     = {207--218}, year = {2016}, publisher = {IEEE},
+  doi       = {10.1109/ISSRE.2016.21}
+}
+@inproceedings{zhu2023loghub,
+  author    = {Zhu, Jieming and He, Shilin and He, Pinjia and Liu, Jinyang and Lyu, Michael R.},
+  title     = {Loghub: A Large Collection of System Log Datasets for {AI}-driven Log Analytics},
+  booktitle = {Proc. IEEE Int. Symp. on Software Reliability Engineering (ISSRE)},
+  year      = {2023}, publisher = {IEEE}
+}
+
+% =====================================================================
+% Knowledge graphs from incidents; duplicate-report retrieval (verified)
+% =====================================================================
+@article{shetty2022softner,
+  author  = {Shetty, Manish and Bansal, Chetan and Kumar, Sumit and Rao, Nikitha and Nagappan, Nachiappan and Zimmermann, Thomas},
+  title   = {{SoftNER}: Mining Knowledge Graphs from Cloud Incidents},
+  journal = {Empirical Software Engineering},
+  volume  = {27}, year = {2022}, doi = {10.1007/s10664-022-10159-w}
+}
+@inproceedings{runeson2007duplicate,
+  author    = {Runeson, Per and Alexandersson, Magnus and Nyholm, Oskar},
+  title     = {Detection of Duplicate Defect Reports Using Natural Language Processing},
+  booktitle = {Proc. Int. Conf. on Software Engineering (ICSE)},
+  pages     = {499--510}, year = {2007}, publisher = {IEEE},
+  doi       = {10.1109/ICSE.2007.32}
+}
+@inproceedings{sun2010duplicate,
+  author    = {Sun, Chengnian and Lo, David and Wang, Xiaoyin and Jiang, Jing and Khoo, Siau-Cheng},
+  title     = {A Discriminative Model Approach for Accurate Duplicate Bug Report Retrieval},
+  booktitle = {Proc. ACM/IEEE Int. Conf. on Software Engineering (ICSE)},
+  pages     = {45--54}, year = {2010}, publisher = {ACM},
+  doi       = {10.1145/1806799.1806811}
+}
+@inproceedings{he2020dccnn,
+  author    = {He, Jianjun and Xu, Ling and Yan, Meng and Xia, Xin and Lei, Yan},
+  title     = {Duplicate Bug Report Detection Using Dual-Channel Convolutional Neural Networks},
+  booktitle = {Proc. Int. Conf. on Program Comprehension (ICPC)},
+  pages     = {117--127}, year = {2020}, publisher = {ACM},
+  doi       = {10.1145/3387904.3389263}
+}
+
+% =====================================================================
+% Benchmark software artifacts (cite official repos)
+% =====================================================================
+@misc{googleboutique,
+  author = {{Google Cloud Platform}},
+  title  = {Online Boutique ({microservices-demo}): A Cloud-First Microservices Demo Application},
+  howpublished = {\url{https://github.com/GoogleCloudPlatform/microservices-demo}}, year = {2024}
+}
+@misc{oteldemo,
+  author = {{OpenTelemetry Authors}},
+  title  = {{OpenTelemetry} Demo (Astronomy Shop)},
+  howpublished = {\url{https://github.com/open-telemetry/opentelemetry-demo}}, year = {2024}
+}
+@misc{chaosmesh,
+  author = {{Chaos Mesh Authors (CNCF)}},
+  title  = {Chaos Mesh: A Chaos Engineering Platform for {Kubernetes}},
+  howpublished = {\url{https://github.com/chaos-mesh/chaos-mesh}}, year = {2024}
 }

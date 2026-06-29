@@ -26,7 +26,7 @@ available for retrieval; \emph{test windows} are the held-out queries used in
 \toprule
  & Online Boutique & OTel Demo & World of Logs \\
 \midrule
-Origin           & collected (ours) & collected (ours) & reused~\cite{xiao2026worldoflogs} \\
+Origin           & collected (ours) & collected (ours) & reused~\cite{wang2026worldoflogs} \\
 Evidence         & full telemetry   & full telemetry   & text only \\
 Scale            & 12 services      & 18 svc.\ + Kafka & 24 projects \\
 Fault scenarios  & 27 families      & 49 scenarios     & real incidents \\
@@ -83,12 +83,13 @@ pages constantly.
 
 The two applications are chosen to differ in \emph{architecture}, not merely in
 size, so that a method cannot succeed by memorizing one system's quirks.
-\textbf{Online Boutique} is a twelve-service e-commerce demo spanning six
-languages; its 27 fault families include hard service outages (for example,
-scaling a service to zero replicas), latency and resource-pressure degradations
-such as slow memory and connection leaks, pod restarts, network faults injected
-with a chaos-engineering tool (partitions, packet loss, DNS failures), and
-deployment churn. \textbf{OpenTelemetry Demo} adds architectural distance:
+\textbf{Online Boutique}~\cite{googleboutique} is a twelve-service e-commerce demo
+spanning six languages; its 27 fault families include hard service outages (for
+example, scaling a service to zero replicas), latency and resource-pressure
+degradations such as slow memory and connection leaks, pod restarts, network
+faults injected with a chaos-engineering tool~\cite{chaosmesh} (partitions, packet
+loss, DNS failures), and deployment churn. \textbf{OpenTelemetry
+Demo}~\cite{oteldemo} adds architectural distance:
 eighteen services in ten languages, organized around a Kafka message bus with
 asynchronous downstream consumers. Its 49 scenarios extend from single-service
 faults---triggered through the application's own built-in failure switches---to
@@ -106,9 +107,10 @@ come from a scenario seen during training.
 
 Synthetic faults, however carefully injected, cannot tell us whether a method
 survives contact with reality. For that we turn to the \emph{World of Logs}
-collection~\cite{xiao2026worldoflogs}, a large public archive of Apache Jira
-issues~\cite{montgomery2025jira}. This dataset is not a contribution of our work;
-we simply derive an evaluation slice from it. We select 24 of its
+collection~\cite{wang2026worldoflogs}, a public archive of logs and issue reports
+mined from online software-engineering sources, including public Jira trackers.
+This dataset is not a contribution of our work; we simply derive an evaluation
+slice from its Apache Jira issues. We select 24 of its
 distributed-systems projects---message brokers, datastores, stream processors,
 the Hadoop ecosystem, and others---which together provide a memory of $38{,}642$
 resolved bug reports to retrieve from and $78{,}140$ incident queries to triage.

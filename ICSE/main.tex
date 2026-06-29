@@ -20,9 +20,6 @@
 % ---------- convenience macros (names are PLACEHOLDERS; see ICSE/README.md) ----------
 \newcommand{\sys}{\textsc{Remedy}\xspace}         % working system name (placeholder)
 \newcommand{\hit}[1]{Hit@#1}
-\newcommand{\real}{\textsc{JiraInc}\xspace}       % real dataset short tag (placeholder; confirm in Datasets)
-\newcommand{\ob}{\textsc{OB}\xspace}              % Online Boutique (synthetic)
-\newcommand{\otel}{\textsc{OTel}\xspace}          % OpenTelemetry Demo (synthetic)
 
 \begin{document}
 
@@ -81,12 +78,11 @@ incident triage, AIOps, information retrieval, LLM agents, empirical software en
 \input{sections/06-results}
 \input{sections/07-discussion}
 \input{sections/08-threats}
-% \input{sections/09-related}      % TODO: author-written
+\input{sections/09-related}
 \input{sections/10-conclusion}
 
 \balance
 \bibliographystyle{IEEEtran}
-\nocite{*} % TEMP: include placeholder bib entry so the draft compiles; remove once real \cite{} calls exist
 \bibliography{refs}
 
 \end{document}
