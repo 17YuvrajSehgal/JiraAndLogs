@@ -1,4 +1,50 @@
 % === Background and Motivating Example ===
 \section{Background and Motivating Example}
 \label{sec:background}
-% TODO: written one section at a time.
+
+Consider an engineer on call for a microservice application who is paged when
+checkout requests begin to fail. The pressing question is not how to repair the
+system from first principles but \emph{what is happening} and \emph{whether it
+warrants action}. In a fully instrumented deployment the evidence is rich yet
+noisy: the cluster reports that a message broker's pod has become unavailable, the
+services that consume from it begin logging errors, distributed traces show their
+requests failing downstream, and an availability alert fires. Assembling these
+fragments into a diagnosis is exactly the slow, expertise-bound step that triage
+is meant to accelerate.
+
+The shortcut a seasoned engineer takes is \emph{recognition}. This
+pattern---a broker outage stalling its consumers and surfacing as checkout
+failures---has occurred before, and a resolved ticket from that earlier incident
+already records how it was diagnosed and fixed. Retrieving that ticket turns an
+open-ended investigation into a near-instant analogy. The institutional memory of
+resolved incidents is, in this sense, the most direct path from symptom to
+resolution---provided the right past incident can be found.
+
+Two complications make finding it hard, and they shape our design. First, the
+\emph{same class of incident arrives with very different evidence}. The broker
+failure above came with logs, metrics, traces, and cluster events; reported in
+another team's issue tracker, the very same failure may arrive as nothing more
+than a sentence---``consumers stalled after the broker restarted, backlog
+growing''---with no telemetry at all. A system that works only when every signal
+is present is useless on the text-only report, even though the matching task is
+identical in both. Second, an incident is \emph{not a single moment}: it unfolds
+over many consecutive windows of observation---a quiet lead-up, the active
+failure, a recovery---so a system that reacts to each window independently will
+page the engineer again and again for what is really one event.
+
+\smallskip
+\noindent\textbf{Problem formulation.} We make these intuitions precise. The
+system observes a stream of \emph{windows}, each a short slice of one service's
+activity. A window always carries a textual summary and, when the deployment is
+instrumented, additional evidence: numeric features, logs, distributed-trace
+summaries, and cluster events. It is matched against a \emph{memory} $M$ of past
+incidents---each a resolved ticket with its text and a set of entities
+(components, error classes, symptoms) extracted from it, and each stamped with the
+time it was resolved. Memory is \emph{time-aware}: for a window observed at time
+$t$, only incidents resolved before $t$ are eligible, so the system is never
+credited with knowledge it could not have had. For each window the system returns
+(i)~a ranked list of the top-$k$ most similar past incidents in $M$, and (ii)~a
+triage decision---whether the window is worth paging an engineer---while grouping
+the windows of one incident so that it pages once rather than repeatedly. The rest
+of the paper describes how \sys produces these outputs across the full range of
+evidence regimes, and how well it does so.

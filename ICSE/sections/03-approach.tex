@@ -2,20 +2,14 @@
 \section{Approach}
 \label{sec:approach}
 
-\sys treats incident triage as \emph{retrieval against a memory of resolved
-incidents}. It processes one \emph{observation window} at a time---a short slice
-of activity for a service, summarized as text and, where instrumentation exists,
-accompanied by numeric telemetry features, log lines, distributed-trace
-summaries, cluster events, and resource metrics. Each window is matched against
-a \emph{memory corpus}: a collection of past incidents, each a resolved ticket
-with its description and a set of structured entities---the affected components,
-error classes, observed symptoms, root cause, and fix---extracted from it.
-Memory is time-aware: only incidents resolved before the current window are
-eligible, so the evaluation never leaks future tickets. For each window, \sys
-returns (i)~a ranked list of up to five past incidents most similar to it and
-(ii)~a triage decision: should this window page an engineer? The design follows
-two commitments---\emph{match by analogy} to memory, and \emph{adapt to whatever
-evidence the window actually carries}. Figure~\ref{fig:arch} shows the pipeline.
+\sys realizes the task of \S\ref{sec:background} as an agent built around
+retrieval from the memory of resolved incidents. Its design rests on two
+commitments: \emph{match by analogy}---rank past incidents by their similarity to
+the current window---and \emph{adapt to whatever evidence the window actually
+carries}, so that one system spans the full range from rich telemetry down to
+text alone. Figure~\ref{fig:arch} shows the resulting pipeline, which we describe
+stage by stage; throughout, we return the $k=5$ most similar past incidents per
+window.
 
 \begin{figure*}[t]
 \centering
