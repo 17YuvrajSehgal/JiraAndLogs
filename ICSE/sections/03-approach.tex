@@ -20,11 +20,15 @@ evidence the window actually carries}. Figure~\ref{fig:arch} shows the pipeline.
 \begin{figure*}[t]
 \centering
 \includegraphics[width=\textwidth]{figures/pipeline.png}
-\caption{Overview of \sys. A controller inspects the evidence each window
-carries, assembles a cost-gated plan, and runs only the steps that evidence
-supports; hybrid retrieval matches the window to past incidents, optional
-evidence-gathering refines the ranking, and a state layer turns per-window
-decisions into per-incident pages.}
+\caption{Overview of \sys. For each observation window---rich telemetry or a
+bare text report---a capability-gated planner profiles the available evidence and
+assembles a cost-gated, cheap-first plan. Hybrid memory retrieval matches the
+window against a time-aware corpus of resolved tickets by fusing dense, sparse,
+and graph retrievers with reciprocal-rank fusion; optional, bounded
+evidence-gathering then refines the ranking; and a state layer issues the triage
+decision while suppressing duplicate pages across an incident's windows. Solid
+arrows denote the per-window flow; dashed arrows denote memory access and
+cross-window state.}
 \label{fig:arch}
 \end{figure*}
 
