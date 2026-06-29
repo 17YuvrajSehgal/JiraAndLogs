@@ -1,4 +1,132 @@
 % === Approach ===
 \section{Approach}
 \label{sec:approach}
-% TODO: written one section at a time.
+
+\sys treats incident triage as \emph{retrieval against a memory of resolved
+incidents}. It processes one \emph{observation window} at a time---a short slice
+of activity for a service, summarized as text and, where instrumentation exists,
+accompanied by numeric telemetry features, log lines, distributed-trace
+summaries, cluster events, and resource metrics. Each window is matched against
+a \emph{memory corpus}: a collection of past incidents, each a resolved ticket
+with its description and a set of structured entities---the affected components,
+error classes, observed symptoms, root cause, and fix---extracted from it.
+Memory is time-aware: only incidents resolved before the current window are
+eligible, so the evaluation never leaks future tickets. For each window, \sys
+returns (i)~a ranked list of up to five past incidents most similar to it and
+(ii)~a triage decision: should this window page an engineer? The design follows
+two commitments---\emph{match by analogy} to memory, and \emph{adapt to whatever
+evidence the window actually carries}. Figure~\ref{fig:arch} shows the pipeline.
+
+\begin{figure*}[t]
+\centering
+\fbox{\begin{minipage}{0.95\textwidth}\centering\vspace{2.4em}
+\textit{[Architecture figure --- observation window $\rightarrow$ capability
+profiling $\rightarrow$ cost-gated plan $\rightarrow$ hybrid memory retrieval
+(dense $+$ sparse $+$ graph, fused by reciprocal rank) $\rightarrow$
+evidence-grounded refinement $\rightarrow$ triage decision \& incident-aware
+paging, all over a time-aware memory of resolved incidents.]}
+\vspace{2.4em}\end{minipage}}
+\caption{Overview of \sys. A controller inspects the evidence each window
+carries, assembles a cost-gated plan, and runs only the steps that evidence
+supports; hybrid retrieval matches the window to past incidents, optional
+evidence-gathering refines the ranking, and a state layer turns per-window
+decisions into per-incident pages.}
+\label{fig:arch}
+\end{figure*}
+
+\subsection{Capability-Gated Planning}
+\label{sec:approach-controller}
+
+Real deployments differ in what they can observe, so \sys never assumes a fixed
+input. It begins each window by taking inventory of the evidence at hand---free
+text, numeric telemetry features, time-ordered logs, a trace summary, cluster
+events, resource metrics, extracted graph entities---and forms a \emph{capability
+profile}. A controller then assembles an execution plan from this profile
+together with the window's role in the incident lifecycle: a quiet baseline, an
+active fault, or a recovery phase. Only steps whose evidence is present are
+scheduled; everything else is skipped without special-casing. The consequence is
+graceful degradation by construction. On a fully instrumented microservice the
+plan is the complete pipeline---numeric triage, all three retrievers, on-demand
+evidence requests, and an optional verifier---whereas on a text-only incident
+report the \emph{same} controller emits a lightweight text-retrieval plan, with
+no code change or reconfiguration.
+
+Planning is also cost-aware. Steps are ordered cheap-first, and expensive steps
+sit behind \emph{gates} that fire only when the cheap path is uncertain. The
+costly retrievers and the language-model verifier run only if a fast lookup has
+not already produced a confident match; a query-rewriting step runs only when
+retrieval confidence is low enough to be worth a retry. A hard per-window budget
+---caps on model tokens, wall-clock time, and number of steps---bounds the worst
+case, and a window aborts gracefully with partial results if the budget is
+exhausted. Because nearly every step reads precomputed signals, the only steps
+that ever consume a language model at decision time are the optional verifier and
+query rewriter, both gated.
+
+\subsection{Hybrid Memory Retrieval}
+\label{sec:approach-retrieval}
+
+At the heart of \sys is a retriever that matches a window to past incidents by
+fusing three complementary notions of similarity, none reliable on its own. A
+\emph{dense} retriever embeds the window and each memory ticket with a fine-tuned
+bi-encoder~\cite{reimers2019sbert}---a compact MiniLM
+backbone~\cite{wang2020minilm} fine-tuned per setting with hard negatives mined
+from a lexical baseline~\cite{robertson2009bm25}---and ranks by embedding
+similarity; it captures paraphrase and semantic overlap but blurs exact tokens.
+A \emph{sparse} retriever, a learned sparse lexical model~\cite{formal2021splade},
+restores that precision, matching the literal identifiers, error codes, and
+component names that distinguish otherwise-similar incidents. A \emph{graph}
+retriever operates over the structured entities extracted from each ticket and
+scores a window by how strongly its own extracted entities---components, error
+classes, symptoms---overlap those of each past incident, capturing structural
+rather than surface resemblance. Each retriever proposes its top candidates, and
+the rankings are merged by reciprocal-rank fusion~\cite{cormack2009rrf}: a
+composition step anchors on the dense retriever's strongest candidates, promotes
+those that several retrievers independently corroborate, and fills the remaining
+ranks by fusion. The effect is that one retriever's blind spot is covered by
+another's strength---the central reason the fused ranker outperforms every single
+view (\S\ref{sec:results}).
+
+\subsection{Evidence-Grounded Refinement}
+\label{sec:approach-react}
+
+When a window carries rich telemetry but the fused match is still uncertain,
+\sys does what an engineer would: it gathers more evidence before committing.
+Following the reason-and-act paradigm~\cite{yao2023react}, it issues a small
+number of targeted requests---for the window's cluster events, an extended slice
+of distributed traces, pod-level resource metrics, or concrete past incidents
+from the same fault family---each returning a compact piece of evidence rather
+than a verdict. It then re-ranks the candidate incidents by how well each one's
+description agrees with the gathered evidence, so a candidate corroborated by, for
+instance, an out-of-memory event or a matching error span rises to the top. The
+loop is deliberately bounded: repeated identical requests are detected and
+refused, and the per-window budget caps the total. When nothing useful is
+gathered---as on text-only incidents, where these requests are never
+scheduled---the step is a safe passthrough that returns the fused ranking
+unchanged.
+
+\subsection{Triage, Novelty, and Incident-Aware Paging}
+\label{sec:approach-state}
+
+The same evidence yields the paging decision. A lightweight classifier combines
+the cheap signals available---a numeric telemetry classifier's score where
+instrumentation exists, and the confidence of the best retrieval match---into a
+single ticket-worthiness probability; on text-only incidents, lacking a telemetry
+classifier, the decision rests on retrieval confidence alone. A window is
+additionally flagged as \emph{novel}---no good precedent in memory---when every
+retriever is only weakly confident, signalling a genuinely new failure mode.
+Finally, because one incident unfolds across many consecutive windows, paging on
+each would bury the on-call engineer. \sys keeps a short per-service memory of its
+recent decisions and, when it recognizes the same incident continuing (the same
+top match and fault family, with no recovery observed in between), suppresses the
+duplicate alert and folds the window into the ongoing incident. The result
+approximates one page per incident rather than one per window, which we quantify
+in \S\ref{sec:results}.
+
+One choice deserves emphasis because it recurs in our results. The optional
+language-model verifier---a step that re-examines a borderline match in natural
+language---is itself capability-gated: it is enabled only where calibration shows
+it helps and disabled where calibration shows it hurts. On real engineer-written
+incidents we find it net-negative and switch it off. Treating ``is this expensive
+reasoning step actually helping \emph{here}?'' as just another capability is, we
+argue, part of what lets one system stay robust across very different evidence
+regimes.
