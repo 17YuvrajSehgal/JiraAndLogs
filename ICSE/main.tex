@@ -49,9 +49,13 @@ knowledge-graph retrieval; adapts which reasoning steps it runs to the evidence
 that is actually available, from rich telemetry to text alone; escalates
 expensive steps only when it is uncertain; and suppresses duplicate pages across
 the lifetime of one incident. We evaluate on three datasets of increasing
-realism: two synthetic microservice-telemetry benchmarks and a large real-world
-corpus of resolved Apache Jira incidents (38{,}642 tickets across 24 projects)
-drawn from the publicly available World of Logs collection. On real
+realism. Two we collect and release: microservice-telemetry datasets built by
+injecting controlled faults into open-source applications and capturing the
+resulting logs, metrics, distributed traces, and cluster events alongside
+incident tickets and per-window ground-truth labels---a telemetry-to-ticket
+pairing we are not aware of in any public dataset. The third is a large
+real-world corpus of resolved Apache Jira incidents (38{,}642 tickets across 24
+projects), drawn from the publicly available World of Logs collection. On real
 incidents, the fusion retriever places the correct prior incident in its top five
 $97\%$ of the time, outperforming dense ($0.91$), lexical ($0.73$), graph
 ($0.31$), and a retrieval-augmented large-language-model baseline ($0.86$), all
@@ -61,7 +65,8 @@ accuracy. A controlled synthetic-versus-real comparison further shows that the
 ticket-worthiness classification that dominates synthetic benchmarks is trivially
 saturated yet unlearnable on real incidents, relocating the genuine difficulty to
 retrieval --- a finding that reframes how operational-triage systems should be
-evaluated. Our code, evaluation harness, and all results are publicly released.
+evaluated. Our two telemetry datasets, code, evaluation harness, and all results
+are publicly released.
 \end{abstract}
 
 \begin{IEEEkeywords}

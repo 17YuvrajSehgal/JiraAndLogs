@@ -24,7 +24,11 @@ First, evaluation is almost always conducted on \emph{synthetic} fault-injection
 telemetry: faults are scripted into a demonstration microservice application, so
 the resulting ``incidents'' are clean, balanced, and separable by construction.
 Whether methods that excel on such data transfer to the messy, imbalanced,
-free-text incidents that engineers actually file is rarely tested. Second,
+free-text incidents that engineers actually file is rarely tested. The problem
+is partly one of data: there is no public corpus that pairs operational
+telemetry---logs, metrics, and traces---with the incident tickets and labels
+these systems are meant to connect, so each study rebuilds its own data and
+seldom releases it, hampering both reuse and head-to-head comparison. Second,
 systems are typically designed for a single, rich evidence regime---full logs,
 metrics, and traces---whereas real deployments are heterogeneous: some incidents
 arrive with deep telemetry, others as little more than a terse textual report. A
@@ -49,11 +53,11 @@ incident spans many consecutive windows, \sys tracks its recent decisions per
 service and suppresses duplicate alerts, reporting roughly one page per incident
 rather than one per window.
 
-We evaluate \sys on three datasets of increasing realism: two synthetic
-microservice-telemetry benchmarks (Online Boutique and the OpenTelemetry Demo)
-and a large real-world corpus of 38{,}642 resolved Apache Jira incidents across
-24 projects, drawn from the publicly available World of
-Logs collection~\cite{xiao2026worldoflogs}. On the real incidents---the hardest
+We evaluate \sys on three datasets of increasing realism: two
+microservice-telemetry datasets we collect and release---built on the Online
+Boutique and OpenTelemetry Demo applications---and a large real-world corpus of
+38{,}642 resolved Apache Jira incidents across 24 projects, drawn from the
+publicly available World of Logs collection~\cite{xiao2026worldoflogs}. On the real incidents---the hardest
 and most consequential setting---hybrid retrieval places the correct prior
 incident among its top five $97\%$ of the time, outperforming our own strong
 dense retriever ($0.91$), classical lexical search ($0.73$), the graph retriever
@@ -90,8 +94,12 @@ operational-triage systems ought to be measured.
   further quantify what the agentic controller adds, isolating its cost savings
   at equal accuracy (\S\ref{sec:results},~\S\ref{sec:discussion}).
 
-  \item \textbf{A reproducible artifact}: code, the evaluation harness, prior-art
-  and LLM baselines, ablations, a cost analysis, multiple-comparison-corrected
-  significance tests, and an LLM-as-judge validation of the matching labels, all
-  publicly released.
+  \item \textbf{Two publicly released incident-triage datasets} that pair
+  multi-signal observability telemetry---logs, metrics, distributed traces, and
+  cluster events---with incident tickets and per-window ground-truth labels,
+  across 27 and 49 controlled fault scenarios respectively. To our knowledge no
+  existing public dataset couples operational telemetry with incident tickets at
+  this granularity. We release them with all code, the evaluation harness,
+  prior-art and LLM baselines, ablations, and multiple-comparison-corrected
+  significance tests.
 \end{itemize}
