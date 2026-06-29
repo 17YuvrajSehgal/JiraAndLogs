@@ -39,11 +39,24 @@ Raw telemetry   & $\sim$35\,GB     & $\sim$11\,GB     & --- (text) \\
 \subsection{Collected Telemetry Datasets}
 \label{sec:datasets-synthetic}
 
-Our two datasets are produced by one pipeline: an open-source microservice
-application is deployed in a Kubernetes cluster alongside a full observability
-stack---Prometheus for metrics, Tempo for distributed traces, and Loki for
-logs---and faults are then injected under controlled, labelled conditions while
-the platform records everything. The unit of collection is a \emph{scenario}: a
+\begin{figure}[t]
+\centering
+\includegraphics[width=\columnwidth]{figures/data-collection.png}
+\caption{Data-collection pipeline for the two telemetry datasets. A load
+generator exercises an open-source microservice application in Kubernetes while
+controlled faults---application-level failures and chaos-engineering network
+faults---are injected. The resulting alerts, metrics, logs, cluster events, and
+distributed-trace spans are captured per window, and a paired synthetic incident
+ticket, rewritten into engineer voice by a language model, is recorded as the
+retrieval target. The labelled result is what the triage agent consumes.}
+\label{fig:collection}
+\end{figure}
+
+Our two datasets are produced by one pipeline (Figure~\ref{fig:collection}): an
+open-source microservice application is deployed in a Kubernetes cluster
+alongside a full observability stack---Prometheus for metrics, Tempo for
+distributed traces, and Loki for logs---and faults are then injected under
+controlled, labelled conditions while the platform records everything. The unit of collection is a \emph{scenario}: a
 single fault, injected for a fixed duration, with declared ground truth. Each
 scenario yields three consecutive observation windows---a fault-free baseline
 before injection, the active fault, and a recovery phase after it is
@@ -51,9 +64,11 @@ cleared---and every window is labelled ticket-worthy, borderline, or noise. For
 each window we archive the raw telemetry it produced: the service's logs, its
 CPU, memory, and restart metric series and any firing alerts, the cluster's
 events and pod state, and a sample of distributed traces; when a scenario
-warrants attention, a paired incident report is written as the retrieval target.
-Because injection is controlled, the resulting window-to-ticket matches are exact
-ground truth, not inferred. We deliberately also collect \emph{negatives that
+warrants attention, a synthetic incident ticket is generated and rewritten by a
+language model into engineer-voice prose---so that memory tickets read like those
+a team would actually file---and stored as the retrieval target. Because injection
+is controlled, the resulting window-to-ticket matches are exact ground truth, not
+inferred. We deliberately also collect \emph{negatives that
 resemble incidents but are not}: near-miss scenarios in which a service is
 stressed yet never crosses into failure, and ``orphan'' faults that genuinely
 occur but should produce no ticket---both essential for measuring false alarms.
