@@ -19,13 +19,7 @@ evidence the window actually carries}. Figure~\ref{fig:arch} shows the pipeline.
 
 \begin{figure*}[t]
 \centering
-\fbox{\begin{minipage}{0.95\textwidth}\centering\vspace{2.4em}
-\textit{[Architecture figure --- observation window $\rightarrow$ capability
-profiling $\rightarrow$ cost-gated plan $\rightarrow$ hybrid memory retrieval
-(dense $+$ sparse $+$ graph, fused by reciprocal rank) $\rightarrow$
-evidence-grounded refinement $\rightarrow$ triage decision \& incident-aware
-paging, all over a time-aware memory of resolved incidents.]}
-\vspace{2.4em}\end{minipage}}
+\includegraphics[width=\textwidth]{figures/pipeline.png}
 \caption{Overview of \sys. A controller inspects the evidence each window
 carries, assembles a cost-gated plan, and runs only the steps that evidence
 supports; hybrid retrieval matches the window to past incidents, optional
