@@ -1,4 +1,166 @@
 % === Results ===
 \section{Results}
 \label{sec:results}
-% TODO: written one section at a time.
+
+\subsection{RQ1: Retrieval Quality}
+\label{sec:results-rq1}
+
+Table~\ref{tab:retrieval} reports retrieval quality across all three datasets.
+Two findings stand out. First, a retriever fine-tuned on the task far
+outperforms strong off-the-shelf methods: our dense bi-encoder beats every
+zero-shot dense embedder, classical lexical search, a cross-encoder re-ranker,
+and a retrieval-augmented LLM on all three datasets---on the real incidents, for
+example, it reaches \hit{5}~$0.91$ against $0.83$--$0.87$ for the best baselines.
+The retrieval-augmented LLM, despite re-reading the same candidates, never
+surpasses the trained retriever, indicating that the gains come from
+domain-adapted retrieval rather than from a general reader.
+
+\begin{table}[t]
+\centering
+\caption{Retrieval quality (\hit{5}, coarse relation) on the held-out test set.
+Best per dataset in \textbf{bold}. Our fine-tuned retriever dominates all
+baselines; hybrid fusion adds a further, significant gain on the large real-world
+corpus.}
+\label{tab:retrieval}
+\footnotesize
+\setlength{\tabcolsep}{5pt}
+\begin{tabular}{lccc}
+\toprule
+Method & Online Boutique & OTel Demo & World of Logs \\
+\midrule
+\multicolumn{4}{l}{\emph{Prior art, zero-shot}}\\
+\quad BGE (dense)          & 0.341 & 0.664 & 0.829 \\
+\quad E5 (dense)           & 0.314 & 0.538 & 0.838 \\
+\quad MPNet (dense)        & 0.375 & 0.630 & 0.834 \\
+\quad TF--IDF (lexical)    & 0.372 & 0.613 & 0.766 \\
+\quad Cross-encoder rerank & 0.296 & 0.580 & 0.874 \\
+\multicolumn{4}{l}{\emph{Retrieval-augmented LLM}}\\
+\quad Qwen2.5-7B           & 0.344 & 0.639 & 0.856 \\
+\multicolumn{4}{l}{\emph{Ours}}\\
+\quad Dense bi-encoder     & \textbf{0.634} & \textbf{0.681} & 0.905 \\
+\quad Knowledge graph      & 0.465 & 0.412 & 0.308 \\
+\quad Hybrid fusion        & 0.559 & 0.672 & \textbf{0.970} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Second, the value of \emph{fusion} depends on the setting. On the large,
+heterogeneous real corpus, fusing the dense, sparse, and graph retrievers lifts
+\hit{5} from $0.91$ to $0.97$---placing the correct prior incident in the top
+five $97\%$ of the time, at \hit{1}~$0.84$ and MRR~$0.90$. This gain is large and
+statistically significant: against the dense retriever the paired-bootstrap
+difference is $+0.065$ ($95\%$ CI $[+0.058,+0.073]$), and against the strongest
+baselines it ranges from $+0.12$ (the LLM) to $+0.14$ (zero-shot dense), all with
+Benjamini--Hochberg $q\approx 0$. On the two small synthetic corpora, by
+contrast, the fine-tuned dense retriever is already so strong that fusion does
+not help, and on Online Boutique it is slightly worse ($-0.076$, $q=0.03$):
+when one retriever dominates a small memory, blending in weaker signals only adds
+noise. Fusion's advantage thus \emph{emerges with scale and diversity}---precisely
+the conditions of real operations.
+
+We further isolated the knowledge graph's contribution by comparing the full
+fusion against fusion without it. The graph does surface correct candidates the
+others miss---on $14\%$ of Online Boutique queries it retrieves the right
+incident where the dense retriever fails---but in fusion this rarely changes
+top-five recall (the $\pm$graph difference is not significant on any dataset).
+The graph is therefore a real but marginal contributor: useful for top-rank
+precision and coverage, not a driver of \hit{5}.
+
+\subsection{RQ2: End-to-End Triage and Graceful Degradation}
+\label{sec:results-rq2}
+
+Table~\ref{tab:agent} reports the full agent. The headline is robustness across
+evidence regimes: the \emph{same} system, with no reconfiguration, retrieves
+strongly whether it has complete telemetry or only text. On the real, text-only
+incidents it reaches \hit{5}~$0.96$---essentially realizing the hybrid retriever's
+quality end to end---while on the fully instrumented synthetic systems it reaches
+$0.76$. Page suppression works as intended: across all three datasets the agent
+emits about one page per incident, collapsing the many windows of a single
+incident into a single alert.
+
+\begin{table}[t]
+\centering
+\caption{End-to-end agent (RQ2) and the cost saved by capability gating (RQ3),
+per dataset. Cost saving is the per-window reduction in wall-clock and model
+usage relative to a cascade that runs every step.}
+\label{tab:agent}
+\footnotesize
+\setlength{\tabcolsep}{5pt}
+\begin{tabular}{lccc}
+\toprule
+ & Online Boutique & OTel Demo & World of Logs \\
+\midrule
+\hit{1}              & 0.689 & 0.647 & 0.859 \\
+\hit{5}              & 0.758 & 0.756 & 0.963 \\
+Triage accuracy      & 0.841 & 0.846 & 0.506 \\
+Pages per incident   & 1.0   & 1.0   & 1.0 \\
+\midrule
+Cost saved (gating)  & 40\%  & 63\%  & 78\% \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{RQ3: The Cost of Autonomy}
+\label{sec:results-rq3}
+
+What does the capability-gated controller buy? Running only the steps the
+evidence supports, and escalating expensive steps only under uncertainty, cuts
+per-window cost---wall-clock time and model usage---by $40\%$, $63\%$, and $78\%$
+on the three datasets relative to a cascade that runs everything (Table~\ref{tab:agent}),
+and the saving grows with scale, since larger workloads contain more windows the
+cheap path can settle. Crucially, this thrift costs no accuracy: an ablation that
+removes each component in turn moves \hit{1} by at most $0.012$, and sweeping the
+evidence-gathering budget leaves \hit{5} unchanged. The same measurements carry a
+candid message: because no single component is load-bearing, the heavyweight
+evidence-gathering tools contribute little measurable \hit{} gain on these
+datasets; their role is to keep cost low by running only when cheaper steps are
+unsure, and the headroom they could add is bounded by how often retrieval is
+already correct.
+
+\subsection{RQ4: Synthetic Versus Real, and What It Reveals}
+\label{sec:results-rq4}
+
+Our most consequential finding concerns the triage \emph{classification} task
+that dominates synthetic benchmarks---deciding whether a window is ticket-worthy
+at all. On synthetic data it is trivially easy: standard classifiers over the
+telemetry features reach a near-perfect area under the precision--recall curve and
+are well calibrated (Table~\ref{tab:triage}). On the real incidents, the very same
+classifiers collapse to chance---an area under the precision--recall curve of
+$0.51$ against a $0.50$ random floor, and an ROC area of $0.50$---and the agent's
+own triage accuracy ($0.51$) tracks the trivial majority-class baseline. The
+difficulty of synthetic triage is an artifact of fault injection, where active
+faults are separable from baselines by construction; on real, engineer-written
+tickets, whether an issue was ultimately deemed worth fixing is simply not
+predictable from its text alone.
+
+\begin{table}[t]
+\centering
+\caption{Triage classification (RQ4): a gradient-boosted classifier over
+telemetry features. Synthetic triage is saturated; real-world triage is at chance
+(majority-class baseline $0.495$). The transferable difficulty lies in retrieval,
+not classification.}
+\label{tab:triage}
+\footnotesize
+\setlength{\tabcolsep}{6pt}
+\begin{tabular}{lccc}
+\toprule
+Dataset & PR-AUC & ROC-AUC & ECE$\downarrow$ \\
+\midrule
+Online Boutique & 1.000 & 1.000 & 0.012 \\
+OTel Demo       & 1.000 & 1.000 & 0.000 \\
+World of Logs   & 0.506 & 0.500 & 0.006 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+This reframes how operational triage should be measured: the part that looks
+solved on synthetic data is the part that does not transfer, while the part that
+does transfer---retrieving which past incident a live one resembles---is where the
+real headroom lies, and where our system is strongest.
+
+Because the real dataset's matches are inferred rather than human-labelled, we
+checked their validity with an LLM-as-judge. Asked to rate the relevance of each
+gold match against a random control, the judge separates them on every dataset,
+and most sharply on the real incidents (a gold-versus-random gap of $1.24$ on a
+five-point scale, versus $0.34$--$0.47$ on synthetic). The matches the real-world
+retrieval numbers are measured against therefore carry genuine signal.
