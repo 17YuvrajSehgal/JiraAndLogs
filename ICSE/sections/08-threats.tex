@@ -2,45 +2,21 @@
 \section{Threats to Validity}
 \label{sec:threats}
 
-\noindent\textbf{External validity.} The central limitation is the split between
-realism and instrumentation: our telemetry-rich datasets are synthetic, while our
-real dataset is text only. As a result, the retrieval and triage claims are
-demonstrated on real, engineer-written incidents, but the system's
-telemetry-diagnosis behavior---the on-demand evidence gathering that depends on
-injected fault structure---is exercised only on synthetic data, and we do not
-claim it generalizes to production telemetry; closing that gap is our main future
-direction. The real incidents themselves come from open-source Apache projects,
-whose public bug tickets may differ from incidents in a proprietary production
-setting, and the two synthetic applications, though architecturally distinct, are
-demonstration systems rather than a representative sample of all deployments.
-
-\noindent\textbf{Construct validity.} For the real dataset there is no
-ground-truth ``which past incident is the answer,'' so matches are inferred from
-shared project, component, and symptom overlap rather than human-adjudicated. We
-mitigate this with an LLM-as-judge check that separates true matches from random
-controls on every dataset (\S\ref{sec:results-rq4}), and we report retrieval under
-both a coarse and a strict relation; still, this is a proxy, not a multi-annotator
-study, and we release a human-annotation kit to enable one. Triage labels are
-likewise derived from each ticket's type and resolution, a reasonable but
-imperfect stand-in for whether an engineer truly considered an issue worth acting
-on.
-
-\noindent\textbf{Internal validity.} All retrievers enforce time-aware
-visibility---only incidents resolved before a window are eligible---so the
-evaluation cannot leak future information, and every dataset holds out whole
-fault families or project domains so that test items never appear in training.
-Experiments use a fixed seed and deterministic decoding for the language models.
-We report multi-seed variance for the trained retriever on the synthetic
-datasets; on the real dataset, whose single training run is far more costly, we
-report a single seed and note this rather than implying broader coverage.
-
-\noindent\textbf{Conclusion validity.} Comparing many systems across datasets and
-metrics inflates the chance of spurious findings, so every reported difference is
-tested with a paired bootstrap and the family of tests is corrected for false
-discovery; we report corrected $q$-values and treat a result as significant only
-when its confidence interval excludes zero. The smaller synthetic test sets yield
-correspondingly wider intervals, which is why several differences there are
-reported as not significant. Finally, we report negative and mixed results
-explicitly---fusion's lack of benefit on small corpora, the knowledge graph's
-marginal contribution, and triage's collapse on real data---rather than
-foregrounding only the favorable comparisons.
+Several threats temper our claims. The principal one is \emph{external}: our
+telemetry-rich datasets are synthetic while our real dataset is text only, so the
+on-demand evidence-gathering behavior is exercised only on injected faults and we
+do not claim it transfers to production telemetry, and the open-source Apache
+incidents and two demonstration applications are not a representative sample of
+all deployments. On \emph{construct} validity, the real dataset has no
+ground-truth answer key, so matches are inferred from project, component, and
+symptom overlap; we mitigate this with an LLM-as-judge check that separates true
+matches from random controls on every dataset (\S\ref{sec:results-rq4}), report
+both a coarse and a strict relation, and release a human-annotation kit, but the
+labels remain a proxy rather than a multi-annotator study. For \emph{internal}
+validity, time-aware visibility and held-out fault families and project domains
+prevent any leakage of future or training information, though the costly real-data
+retriever is trained on a single seed, which we report rather than overstate.
+Finally, for \emph{conclusion} validity, every difference is tested with a paired
+bootstrap corrected for false discovery, and we report negative and mixed results,
+such as fusion's lack of benefit on small corpora and triage's collapse on real
+data, rather than only the favorable comparisons.

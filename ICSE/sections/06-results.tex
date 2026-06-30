@@ -143,11 +143,11 @@ already correct.
 \includegraphics[width=\textwidth]{figures/fig_adaptive_execution.png}
 \caption{Adaptive execution on the fully-instrumented Online Boutique system
 (RQ3). (a)~Raising the evidence-gathering budget leaves retrieval accuracy
-unchanged (\hit{5} flat at $0.76$; \hit{1} within $\pm0.01$) while wall-clock time
-grows $6.7\times$---more budget buys latency, not accuracy. (b)~No single evidence
-tool is load-bearing, and the extended-trace reader is net-\emph{harmful} to top-1
-retrieval ($-0.018$); the peer-incident lookup is the only consistently positive
-tool. The controller's value is to invoke these tools only when cheaper steps are
+unchanged (\hit{5} flat at $0.76$; \hit{1} within a $0.024$ band) while wall-clock
+time grows $6.7\times$---more budget buys latency, not accuracy. (b)~No single
+evidence tool is load-bearing, and the extended-trace reader is
+net-\emph{harmful} to top-1 retrieval ($-0.018$); the peer-incident lookup is the
+only clearly beneficial tool. The controller's value is to invoke these tools only when cheaper steps are
 unsure, not to add accuracy.}
 \label{fig:adaptive}
 \end{figure*}
