@@ -31,8 +31,9 @@ We compare our hybrid retriever and full system against three groups of baseline
 all evaluated under an identical memory, time-aware visibility, and gold contract.
 
 \noindent\emph{Constituent retrievers.} To show that fusion is more than the sum
-of its parts, we evaluate each of our retrievers alone: the fine-tuned dense
-bi-encoder, the learned sparse retriever, and the knowledge-graph retriever.
+of its parts, we report our fine-tuned dense bi-encoder and our knowledge-graph
+retriever on their own, alongside the full hybrid that fuses them with a learned
+sparse retriever.
 
 \noindent\emph{Prior-art retrieval.} We add widely used, off-the-shelf retrievers
 applied zero-shot: three strong dense embedding models (BGE, E5, and
@@ -58,9 +59,8 @@ $k\in\{1,5,10\}$---and mean reciprocal rank (MRR), averaged over queries that ha
 at least one ground-truth match; on the real dataset we report both the coarse
 and strict matching relations of \S\ref{sec:datasets-wol}. \emph{Triage} is a
 calibrated classification problem, so beyond accuracy we report the area under the
-precision--recall curve, the area under the ROC curve, expected calibration
-error, and precision at a fixed $5\%$ false-positive rate---the operating point an
-alerting system actually runs at. We also report, operationally, pages per
+precision--recall curve, the area under the ROC curve, and expected calibration
+error. We also report, operationally, pages per
 incident, which captures whether duplicate alerts are suppressed. Finally,
 \emph{cost} is measured per window as wall-clock time and language-model token
 usage, relative to a counterfactual cascade that runs every step on every window.
