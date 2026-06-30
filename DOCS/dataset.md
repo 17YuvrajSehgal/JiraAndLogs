@@ -122,8 +122,6 @@ Research metadata is injected as low-cardinality Kubernetes labels and OTel reso
 
 **Source repository**: `microservices-demo-google/` — a **fork** of the upstream Google Microservices Demo with research-specific source-level changes.
 
-Fork URL: <https://github.com/17YuvrajSehgal/microservices-demo-google>
-
 The fork adds:
 - Structured JSON console logging across all services (enables Grafana Alloy to extract `severity`, `message`, `trace_id`, `span_id` as Loki labels).
 - Per-service OTel resource attributes (`research.jira-telemetry/service-tier`) wired into application init.
@@ -591,14 +589,6 @@ The simple dataset contains everything needed to train and evaluate the retrieva
 | Multi-ticket incident clusters | (via scenario chains) | (via L3 cascade scenarios) | 2,456 (via Jira `Duplicate`/`Cloners`/`Cause` links) |
 
 ---
-
-## Repository Forks
-
-Custom forks of upstream demo applications used by this project:
-
-| Upstream | Our fork | Purpose of changes |
-|---|---|---|
-| Google Microservices Demo (`microservices-demo`) | <https://github.com/17YuvrajSehgal/microservices-demo-google> | Structured JSON logging, OTel resource attributes, host-metrics instrumentation, OTLP exporter wiring |
 
 The OTel Demo (`opentelemetry-demo/`) is used **as-is from the upstream** — research-specific routing is handled by Helm values, not by source changes. The WoL archive is read-only.
 
