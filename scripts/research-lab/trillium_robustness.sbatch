@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-#SBATCH --account=def-naser2
+#SBATCH --account=def-anonymous
 #SBATCH --job-name=robustness
 #SBATCH --partition=compute
 #SBATCH --nodes=1 --ntasks=1 --gpus-per-node=1 --cpus-per-task=24 --time=03:00:00
