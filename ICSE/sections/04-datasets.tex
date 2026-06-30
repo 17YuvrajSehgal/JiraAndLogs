@@ -29,7 +29,7 @@ available for retrieval; \emph{test windows} are the held-out queries used in
 Origin           & collected (ours) & collected (ours) & reused~\cite{wang2026worldoflogs} \\
 Evidence         & full telemetry   & full telemetry   & text only \\
 Scale            & 12 services      & 18 svc.\ + Kafka & 24 projects \\
-Fault scenarios  & 27 families      & 49 scenarios     & real incidents \\
+Fault scenarios  & 26 families      & 52 scenarios     & real incidents \\
 Memory incidents & 347              & 147              & 38{,}642 \\
 Test windows     & 1{,}008          & 247              & 13{,}388 \\
 Split            & by family        & by family        & leave-domain-out \\
@@ -50,7 +50,7 @@ controlled faults---application-level failures and chaos-engineering network
 faults---are injected. The resulting alerts, metrics, logs, cluster events, and
 distributed-trace spans are captured per window, and a paired synthetic incident
 ticket, rewritten into engineer voice by a language model, is recorded as the
-retrieval target. The labelled result is what the triage agent consumes.}
+retrieval target. The labelled result is what the triage system consumes.}
 \label{fig:collection}
 \end{figure}
 
@@ -84,14 +84,14 @@ pages constantly.
 The two applications are chosen to differ in \emph{architecture}, not merely in
 size, so that a method cannot succeed by memorizing one system's quirks.
 \textbf{Online Boutique}~\cite{googleboutique} is a twelve-service e-commerce demo
-spanning six languages; its 27 fault families include hard service outages (for
+spanning six languages; its 26 fault families include hard service outages (for
 example, scaling a service to zero replicas), latency and resource-pressure
 degradations such as slow memory and connection leaks, pod restarts, network
 faults injected with a chaos-engineering tool~\cite{chaosmesh} (partitions, packet
 loss, DNS failures), and deployment churn. \textbf{OpenTelemetry
 Demo}~\cite{oteldemo} adds architectural distance:
 eighteen services in ten languages, organized around a Kafka message bus with
-asynchronous downstream consumers. Its 49 scenarios extend from single-service
+asynchronous downstream consumers. Its 52 scenarios extend from single-service
 faults---triggered through the application's own built-in failure switches---to
 Kafka-specific failures such as broker outages and consumer lag that have no
 Online Boutique analogue, and on to concurrent and cascading multi-fault

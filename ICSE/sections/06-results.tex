@@ -61,13 +61,20 @@ pairwise comparison with its bootstrap confidence interval and significance.
 
 \begin{figure}[t]
 \centering
-\includegraphics[width=0.92\columnwidth]{figures/fig_significance_forest.pdf}
+\includegraphics[width=0.92\columnwidth]{figures/fig_significance_forest.png}
 \caption{Difference in \hit{5} between Hybrid-RRF and each alternative (paired
 bootstrap, $95\%$ CI; green = significant after Benjamini--Hochberg). Hybrid wins
-decisively on real data (WoL) and against the graph and lexical baselines, but
-does not beat the fine-tuned dense retriever on the small synthetic corpora.}
+decisively on real data (WoL) and beats the graph baseline on every dataset; on
+the small synthetic corpora it ties or trails the fine-tuned dense retriever.}
 \label{fig:forest}
 \end{figure}
+
+This advantage survives a stricter test. Under the strict matching relation, which
+demands substantial symptom overlap rather than mere topical relatedness, hybrid
+retrieval still places the correct incident in its top five $74\%$ of the time
+(MRR~$0.60$), and the result holds across \emph{both} held-out project domains
+(Kafka~$0.80$, MariaDB~$0.73$)---evidence that the headline number is neither an
+artifact of one project nor of a lenient label.
 
 We further isolated the knowledge graph's contribution by comparing the full
 fusion against fusion without it. The graph does surface correct candidates the
@@ -80,18 +87,20 @@ precision and coverage, not a driver of \hit{5}.
 \subsection{RQ2: End-to-End Triage and Graceful Degradation}
 \label{sec:results-rq2}
 
-Table~\ref{tab:agent} reports the full agent. The headline is robustness across
+Table~\ref{tab:agent} reports the full end-to-end system. The headline is robustness across
 evidence regimes: the \emph{same} system, with no reconfiguration, retrieves
 strongly whether it has complete telemetry or only text. On the real, text-only
 incidents it reaches \hit{5}~$0.96$---essentially realizing the hybrid retriever's
 quality end to end---while on the fully instrumented synthetic systems it reaches
-$0.76$. Page suppression works as intended: across all three datasets the agent
-emits about one page per incident, collapsing the many windows of a single
-incident into a single alert.
+$0.76$. Page suppression works as intended: across all three datasets the system
+emits about one page per incident. On the real corpus the effect is substantial,
+the suppression mechanism fires $3{,}061$ times to fold the repeat windows of an
+ongoing incident into the single alert already raised, rather than paging an
+engineer afresh for every window.
 
 \begin{table}[t]
 \centering
-\caption{End-to-end agent (RQ2) and the cost saved by capability gating (RQ3),
+\caption{End-to-end system (RQ2) and the cost saved by capability gating (RQ3),
 per dataset. Cost saving is the per-window reduction in wall-clock and model
 usage relative to a cascade that runs every step.}
 \label{tab:agent}
@@ -103,6 +112,7 @@ usage relative to a cascade that runs every step.}
 \midrule
 \hit{1}              & 0.689 & 0.647 & 0.859 \\
 \hit{5}              & 0.758 & 0.756 & 0.963 \\
+MRR                  & 0.714 & 0.688 & 0.902 \\
 Triage accuracy      & 0.841 & 0.846 & 0.506 \\
 Pages per incident   & 1.0   & 1.0   & 1.0 \\
 \midrule
@@ -111,7 +121,7 @@ Cost saved (gating)  & 40\%  & 63\%  & 78\% \\
 \end{tabular}
 \end{table}
 
-\subsection{RQ3: The Cost of Autonomy}
+\subsection{RQ3: The Cost of Adaptive Execution}
 \label{sec:results-rq3}
 
 What does the capability-gated controller buy? Running only the steps the
@@ -128,6 +138,20 @@ datasets; their role is to keep cost low by running only when cheaper steps are
 unsure, and the headroom they could add is bounded by how often retrieval is
 already correct.
 
+\begin{figure*}[t]
+\centering
+\includegraphics[width=\textwidth]{figures/fig_adaptive_execution.png}
+\caption{Adaptive execution on the fully-instrumented Online Boutique system
+(RQ3). (a)~Raising the evidence-gathering budget leaves retrieval accuracy
+unchanged (\hit{5} flat at $0.76$; \hit{1} within a $0.024$ band) while wall-clock
+time grows $6.7\times$---more budget buys latency, not accuracy. (b)~No single
+evidence tool is load-bearing, and the extended-trace reader is
+net-\emph{harmful} to top-1 retrieval ($-0.018$); the peer-incident lookup is the
+only clearly beneficial tool. The controller's value is to invoke these tools only when cheaper steps are
+unsure, not to add accuracy.}
+\label{fig:adaptive}
+\end{figure*}
+
 \subsection{RQ4: Synthetic Versus Real, and What It Reveals}
 \label{sec:results-rq4}
 
@@ -135,24 +159,16 @@ Our most consequential finding concerns the triage \emph{classification} task
 that dominates synthetic benchmarks---deciding whether a window is ticket-worthy
 at all. On synthetic data it is trivially easy: standard classifiers over the
 telemetry features reach a near-perfect area under the precision--recall curve and
-are well calibrated (Figure~\ref{fig:triage}). On the real incidents, the very same
-classifiers collapse to chance---an area under the precision--recall curve of
-$0.51$ against a $0.50$ random floor, and an ROC area of $0.50$---and the agent's
-own triage accuracy ($0.51$) tracks the trivial majority-class baseline. The
+are well calibrated. On the real incidents, the very same
+classifiers collapse to chance: their area under the precision--recall curve is
+$0.51$, identical to the positive base rate a random ranker would score, and their
+ROC area is exactly $0.50$. The system's own triage accuracy ($0.51$) likewise
+matches the majority-class baseline ($0.51$), confirming that no usable signal is
+being learned. The
 difficulty of synthetic triage is an artifact of fault injection, where active
 faults are separable from baselines by construction; on real, engineer-written
 tickets, whether an issue was ultimately deemed worth fixing is simply not
 predictable from its text alone.
-
-\begin{figure}[t]
-\centering
-\includegraphics[width=0.82\columnwidth]{figures/fig_triage_reframing.pdf}
-\caption{Triage classification (RQ4): a gradient-boosted classifier's PR-AUC and
-the agent's triage accuracy. Synthetic triage is saturated (PR-AUC $\approx 1$);
-real-world triage sits at the chance floor (majority-class baseline $0.495$). The
-transferable difficulty lies in retrieval, not classification.}
-\label{fig:triage}
-\end{figure}
 
 This reframes how operational triage should be measured: the part that looks
 solved on synthetic data is the part that does not transfer, while the part that

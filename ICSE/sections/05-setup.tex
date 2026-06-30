@@ -13,9 +13,9 @@ Our evaluation is organized around four questions:
   lexical, and graph retrieval outperform each in isolation, as well as strong
   prior-art and LLM-based retrievers?
   \item[\textbf{RQ2}] \textbf{(End-to-end triage).} Does the capability-gated
-  agent retrieve effectively end to end, and does the \emph{same} system hold up
+  system retrieve effectively end to end, and does the \emph{same} system hold up
   as the available evidence degrades from full telemetry to text alone?
-  \item[\textbf{RQ3}] \textbf{(Cost of autonomy).} What does the agent's
+  \item[\textbf{RQ3}] \textbf{(Cost of adaptive execution).} What does the system's
   capability gating buy? Specifically, how much triage cost does it save relative
   to running every step on every window, at equal accuracy, and which components
   carry the result?
@@ -27,12 +27,13 @@ Our evaluation is organized around four questions:
 \subsection{Systems and Baselines}
 \label{sec:setup-baselines}
 
-We compare our hybrid retriever and full agent against three groups of baselines,
+We compare our hybrid retriever and full system against three groups of baselines,
 all evaluated under an identical memory, time-aware visibility, and gold contract.
 
 \noindent\emph{Constituent retrievers.} To show that fusion is more than the sum
-of its parts, we evaluate each of our retrievers alone: the fine-tuned dense
-bi-encoder, the learned sparse retriever, and the knowledge-graph retriever.
+of its parts, we report our fine-tuned dense bi-encoder and our knowledge-graph
+retriever on their own, alongside the full hybrid that fuses them with a learned
+sparse retriever.
 
 \noindent\emph{Prior-art retrieval.} We add widely used, off-the-shelf retrievers
 applied zero-shot: three strong dense embedding models (BGE, E5, and
@@ -54,14 +55,12 @@ trees, random forests, and logistic regression---wherever such features exist.
 
 We measure two capabilities separately. \emph{Retrieval} is scored with
 Hit@$k$---the correct prior incident appears in the top $k$, for
-$k\in\{1,5,10\}$---and mean reciprocal rank (MRR), averaged over queries that have
+$k\in\{1,5\}$---and mean reciprocal rank (MRR), averaged over queries that have
 at least one ground-truth match; on the real dataset we report both the coarse
 and strict matching relations of \S\ref{sec:datasets-wol}. \emph{Triage} is a
 calibrated classification problem, so beyond accuracy we report the area under the
-precision--recall curve, the area under the ROC curve, expected calibration
-error, and precision at a fixed $5\%$ false-positive rate---the operating point an
-alerting system actually runs at. We further report novelty detection (precision
-and recall of flagging incidents with no precedent) and, operationally, pages per
+precision--recall curve, the area under the ROC curve, and expected calibration
+error. We also report, operationally, pages per
 incident, which captures whether duplicate alerts are suppressed. Finally,
 \emph{cost} is measured per window as wall-clock time and language-model token
 usage, relative to a counterfactual cascade that runs every step on every window.
@@ -90,6 +89,11 @@ bi-encoder fine-tuned for five epochs with hard negatives mined by lexical searc
 the hybrid fuses each retriever's top candidates by reciprocal rank fusion. Graph
 entities are extracted from tickets by a small language model and matched by
 entity overlap. The retrieval-augmented and judge models run offline with
-deterministic (greedy) decoding. Every experiment uses a fixed random seed and
-runs on a single GPU per job; full configurations and seeds are released with the
-artifact.
+deterministic (greedy) decoding. Every experiment uses a fixed random seed, and
+full configurations and seeds are released with the artifact.
+
+\noindent\emph{Compute environment.} All experiments were executed on the
+Trillium cluster, a system administered by the Digital Research Alliance of
+Canada.\footnote{\url{https://alliancecan.ca}} Each training and sampling job was
+allocated a single NVIDIA H100 GPU (80\,GB) together with up to 24 CPU cores and
+the node's per-GPU share of host memory.

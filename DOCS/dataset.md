@@ -168,7 +168,7 @@ The load generator is configured with **25 users at spawn rate 3**, exercising t
 
 12 services: `cartservice` (.NET), `checkoutservice` (Go), `currencyservice` (Node), `paymentservice` (Node), `productcatalogservice` (Go), `recommendationservice` (Python), `shippingservice` (Go), `emailservice` (Python), `adservice` (Java), `frontend` (Go), `redis-cart`, `loadgenerator`. Full catalog with criticality ratings is at `deploy/research-lab/service-catalogs/online-boutique.yaml`.
 
-### Fault families (27 families, ~6,720 windows)
+### Fault families (26 fault families + 1 no-fault baseline, ~6,720 windows)
 
 Faults are grouped by mechanism:
 
@@ -247,7 +247,7 @@ During a fault scenario, `Invoke-FlagdFlip.ps1` patches the `flagd-config` Confi
 
 18 application components: `frontend` (TypeScript), `frontend-proxy` (Nginx), `ad` (Java), `cart` (C#), `checkout` (Go), `currency` (C++), `email` (Ruby), `payment` (JavaScript), `product-catalog` (Go), `product-reviews` (Rust), `quote` (PHP), `recommendation` (Python), `shipping` (Rust), `llm` (Python), `image-provider` (Nginx), `accounting` (Kotlin/Kafka consumer), `fraud-detection` (Java/Kafka consumer), plus `kafka`, `flagd`, `valkey-cart`, `postgresql`. Full catalog at `deploy/research-lab/service-catalogs/otel-demo.yaml`.
 
-### Fault families (49 scenarios total, ~1,643 windows)
+### Fault families (52 fault scenarios + 1 no-fault baseline, ~1,643 windows)
 
 Scenarios are structured in four complexity levels:
 
