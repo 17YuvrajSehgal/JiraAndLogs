@@ -40,10 +40,11 @@ conditions.
 In this paper, we present \sys, an adaptive incident-triage framework organized around retrieval from a memory of resolved incidents. Rather than assuming a fixed workflow, \sys dynamically selects retrieval and reasoning capabilities based on the operational evidence available for each incident, enabling the same framework to operate in heterogeneous evidence environments ranging from telemetry-rich deployments to text-only incident reports. The design is guided by three principles. First, \emph{hybrid memory retrieval} combines dense, lexical, and knowledge-graph retrieval to exploit complementary notions of similarity between live and historical incidents. Second, \emph{Capability-aware} execution invokes only those retrieval, verification, and evidence-gathering steps that are supported by the available evidence and justified by retrieval uncertainty, reducing unnecessary computation while preserving retrieval quality. Third, \emph{Incident-aware paging} tracks evolving incidents across consecutive windows to suppress duplicate pages and maintain consistent operational decisions.
 
 To evaluate both adaptability across heterogeneous evidence regimes and transfer from synthetic to real deployments, we evaluate \sys on three datasets of increasing operational realism: two newly collected and publicly released microservice-telemetry datasets built on the Online Boutique and OpenTelemetry Demo applications, and a large real-world corpus of 38,642 resolved Apache Jira incidents spanning 24 projects from the publicly available World of Logs collection~\cite{wang2026worldoflogs}. On the real incidents (the hardest and most consequential setting) hybrid retrieval places the correct prior
-incident among its top five $97\%$ of the time, outperforming our own strong
-dense retriever ($0.91$), classical lexical search ($0.73$), the graph retriever
-alone ($0.31$), and a retrieval-augmented large-language-model baseline
-($0.86$); every gap survives multiple-comparison correction. The end-to-end
+incident among its top five $97\%$ of the time. This improves on each of its own
+fused components in isolation---a fine-tuned dense bi-encoder ($0.91$) and a
+knowledge-graph retriever ($0.31$)---and on external baselines, including
+classical lexical search ($0.73$) and a retrieval-augmented large-language-model
+reranker ($0.86$); every gap survives multiple-comparison correction. The end-to-end
 system reaches $0.96$ while its capability gating cuts per-window triage cost by
 up to $78\%$ relative to running every step on every window, with no loss in
 retrieval quality. Most striking is a controlled comparison between synthetic and
