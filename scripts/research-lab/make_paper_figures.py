@@ -44,7 +44,7 @@ def fig_retrieval():
     def cas(ds, m): r = _load(PR/"retrieval-cascades"/ds/f"{m}-mode3-results.json"); return r["coarse"]["hit_at_5"] if r else None
     def bse(fam, ds, m): r = _load(PR/"baselines"/fam/ds/f"{m}-results.json"); return r["coarse"]["hit_at_5"] if r else None
     rows = [
-        ("BM25 (lexical)",      C["prior"], lambda d: bse("tfidf", d, "tfidf")),
+        ("TF-IDF (lexical)",    C["prior"], lambda d: bse("tfidf", d, "tfidf")),
         ("BGE (dense, 0-shot)", C["prior"], lambda d: bse("sota-dense", d, "bge")),
         ("LLM-RAG",             C["llm"],   lambda d: bse("llm-rag", d, "llm-rag")),
         ("BiEncoder (ours)",    C["ours"],  lambda d: cas(d, "biencoder")),
