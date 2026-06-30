@@ -104,40 +104,14 @@ a normalized score $c\in[0,1]$ that a skill attaches to its output: for the
 triage classifier it is the predicted probability that the window is
 ticket-worthy, and for a retriever it is the strength of its best match. The
 controller converts these scores into discrete actions through two fixed
-thresholds, $0.90$ and $0.50$ (Table~\ref{tab:confidence}). A cheap-path score at
-or above $0.90$, accompanied by at least one dense candidate, is treated as
-decisive: the system accepts the fast result and skips the expensive retrievers
-and the verifier. A best-match confidence below $0.50$ is treated as a failure to
-find an acceptable precedent, which triggers a query rewrite and, if it persists,
-a novelty flag. The intermediate band, $0.50\le c<0.90$, is the regime of genuine
-uncertainty in which escalation pays off. The same $0.50$ level separates a
-ticket-worthy decision from noise.
-
-\begin{table}[t]
-\centering
-\caption{How \sys{} acts on a confidence score $c\in[0,1]$ at each decision
-point. At or above the threshold the result is accepted and the system proceeds;
-below it, the listed action is taken. Values near the high threshold are
-``acceptable'' evidence to commit cheaply, whereas low values are treated as
-unreliable and trigger more work or a novelty flag.}
-\label{tab:confidence}
-\footnotesize
-\setlength{\tabcolsep}{4pt}
-\begin{tabular}{@{}p{0.40\columnwidth}cp{0.34\columnwidth}@{}}
-\toprule
-Decision point (confidence signal) & Thr. & Action when below \\
-\midrule
-Escalation gate (cheap-path triage score)\textsuperscript{$\dagger$} & $0.90$ & run sparse and graph retrievers, plus the verifier where calibrated \\
-Reformulation gate (best-match confidence) & $0.50$ & rewrite the query and retry retrieval \\
-Novelty flag (best-match confidence) & $0.50$ & mark the window as a new failure mode \\
-Triage decision (stacked probability) & $0.50$ & label the window noise, not ticket-worthy \\
-\bottomrule
-\end{tabular}
-\vspace{1pt}
-{\footnotesize \textsuperscript{$\dagger$}The cheap path is trusted only when the
-score is $\ge 0.90$ \emph{and} the dense retriever returned at least one
-candidate; with no numeric signal (text-only windows) it always escalates.}
-\end{table}
+thresholds. A cheap-path score at or above $0.90$, accompanied by at least one
+dense candidate, is treated as decisive, and the system accepts the fast result
+and skips the expensive retrievers and the verifier; with no numeric signal, as
+on text-only windows, it always escalates. A best-match confidence below $0.50$
+is treated as a failure to find an acceptable precedent, triggering a query
+rewrite and, if it persists, a novelty flag. The intermediate band
+$0.50\le c<0.90$ is the regime of genuine uncertainty in which escalation pays
+off, and the same $0.50$ level separates a ticket-worthy decision from noise.
 
 \noindent\textbf{Why a gated controller rather than a free-form agent.} \sys{} is
 deliberately \emph{agentic in capability but not autonomous in control}. A fully
