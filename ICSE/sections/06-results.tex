@@ -69,6 +69,13 @@ the small synthetic corpora it ties or trails the fine-tuned dense retriever.}
 \label{fig:forest}
 \end{figure}
 
+This advantage survives a stricter test. Under the strict matching relation, which
+demands substantial symptom overlap rather than mere topical relatedness, hybrid
+retrieval still places the correct incident in its top five $74\%$ of the time
+(MRR~$0.60$), and the result holds across \emph{both} held-out project domains
+(Kafka~$0.80$, MariaDB~$0.73$)---evidence that the headline number is neither an
+artifact of one project nor of a lenient label.
+
 We further isolated the knowledge graph's contribution by comparing the full
 fusion against fusion without it. The graph does surface correct candidates the
 others miss---on $14\%$ of Online Boutique queries it retrieves the right
@@ -86,8 +93,10 @@ strongly whether it has complete telemetry or only text. On the real, text-only
 incidents it reaches \hit{5}~$0.96$---essentially realizing the hybrid retriever's
 quality end to end---while on the fully instrumented synthetic systems it reaches
 $0.76$. Page suppression works as intended: across all three datasets the system
-emits about one page per incident, collapsing the many windows of a single
-incident into a single alert.
+emits about one page per incident. On the real corpus the effect is substantial,
+the suppression mechanism fires $3{,}061$ times to fold the repeat windows of an
+ongoing incident into the single alert already raised, rather than paging an
+engineer afresh for every window.
 
 \begin{table}[t]
 \centering
@@ -103,6 +112,7 @@ usage relative to a cascade that runs every step.}
 \midrule
 \hit{1}              & 0.689 & 0.647 & 0.859 \\
 \hit{5}              & 0.758 & 0.756 & 0.963 \\
+MRR                  & 0.714 & 0.688 & 0.902 \\
 Triage accuracy      & 0.841 & 0.846 & 0.506 \\
 Pages per incident   & 1.0   & 1.0   & 1.0 \\
 \midrule
