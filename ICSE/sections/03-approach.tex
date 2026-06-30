@@ -4,21 +4,16 @@
 
 \sys realizes the task of \S\ref{sec:background} as an agent built around
 retrieval from the memory of resolved incidents. Its design rests on two
-commitments: \emph{match by analogy}---rank past incidents by their similarity to
-the current window---and \emph{adapt to whatever evidence the window actually
+commitments: \emph{match by analogy}---rank past incidents by their similarity to the current window---and \emph{adapt to whatever evidence the window actually
 carries}, so that one system spans the full range from rich telemetry down to
-text alone. Figure~\ref{fig:arch} shows the resulting pipeline, which we describe
-stage by stage; throughout, we return the $k=5$ most similar past incidents per
+text alone. Figure~\ref{fig:arch} shows the resulting pipeline, which we describe stage by stage; throughout, we return the $k=5$ most similar past incidents per
 window.
 
 \begin{figure*}[t]
 \centering
 \includegraphics[width=\textwidth]{figures/pipeline.png}
 \caption{Overview of \sys. For each observation window---rich telemetry or a
-bare text report---a capability-gated planner profiles the available evidence and
-assembles a cost-gated, cheap-first plan. Hybrid memory retrieval matches the
-window against a time-aware corpus of resolved tickets by fusing dense, sparse,
-and graph retrievers with reciprocal-rank fusion; optional, bounded
+bare text report---a capability-gated planner profiles the available evidence and assembles a cost-gated, cheap-first plan. Hybrid memory retrieval matches the window against a time-aware corpus of resolved tickets by fusing dense, sparse, and graph retrievers with reciprocal-rank fusion; optional, bounded
 evidence-gathering then refines the ranking; and a state layer issues the triage
 decision while suppressing duplicate pages across an incident's windows. Solid
 arrows denote the per-window flow; dashed arrows denote memory access and
@@ -32,16 +27,7 @@ cross-window state.}
 Real deployments differ in what they can observe, so \sys never assumes a fixed
 input. It begins each window by taking inventory of the evidence at hand---free
 text, numeric telemetry features, time-ordered logs, a trace summary, cluster
-events, resource metrics, extracted graph entities---and forms a \emph{capability
-profile}. A controller then assembles an execution plan from this profile
-together with the window's role in the incident lifecycle: a quiet baseline, an
-active fault, or a recovery phase. Only steps whose evidence is present are
-scheduled; everything else is skipped without special-casing. The consequence is
-graceful degradation by construction. On a fully instrumented microservice the
-plan is the complete pipeline---numeric triage, all three retrievers, on-demand
-evidence requests, and an optional verifier---whereas on a text-only incident
-report the \emph{same} controller emits a lightweight text-retrieval plan, with
-no code change or reconfiguration.
+events, resource metrics, extracted graph entities---and forms a \emph{capability profile}. A controller then assembles an execution plan from this profile together with the window's role in the incident lifecycle: a quiet baseline, an active fault, or a recovery phase. Only steps whose evidence is present are scheduled; everything else is skipped without special-casing. The consequence is graceful degradation by construction. On a fully instrumented microservice the plan is the complete pipeline---numeric triage, all three retrievers, on-demand evidence requests, and an optional verifier---whereas on a text-only incident report the \emph{same} controller emits a lightweight text-retrieval plan, with no code change or reconfiguration.
 
 Planning is also cost-aware. Steps are ordered cheap-first, and expensive steps
 sit behind \emph{gates} that fire only when the cheap path is uncertain. The
@@ -51,8 +37,7 @@ retrieval confidence is low enough to be worth a retry. A hard per-window budget
 ---caps on model tokens, wall-clock time, and number of steps---bounds the worst
 case, and a window aborts gracefully with partial results if the budget is
 exhausted. Because nearly every step reads precomputed signals, the only steps
-that ever consume a language model at decision time are the optional verifier and
-query rewriter, both gated.
+that ever consume a language model at decision time are the optional verifier and query rewriter, both gated.
 
 \subsection{Hybrid Memory Retrieval}
 \label{sec:approach-retrieval}

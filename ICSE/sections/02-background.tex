@@ -12,39 +12,44 @@ requests failing downstream, and an availability alert fires. Assembling these
 fragments into a diagnosis is exactly the slow, expertise-bound step that triage
 is meant to accelerate.
 
-The shortcut a seasoned engineer takes is \emph{recognition}. This
-pattern---a broker outage stalling its consumers and surfacing as checkout
-failures---has occurred before, and a resolved ticket from that earlier incident
-already records how it was diagnosed and fixed. Retrieving that ticket turns an
-open-ended investigation into a near-instant analogy. The institutional memory of
-resolved incidents is, in this sense, the most direct path from symptom to
-resolution---provided the right past incident can be found.
+The shortcut a seasoned engineer takes is \emph{recognition}. This pattern, where a broker outage stalls its consumers and ultimately manifests as checkout failures, has occurred before, and a previously resolved ticket already records how it was diagnosed and fixed. Retrieving that ticket transforms an open-ended investigation into a near-instant analogy. In this sense, the institutional memory encoded in resolved incidents provides the most direct path from symptom to resolution, provided the relevant past incident can be retrieved.
 
-Two complications make finding it hard, and they shape our design. First, the
-\emph{same class of incident arrives with very different evidence}. The broker
-failure above came with logs, metrics, traces, and cluster events; reported in
-another team's issue tracker, the very same failure may arrive as nothing more
-than a sentence---``consumers stalled after the broker restarted, backlog
-growing''---with no telemetry at all. A system that works only when every signal
-is present is useless on the text-only report, even though the matching task is
-identical in both. Second, an incident is \emph{not a single moment}: it unfolds
-over many consecutive windows of observation---a quiet lead-up, the active
-failure, a recovery---so a system that reacts to each window independently will
-page the engineer again and again for what is really one event.
+Two characteristics of operational incident triage fundamentally shape our system design. First, the \emph{same underlying incident can arrive with vastly different evidence}. The broker failure above may be accompanied by logs, metrics, traces, and cluster events; in another team's issue tracker, the identical failure may be reported as nothing more than a sentence---``consumers stalled after the broker restarted, backlog growing''---without any telemetry. Yet the retrieval task is identical in both cases: identify the most relevant previously resolved incident. A system that depends on complete observability therefore fails precisely when historical knowledge is needed most. Second, an incident is \emph{not an instantaneous event}. It evolves over a sequence of observation windows, from early warning signs through active failure to eventual recovery. Treating each window independently produces repeated alerts for what is, in reality, a single evolving incident.
 
 \smallskip
-\noindent\textbf{Problem formulation.} We make these intuitions precise. The
-system observes a stream of \emph{windows}, each a short slice of one service's
-activity. A window always carries a textual summary and, when the deployment is
-instrumented, additional evidence: numeric features, logs, distributed-trace
-summaries, and cluster events. It is matched against a \emph{memory} $M$ of past
-incidents---each a resolved ticket with its text and a set of entities
-(components, error classes, symptoms) extracted from it, and each stamped with the
-time it was resolved. Memory is \emph{time-aware}: for a window observed at time
-$t$, only incidents resolved before $t$ are eligible, so the system is never
-credited with knowledge it could not have had. For each window the system returns
-(i)~a ranked list of the top-$k$ most similar past incidents in $M$, and (ii)~a
-triage decision---whether the window is worth paging an engineer---while grouping
-the windows of one incident so that it pages once rather than repeatedly. The rest
-of the paper describes how \sys produces these outputs across the full range of
-evidence regimes, and how well it does so.
+\noindent\textbf{Problem formulation.}
+We formulate incident triage as adaptive retrieval over a time-aware incident memory under heterogeneous evidence. Let
+$\mathcal{W}=\{w_1,\ldots,w_n\}$ denote a time-ordered stream of observation
+windows, where each window
+\[
+w_i=(t_i,\mathbf{x}_i,e_i)
+\]
+is observed at time $t_i$, contains a textual summary $\mathbf{x}_i$, and may
+include an arbitrary subset of auxiliary evidence
+$e_i\subseteq\{\text{metrics},\text{logs},\text{traces},\text{events}\}$.
+Consequently, different windows may expose different evidence modalities,
+including text alone.
+
+The retrieval memory
+$\mathcal{M}=\{m_1,\ldots,m_N\}$ consists of previously resolved incidents.
+Each incident
+\[
+m_j=(\mathbf{d}_j,\mathcal{E}_j,\tau_j)
+\]
+contains its textual description $\mathbf{d}_j$, a set of extracted entities
+$\mathcal{E}_j$ (e.g., services, components, error classes, and symptoms), and
+its resolution time $\tau_j$. To prevent temporal leakage, only incidents
+resolved before the current observation are searchable; for a window observed at
+time $t_i$, the eligible memory is
+\[
+\mathcal{M}_{<t_i}=\{m_j\in\mathcal{M}\mid \tau_j<t_i\}.
+\]
+
+Given a window $w_i$, the objective is to retrieve the top-$k$ most relevant
+historical incidents from $\mathcal{M}_{<t_i}$ while simultaneously deciding
+whether the window warrants an engineer page. Since consecutive windows often
+belong to the same underlying operational event, the system must additionally
+associate related windows into a single incident so that only one page is issued.
+The challenge is to solve this retrieval and triage problem consistently across
+the full spectrum of evidence regimes, from text-only reports to richly
+instrumented deployments.

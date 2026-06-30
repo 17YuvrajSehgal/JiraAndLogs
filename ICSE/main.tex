@@ -1,3 +1,4 @@
+
 %% ICSE 2027 — Research Track submission (double-blind)
 %% Format: IEEE two-column conference. Swap the documentclass if ICSE 2027
 %% mandates the ACM acmart format (the section files are class-agnostic).
@@ -18,13 +19,14 @@
 \usepackage{xspace}
 
 % ---------- convenience macros (names are PLACEHOLDERS; see ICSE/README.md) ----------
-\newcommand{\sys}{\textsc{Remedy}\xspace}         % working system name (placeholder)
+\newcommand{\sys}{\textsc{Remedy}\xspace}         % working system name (placeholder)
 \newcommand{\hit}[1]{Hit@#1}
 
 \begin{document}
 
-\title{Capability-Gated Agentic Incident Triage:\\
-Matching Live Incidents to Resolved Tickets from Telemetry to the Real World}
+% \title{Capability-Gated Agentic Incident Triage:\\
+% Matching Live Incidents to Resolved Tickets from Telemetry to the Real World}
+\title{Capability-Aware Incident Retrieval from Telemetry to Real-World Incident Reports}
 
 % --- double-blind: anonymized authors ---
 \author{\IEEEauthorblockN{Anonymous Author(s)}
@@ -33,37 +35,11 @@ Matching Live Incidents to Resolved Tickets from Telemetry to the Real World}
 \maketitle
 
 \begin{abstract}
-On-call engineers triage a steady stream of alerts, and their most valuable
-signal is institutional memory: how similar incidents were diagnosed and
-resolved in the past. Surfacing the right prior incident for a live one is,
-however, hard, and most automated-triage research is evaluated only on synthetic
-fault-injection telemetry, leaving open how such systems behave on real
-engineer-written incidents. We present an agentic incident-triage system that,
-given a window of telemetry (or a textual incident report), retrieves the most
-similar resolved incidents from a memory of past tickets and decides whether the
-window warrants paging an engineer. The system fuses dense, lexical, and
-knowledge-graph retrieval; adapts which reasoning steps it runs to the evidence
-that is actually available, from rich telemetry to text alone; escalates
-expensive steps only when it is uncertain; and suppresses duplicate pages across
-the lifetime of one incident. We evaluate on three datasets of increasing
-realism. Two we collect and release: microservice-telemetry datasets built by
-injecting controlled faults into open-source applications and capturing the
-resulting logs, metrics, distributed traces, and cluster events alongside
-incident tickets and per-window ground-truth labels---a telemetry-to-ticket
-pairing we are not aware of in any public dataset. The third is a large
-real-world corpus of resolved Apache Jira incidents (38{,}642 tickets across 24
-projects), drawn from the publicly available World of Logs collection. On real
-incidents, the fusion retriever places the correct prior incident in its top five
-$97\%$ of the time, outperforming dense ($0.91$), lexical ($0.73$), graph
-($0.31$), and a retrieval-augmented large-language-model baseline ($0.86$), all
-significant under multiple-comparison correction; the end-to-end agent reaches
-$0.96$ while its capability gating cuts triage cost by up to $78\%$ at equal
-accuracy. A controlled synthetic-versus-real comparison further shows that the
-ticket-worthiness classification that dominates synthetic benchmarks is trivially
-saturated yet unlearnable on real incidents, relocating the genuine difficulty to
-retrieval --- a finding that reframes how operational-triage systems should be
-evaluated. Our two telemetry datasets, code, evaluation harness, and all results
-are publicly released.
+On-call engineers triage a steady stream of alerts, yet their most valuable source of diagnostic knowledge is institutional memory: how similar incidents were previously diagnosed and resolved. Retrieving the right historical incident for a live one, however, remains difficult, particularly because existing automated-triage approaches are largely evaluated on synthetic fault-injection telemetry under fixed observability assumptions, leaving their effectiveness on real engineer-written incidents largely unexplored.
+We present \textbf{REMEDY}, an adaptive incident-triage framework that retrieves relevant historical incidents while dynamically selecting the reasoning capabilities supported by the available operational evidence. Rather than assuming a fixed telemetry pipeline, REMEDY adapts seamlessly across heterogeneous evidence regimes—from rich telemetry to text-only incident reports—combining dense, lexical, and knowledge-graph retrieval with capability-aware orchestration that invokes additional reasoning only when uncertainty justifies its cost.
+We evaluate REMEDY on three datasets of increasing realism. Two are newly collected and released telemetry-to-ticket datasets built from controlled fault injection in open-source microservice applications, pairing logs, metrics, distributed traces, cluster events, incident tickets, and per-window ground-truth labels. The third is a large real-world corpus of 38,642 resolved Apache Jira incidents spanning 24 projects. On real incidents, REMEDY retrieves the correct prior incident within its top five results 97\% of the time, significantly outperforming dense (0.91), lexical (0.73), graph (0.31), and retrieval-augmented LLM (0.86) baselines. Its adaptive orchestration preserves retrieval quality while reducing triage cost by up to 78\%.
+More importantly, our controlled comparison between synthetic and real incidents reveals that the ticket-worthiness classification task dominating existing benchmarks is nearly saturated on synthetic telemetry yet no better than chance on real incidents, indicating that the transferable challenge in operational incident triage lies in retrieving relevant historical incidents rather than classifying alerts. This finding reframes how operational incident-triage systems should be evaluated. We publicly release our datasets, code, evaluation harness, and experimental results.
+
 \end{abstract}
 
 \begin{IEEEkeywords}
@@ -86,3 +62,6 @@ incident triage, AIOps, information retrieval, LLM agents, empirical software en
 \bibliography{refs}
 
 \end{document}
+
+
+
