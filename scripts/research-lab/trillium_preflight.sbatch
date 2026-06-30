@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-#SBATCH --account=def-naser2
+#SBATCH --account=def-anonymous
 #SBATCH --job-name=hybrid-preflight
 #SBATCH --partition=debug
 #SBATCH --nodes=1

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-#SBATCH --account=def-naser2
+#SBATCH --account=def-anonymous
 #SBATCH --job-name=gold-judge
 #SBATCH --partition=compute
 #SBATCH --nodes=1 --ntasks=1 --gpus-per-node=1 --cpus-per-task=12 --time=02:00:00
