@@ -55,12 +55,12 @@ retrievers and the language-model verifier are scheduled only when this cheap pa
 is unconvincing, that is, when the numeric triage score falls below $0.90$ or the
 dense retriever returns no confident match. A second gate triggers query
 reformulation only when the best retriever confidence is below $0.5$. Here
-\emph{confidence} is a score $c\in[0,1]$ that a skill attaches to its output, the
+\emph{confidence} $c\in[0,1]$ is the score a skill attaches to its output---the
 triage classifier's ticket-worthiness probability or a retriever's best-match
-strength: $c\ge0.90$ on the cheap path commits immediately and skips the expensive
-steps (a text-only window, lacking a numeric signal, always escalates), $c<0.5$
-signals no acceptable precedent and triggers a rewrite and, if it persists, a
-novelty flag, and the same $0.5$ separates a ticket-worthy decision from noise. A
+strength: $c\ge0.90$ on the cheap path commits and skips the expensive steps (a
+text-only window, lacking a numeric signal, always escalates), while $c<0.5$
+signals no acceptable precedent, triggering a rewrite and, if it persists, a
+novelty flag; the same $0.5$ separates ticket-worthy from noise. A
 hard per-window budget bounds the worst case, capping language-model tokens
 ($10^5$), wall-clock time ($90$\,s), monetary cost (\$$0.50$), and total skill
 invocations ($12$); an exhausted budget returns the best partial result. Because
@@ -96,20 +96,16 @@ Algorithm~\ref{alg:window} summarizes the per-window procedure.
 \end{algorithm}
 
 \noindent\textbf{Why a gated controller rather than a free-form agent.} \sys{} is
-deliberately \emph{agentic in capability but not autonomous in control}. A fully
-autonomous design would let a language model decide, at each step, which tool to
-call next, but triage sits in the critical path of an on-call workflow, where
-three properties are non-negotiable: \emph{reproducibility}, so the same incident
-yields the same decision and the evaluation is trustworthy; \emph{bounded cost and
-latency}, so a single window cannot trigger an open-ended reasoning loop; and
-\emph{auditability}, so every action traces to an explicit rule and budget rather
-than to an opaque model choice. A free-form agent forfeits all three: it is
-non-deterministic, can spend without bound, and may hallucinate tool calls or loop
-without progress. \sys{} instead embeds the useful agentic behaviors, selective
-evidence-gathering and natural-language verification, inside a deterministic,
-capability-gated skeleton, and invokes the language model only where prior
-calibration shows it helps, keeping an agent's adaptivity with the predictability
-that production triage demands.
+deliberately \emph{agentic in capability but not autonomous in control}. Letting a
+language model choose each next tool would forfeit three properties that triage, on
+the critical path of an on-call workflow, cannot give up: \emph{reproducibility}
+(the same incident yields the same decision), \emph{bounded cost and latency} (no
+open-ended reasoning loop on a single window), and \emph{auditability} (every
+action traces to an explicit rule and budget, not an opaque model choice). \sys{}
+instead embeds the useful agentic behaviors---selective evidence-gathering and
+natural-language verification---inside a deterministic, capability-gated skeleton,
+invoking the language model only where calibration shows it helps: an agent's
+adaptivity with the predictability production triage demands.
 
 \subsection{Hybrid Memory Retrieval}
 \label{sec:approach-retrieval}
@@ -198,22 +194,20 @@ these requests are never scheduled, so the step is a safe pass-through that retu
 the fused ranking unchanged.
 
 \smallskip
-\noindent\textbf{A representative trajectory.} On one telemetry-rich active-fault
-window, a cart service degraded by a failing Redis cache dependency, the steps
-compose as follows. The profile admits the full tool set; the cheap path fires (a
-numeric anomaly plus a dense top candidate) but with a thin margin, two precedents,
-a cache outage and a memory leak, scoring almost equally. Because confidence is
-low, \sys{} escalates to the sparse and graph retrievers, and the graph surfaces a
-cache-dependency precedent that the dense view had ranked lower, on the strength of
-a shared component and error class. Still unsure, it requests pod events and
-metrics, observes a cache-pod restart and memory saturation alongside the latency
-spike, and re-ranks the corroborated precedent to rank one; now confident, it stops
-below budget and the state layer folds the window into the ongoing incident. Faced
-with the \emph{same} symptom as a one-sentence text ticket carrying no telemetry,
-the identical system profiles a text-only capability set, skips the telemetry
-steps, and emits a lightweight dense-and-graph plan, the graceful degradation of
-\S\ref{sec:approach-controller} realized as a different path through the same
-library of skills.
+\noindent\textbf{A representative trajectory.} On a telemetry-rich active-fault
+window---a cart service degraded by a failing Redis dependency---the cheap path
+fires (a numeric anomaly plus a dense top candidate) but with a thin margin: two
+precedents, a cache outage and a memory leak, score almost equally. \sys{}
+escalates to the sparse and graph retrievers, and the graph surfaces a
+cache-dependency precedent the dense view ranked lower, on a shared component and
+error class. Still unsure, it requests pod events and metrics, observes a cache-pod
+restart and memory saturation alongside the latency spike, re-ranks the
+corroborated precedent to rank one, and---now confident---stops below budget while
+the state layer folds the window into the ongoing incident. Faced with the
+\emph{same} symptom as a one-sentence text ticket, the identical system profiles a
+text-only capability set, skips the telemetry steps, and emits a lightweight
+dense-and-graph plan: the graceful degradation of \S\ref{sec:approach-controller}
+as a different path through one skill library.
 
 \subsection{Triage, Novelty, and Incident-Aware Paging}
 \label{sec:approach-state}
@@ -230,14 +224,13 @@ retriever confidence, a verifier judgement of novelty when the verifier ran, and
 optional learned novelty score.
 
 Because a single incident unfolds across many consecutive windows, paging on each
-would bury the on-call engineer. \sys{} maintains a short per-service ring buffer
-of its last twelve decisions and suppresses a duplicate when the current window
-repeats a recently paged incident, identified by the same top-ranked precedent and
-fault family within a lookback of three windows and with no recovery window
-observed in between, letting the window inherit the earlier incident's identifier.
-Consecutive windows of one fault thereby fold into a single incident, and the
-system approaches one page per incident rather than one per window
-(\S\ref{sec:results}).
+would bury the on-call engineer. \sys{} keeps a short per-service ring buffer of its
+last twelve decisions and suppresses a duplicate when the current window repeats a
+recently paged incident---the same top-ranked precedent and fault family within a
+three-window lookback, with no recovery window in between---letting it inherit the
+earlier incident's identifier. Consecutive windows of one fault thus fold into a
+single incident, and the system approaches one page per incident rather than one
+per window (\S\ref{sec:results}).
 
 One design choice deserves emphasis because it recurs in our results. The optional
 language-model verifier, which re-examines a borderline match in natural language,

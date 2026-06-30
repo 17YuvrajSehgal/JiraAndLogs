@@ -2,16 +2,7 @@
 \section{Datasets}
 \label{sec:datasets}
 
-A faithful evaluation of incident triage must cover the range of conditions a
-deployed system actually faces---from richly instrumented services, where logs,
-metrics, and traces are all available, down to bare incident reports that contain
-nothing but text. We therefore evaluate on three datasets positioned along this
-realism spectrum (Table~\ref{tab:datasets}). The first two we \emph{collect and
-release}: instrumented microservice systems placed under controlled fault
-injection, which let us pair multi-signal telemetry with incident tickets and
-exact per-window labels. The third we \emph{reuse}: a large corpus of real,
-engineer-written Apache Jira incidents that tests whether methods tuned on
-synthetic data hold up in the field.
+A faithful evaluation must cover the range of conditions a deployed system faces---from richly instrumented services, where logs, metrics, and traces are all available, down to bare incident reports that are nothing but text. We therefore use three datasets along this realism spectrum (Table~\ref{tab:datasets}). The first two we \emph{collect and release}: instrumented microservice systems under controlled fault injection, pairing multi-signal telemetry with incident tickets and exact per-window labels. The third we \emph{reuse}: a large corpus of real, engineer-written Apache Jira incidents that tests whether methods tuned on synthetic data hold up in the field.
 
 \begin{table}[t]
 \centering
@@ -69,17 +60,16 @@ engineer would open an issue), \textbf{borderline} (recovering or marginal), or
 activity---is the atomic input to the triage system throughout this paper.
 
 For each window we archive everything the platform recorded: the service's logs,
-its CPU, memory, and restart time series together with any firing alerts, the
-cluster's events and pod state, and a sample of distributed traces. When a
-scenario warrants attention, we generate the corresponding incident ticket and
-rewrite it with a language model into natural, engineer-voice prose, so that the
-memory of past tickets reads like one a team would actually file; this ticket is
-the retrieval target. Because we control the injection, the link between a window
-and its ticket is \emph{exact ground truth} rather than inferred. We are also
-careful to record realistic negatives---near-miss scenarios in which a service is
-stressed but never actually fails, and ``orphan'' faults that occur yet warrant
-no ticket---since these are what separate a useful triage system from one that
-pages constantly.
+its CPU, memory, and restart series with any firing alerts, the cluster's events
+and pod state, and a sample of distributed traces. When a scenario warrants
+attention, we generate the incident ticket and rewrite it with a language model
+into natural, engineer-voice prose, so the memory reads like tickets a team would
+actually file; this ticket is the retrieval target. Because we control the
+injection, the window--ticket link is \emph{exact ground truth} rather than
+inferred. We also record realistic negatives---near-misses in which a service is
+stressed but never fails, and ``orphan'' faults that occur yet warrant no
+ticket---since these separate a useful triage system from one that pages
+constantly.
 
 The two applications are chosen to differ in \emph{architecture}, not merely in
 size, so that a method cannot succeed by memorizing one system's quirks.

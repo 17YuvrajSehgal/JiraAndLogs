@@ -87,16 +87,15 @@ precision and coverage, not a driver of \hit{5}.
 \subsection{RQ2: End-to-End Triage and Graceful Degradation}
 \label{sec:results-rq2}
 
-Table~\ref{tab:agent} reports the full end-to-end system. The headline is robustness across
-evidence regimes: the \emph{same} system, with no reconfiguration, retrieves
-strongly whether it has complete telemetry or only text. On the real, text-only
-incidents it reaches \hit{5}~$0.96$---essentially realizing the hybrid retriever's
-quality end to end---while on the fully instrumented synthetic systems it reaches
-$0.76$. Page suppression works as intended: across all three datasets the system
-emits about one page per incident. On the real corpus the effect is substantial,
-the suppression mechanism fires $3{,}061$ times to fold the repeat windows of an
-ongoing incident into the single alert already raised, rather than paging an
-engineer afresh for every window.
+Table~\ref{tab:agent} reports the full end-to-end system. The headline is
+robustness across evidence regimes: the \emph{same} system, with no
+reconfiguration, retrieves strongly whether it has complete telemetry or only text,
+reaching \hit{5}~$0.96$ on the real, text-only incidents---essentially realizing the
+hybrid retriever's quality end to end---and $0.76$ on the fully instrumented
+synthetic systems. Page suppression works as intended: across all three datasets
+the system emits about one page per incident, the suppression mechanism firing
+$3{,}061$ times on the real corpus to fold the repeat windows of an ongoing incident
+into the alert already raised rather than paging afresh for every window.
 
 \begin{table}[t]
 \centering
@@ -176,8 +175,8 @@ does transfer---retrieving which past incident a live one resembles---is where t
 real headroom lies, and where our system is strongest.
 
 Because the real dataset's matches are inferred rather than human-labelled, we
-checked their validity with an LLM-as-judge. Asked to rate the relevance of each
-gold match against a random control, the judge separates them on every dataset,
-and most sharply on the real incidents (a gold-versus-random gap of $1.24$ on a
-five-point scale, versus $0.34$--$0.47$ on synthetic). The matches the real-world
-retrieval numbers are measured against therefore carry genuine signal.
+validated them with an LLM-as-judge. Asked to rate each gold match against a random
+control, the judge separates the two on every dataset, most sharply on the real
+incidents (a gold-versus-random gap of $1.24$ on a five-point scale, versus
+$0.34$--$0.47$ on synthetic), so the matches our real-world numbers are measured
+against carry genuine signal.

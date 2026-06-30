@@ -19,14 +19,13 @@ that fusing retrievers is useless, even mildly harmful, and shipped a single den
 model. On the real corpus, an order of magnitude larger and spread across two
 dozen projects, the same fusion is decisively best (Figure~\ref{fig:forest}): in a
 small, homogeneous memory one retriever dominates and weaker signals only add
-noise, whereas a large, diverse memory creates exactly the blind spots that
-complementary retrievers cover. With only three corpora we cannot fully
-disentangle scale from diversity, so the defensible claim is the per-dataset one,
-fusion is significantly best on the large, heterogeneous real corpus and ties or
-trails the fine-tuned dense retriever on the small synthetic ones. Retrieval
-comparisons therefore need realistic scale \emph{and} diversity before their
-conclusions can be trusted, one reason we release real-scale data alongside the
-synthetic.
+noise, whereas a large, diverse memory creates the blind spots that complementary
+retrievers cover. With only three corpora we cannot fully disentangle scale from
+diversity, so we make the per-dataset claim: fusion is significantly best on the
+large, heterogeneous real corpus and ties or trails the dense retriever on the
+small synthetic ones. Retrieval comparisons thus need realistic scale \emph{and}
+diversity before their conclusions can be trusted---one reason we release
+real-scale data alongside the synthetic.
 
 \noindent\textbf{Robustness comes from asking ``does this step help \emph{here}?''}
 The right action depends on the deployment. The language-model verifier improves
