@@ -159,7 +159,7 @@ Our most consequential finding concerns the triage \emph{classification} task
 that dominates synthetic benchmarks---deciding whether a window is ticket-worthy
 at all. On synthetic data it is trivially easy: standard classifiers over the
 telemetry features reach a near-perfect area under the precision--recall curve and
-are well calibrated (Figure~\ref{fig:triage}). On the real incidents, the very same
+are well calibrated. On the real incidents, the very same
 classifiers collapse to chance: their area under the precision--recall curve is
 $0.51$, identical to the positive base rate a random ranker would score, and their
 ROC area is exactly $0.50$. The system's own triage accuracy ($0.51$) likewise
@@ -169,17 +169,6 @@ difficulty of synthetic triage is an artifact of fault injection, where active
 faults are separable from baselines by construction; on real, engineer-written
 tickets, whether an issue was ultimately deemed worth fixing is simply not
 predictable from its text alone.
-
-\begin{figure}[t]
-\centering
-\includegraphics[width=0.82\columnwidth]{figures/fig_triage_reframing.png}
-\caption{Triage classification (RQ4): the gradient-boosted classifier's
-discrimination (ROC-AUC; PR-AUC annotated below each bar). Synthetic triage is
-saturated (ROC-AUC $\approx 1$); on real incidents it sits exactly at the chance
-floor (ROC-AUC $0.50$, dashed line; PR-AUC $0.51$ equals the positive base rate).
-The transferable difficulty lies in retrieval, not classification.}
-\label{fig:triage}
-\end{figure}
 
 This reframes how operational triage should be measured: the part that looks
 solved on synthetic data is the part that does not transfer, while the part that

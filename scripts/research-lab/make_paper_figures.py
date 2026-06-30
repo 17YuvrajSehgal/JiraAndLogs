@@ -8,10 +8,10 @@ Figures fall into two groups:
 
   PAPER figures (referenced in ICSE/sections/*.tex):
     - fig_significance_forest : BH-corrected Hit@5 deltas, Hybrid vs each method
-    - fig_triage_reframing    : classifier ROC-AUC, synthetic saturated vs real-at-chance
     - fig_adaptive_execution  : tool budget buys latency not accuracy; some tools hurt
 
   SUPPLEMENTARY figures (slides / appendix; not wired into the manuscript):
+    - fig_triage_reframing    : classifier ROC-AUC, synthetic saturated vs real-at-chance
     - fig_retrieval_hit5, fig_cost_savings, fig_kg_complementarity,
       fig_gold_validation, fig_robustness_seeds
 
@@ -327,8 +327,8 @@ def fig_seeds():
 
 def main():
     print("Generating figures from paper-results/ ...")
-    paper = (fig_significance_forest, fig_triage_reframing, fig_adaptive_execution)
-    supp = (fig_retrieval, fig_cost, fig_complementarity, fig_gold, fig_seeds)
+    paper = (fig_significance_forest, fig_adaptive_execution)
+    supp = (fig_triage_reframing, fig_retrieval, fig_cost, fig_complementarity, fig_gold, fig_seeds)
     print(" paper figures:")
     for fn in paper:
         try: fn()
