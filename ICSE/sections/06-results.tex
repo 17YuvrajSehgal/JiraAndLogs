@@ -61,7 +61,7 @@ pairwise comparison with its bootstrap confidence interval and significance.
 
 \begin{figure}[t]
 \centering
-\includegraphics[width=0.92\columnwidth]{figures/fig_significance_forest.pdf}
+\includegraphics[width=0.92\columnwidth]{figures/fig_significance_forest.png}
 \caption{Difference in \hit{5} between Hybrid-RRF and each alternative (paired
 bootstrap, $95\%$ CI; green = significant after Benjamini--Hochberg). Hybrid wins
 decisively on real data (WoL) and beats the graph baseline on every dataset; on
@@ -138,6 +138,20 @@ datasets; their role is to keep cost low by running only when cheaper steps are
 unsure, and the headroom they could add is bounded by how often retrieval is
 already correct.
 
+\begin{figure*}[t]
+\centering
+\includegraphics[width=\textwidth]{figures/fig_adaptive_execution.png}
+\caption{Adaptive execution on the fully-instrumented Online Boutique system
+(RQ3). (a)~Raising the evidence-gathering budget leaves retrieval accuracy
+unchanged (\hit{5} flat at $0.76$; \hit{1} within $\pm0.01$) while wall-clock time
+grows $6.7\times$---more budget buys latency, not accuracy. (b)~No single evidence
+tool is load-bearing, and the extended-trace reader is net-\emph{harmful} to top-1
+retrieval ($-0.018$); the peer-incident lookup is the only consistently positive
+tool. The controller's value is to invoke these tools only when cheaper steps are
+unsure, not to add accuracy.}
+\label{fig:adaptive}
+\end{figure*}
+
 \subsection{RQ4: Synthetic Versus Real, and What It Reveals}
 \label{sec:results-rq4}
 
@@ -158,12 +172,12 @@ predictable from its text alone.
 
 \begin{figure}[t]
 \centering
-\includegraphics[width=0.82\columnwidth]{figures/fig_triage_reframing.pdf}
-\caption{Triage classification (RQ4): a gradient-boosted classifier's PR-AUC and
-the system's triage accuracy. Synthetic triage is saturated (PR-AUC $\approx 1$);
-real-world triage sits at the chance floor (dashed line at $0.5$; the
-majority-class baseline is $0.51$). The transferable difficulty lies in
-retrieval, not classification.}
+\includegraphics[width=0.82\columnwidth]{figures/fig_triage_reframing.png}
+\caption{Triage classification (RQ4): the gradient-boosted classifier's
+discrimination (ROC-AUC; PR-AUC annotated below each bar). Synthetic triage is
+saturated (ROC-AUC $\approx 1$); on real incidents it sits exactly at the chance
+floor (ROC-AUC $0.50$, dashed line; PR-AUC $0.51$ equals the positive base rate).
+The transferable difficulty lies in retrieval, not classification.}
 \label{fig:triage}
 \end{figure}
 

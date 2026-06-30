@@ -21,22 +21,17 @@ evaluated retrieval only on the synthetic corpora, as is common, we would have
 concluded that fusing retrievers is useless---even mildly harmful---and shipped a
 single dense model. On the real corpus, an order of magnitude larger and spread
 across two dozen projects, the same fusion is decisively best
-(Figure~\ref{fig:scale}). The reason is intuitive in hindsight: in a small,
+(Figure~\ref{fig:forest}). The reason is intuitive in hindsight: in a small,
 homogeneous memory one retriever dominates and blending in weaker signals only
 adds noise, whereas a large, diverse memory creates exactly the blind spots that
-complementary retrievers cover. Retrieval comparisons therefore need to be run at
-realistic memory scale before their conclusions can be trusted---one reason we
-release real-scale data alongside the synthetic.
-
-\begin{figure}[t]
-\centering
-\includegraphics[width=0.92\columnwidth]{figures/fig_fusion_vs_scale.pdf}
-\caption{The benefit of fusion grows with the size of the incident memory. On the
-two small synthetic corpora the fused retriever does not improve on the
-fine-tuned dense one; on the real corpus, two orders of magnitude larger, it is
-clearly better.}
-\label{fig:scale}
-\end{figure}
+complementary retrievers cover. With only three corpora we cannot fully
+disentangle scale from diversity, so we do not read this as a smooth size trend;
+the defensible claim is the per-dataset one in Figure~\ref{fig:forest}---fusion is
+significantly best on the large, heterogeneous real corpus and ties or trails the
+fine-tuned dense retriever on the small, homogeneous synthetic ones. Retrieval
+comparisons therefore need to be run at realistic scale \emph{and} diversity
+before their conclusions can be trusted---one reason we release real-scale data
+alongside the synthetic.
 
 \noindent\textbf{Robustness comes from asking ``does this step help \emph{here}?''}
 A recurring pattern is that the right action depends on the deployment. The
@@ -48,7 +43,7 @@ controller instead treats both \emph{what evidence is present} and \emph{whether
 an expensive step is actually beneficial} as decisions made per window and per
 setting---which is what lets one implementation run from full telemetry down to
 bare text, suppress duplicate pages, and shed $40$--$78\%$ of per-window cost with
-no loss in accuracy. The practical lesson is that large language models are not a
+no loss in accuracy (Figure~\ref{fig:adaptive}). The practical lesson is that large language models are not a
 default win in this domain; the leverage lies in a controller that invokes them
 selectively and measures their effect.
 
