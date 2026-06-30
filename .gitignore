@@ -63,3 +63,5 @@ data.tar.gz
 # paper-results: commit metrics/summaries; large per-window predictions ship as a release archive
 paper-results.zip
 paper-results
+
+referenced-research-papers
