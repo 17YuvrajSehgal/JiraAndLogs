@@ -61,8 +61,6 @@ Datasets are large (WoL ≈ 5 GB) and ship as a separate archive — see
 
 ## Documentation
 - [`DOCS/REPRODUCE.md`](DOCS/REPRODUCE.md) — script → result map + commands
-- [`DOCS/collection-log.md`](DOCS/collection-log.md) — full provenance log
-- [`DOCS/audit-findings.md`](DOCS/audit-findings.md) — pre/in-collection correctness audit (all fixed)
 - [`DOCS/threats-to-validity.md`](DOCS/threats-to-validity.md) — scoping & limitations
 - [`DOCS/agentic-system.md`](DOCS/agentic-system.md) — system design
 
