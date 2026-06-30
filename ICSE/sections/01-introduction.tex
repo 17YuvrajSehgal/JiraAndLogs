@@ -3,7 +3,7 @@
 \label{sec:introduction}
 
 Modern cloud services emit a relentless stream of alerts, and on-call engineers must decide, often within minutes, which alerts signal a genuine incident
-worth investigating and which are noise \textcolor{red}{[REF]}. The decision is consequential in both directions: a missed incident becomes an outage, while a flood of low-value
+worth investigating and which are noise~\cite{he2021survey,ghosh2022incidents}. The decision is consequential in both directions: a missed incident becomes an outage, while a flood of low-value
 pages erodes attention and trust in the alerting system itself. What makes an on-call engineer effective is rarely raw signal-reading; it is
 \emph{memory}. Most incidents rhyme with something the team has resolved
 before, and the fastest path from symptom to fix is to recognize the current
@@ -20,16 +20,16 @@ classifies alerts and incidents related to surfaces. However, two assumptions
 limit how far these approaches can be carried into practice.
 
 First, the evaluation is conducted almost exclusively on
-\emph{synthetic} fault-injection telemetry \textcolor{red}{[REF]}. Faults are scripted into
+\emph{synthetic} fault-injection telemetry~\cite{chen2025aiopslab}. Faults are scripted into
 demonstration microservice applications, producing incidents that are clean,
 balanced, and easily separable. Whether methods that excel under these
 conditions transfer to noisy, imbalanced, and free-text incidents encountered
-in real operations remains largely unexplored \textcolor{red}{[ref]}. Progress is further hindered by
+in real operations remains largely unexplored. Progress is further hindered by
 the lack of publicly available datasets that pair operational
 telemetry such as logs, metrics, and traces with incident tickets and ground-truth
-labels, making reproducible comparisons difficult \textcolor{red}{[ref]}.
+labels, making reproducible comparisons difficult: existing public resources offer telemetry or tickets in isolation~\cite{zhu2023loghub,montgomery2022jira}, not the paired, per-window-labeled corpus that triage evaluation requires.
 
-Second, existing systems largely assume a fixed observability environment, typically designing retrieval and reasoning pipelines for telemetry-rich environments \textcolor{red}{W: give examples with refs]}.
+Second, existing systems largely assume a fixed observability environment, typically designing retrieval and reasoning pipelines for telemetry-rich environments~\cite{ahmed2023rootcause,chen2024rcacopilot,zhou2024dbot}.
 However, real operational deployments are inherently heterogeneous: some
 incidents are accompanied by detailed logs, metrics, and traces, whereas others arrive as little more than a brief textual report. An operational incident-triage system should, therefore, adapt its retrieval and reasoning strategy to the
 evidence actually available rather than relying on a fixed execution pipeline.
@@ -44,7 +44,7 @@ incident among its top five $97\%$ of the time, outperforming our own strong
 dense retriever ($0.91$), classical lexical search ($0.73$), the graph retriever
 alone ($0.31$), and a retrieval-augmented large-language-model baseline
 ($0.86$); every gap survives multiple-comparison correction. The end-to-end
-agent reaches $0.96$ while its capability gating cuts per-window triage cost by
+system reaches $0.96$ while its capability gating cuts per-window triage cost by
 up to $78\%$ relative to running every step on every window, with no loss in
 retrieval quality. Most striking is a controlled comparison between synthetic and
 real data: the ticket-worthiness classification that dominates synthetic

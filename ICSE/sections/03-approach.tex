@@ -2,7 +2,7 @@
 \section{Approach}
 \label{sec:approach}
 
-\sys realizes the task of \S\ref{sec:background} as an agent built around
+\sys realizes the task of \S\ref{sec:background} as a capability-aware system built around
 retrieval from the memory of resolved incidents. Its design rests on two
 commitments: \emph{match by analogy}---rank past incidents by their similarity to the current window---and \emph{adapt to whatever evidence the window actually
 carries}, so that one system spans the full range from rich telemetry down to
@@ -80,6 +80,29 @@ refused, and the per-window budget caps the total. When nothing useful is
 gathered---as on text-only incidents, where these requests are never
 scheduled---the step is a safe passthrough that returns the fused ranking
 unchanged.
+
+\smallskip
+\noindent\textbf{A representative trajectory.} The following traces how these
+decisions compose on one telemetry-rich active-fault window---a cart service
+degraded by a failing Redis dependency; it illustrates the controller's behavior
+rather than reproducing a single verbatim log. \emph{(1)~Profile:} the window
+exposes text, numeric features, logs, traces, cluster events, and metrics, so the
+full tool set is available. \emph{(2)~Cheap path:} the numeric classifier flags an
+anomaly and the dense retriever returns a top candidate, but with a thin
+margin---two precedents (a Redis outage and a cart memory leak) score almost
+equally. \emph{(3)~Escalate on uncertainty:} because confidence is low, \sys{}
+runs the hybrid and knowledge-graph retrievers; the graph surfaces a
+Redis-dependency precedent the dense retriever had ranked lower. \emph{(4)~Gather
+evidence:} still unsure, it requests pod events and pod metrics, observing a Redis
+pod restart and memory saturation alongside a cart latency spike. \emph{(5)~Re-rank
+and commit:} corroborated by this evidence, the Redis-degradation precedent rises
+to rank~1; now confident, \sys{} stops below budget, emits the triage decision
+and matched precedents, and the state layer folds the window into the ongoing
+incident. Faced instead with the \emph{same} symptom as a one-sentence text ticket
+with no telemetry, the identical system profiles a text-only capability set, skips
+steps~(2) and~(4), emits a lightweight dense-plus-hybrid plan, and stops---the
+graceful degradation of \S\ref{sec:approach-controller} realized as a different
+trajectory through the same tool library.
 
 \subsection{Triage, Novelty, and Incident-Aware Paging}
 \label{sec:approach-state}

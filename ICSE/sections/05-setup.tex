@@ -13,9 +13,9 @@ Our evaluation is organized around four questions:
   lexical, and graph retrieval outperform each in isolation, as well as strong
   prior-art and LLM-based retrievers?
   \item[\textbf{RQ2}] \textbf{(End-to-end triage).} Does the capability-gated
-  agent retrieve effectively end to end, and does the \emph{same} system hold up
+  system retrieve effectively end to end, and does the \emph{same} system hold up
   as the available evidence degrades from full telemetry to text alone?
-  \item[\textbf{RQ3}] \textbf{(Cost of autonomy).} What does the agent's
+  \item[\textbf{RQ3}] \textbf{(Cost of adaptive execution).} What does the system's
   capability gating buy? Specifically, how much triage cost does it save relative
   to running every step on every window, at equal accuracy, and which components
   carry the result?
@@ -27,7 +27,7 @@ Our evaluation is organized around four questions:
 \subsection{Systems and Baselines}
 \label{sec:setup-baselines}
 
-We compare our hybrid retriever and full agent against three groups of baselines,
+We compare our hybrid retriever and full system against three groups of baselines,
 all evaluated under an identical memory, time-aware visibility, and gold contract.
 
 \noindent\emph{Constituent retrievers.} To show that fusion is more than the sum

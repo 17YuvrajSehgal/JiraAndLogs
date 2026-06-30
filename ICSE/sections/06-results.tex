@@ -80,18 +80,18 @@ precision and coverage, not a driver of \hit{5}.
 \subsection{RQ2: End-to-End Triage and Graceful Degradation}
 \label{sec:results-rq2}
 
-Table~\ref{tab:agent} reports the full agent. The headline is robustness across
+Table~\ref{tab:agent} reports the full end-to-end system. The headline is robustness across
 evidence regimes: the \emph{same} system, with no reconfiguration, retrieves
 strongly whether it has complete telemetry or only text. On the real, text-only
 incidents it reaches \hit{5}~$0.96$---essentially realizing the hybrid retriever's
 quality end to end---while on the fully instrumented synthetic systems it reaches
-$0.76$. Page suppression works as intended: across all three datasets the agent
+$0.76$. Page suppression works as intended: across all three datasets the system
 emits about one page per incident, collapsing the many windows of a single
 incident into a single alert.
 
 \begin{table}[t]
 \centering
-\caption{End-to-end agent (RQ2) and the cost saved by capability gating (RQ3),
+\caption{End-to-end system (RQ2) and the cost saved by capability gating (RQ3),
 per dataset. Cost saving is the per-window reduction in wall-clock and model
 usage relative to a cascade that runs every step.}
 \label{tab:agent}
@@ -111,7 +111,7 @@ Cost saved (gating)  & 40\%  & 63\%  & 78\% \\
 \end{tabular}
 \end{table}
 
-\subsection{RQ3: The Cost of Autonomy}
+\subsection{RQ3: The Cost of Adaptive Execution}
 \label{sec:results-rq3}
 
 What does the capability-gated controller buy? Running only the steps the
@@ -137,7 +137,7 @@ at all. On synthetic data it is trivially easy: standard classifiers over the
 telemetry features reach a near-perfect area under the precision--recall curve and
 are well calibrated (Figure~\ref{fig:triage}). On the real incidents, the very same
 classifiers collapse to chance---an area under the precision--recall curve of
-$0.51$ against a $0.50$ random floor, and an ROC area of $0.50$---and the agent's
+$0.51$ against a $0.50$ random floor, and an ROC area of $0.50$---and the system's
 own triage accuracy ($0.51$) tracks the trivial majority-class baseline. The
 difficulty of synthetic triage is an artifact of fault injection, where active
 faults are separable from baselines by construction; on real, engineer-written
@@ -148,7 +148,7 @@ predictable from its text alone.
 \centering
 \includegraphics[width=0.82\columnwidth]{figures/fig_triage_reframing.pdf}
 \caption{Triage classification (RQ4): a gradient-boosted classifier's PR-AUC and
-the agent's triage accuracy. Synthetic triage is saturated (PR-AUC $\approx 1$);
+the system's triage accuracy. Synthetic triage is saturated (PR-AUC $\approx 1$);
 real-world triage sits at the chance floor (majority-class baseline $0.495$). The
 transferable difficulty lies in retrieval, not classification.}
 \label{fig:triage}
