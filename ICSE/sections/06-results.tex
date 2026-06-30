@@ -9,7 +9,7 @@ Table~\ref{tab:retrieval} reports retrieval quality across all three datasets.
 Two findings stand out. First, a retriever fine-tuned on the task far
 outperforms strong off-the-shelf methods: our dense bi-encoder beats every
 zero-shot dense embedder, classical lexical search, a cross-encoder re-ranker,
-and a retrieval-augmented LLM on all three datasets---on the real incidents, for
+and a retrieval-augmented LLM on all three datasets: on the real incidents, for
 example, it reaches \hit{5}~$0.91$ against $0.83$--$0.87$ for the best baselines.
 The retrieval-augmented LLM, despite re-reading the same candidates, never
 surpasses the trained retriever, indicating that the gains come from
@@ -46,7 +46,7 @@ Method & Online Boutique & OTel Demo & World of Logs \\
 
 Second, the value of \emph{fusion} depends on the setting. On the large,
 heterogeneous real corpus, fusing the dense, sparse, and graph retrievers lifts
-\hit{5} from $0.91$ to $0.97$---placing the correct prior incident in the top
+\hit{5} from $0.91$ to $0.97$, placing the correct prior incident in the top
 five $97\%$ of the time, at \hit{1}~$0.84$ and MRR~$0.90$. This gain is large and
 statistically significant: against the dense retriever the paired-bootstrap
 difference is $+0.065$ ($95\%$ CI $[+0.058,+0.073]$), and against the strongest
@@ -55,7 +55,7 @@ Benjamini--Hochberg $q\approx 0$. On the two small synthetic corpora, by
 contrast, the fine-tuned dense retriever is already so strong that fusion does
 not help, and on Online Boutique it is slightly worse ($-0.076$, $q=0.03$):
 when one retriever dominates a small memory, blending in weaker signals only adds
-noise. Fusion's advantage thus \emph{emerges with scale and diversity}---precisely
+noise. Fusion's advantage thus \emph{emerges with scale and diversity}, precisely
 the conditions of real operations. Figure~\ref{fig:forest} summarizes every
 pairwise comparison with its bootstrap confidence interval and significance.
 
@@ -73,13 +73,13 @@ This advantage survives a stricter test. Under the strict matching relation, whi
 demands substantial symptom overlap rather than mere topical relatedness, hybrid
 retrieval still places the correct incident in its top five $74\%$ of the time
 (MRR~$0.60$), and the result holds across \emph{both} held-out project domains
-(Kafka~$0.80$, MariaDB~$0.73$)---evidence that the headline number is neither an
+(Kafka~$0.80$, MariaDB~$0.73$), evidence that the headline number is neither an
 artifact of one project nor of a lenient label.
 
 We further isolated the knowledge graph's contribution by comparing the full
 fusion against fusion without it. The graph does surface correct candidates the
-others miss---on $14\%$ of Online Boutique queries it retrieves the right
-incident where the dense retriever fails---but in fusion this rarely changes
+others miss (on $14\%$ of Online Boutique queries it retrieves the right
+incident where the dense retriever fails), but in fusion this rarely changes
 top-five recall (the $\pm$graph difference is not significant on any dataset).
 The graph is therefore a real but marginal contributor: useful for top-rank
 precision and coverage, not a driver of \hit{5}.
@@ -90,8 +90,8 @@ precision and coverage, not a driver of \hit{5}.
 Table~\ref{tab:agent} reports the full end-to-end system. The headline is
 robustness across evidence regimes: the \emph{same} system, with no
 reconfiguration, retrieves strongly whether it has complete telemetry or only text,
-reaching \hit{5}~$0.96$ on the real, text-only incidents---essentially realizing the
-hybrid retriever's quality end to end---and $0.76$ on the fully instrumented
+reaching \hit{5}~$0.96$ on the real, text-only incidents (essentially realizing the
+hybrid retriever's quality end to end) and $0.76$ on the fully instrumented
 synthetic systems. Page suppression works as intended: across all three datasets
 the system emits about one page per incident, the suppression mechanism firing
 $3{,}061$ times on the real corpus to fold the repeat windows of an ongoing incident
@@ -125,7 +125,7 @@ Cost saved (gating)  & 40\%  & 63\%  & 78\% \\
 
 What does the capability-gated controller buy? Running only the steps the
 evidence supports, and escalating expensive steps only under uncertainty, cuts
-per-window cost---wall-clock time and model usage---by $40\%$, $63\%$, and $78\%$
+per-window cost (wall-clock time and model usage) by $40\%$, $63\%$, and $78\%$
 on the three datasets relative to a cascade that runs everything (Table~\ref{tab:agent}),
 and the saving grows with scale, since larger workloads contain more windows the
 cheap path can settle. Crucially, this thrift costs no accuracy: an ablation that
@@ -143,7 +143,7 @@ already correct.
 \caption{Adaptive execution on the fully-instrumented Online Boutique system
 (RQ3). (a)~Raising the evidence-gathering budget leaves retrieval accuracy
 unchanged (\hit{5} flat at $0.76$; \hit{1} within a $0.024$ band) while wall-clock
-time grows $6.7\times$---more budget buys latency, not accuracy. (b)~No single
+time grows $6.7\times$: more budget buys latency, not accuracy. (b)~No single
 evidence tool is load-bearing, and the extended-trace reader is
 net-\emph{harmful} to top-1 retrieval ($-0.018$); the peer-incident lookup is the
 only clearly beneficial tool. The controller's value is to invoke these tools only when cheaper steps are
@@ -155,7 +155,7 @@ unsure, not to add accuracy.}
 \label{sec:results-rq4}
 
 Our most consequential finding concerns the triage \emph{classification} task
-that dominates synthetic benchmarks---deciding whether a window is ticket-worthy
+that dominates synthetic benchmarks, deciding whether a window is ticket-worthy
 at all. On synthetic data it is trivially easy: standard classifiers over the
 telemetry features reach a near-perfect area under the precision--recall curve and
 are well calibrated. On the real incidents, the very same
@@ -171,7 +171,7 @@ predictable from its text alone.
 
 This reframes how operational triage should be measured: the part that looks
 solved on synthetic data is the part that does not transfer, while the part that
-does transfer---retrieving which past incident a live one resembles---is where the
+does transfer (retrieving which past incident a live one resembles) is where the
 real headroom lies, and where our system is strongest.
 
 Because the real dataset's matches are inferred rather than human-labelled, we

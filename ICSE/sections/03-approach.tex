@@ -55,7 +55,7 @@ retrievers and the language-model verifier are scheduled only when this cheap pa
 is unconvincing, that is, when the numeric triage score falls below $0.90$ or the
 dense retriever returns no confident match. A second gate triggers query
 reformulation only when the best retriever confidence is below $0.5$. Here
-\emph{confidence} $c\in[0,1]$ is the score a skill attaches to its output---the
+\emph{confidence} $c\in[0,1]$ is the score a skill attaches to its output, the
 triage classifier's ticket-worthiness probability or a retriever's best-match
 strength: $c\ge0.90$ on the cheap path commits and skips the expensive steps (a
 text-only window, lacking a numeric signal, always escalates), while $c<0.5$
@@ -102,8 +102,8 @@ the critical path of an on-call workflow, cannot give up: \emph{reproducibility}
 (the same incident yields the same decision), \emph{bounded cost and latency} (no
 open-ended reasoning loop on a single window), and \emph{auditability} (every
 action traces to an explicit rule and budget, not an opaque model choice). \sys{}
-instead embeds the useful agentic behaviors---selective evidence-gathering and
-natural-language verification---inside a deterministic, capability-gated skeleton,
+instead embeds the useful agentic behaviors (selective evidence-gathering and
+natural-language verification) inside a deterministic, capability-gated skeleton,
 invoking the language model only where calibration shows it helps: an agent's
 adaptivity with the predictability production triage demands.
 
@@ -195,14 +195,14 @@ the fused ranking unchanged.
 
 \smallskip
 \noindent\textbf{A representative trajectory.} On a telemetry-rich active-fault
-window---a cart service degraded by a failing Redis dependency---the cheap path
+window (a cart service degraded by a failing Redis dependency), the cheap path
 fires (a numeric anomaly plus a dense top candidate) but with a thin margin: two
 precedents, a cache outage and a memory leak, score almost equally. \sys{}
 escalates to the sparse and graph retrievers, and the graph surfaces a
 cache-dependency precedent the dense view ranked lower, on a shared component and
 error class. Still unsure, it requests pod events and metrics, observes a cache-pod
 restart and memory saturation alongside the latency spike, re-ranks the
-corroborated precedent to rank one, and---now confident---stops below budget while
+corroborated precedent to rank one and, now confident, stops below budget while
 the state layer folds the window into the ongoing incident. Faced with the
 \emph{same} symptom as a one-sentence text ticket, the identical system profiles a
 text-only capability set, skips the telemetry steps, and emits a lightweight
@@ -226,8 +226,8 @@ optional learned novelty score.
 Because a single incident unfolds across many consecutive windows, paging on each
 would bury the on-call engineer. \sys{} keeps a short per-service ring buffer of its
 last twelve decisions and suppresses a duplicate when the current window repeats a
-recently paged incident---the same top-ranked precedent and fault family within a
-three-window lookback, with no recovery window in between---letting it inherit the
+recently paged incident (the same top-ranked precedent and fault family within a
+three-window lookback, with no recovery window in between), letting it inherit the
 earlier incident's identifier. Consecutive windows of one fault thus fold into a
 single incident, and the system approaches one page per incident rather than one
 per window (\S\ref{sec:results}).

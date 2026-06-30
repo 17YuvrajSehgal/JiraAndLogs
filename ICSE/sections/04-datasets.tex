@@ -2,7 +2,7 @@
 \section{Datasets}
 \label{sec:datasets}
 
-A faithful evaluation must cover the range of conditions a deployed system faces---from richly instrumented services, where logs, metrics, and traces are all available, down to bare incident reports that are nothing but text. We therefore use three datasets along this realism spectrum (Table~\ref{tab:datasets}). The first two we \emph{collect and release}: instrumented microservice systems under controlled fault injection, pairing multi-signal telemetry with incident tickets and exact per-window labels. The third we \emph{reuse}: a large corpus of real, engineer-written Apache Jira incidents that tests whether methods tuned on synthetic data hold up in the field.
+A faithful evaluation must cover the range of conditions a deployed system faces: from richly instrumented services, where logs, metrics, and traces are all available, down to bare incident reports that are nothing but text. We therefore use three datasets along this realism spectrum (Table~\ref{tab:datasets}). The first two we \emph{collect and release}: instrumented microservice systems under controlled fault injection, pairing multi-signal telemetry with incident tickets and exact per-window labels. The third we \emph{reuse}: a large corpus of real, engineer-written Apache Jira incidents that tests whether methods tuned on synthetic data hold up in the field.
 
 \begin{table}[t]
 \centering
@@ -37,8 +37,8 @@ Raw telemetry    & $\sim$35\,GB     & $\sim$11\,GB     & --- (text) \\
 \includegraphics[width=\columnwidth]{figures/data-collection.png}
 \caption{Data-collection pipeline for the two telemetry datasets. A load
 generator exercises an open-source microservice application in Kubernetes while
-controlled faults---application-level failures and chaos-engineering network
-faults---are injected. The resulting alerts, metrics, logs, cluster events, and
+controlled faults (application-level failures and chaos-engineering network
+faults) are injected. The resulting alerts, metrics, logs, cluster events, and
 distributed-trace spans are captured per window, and a paired synthetic incident
 ticket, rewritten into engineer voice by a language model, is recorded as the
 retrieval target. The labelled result is what the triage system consumes.}
@@ -47,17 +47,17 @@ retrieval target. The labelled result is what the triage system consumes.}
 
 Both datasets come from a single collection pipeline (Figure~\ref{fig:collection}).
 We deploy an open-source microservice application in a Kubernetes cluster
-instrumented with a standard observability stack---Prometheus for metrics, Tempo
-for distributed traces, and Loki for logs---drive it with a synthetic load
+instrumented with a standard observability stack (Prometheus for metrics, Tempo
+for distributed traces, and Loki for logs), drive it with a synthetic load
 generator, and inject faults under controlled, fully labelled conditions. The
 unit of collection is a \emph{scenario}: one fault, injected for a fixed
 duration, with its ground truth declared in advance. Each scenario produces three
-consecutive \emph{observation windows}---a fault-free baseline just before the
-fault, the active fault itself, and a recovery phase after it is cleared---and we
+consecutive \emph{observation windows} (a fault-free baseline just before the
+fault, the active fault itself, and a recovery phase after it is cleared), and we
 label every window with one of three classes: \textbf{ticket-worthy} (a real
 engineer would open an issue), \textbf{borderline} (recovering or marginal), or
-\textbf{noise} (normal operation). A window---a short slice of one service's
-activity---is the atomic input to the triage system throughout this paper.
+\textbf{noise} (normal operation). A window, a short slice of one service's
+activity, is the atomic input to the triage system throughout this paper.
 
 For each window we archive everything the platform recorded: the service's logs,
 its CPU, memory, and restart series with any firing alerts, the cluster's events
@@ -66,9 +66,9 @@ attention, we generate the incident ticket and rewrite it with a language model
 into natural, engineer-voice prose, so the memory reads like tickets a team would
 actually file; this ticket is the retrieval target. Because we control the
 injection, the window--ticket link is \emph{exact ground truth} rather than
-inferred. We also record realistic negatives---near-misses in which a service is
+inferred. We also record realistic negatives (near-misses in which a service is
 stressed but never fails, and ``orphan'' faults that occur yet warrant no
-ticket---since these separate a useful triage system from one that pages
+ticket), since these separate a useful triage system from one that pages
 constantly.
 
 The two applications are chosen to differ in \emph{architecture}, not merely in
@@ -82,7 +82,7 @@ loss, DNS failures), and deployment churn. \textbf{OpenTelemetry
 Demo}~\cite{oteldemo} adds architectural distance:
 eighteen services in ten languages, organized around a Kafka message bus with
 asynchronous downstream consumers. Its 52 scenarios extend from single-service
-faults---triggered through the application's own built-in failure switches---to
+faults (triggered through the application's own built-in failure switches) to
 Kafka-specific failures such as broker outages and consumer lag that have no
 Online Boutique analogue, and on to concurrent and cascading multi-fault
 episodes. Together the two contribute roughly $6{,}700$ and $1{,}600$ labelled
@@ -101,8 +101,8 @@ collection~\cite{wang2026worldoflogs}, a public archive of logs and issue report
 mined from online software-engineering sources, including public Jira trackers.
 This dataset is not a contribution of our work; we simply derive an evaluation
 slice from its Apache Jira issues. We select 24 of its
-distributed-systems projects---message brokers, datastores, stream processors,
-the Hadoop ecosystem, and others---which together provide a memory of $38{,}642$
+distributed-systems projects (message brokers, datastores, stream processors,
+the Hadoop ecosystem, and others), which together provide a memory of $38{,}642$
 resolved bug reports to retrieve from and $78{,}140$ incident queries to triage.
 Each query receives the same three labels as our synthetic data, assigned
 automatically from the ticket's type and final resolution: a fixed bug is
@@ -111,7 +111,7 @@ or non-bug issue is noise.
 
 This corpus is deliberately the hardest of the three, for two reasons. It is
 \emph{text only}: authentic, terse, engineer-written descriptions with no
-telemetry whatsoever---exactly the degraded regime to which our controller must
+telemetry whatsoever, exactly the degraded regime to which our controller must
 fall back. And we evaluate it under a \emph{leave-domain-out} split, holding out
 two entire project families (a message broker and a database engine, $13{,}388$
 incidents) so the system must match incidents in projects it never saw while

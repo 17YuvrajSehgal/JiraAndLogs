@@ -47,15 +47,15 @@ dense top candidates for each query; following common practice for LLM baselines
 we run it on a fixed 500-incident sample per dataset.
 
 \noindent\emph{Triage classifiers.} For the triage decision (RQ4) we additionally
-compare standard classifiers over the numeric telemetry features---gradient-boosted
-trees, random forests, and logistic regression---wherever such features exist.
+compare standard classifiers over the numeric telemetry features (gradient-boosted
+trees, random forests, and logistic regression) wherever such features exist.
 
 \subsection{Metrics}
 \label{sec:setup-metrics}
 
 We measure two capabilities separately. \emph{Retrieval} is scored with
-Hit@$k$---the correct prior incident appears in the top $k$, for
-$k\in\{1,5\}$---and mean reciprocal rank (MRR), averaged over queries that have
+Hit@$k$ (the correct prior incident appears in the top $k$, for
+$k\in\{1,5\}$) and mean reciprocal rank (MRR), averaged over queries that have
 at least one ground-truth match; on the real dataset we report both the coarse
 and strict matching relations of \S\ref{sec:datasets-wol}. \emph{Triage} is a
 calibrated classification problem, so beyond accuracy we report the area under the
