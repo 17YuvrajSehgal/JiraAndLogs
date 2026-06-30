@@ -139,6 +139,8 @@ def main():
     ap.add_argument("--deposition-id", type=int, default=None, help="Resume into an existing draft.")
     ap.add_argument("--no-metadata", action="store_true", help="Skip setting metadata.")
     ap.add_argument("--token", default=os.environ.get("ZENODO_TOKEN"))
+    ap.add_argument("--metadata-file", default=None,
+                    help="JSON file of Zenodo metadata; overrides the built-in dataset metadata.")
     args = ap.parse_args()
 
     if not args.token:
@@ -203,14 +205,19 @@ def main():
     # 3. Set anonymized metadata (best-effort; never blocks the upload)
     if not args.no_metadata:
         print("\nSetting anonymized metadata ...")
+        meta = METADATA
+        if args.metadata_file:
+            with open(args.metadata_file, encoding="utf-8") as fh:
+                meta = json.load(fh)
         mr = sess.put(f"{base}/api/deposit/depositions/{dep_id}",
-                      json={"metadata": METADATA})
+                      json={"metadata": meta})
         if mr.status_code == 200:
-            print("  metadata set (Creators=Anonymous, license=CC-BY-4.0, no funding/repo links).")
+            cr = [c.get("name") for c in meta.get("creators", [])]
+            print(f"  metadata set (creators={cr}, license={meta.get('license')}, no funding/repo links).")
         else:
             print(f"  ! metadata not set [{mr.status_code}]: {mr.text[:400]}")
             print("  -> set it manually in the UI; here is the JSON to paste/adapt:")
-            print(json.dumps(METADATA, indent=2))
+            print(json.dumps(meta, indent=2))
 
     print("\nDONE. NOT published (by design).")
     print(f"Review and Publish here when ready: {html}")
