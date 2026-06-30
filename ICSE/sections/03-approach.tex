@@ -117,8 +117,8 @@ bi-encoder $\phi$ and scores by cosine similarity,
 \begin{equation}
 s_{\text{dense}}(w,m)=\cos\!\big(\phi(\mathbf{x}_w),\,\phi(\mathbf{d}_m)\big).
 \end{equation}
-We fine-tune a compact MiniLM encoder ($384$-dimensional) with a
-multiple-negatives ranking objective~\cite{reimers2019sbert,wang2020minilm}: each
+We fine-tune a compact ($384$-dimensional) MiniLM bi-encoder~\cite{wang2020minilm,reimers2019sbert}
+with a multiple-negatives ranking loss~\cite{karpukhin2020dpr}: each
 window is paired with its gold ticket as a positive against the rest of the batch,
 two hard negatives mined by a lexical retriever~\cite{robertson2009bm25}, and one
 random negative, teaching it to separate genuinely related incidents from those
