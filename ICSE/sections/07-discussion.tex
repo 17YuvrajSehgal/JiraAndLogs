@@ -10,20 +10,19 @@ almost by construction, while on real engineer-filed tickets every classifier we
 tried sat at chance (\S\ref{sec:results-rq4}). Strong synthetic triage numbers
 therefore certify the dataset, not the method, and a system tuned to maximize them
 optimizes a quantity that does not transfer. The problem worth solving is the one
-that does, recognizing \emph{which} past incident a live one resembles; far from
-saturated, it is where the gains we report come from.
+that does: recognizing \emph{which} past incident a live one resembles, far from
+saturated and where our gains come from.
 
 \noindent\textbf{Method conclusions flip with scale and realism.} Had we evaluated
 retrieval only on the synthetic corpora, as is common, we would have concluded
 that fusing retrievers is useless, even mildly harmful, and shipped a single dense
 model. On the real corpus, an order of magnitude larger and spread across two
-dozen projects, the same fusion is decisively best (Figure~\ref{fig:forest}): in a
-small, homogeneous memory one retriever dominates and weaker signals only add
-noise, whereas a large, diverse memory creates the blind spots that complementary
-retrievers cover. With only three corpora we cannot fully disentangle scale from
-diversity, so we make the per-dataset claim: fusion is significantly best on the
-large, heterogeneous real corpus and ties or trails the dense retriever on the
-small synthetic ones. Retrieval comparisons thus need realistic scale \emph{and}
+dozen projects, the same fusion is decisively best (Figure~\ref{fig:forest}): a large, diverse
+memory creates blind spots that complementary retrievers cover, while in a small,
+homogeneous one a single retriever dominates and weaker signals only add noise. With
+only three corpora we cannot fully disentangle scale from diversity, so we claim only
+per dataset: fusion is significantly best on the large, heterogeneous real corpus and
+ties or trails the dense retriever on the small synthetic ones. Retrieval comparisons thus need realistic scale \emph{and}
 diversity before their conclusions can be trusted, one reason we release
 real-scale data alongside the synthetic.
 
@@ -33,11 +32,10 @@ synthetic triage yet is net-negative on real text and is switched off there; the
 retrieval-augmented language model never beats the domain-tuned retriever whose
 candidates it re-reads. A system that hard-codes such components pays for them
 everywhere and is hurt where they misfire. Our controller instead treats both
-\emph{what evidence is present} and \emph{whether an expensive step is
-beneficial} as per-window, per-setting decisions, which lets one
-implementation run from full telemetry down to bare text, suppress duplicate
-pages, and shed $40$--$78\%$ of per-window cost with no loss in accuracy
-(Figure~\ref{fig:adaptive}). Large language models are not a default win in this
+\emph{what evidence is present} and \emph{whether an expensive step helps} as
+per-window decisions, letting one implementation run from full telemetry down to
+bare text, suppress duplicate pages, and shed $40$--$78\%$ of per-window cost with no
+loss in accuracy (Figure~\ref{fig:adaptive}). Large language models are not a default win in this
 domain; the leverage lies in a controller that invokes them selectively and
 measures their effect.
 
@@ -56,5 +54,5 @@ recall little; richer relational extraction or a learned graph matcher, rather
 than entity overlap, may convert that latent signal into measured gains. Second,
 our real-world data is text only while our telemetry-rich data is synthetic: the
 open frontier is real telemetry paired with real, human-written tickets at scale.
-The datasets, harness, and baselines we release lower the barrier to that step;
+The datasets, harness, and baselines we release lower the barrier;
 \S\ref{sec:threats} discusses the limitations that temper these conclusions.
