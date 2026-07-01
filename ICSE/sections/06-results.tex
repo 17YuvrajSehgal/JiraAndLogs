@@ -84,6 +84,14 @@ top-five recall (the $\pm$graph difference is not significant on any dataset).
 The graph is therefore a real but marginal contributor: useful for top-rank
 precision and coverage, not a driver of \hit{5}.
 
+\smallskip
+\noindent The fine-tuned retriever's advantage is also stable across random seeds:
+retraining it under three seeds leaves coarse \hit{5} within a narrow band on both
+telemetry datasets (Online Boutique $0.632\pm0.015$, OTel Demo $0.678\pm0.004$;
+mean$\pm$std), so its lead over the zero-shot embedders is not an artifact of a
+lucky initialization. Only the costlier real-data retriever is trained once
+(\S\ref{sec:threats}).
+
 \subsection{RQ2: End-to-End Triage and Graceful Degradation}
 \label{sec:results-rq2}
 
@@ -136,6 +144,16 @@ evidence-gathering tools contribute little measurable \hit{} gain on these
 datasets; their role is to keep cost low by running only when cheaper steps are
 unsure, and the headroom they could add is bounded by how often retrieval is
 already correct.
+
+\smallskip
+\noindent The ablation isolates one capability that sits apart from retrieval rank,
+\emph{novelty detection}: removing the novelty-composition step leaves \hit{5}
+unchanged but drops recall of novel, no-precedent incidents from $0.54$ to $0$ on
+Online Boutique, so the step is load-bearing for flagging failures with no
+precedent even though it never moves top-five retrieval. On the text-only real
+corpus this flag is confounded with ordinary retrieval uncertainty (weakening
+retrieval only makes more windows look novel), so we report novelty on the
+synthetic telemetry data alone.
 
 \begin{figure*}[t]
 \centering
