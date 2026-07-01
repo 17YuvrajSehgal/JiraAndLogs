@@ -53,7 +53,7 @@ fault, the active fault itself, and a recovery phase after it is cleared), and w
 label every window with one of three classes: \textbf{ticket-worthy} (a real
 engineer would open an issue), \textbf{borderline} (recovering or marginal), or
 \textbf{noise} (normal operation). A window, a short slice of one service's
-activity, is the atomic input to the triage system.
+activity (5 minutes), is the atomic input to the triage system.
 
 For each window we archive everything the platform recorded: the service's logs,
 its CPU, memory, and restart series with any firing alerts, the cluster's events
