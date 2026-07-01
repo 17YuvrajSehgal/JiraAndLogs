@@ -2,7 +2,7 @@
 \section{Datasets}
 \label{sec:datasets}
 
-A faithful evaluation must cover the range of conditions a deployed system faces: from richly instrumented services with logs, metrics, and traces down to bare, text-only incident reports. We therefore use three datasets along this realism spectrum (Table~\ref{tab:datasets}). The first two we \emph{collect and release}: instrumented microservice systems under controlled fault injection, pairing multi-signal telemetry with incident tickets and exact per-window labels. The third we \emph{reuse}: a large corpus of real, engineer-written Apache Jira incidents that tests whether methods tuned on synthetic data hold up in the field.
+A faithful evaluation must cover the range a deployed system faces: from richly instrumented services with logs, metrics, and traces down to bare, text-only reports. We therefore use three datasets along this realism spectrum (Table~\ref{tab:datasets}). The first two we \emph{collect and release}: instrumented microservice systems under controlled fault injection, pairing multi-signal telemetry with incident tickets and exact per-window labels. The third we \emph{reuse}: a large corpus of real, engineer-written Apache Jira incidents testing whether methods tuned on synthetic data hold up in the field.
 
 \begin{table}[t]
 \centering
@@ -59,8 +59,8 @@ For each window we archive everything the platform recorded: the service's logs,
 its CPU, memory, and restart series with any firing alerts, the cluster's events
 and pod state, and a sample of distributed traces. When a scenario warrants
 attention, we generate the incident ticket and rewrite it with a language model
-into natural, engineer-voice prose, so the memory reads like tickets a team would
-actually file; this ticket is the retrieval target. Because we control the
+into natural, engineer-voice prose, so the memory reads like real filed tickets;
+this ticket is the retrieval target. Because we control the
 injection, the window--ticket link is \emph{exact ground truth} rather than
 inferred. We also record realistic near-misses (a service stressed but never
 failing, warranting no page) and \emph{orphan} faults (genuine ticket-worthy
@@ -79,10 +79,8 @@ Demo}~\cite{oteldemo} adds architectural distance:
 seventeen services in twelve languages, organized around a Kafka message bus with
 asynchronous downstream consumers. Its 52 scenarios extend from single-service faults (triggered through the application's built-in failure switches) to Kafka-specific failures such as broker outages and consumer lag with no Online Boutique analogue, and on to concurrent and cascading multi-fault episodes. Together the two contribute roughly $6{,}700$ and $1{,}600$ labelled
 windows and tens of gigabytes of raw telemetry, which we release as self-contained
-archives; to our knowledge, no existing public dataset pairs operational
-telemetry with incident tickets and per-window labels at this breadth. Within
-each dataset we hold out whole fault families for testing, so test windows never
-come from a scenario seen during training.
+archives. Within each dataset we hold out whole fault families for testing, so test
+windows never come from a scenario seen during training.
 
 \subsection{Real-World Incidents: World of Logs}
 \label{sec:datasets-wol}

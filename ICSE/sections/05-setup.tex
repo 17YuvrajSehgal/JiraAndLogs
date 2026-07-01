@@ -40,10 +40,10 @@ MPNet)~\cite{xiao2024cpack,wang2022e5,song2020mpnet}, classical lexical search
 (TF--IDF and BM25~\cite{robertson2009bm25}), and a cross-encoder
 re-ranker~\cite{nogueira2019passage} applied over the dense candidates.
 
-\noindent\emph{Retrieval-augmented LLM.} As a contemporary point of comparison,
+\noindent\emph{Retrieval-augmented LLM.} As a contemporary comparison,
 an instruction-tuned language model (Qwen2.5-7B~\cite{qwen2024}) re-ranks the
-dense top candidates for each query; following common practice for LLM baselines,
-we run it on a fixed 500-incident sample per dataset.
+dense top candidates per query; following common practice, we run it on a fixed
+500-incident sample per dataset.
 
 \noindent\emph{Triage classifiers.} For the triage decision (RQ4) we additionally
 compare standard classifiers over the numeric telemetry features (gradient-boosted
@@ -58,7 +58,7 @@ $k\in\{1,5\}$) and mean reciprocal rank (MRR), averaged over queries that have
 at least one ground-truth match; on the real dataset we report both the coarse
 and strict matching relations of \S\ref{sec:datasets-wol}. \emph{Triage} is a
 calibrated classification problem, so beyond accuracy we report the areas under the precision--recall and ROC
-curves, and expected calibration error. We also report pages per incident, which captures whether duplicate alerts are
+curves, and expected calibration error. We also report pages per incident, capturing whether duplicate alerts are
 suppressed. Finally,
 \emph{cost} is measured per window as wall-clock time and language-model token
 usage, relative to a counterfactual cascade that runs every step on every window.

@@ -4,33 +4,31 @@
 
 \sys realizes the task of \S\ref{sec:background} as a capability-aware system
 organized around retrieval from the memory of resolved incidents. Two commitments
-shape every component: to \emph{match by analogy}, ranking past incidents by their
-similarity to the current window and reusing their recorded diagnosis; and to
-\emph{adapt to whatever evidence the window actually carries}, so that a single
-system spans the full range of operational conditions, from a richly instrumented
+shape it: \emph{match by analogy}, ranking past incidents by similarity to the
+current window and reusing their diagnosis; and \emph{adapt to the evidence each
+window carries}, so one system spans conditions from a richly instrumented
 deployment to a one-line text report. Figure~\ref{fig:arch} shows the pipeline;
 throughout, we return the $k=5$ most similar past incidents for each window.
 
 \begin{figure*}[t]
 \centering
 \includegraphics[width=\textwidth]{figures/pipeline.png}
-\caption{Overview of \sys. For each observation window, rich telemetry or a bare
-text report, a capability-gated planner profiles the available evidence and
-assembles a cost-gated, cheap-first plan. Hybrid memory retrieval matches the
-window against a time-aware corpus of resolved tickets by fusing dense, sparse,
-and graph retrievers with reciprocal rank fusion; optional, bounded
-evidence-gathering then refines the ranking; and a state layer issues the triage
-decision while suppressing duplicate pages across an incident's windows. Solid
-arrows denote the per-window flow; dashed arrows denote memory access and
-cross-window state.}
+\caption{Overview of \sys. For each window (rich telemetry or bare text), a
+capability-gated planner profiles the evidence and assembles a cost-gated,
+cheap-first plan. Hybrid retrieval matches the window against a time-aware corpus
+of resolved tickets, fusing dense, sparse, and graph retrievers with reciprocal
+rank fusion; bounded evidence-gathering then refines the ranking; and a state layer
+issues the triage decision while suppressing duplicate pages across an incident's
+windows. Solid arrows: per-window flow; dashed: memory access and cross-window
+state.}
 \label{fig:arch}
 \end{figure*}
 
 \subsection{Capability Profiling and Gated Planning}
 \label{sec:approach-controller}
 
-\sys{} first decides \emph{what to do}, then executes that plan, and the decision
-is driven by a \emph{capability profile}. A lightweight observer maps a window
+\sys{} first decides \emph{what to do}, then executes; the decision is driven by a
+\emph{capability profile}. A lightweight observer maps a window
 $w=(t,\mathbf{x},e)$ to a set of binary capability flags
 $\mathcal{C}(w)\subseteq\mathcal{F}$, where $\mathcal{F}$ is a fixed vocabulary of
 eleven flags (\textsc{Text}, \textsc{NumericFeatures}, \textsc{OrderedLogs},
@@ -45,8 +43,8 @@ fault, a recovery phase, or a continuation of an already-paged incident. Because
 inadmissible skills are never scheduled, the system degrades gracefully by
 construction: a fully instrumented window yields a plan with numeric triage, all
 three retrievers, on-demand evidence requests, and an optional verifier, while a
-text-only window drives the identical controller to a compact dense-and-graph
-plan, with no change of code or configuration.
+text-only window drives the identical controller to a compact dense-and-graph plan,
+with no code or configuration change.
 
 Planning is also cost-aware. Skills are ordered cheapest first, and the expensive
 ones sit behind \emph{gates} that open only under uncertainty. A fast pass runs a
@@ -97,13 +95,13 @@ Algorithm~\ref{alg:window} summarizes the per-window procedure.
 
 \noindent\textbf{Why a gated controller rather than a free-form agent.} \sys{} is
 deliberately \emph{agentic in capability but not autonomous in control}. Letting a
-language model choose each next tool would forfeit three properties that triage, on
-the critical path of an on-call workflow, cannot give up: \emph{reproducibility}
-(the same incident yields the same decision), \emph{bounded cost and latency} (no
-open-ended reasoning loop on a single window), and \emph{auditability} (every
-action traces to an explicit rule and budget, not an opaque model choice). \sys{}
-instead embeds the useful agentic behaviors (selective evidence-gathering and
-natural-language verification) inside a deterministic, capability-gated skeleton,
+language model choose each next tool would forfeit three properties triage cannot
+give up: \emph{reproducibility} (the same incident yields the same decision),
+\emph{bounded cost and latency} (no open-ended reasoning loop per window), and
+\emph{auditability} (every action traces to an explicit rule and budget, not an
+opaque model choice). \sys{} instead embeds the useful agentic behaviors
+(selective evidence-gathering and natural-language verification) in a
+deterministic, capability-gated skeleton,
 invoking the language model only where calibration shows it helps: an agent's
 adaptivity with the predictability production triage demands.
 
@@ -139,10 +137,10 @@ s_{\text{fuse}}(m)=\sum_{r\in\{\text{dense},\,\text{sparse},\,\text{graph}\}}
 \end{equation}
 where an incident contributes nothing from a retriever that does not rank it. A
 final composition step sharpens the head of the list, anchoring on the dense
-retriever's strongest candidates and promoting those that the sparse and graph
+retriever's strongest candidates and promoting those the sparse and graph
 retrievers independently corroborate. One view's blind spot is thus covered by
-another's strength, the central reason the fused ranker outperforms every
-constituent alone (\S\ref{sec:results}).
+another's strength, the central reason the fused ranker beats every constituent
+alone (\S\ref{sec:results}).
 
 \subsection{Knowledge-Graph Construction and Retrieval}
 \label{sec:approach-kg}
@@ -156,8 +154,8 @@ materialized as a typed property graph with seven node labels (\textsc{Incident}
 \textsc{Service}, \textsc{Component}, \textsc{ErrorClass}, \textsc{RootCause},
 \textsc{Fix}, \textsc{Symptom}) and six labelled relations; shared entities are
 deduplicated, so two incidents that touch the same component or raise the same
-error class are linked through it. The graph thus encodes the structural
-neighbourhoods that recur across an operational history.
+error class are linked through it, encoding the structural neighbourhoods that
+recur across an operational history.
 
 At query time the same extraction runs on the window (or a fast rule-based
 extractor when no language model is configured), and we score each visible
@@ -182,12 +180,11 @@ and component even when their prose differs.
 
 When a window carries rich telemetry but the fused ranking remains uncertain,
 \sys{} does what an engineer would: it gathers more evidence before committing.
-Following the reason-and-act paradigm~\cite{yao2023react}, it issues a small number
-of targeted requests, each returning one compact piece of evidence rather than a
-verdict, the window's cluster events, an extended slice of distributed traces,
-pod-level resource metrics, or concrete past incidents from the same fault family,
-then re-ranks the candidates by how well each one's description agrees with the
-gathered evidence. The loop is bounded: repeated identical requests are refused,
+Following the reason-and-act paradigm~\cite{yao2023react}, it issues a few targeted
+requests, each returning one compact piece of evidence rather than a verdict
+(cluster events, an extended trace slice, pod-level metrics, or past incidents from
+the same fault family), then re-ranks candidates by how well each description agrees
+with the gathered evidence. The loop is bounded: repeated identical requests are refused,
 and the per-window budget caps the total number of calls. On a text-only window
 these requests are never scheduled, so the step is a safe pass-through that returns
 the fused ranking unchanged.
@@ -195,18 +192,15 @@ the fused ranking unchanged.
 \smallskip
 \noindent\textbf{A representative trajectory.} On a telemetry-rich active-fault
 window (a cart service degraded by a failing Redis dependency), the cheap path
-fires (a numeric anomaly plus a dense top candidate) but with a thin margin: two
-precedents, a cache outage and a memory leak, score almost equally. \sys{}
-escalates to the sparse and graph retrievers, and the graph surfaces a
-cache-dependency precedent the dense view ranked lower, on a shared component and
-error class. Still unsure, it requests pod events and metrics, observes a cache-pod
-restart and memory saturation alongside the latency spike, re-ranks the
-corroborated precedent to rank one and, now confident, stops below budget while
-the state layer folds the window into the ongoing incident. Faced with the
-\emph{same} symptom as a one-sentence text ticket, the identical system profiles a
-text-only capability set, skips the telemetry steps, and emits a lightweight
-dense-and-graph plan: the graceful degradation of \S\ref{sec:approach-controller}
-as a different path through one skill library.
+fires with a thin margin: two precedents, a cache outage and a memory leak, score
+almost equally. \sys{} escalates to the sparse and graph retrievers, requests pod
+events and metrics, observes a cache-pod restart and memory saturation alongside
+the latency spike, and re-ranks the corroborated cache-dependency precedent to
+rank one, stopping below budget while the state layer folds the window into the
+ongoing incident. Faced with the \emph{same} symptom as a one-sentence text
+ticket, the identical system profiles a text-only capability set, skips the
+telemetry steps, and emits a lightweight dense-and-graph plan: graceful
+degradation as a different path through one skill library.
 
 \subsection{Triage, Novelty, and Incident-Aware Paging}
 \label{sec:approach-state}
@@ -222,18 +216,18 @@ precedent in memory, when no source is confident: the disjunction of a low maxim
 retriever confidence, a verifier judgement of novelty when the verifier ran, and an
 optional learned novelty score.
 
-Because a single incident unfolds across many consecutive windows, paging on each
-would bury the on-call engineer. \sys{} keeps a short per-service ring buffer of its
-last twelve decisions and suppresses a duplicate when the current window repeats a
-recently paged incident (the same top-ranked precedent and fault family within a
-three-window lookback, with no recovery window in between), letting it inherit the
-earlier incident's identifier. Consecutive windows of one fault thus fold into a
-single incident, and the system approaches one page per incident rather than one
-per window (\S\ref{sec:results}).
+Because a single incident unfolds across many windows, paging on each would bury
+the on-call engineer. \sys{} keeps a per-service ring buffer of its last twelve
+decisions and suppresses a duplicate when a window repeats a recently paged incident
+(same top-ranked precedent and fault family within a three-window lookback, no
+recovery window between), letting it inherit that incident's identifier. Consecutive
+windows of one fault thus fold into a single incident, and the system approaches one
+page per incident, not one per window (\S\ref{sec:results}).
 
 One design choice deserves emphasis because it recurs in our results. The optional
 language-model verifier, which re-examines a borderline match in natural language,
-is itself capability-gated, enabled only where calibration shows it helps and
-disabled where it hurts; on real engineer-written incidents we find it net-negative
-and switch it off. Treating whether an expensive reasoning step actually helps in a given setting as just another capability is, we argue, much of what lets one system stay robust across very different evidence
-regimes.
+is itself capability-gated: enabled where calibration shows it helps, disabled where
+it hurts; on real engineer-written incidents we find it net-negative and switch it
+off. Treating whether an expensive reasoning step helps in a given setting as just
+another capability is, we argue, much of what keeps one system robust across very
+different evidence regimes.
