@@ -185,7 +185,15 @@ being learned. The
 difficulty of synthetic triage is an artifact of fault injection, where active
 faults are separable from baselines by construction; on real, engineer-written
 tickets, whether an issue was ultimately deemed worth fixing is simply not
-predictable from its text alone.
+predictable from its text alone. We further confirm that the synthetic signal is
+genuine rather than memorized: on Online Boutique we inject \emph{orphan} faults,
+real ticket-worthy failures deliberately left with no matching ticket in memory, and
+the triage classifiers flag them as reliably as the reported faults (recall gap
+within $5$ points, and $1.00$ versus $1.00$ for the gradient-boosted model), so the
+near-perfect synthetic number reflects fault-versus-baseline separability, not
+memorization of which incidents carry tickets. This check is informative only there:
+the other telemetry set contained no orphan faults, and on the real corpus triage is
+already at chance, leaving the orphan split uninformative.
 
 This reframes how operational triage should be measured: the part that looks
 solved on synthetic data is the part that does not transfer, while the part that
