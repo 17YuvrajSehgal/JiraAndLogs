@@ -15,34 +15,44 @@ The retrieval-augmented LLM, despite re-reading the same candidates, never
 surpasses the trained retriever, indicating that the gains come from
 domain-adapted retrieval rather than from a general reader.
 
-\begin{table}[t]
+\begin{table*}[t]
 \centering
-\caption{Retrieval quality (\hit{5}, coarse relation) on the held-out test set.
-Best per dataset in \textbf{bold}. Our fine-tuned retriever dominates all
-baselines; hybrid fusion adds a further, significant gain on the large real-world
-corpus.}
+\caption{Retrieval quality on the held-out test set: Hit@1, Hit@5, and mean
+reciprocal rank (MRR) under the coarse matching relation, averaged over the $n$ test
+queries that have a ground-truth match. Best per column in \textbf{bold}. Our
+fine-tuned dense retriever leads every zero-shot baseline and the
+retrieval-augmented LLM on Hit@5 across all three datasets; hybrid fusion
+additionally tops Hit@5 and MRR on the large real-world corpus (World of Logs),
+where its Hit@5 gain over the dense retriever and the strongest baselines is
+statistically significant (paired bootstrap, Benjamini--Hochberg $q<0.05$;
+Fig.~\ref{fig:forest}). On the small synthetic corpora the dense retriever alone is
+tied with or ahead of fusion.}
 \label{tab:retrieval}
 \footnotesize
-\setlength{\tabcolsep}{5pt}
-\begin{tabular}{lccc}
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{l ccc ccc ccc}
 \toprule
-Method & Online Boutique & OTel Demo & World of Logs \\
+& \multicolumn{3}{c}{Online Boutique ($n{=}331$)}
+& \multicolumn{3}{c}{OTel Demo ($n{=}119$)}
+& \multicolumn{3}{c}{World of Logs ($n{=}5{,}150$)} \\
+\cmidrule(lr){2-4}\cmidrule(lr){5-7}\cmidrule(lr){8-10}
+Method & \hit{1} & \hit{5} & MRR & \hit{1} & \hit{5} & MRR & \hit{1} & \hit{5} & MRR \\
 \midrule
-\multicolumn{4}{l}{\emph{Prior art, zero-shot}}\\
-\quad BGE (dense)          & 0.341 & 0.664 & 0.829 \\
-\quad E5 (dense)           & 0.314 & 0.538 & 0.838 \\
-\quad MPNet (dense)        & 0.375 & 0.630 & 0.834 \\
-\quad TF--IDF (lexical)    & 0.372 & 0.613 & 0.766 \\
-\quad Cross-encoder rerank & 0.296 & 0.580 & 0.874 \\
-\multicolumn{4}{l}{\emph{Retrieval-augmented LLM}}\\
-\quad Qwen2.5-7B           & 0.344 & 0.639 & 0.856 \\
-\multicolumn{4}{l}{\emph{Ours}}\\
-\quad Dense bi-encoder     & \textbf{0.634} & \textbf{0.681} & 0.905 \\
-\quad Knowledge graph      & 0.465 & 0.412 & 0.308 \\
-\quad Hybrid fusion        & 0.559 & 0.672 & \textbf{0.970} \\
+\multicolumn{10}{l}{\emph{Prior art, zero-shot}}\\
+\quad BGE (dense)          & 0.172 & 0.341 & 0.244 & 0.387 & 0.664 & 0.508 & 0.623 & 0.829 & 0.710 \\
+\quad E5 (dense)           & 0.154 & 0.314 & 0.224 & 0.479 & 0.538 & 0.509 & 0.639 & 0.838 & 0.725 \\
+\quad MPNet (dense)        & 0.202 & 0.375 & 0.278 & 0.227 & 0.630 & 0.404 & 0.644 & 0.834 & 0.725 \\
+\quad TF--IDF (lexical)    & 0.127 & 0.372 & 0.231 & \textbf{0.521} & 0.613 & 0.563 & 0.521 & 0.766 & 0.626 \\
+\quad Cross-encoder rerank & 0.103 & 0.296 & 0.182 & 0.311 & 0.580 & 0.441 & 0.686 & 0.874 & 0.766 \\
+\multicolumn{10}{l}{\emph{Retrieval-augmented LLM}}\\
+\quad Qwen2.5-7B           & 0.239 & 0.344 & 0.293 & 0.370 & 0.639 & 0.501 & 0.710 & 0.856 & 0.778 \\
+\multicolumn{10}{l}{\emph{Ours}}\\
+\quad Dense bi-encoder     & \textbf{0.432} & \textbf{0.634} & \textbf{0.512} & 0.445 & \textbf{0.681} & 0.549 & \textbf{0.856} & 0.905 & 0.874 \\
+\quad Knowledge graph      & 0.396 & 0.465 & 0.420 & 0.067 & 0.412 & 0.227 & 0.083 & 0.308 & 0.152 \\
+\quad Hybrid fusion        & 0.414 & 0.559 & 0.461 & 0.513 & 0.672 & \textbf{0.568} & 0.839 & \textbf{0.970} & \textbf{0.897} \\
 \bottomrule
 \end{tabular}
-\end{table}
+\end{table*}
 
 Second, the value of \emph{fusion} depends on the setting. On the large,
 heterogeneous real corpus, fusing the dense, sparse, and graph retrievers lifts
@@ -83,6 +93,14 @@ incident where the dense retriever fails), but in fusion this rarely changes
 top-five recall (the $\pm$graph difference is not significant on any dataset).
 The graph is therefore a real but marginal contributor: useful for top-rank
 precision and coverage, not a driver of \hit{5}.
+
+\smallskip
+\noindent The fine-tuned retriever's advantage is also stable across random seeds:
+retraining it under three seeds leaves coarse \hit{5} within a narrow band on both
+telemetry datasets (Online Boutique $0.632\pm0.015$, OTel Demo $0.678\pm0.004$;
+mean$\pm$std), so its lead over the zero-shot embedders is not an artifact of a
+lucky initialization. Only the costlier real-data retriever is trained once
+(\S\ref{sec:threats}).
 
 \subsection{RQ2: End-to-End Triage and Graceful Degradation}
 \label{sec:results-rq2}
@@ -137,6 +155,16 @@ datasets; their role is to keep cost low by running only when cheaper steps are
 unsure, and the headroom they could add is bounded by how often retrieval is
 already correct.
 
+\smallskip
+\noindent The ablation isolates one capability that sits apart from retrieval rank,
+\emph{novelty detection}: removing the novelty-composition step leaves \hit{5}
+unchanged but drops recall of novel, no-precedent incidents from $0.54$ to $0$ on
+Online Boutique, so the step is load-bearing for flagging failures with no
+precedent even though it never moves top-five retrieval. On the text-only real
+corpus this flag is confounded with ordinary retrieval uncertainty (weakening
+retrieval only makes more windows look novel), so we report novelty on the
+synthetic telemetry data alone.
+
 \begin{figure*}[t]
 \centering
 \includegraphics[width=\textwidth]{figures/fig_adaptive_execution.png}
@@ -167,7 +195,15 @@ being learned. The
 difficulty of synthetic triage is an artifact of fault injection, where active
 faults are separable from baselines by construction; on real, engineer-written
 tickets, whether an issue was ultimately deemed worth fixing is simply not
-predictable from its text alone.
+predictable from its text alone. We further confirm that the synthetic signal is
+genuine rather than memorized: on Online Boutique we inject \emph{orphan} faults,
+real ticket-worthy failures deliberately left with no matching ticket in memory, and
+the triage classifiers flag them as reliably as the reported faults (recall gap
+within $5$ points, and $1.00$ versus $1.00$ for the gradient-boosted model), so the
+near-perfect synthetic number reflects fault-versus-baseline separability, not
+memorization of which incidents carry tickets. This check is informative only there:
+the other telemetry set contained no orphan faults, and on the real corpus triage is
+already at chance, leaving the orphan split uninformative.
 
 This reframes how operational triage should be measured: the part that looks
 solved on synthetic data is the part that does not transfer, while the part that

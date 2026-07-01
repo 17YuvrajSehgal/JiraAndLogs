@@ -14,8 +14,10 @@ matches from random controls on every dataset (\S\ref{sec:results-rq4}), report
 both a coarse and a strict relation, and release a human-annotation kit, but the
 labels remain a proxy rather than a multi-annotator study. For \emph{internal}
 validity, time-aware visibility and held-out fault families and project domains
-prevent any leakage of future or training information, though the costly real-data
-retriever is trained on a single seed, which we report rather than overstate.
+prevent any leakage of future or training information, though only the costly
+real-data retriever is trained on a single seed (the two telemetry retrievers are
+stable across three seeds, \S\ref{sec:results-rq1}), which we report rather than
+overstate.
 Finally, for \emph{conclusion} validity, every difference is tested with a paired
 bootstrap corrected for false discovery, and we report negative and mixed results,
 such as fusion's lack of benefit on small corpora and triage's collapse on real

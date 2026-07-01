@@ -65,10 +65,12 @@ attention, we generate the incident ticket and rewrite it with a language model
 into natural, engineer-voice prose, so the memory reads like tickets a team would
 actually file; this ticket is the retrieval target. Because we control the
 injection, the window--ticket link is \emph{exact ground truth} rather than
-inferred. We also record realistic negatives (near-misses in which a service is
-stressed but never fails, and ``orphan'' faults that occur yet warrant no
-ticket), since these separate a useful triage system from one that pages
-constantly.
+inferred. We also record realistic near-misses (a service stressed but never
+failing, warranting no page) and \emph{orphan} faults (genuine ticket-worthy
+failures for which no ticket is filed, so a page-worthy window has no precedent in
+memory). The near-misses separate a useful triage system from one that pages
+constantly; the orphans test whether it recognizes an incident from telemetry
+rather than only when a matching ticket exists.
 
 The two applications are chosen to differ in \emph{architecture}, not merely in
 size, so that a method cannot succeed by memorizing one system's quirks.
