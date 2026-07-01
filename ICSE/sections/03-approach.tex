@@ -171,9 +171,7 @@ weighted most heavily ($\lambda_{\text{error}}=3.0$), followed by the affected
 service ($2.0$) and component ($1.5$), while symptoms, which recur across many
 unrelated incidents, contribute least ($1.0$). The score is a single graph query
 that enforces time-aware visibility directly: an incident is eligible only if
-its resolution timestamp precedes the window's. This view excels where
-text similarity is weakest, recognizing that two incidents share an error class
-and component even when their prose differs.
+its resolution timestamp precedes the window's.
 
 \subsection{Evidence-Grounded Refinement}
 \label{sec:approach-react}
@@ -221,8 +219,7 @@ recovery window between), letting it inherit that incident's identifier. Consecu
 windows of one fault thus fold into a single incident, and the system approaches one
 page per incident, not one per window (\S\ref{sec:results}).
 
-One design choice deserves emphasis because it recurs in our results. The optional
-language-model verifier, which re-examines a borderline match in natural language,
+The optional language-model verifier, which re-examines a borderline match in natural language,
 is itself capability-gated: enabled where calibration shows it helps, disabled where
 it hurts; on real engineer-written incidents we find it net-negative and switch it
 off. Treating whether an expensive reasoning step helps in a given setting as just

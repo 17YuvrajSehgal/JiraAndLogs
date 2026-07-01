@@ -4,7 +4,7 @@
 
 Consider an engineer on call for a microservice application, paged when checkout requests begin to fail. The pressing question is not how to repair the
 system from first principles but \emph{what is happening} and \emph{whether it
-warrants action}. In a fully instrumented deployment the evidence is rich yet noisy: the cluster reports a message broker's pod unavailable, its consumer services begin logging errors, distributed traces show their requests failing downstream, and an availability alert fires. Assembling these fragments into a diagnosis is the slow, expertise-bound step triage is meant to accelerate.
+warrants action}. In a fully instrumented deployment the evidence is rich yet noisy: the cluster reports a message broker's pod unavailable, its consumer services begin logging errors, distributed traces show their requests failing downstream, and an availability alert fires.
 
 The shortcut a seasoned engineer takes is \emph{recognition}: this pattern, a broker outage stalling its consumers and surfacing as checkout failures, has occurred before, and a resolved ticket already records how it was diagnosed and fixed. Retrieving that ticket turns an open-ended investigation into a near-instant analogy, the most direct path from symptom to resolution, provided the past incident can be found.
 
@@ -21,7 +21,6 @@ w_i=(t_i,\mathbf{x}_i,e_i)
 is observed at time $t_i$, contains a textual summary $\mathbf{x}_i$, and may
 include an arbitrary subset of auxiliary evidence
 $e_i\subseteq\{\text{metrics},\text{logs},\text{traces},\text{events}\}$.
-Thus windows may expose different modalities, including text alone.
 
 The retrieval memory
 $\mathcal{M}=\{m_1,\ldots,m_N\}$ consists of previously resolved incidents.
@@ -41,4 +40,3 @@ time $t_i$, the eligible memory is
 Given a window $w_i$, the objective is to retrieve the top-$k$ most relevant
 historical incidents from $\mathcal{M}_{<t_i}$ while simultaneously deciding
 whether the window warrants an engineer page. Since consecutive windows often belong to the same operational event, the system must additionally associate related windows into one incident so that only one page is issued.
-The challenge is to solve this retrieval and triage problem consistently across all evidence regimes, from text-only reports to richly instrumented deployments.

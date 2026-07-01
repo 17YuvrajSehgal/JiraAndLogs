@@ -69,7 +69,6 @@ memory). The near-misses separate a useful triage system from one that pages
 constantly; the orphans test whether it recognizes an incident from telemetry
 rather than only when a matching ticket exists.
 
-The two applications differ in \emph{architecture}, not merely size, so a method cannot succeed by memorizing one system's quirks.
 \textbf{Online Boutique}~\cite{googleboutique} is an eleven-service e-commerce demo
 spanning five languages; its 26 fault families include hard service outages (e.g., scaling a service to zero replicas), latency and resource-pressure
 degradations such as slow memory and connection leaks, pod restarts, network
@@ -85,9 +84,8 @@ windows never come from a scenario seen during training.
 \subsection{Real-World Incidents: World of Logs}
 \label{sec:datasets-wol}
 
-Synthetic faults, however carefully injected, cannot tell us whether a method
-survives contact with reality. For that we turn to the \emph{World of Logs}
-collection~\cite{wang2026worldoflogs}, a public archive of logs and issue reports
+To see whether a method survives contact with reality, we turn to the \emph{World
+of Logs} collection~\cite{wang2026worldoflogs}, a public archive of logs and issue reports
 mined from online software-engineering sources, including public Jira trackers.
 This dataset is not our contribution; we derive an evaluation slice from its Apache Jira issues. We select 24 of its
 distributed-systems projects (message brokers, datastores, stream processors,
