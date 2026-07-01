@@ -3,8 +3,8 @@
 \label{sec:introduction}
 
 Modern cloud services emit a relentless stream of alerts, and on-call engineers
-must decide, often within minutes, which signal a genuine incident worth
-investigating and which are noise~\cite{he2021survey,ghosh2022incidents}. The
+must decide, often within minutes, which signal a genuine incident and which are
+noise~\cite{he2021survey,ghosh2022incidents}. The
 decision is consequential both ways: a missed incident becomes an outage, while a
 flood of low-value pages erodes trust in the alerting system. What makes an
 on-call engineer effective is rarely raw signal-reading; it is \emph{memory}. Most
@@ -12,9 +12,8 @@ incidents rhyme with one the team has resolved before, and the fastest path from
 symptom to fix is to recognize ``the message-broker outage from
 last quarter'' and reuse the diagnosis that worked. The institutional record
 of past resolutions, typically a backlog of closed issue-tracker tickets, is
-therefore a team's single most valuable triage aid, yet largely
-untapped, because finding the \emph{right} prior incident for a live one is itself
-a hard retrieval problem.
+therefore a team's most valuable triage aid, yet largely untapped: finding the
+\emph{right} prior incident for a live one is itself a hard retrieval problem.
 
 This need has motivated growing work on automated incident triage and
 AIOps~\cite{he2021survey,chen2019triage,ghosh2022incidents}, increasingly powered
@@ -22,63 +21,52 @@ by large language models (LLMs)~\cite{ahmed2023rootcause,chen2024rcacopilot}.
 However, two assumptions limit how far these approaches carry into practice.
 
 First, evaluation is conducted almost exclusively on \emph{synthetic}
-fault-injection telemetry~\cite{chen2025aiopslab}: faults are scripted into
-demonstration microservice applications, producing incidents that are clean,
-balanced, and easily separable, and whether methods that excel under these
-conditions transfer to the noisy, imbalanced, free-text incidents of real
-operations remains largely unexplored. Progress is further hindered by the lack of
-public datasets pairing operational telemetry (logs, metrics, traces)
-with incident tickets and ground-truth labels: existing resources offer telemetry
-or tickets in isolation~\cite{zhu2023loghub,montgomery2022jira}, not the paired,
-per-window-labeled corpus triage evaluation requires.
+fault-injection telemetry~\cite{chen2025aiopslab}: faults scripted into
+demonstration microservice applications produce incidents that are clean, balanced,
+and easily separable, and whether methods that excel there transfer to the noisy,
+imbalanced, free-text incidents of real operations remains largely unexplored.
+Progress is further hindered by a lack of public datasets pairing telemetry (logs,
+metrics, traces) with incident tickets and ground-truth labels: existing resources
+offer telemetry or tickets in isolation~\cite{zhu2023loghub,montgomery2022jira}, not
+the paired, per-window-labeled corpus triage evaluation requires.
 
-Second, existing systems largely assume a fixed observability environment,
-designing retrieval and reasoning pipelines for telemetry-rich
+Second, existing systems largely assume a fixed observability environment, building
+retrieval and reasoning pipelines for telemetry-rich
 settings~\cite{ahmed2023rootcause,chen2024rcacopilot,zhou2024dbot}. Yet real
 deployments are heterogeneous: some incidents arrive with detailed logs, metrics,
-and traces, others as little more than a brief textual report. A triage system
-should adapt its strategy to the evidence actually available rather than rely on a
-fixed pipeline, a capability rarely considered or evaluated under realistic
-conditions.
+and traces, others as little more than a brief text report. A triage system should
+adapt to the evidence actually available rather than rely on a fixed pipeline, a
+capability rarely evaluated under realistic conditions.
 
 We present \sys (Adaptive Retrieval for Incident Support and Explanation), an
-adaptive incident-triage framework organized
-around retrieval from a memory of resolved incidents. Rather than assuming a fixed
-workflow, \sys dynamically selects retrieval and reasoning capabilities from the
-operational evidence available for each incident, letting one framework span
-heterogeneous regimes from telemetry-rich deployments to text-only reports. Its
-design follows three principles: \emph{hybrid memory retrieval} combines dense,
-lexical, and knowledge-graph similarity between live and historical incidents;
-\emph{capability-aware execution} invokes only the retrieval, verification, and
-evidence-gathering steps the available evidence supports and retrieval uncertainty
-justifies, cutting computation while preserving quality; and \emph{incident-aware
-paging} tracks evolving incidents across consecutive windows to suppress duplicate
-pages.
+adaptive incident-triage framework organized around retrieval from a memory of
+resolved incidents. Rather than assuming a fixed workflow, \sys selects retrieval
+and reasoning capabilities from the evidence available for each incident, letting
+one framework span regimes from telemetry-rich deployments to text-only reports. Its
+design follows three principles: \emph{hybrid memory retrieval} (dense, lexical, and
+knowledge-graph similarity between live and historical incidents),
+\emph{capability-aware execution} (running only the steps the evidence supports and
+uncertainty justifies), and \emph{incident-aware paging} (tracking evolving incidents
+to suppress duplicate pages).
 
-To evaluate adaptability across evidence regimes and transfer from synthetic to
-real deployments, we study \sys on three datasets of increasing realism: two newly
-collected, publicly released microservice-telemetry datasets (Online Boutique and
-OpenTelemetry Demo)\footnote{\url{https://zenodo.org/records/21096887}} and a large real-world corpus of 38,642 resolved Apache Jira
-incidents across 24 projects from the World of Logs
-collection~\cite{wang2026worldoflogs}. On the real incidents, the hardest setting,
-hybrid retrieval places the correct prior incident in its top five $97\%$ of the
-time, improving on each of its fused components in isolation (dense $0.91$, graph
-$0.31$) and on external baselines (lexical $0.77$, retrieval-augmented LLM
-$0.86$), every gap surviving multiple-comparison correction; the end-to-end system
-reaches $0.96$ while capability gating cuts per-window cost by up to $78\%$ with no
-loss in quality. Most striking is a controlled synthetic-versus-real comparison:
-the ticket-worthiness classification that dominates synthetic benchmarks is
-essentially perfect there (area under the precision--recall curve $\approx 1.0$)
-yet no better than chance on real incidents. The difficulty is not deciding
-\emph{whether} a window is an incident but retrieving \emph{which} past incident it
-resembles, a finding that reframes how operational-triage systems ought to be
-measured.
+To test adaptability and synthetic-to-real transfer, we study \sys on three
+datasets of increasing realism: two newly released microservice-telemetry datasets
+(Online Boutique and OpenTelemetry Demo)\footnote{\url{https://zenodo.org/records/21096887}}
+and 38,642 real Apache Jira incidents from 24 projects (World of
+Logs~\cite{wang2026worldoflogs}). On the hardest, real incidents, hybrid retrieval
+finds the correct prior incident in its top five $97\%$ of the time, beating every
+fused component and external baseline (each gap surviving multiple-comparison
+correction), while capability gating cuts per-window cost by up to $78\%$ at no loss
+in quality. Most striking, the ticket-worthiness classification that dominates
+synthetic benchmarks is near-perfect there yet no better than chance on real
+incidents: the challenge is not \emph{whether} a window is an incident but
+\emph{which} past one it resembles, reframing how triage ought to be measured.
 
 \noindent\textbf{Contributions.} This paper contributes:
 \begin{itemize}
   \item \textbf{A capability-gated triage framework} that composes retrieval and
-  reasoning steps to fit each incident's available evidence, running one workflow
-  from full telemetry to text-only reports while cutting per-window cost through
+  reasoning steps to each incident's available evidence, running one workflow from
+  full telemetry to text-only reports while cutting per-window cost via
   uncertainty-aware execution.
 
   \item \textbf{A hybrid retriever} fusing dense, lexical, and knowledge-graph
@@ -93,7 +81,7 @@ measured.
 
   \item \textbf{Two released telemetry-to-ticket datasets} pairing logs, metrics,
   traces, and cluster events with incident tickets and per-window labels (26 and
-  52 fault scenarios) with, to our knowledge, no prior public dataset coupling
-  telemetry and tickets at this granularity, alongside all code, baselines,
-  ablations, and significance tests.\footnote{\url{https://zenodo.org/records/21096898}}
+  52 fault scenarios), the first public datasets to our knowledge coupling telemetry
+  and tickets at this granularity, alongside all code, baselines, ablations, and
+  significance tests.\footnote{\url{https://zenodo.org/records/21096898}}
 \end{itemize}
