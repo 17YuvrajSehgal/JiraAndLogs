@@ -6,17 +6,17 @@ Modern cloud services emit a relentless stream of alerts, and on-call engineers
 must decide, often within minutes, which signal a genuine incident worth
 investigating and which are noise~\cite{he2021survey,ghosh2022incidents}. The
 decision is consequential both ways: a missed incident becomes an outage, while a
-flood of low-value pages erodes trust in the alerting system itself. What makes an
+flood of low-value pages erodes trust in the alerting system. What makes an
 on-call engineer effective is rarely raw signal-reading; it is \emph{memory}. Most
 incidents rhyme with one the team has resolved before, and the fastest path from
-symptom to fix is to recognize the situation as ``the message-broker outage from
-last quarter'' and reuse the diagnosis that worked then. The institutional record
+symptom to fix is to recognize ``the message-broker outage from
+last quarter'' and reuse the diagnosis that worked. The institutional record
 of past resolutions, typically a backlog of closed issue-tracker tickets, is
-therefore the single most valuable triage aid a team owns, yet it is largely
+therefore a team's single most valuable triage aid, yet largely
 untapped, because finding the \emph{right} prior incident for a live one is itself
 a hard retrieval problem.
 
-This need has motivated a growing body of work on automated incident triage and
+This need has motivated growing work on automated incident triage and
 AIOps~\cite{he2021survey,chen2019triage,ghosh2022incidents}, increasingly powered
 by large language models (LLMs)~\cite{ahmed2023rootcause,chen2024rcacopilot}.
 However, two assumptions limit how far these approaches carry into practice.
@@ -27,10 +27,10 @@ demonstration microservice applications, producing incidents that are clean,
 balanced, and easily separable, and whether methods that excel under these
 conditions transfer to the noisy, imbalanced, free-text incidents of real
 operations remains largely unexplored. Progress is further hindered by the lack of
-public datasets pairing operational telemetry such as logs, metrics, and traces
+public datasets pairing operational telemetry (logs, metrics, traces)
 with incident tickets and ground-truth labels: existing resources offer telemetry
 or tickets in isolation~\cite{zhu2023loghub,montgomery2022jira}, not the paired,
-per-window-labeled corpus that triage evaluation requires.
+per-window-labeled corpus triage evaluation requires.
 
 Second, existing systems largely assume a fixed observability environment,
 designing retrieval and reasoning pipelines for telemetry-rich
@@ -41,7 +41,7 @@ should adapt its strategy to the evidence actually available rather than rely on
 fixed pipeline, a capability rarely considered or evaluated under realistic
 conditions.
 
-In this paper we present \sys, an adaptive incident-triage framework organized
+We present \sys, an adaptive incident-triage framework organized
 around retrieval from a memory of resolved incidents. Rather than assuming a fixed
 workflow, \sys dynamically selects retrieval and reasoning capabilities from the
 operational evidence available for each incident, letting one framework span

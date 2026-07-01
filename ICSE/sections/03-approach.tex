@@ -147,8 +147,7 @@ constituent alone (\S\ref{sec:results}).
 \subsection{Knowledge-Graph Construction and Retrieval}
 \label{sec:approach-kg}
 
-We build the knowledge graph once, offline, from the resolved tickets that
-constitute the memory. For each ticket we prompt a lightweight language model
+We build the knowledge graph once, offline, from the resolved tickets in memory. For each ticket we prompt a lightweight language model
 (\texttt{gpt-4o-mini}) to emit a structured fact set: the affected services and
 components, any canonical error classes (for example \textsc{OOMKilled} or
 \textsc{ConnectionRefused}), a one-sentence root cause, a one-sentence fix with a
@@ -173,10 +172,10 @@ with weights that reflect each signal's diagnostic value: an exact error class i
 weighted most heavily ($\lambda_{\text{error}}=3.0$), followed by the affected
 service ($2.0$) and component ($1.5$), while symptoms, which recur across many
 unrelated incidents, contribute least ($1.0$). The score is a single graph query
-that enforces time-aware visibility directly, an incident being eligible only if
-its resolution timestamp precedes the window's. This view excels precisely where
+that enforces time-aware visibility directly: an incident is eligible only if
+its resolution timestamp precedes the window's. This view excels where
 text similarity is weakest, recognizing that two incidents share an error class
-and a component even when their prose differs.
+and component even when their prose differs.
 
 \subsection{Evidence-Grounded Refinement}
 \label{sec:approach-react}
@@ -236,7 +235,5 @@ One design choice deserves emphasis because it recurs in our results. The option
 language-model verifier, which re-examines a borderline match in natural language,
 is itself capability-gated, enabled only where calibration shows it helps and
 disabled where it hurts; on real engineer-written incidents we find it net-negative
-and switch it off. Treating the question of whether an expensive reasoning step is
-actually helping in a given setting as just another capability is, we argue, a
-large part of what lets one system stay robust across very different evidence
+and switch it off. Treating whether an expensive reasoning step actually helps in a given setting as just another capability is, we argue, much of what lets one system stay robust across very different evidence
 regimes.

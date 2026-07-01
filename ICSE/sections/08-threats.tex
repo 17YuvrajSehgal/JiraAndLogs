@@ -3,9 +3,9 @@
 \label{sec:threats}
 
 Several threats temper our claims. The principal one is \emph{external}: our
-telemetry-rich datasets are synthetic while our real dataset is text only, so the
-on-demand evidence-gathering behavior is exercised only on injected faults and we
-do not claim it transfers to production telemetry, and the open-source Apache
+telemetry-rich datasets are synthetic while our real dataset is text only, so
+on-demand evidence-gathering is exercised only on injected faults and we
+do not claim it transfers to production telemetry; the open-source Apache
 incidents and two demonstration applications are not a representative sample of
 all deployments. On \emph{construct} validity, the real dataset has no
 ground-truth answer key, so matches are inferred from project, component, and
@@ -14,11 +14,10 @@ matches from random controls on every dataset (\S\ref{sec:results-rq4}), report
 both a coarse and a strict relation, and release a human-annotation kit, but the
 labels remain a proxy rather than a multi-annotator study. For \emph{internal}
 validity, time-aware visibility and held-out fault families and project domains
-prevent any leakage of future or training information, though only the costly
+prevent leakage of future or training information, though only the costly
 real-data retriever is trained on a single seed (the two telemetry retrievers are
-stable across three seeds, \S\ref{sec:results-rq1}), which we report rather than
-overstate.
+stable across three seeds, \S\ref{sec:results-rq1}), which we report.
 Finally, for \emph{conclusion} validity, every difference is tested with a paired
 bootstrap corrected for false discovery, and we report negative and mixed results,
 such as fusion's lack of benefit on small corpora and triage's collapse on real
-data, rather than only the favorable comparisons.
+data, not only the favorable comparisons.

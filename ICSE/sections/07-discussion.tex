@@ -10,8 +10,8 @@ almost by construction, while on real engineer-filed tickets every classifier we
 tried sat at chance (\S\ref{sec:results-rq4}). Strong synthetic triage numbers
 therefore certify the dataset, not the method, and a system tuned to maximize them
 optimizes a quantity that does not transfer. The problem worth solving is the one
-that does, recognizing \emph{which} past incident a live one resembles, and it is
-far from saturated, which is where the gains we report come from.
+that does, recognizing \emph{which} past incident a live one resembles; far from
+saturated, it is where the gains we report come from.
 
 \noindent\textbf{Method conclusions flip with scale and realism.} Had we evaluated
 retrieval only on the synthetic corpora, as is common, we would have concluded
@@ -33,8 +33,8 @@ synthetic triage yet is net-negative on real text and is switched off there; the
 retrieval-augmented language model never beats the domain-tuned retriever whose
 candidates it re-reads. A system that hard-codes such components pays for them
 everywhere and is hurt where they misfire. Our controller instead treats both
-\emph{what evidence is present} and \emph{whether an expensive step is actually
-beneficial} as decisions made per window and per setting, which is what lets one
+\emph{what evidence is present} and \emph{whether an expensive step is
+beneficial} as per-window, per-setting decisions, which lets one
 implementation run from full telemetry down to bare text, suppress duplicate
 pages, and shed $40$--$78\%$ of per-window cost with no loss in accuracy
 (Figure~\ref{fig:adaptive}). Large language models are not a default win in this
@@ -46,7 +46,7 @@ accuracy.} The full system does not beat the best single retriever on raw hit
 rate; it \emph{matches} that quality while spending a fraction of the budget, and
 it keeps working when most of the evidence disappears. In real operations, where
 instrumentation is uneven, alert volume is punishing, and compute is metered,
-peak-quality retrieval when it is warranted, a lightweight path when it is not,
+peak-quality retrieval when warranted, a lightweight path when not,
 and roughly one alert per incident are precisely the properties that make a triage
 assistant deployable.
 

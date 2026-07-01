@@ -9,11 +9,9 @@ Table~\ref{tab:retrieval} reports retrieval quality across all three datasets.
 Two findings stand out. First, a retriever fine-tuned on the task far
 outperforms strong off-the-shelf methods: our dense bi-encoder beats every
 zero-shot dense embedder, classical lexical search, a cross-encoder re-ranker,
-and a retrieval-augmented LLM on all three datasets: on the real incidents, for
-example, it reaches \hit{5}~$0.91$ against $0.83$--$0.87$ for the best baselines.
+and a retrieval-augmented LLM on all three datasets: on real incidents it reaches \hit{5}~$0.91$ against $0.83$--$0.87$ for the best baselines.
 The retrieval-augmented LLM, despite re-reading the same candidates, never
-surpasses the trained retriever, indicating that the gains come from
-domain-adapted retrieval rather than from a general reader.
+surpasses the trained retriever: the gains come from domain-adapted retrieval, not a general reader.
 
 \begin{table*}[t]
 \centering
@@ -71,7 +69,7 @@ pairwise comparison with its bootstrap confidence interval and significance.
 
 \begin{figure}[t]
 \centering
-\includegraphics[width=0.92\columnwidth]{figures/fig_significance_forest.png}
+\includegraphics[width=0.82\columnwidth]{figures/fig_significance_forest.png}
 \caption{Difference in \hit{5} between Hybrid-RRF and each alternative (paired
 bootstrap, $95\%$ CI; green = significant after Benjamini--Hochberg). Hybrid wins
 decisively on real data (WoL) and beats the graph baseline on every dataset; on
@@ -86,8 +84,7 @@ retrieval still places the correct incident in its top five $74\%$ of the time
 (Kafka~$0.80$, MariaDB~$0.73$), evidence that the headline number is neither an
 artifact of one project nor of a lenient label.
 
-We further isolated the knowledge graph's contribution by comparing the full
-fusion against fusion without it. The graph does surface correct candidates the
+We isolated the knowledge graph's contribution by comparing full fusion against fusion without it. The graph does surface correct candidates the
 others miss (on $14\%$ of Online Boutique queries it retrieves the right
 incident where the dense retriever fails), but in fusion this rarely changes
 top-five recall (the $\pm$graph difference is not significant on any dataset).
@@ -110,10 +107,7 @@ robustness across evidence regimes: the \emph{same} system, with no
 reconfiguration, retrieves strongly whether it has complete telemetry or only text,
 reaching \hit{5}~$0.96$ on the real, text-only incidents (essentially realizing the
 hybrid retriever's quality end to end) and $0.76$ on the fully instrumented
-synthetic systems. Page suppression works as intended: across all three datasets
-the system emits about one page per incident, the suppression mechanism firing
-$3{,}061$ times on the real corpus to fold the repeat windows of an ongoing incident
-into the alert already raised rather than paging afresh for every window.
+synthetic systems. Page suppression works: across all three datasets the system emits about one page per incident, the mechanism firing $3{,}061$ times on the real corpus to fold an ongoing incident's repeat windows into the alert already raised rather than paging afresh for every window.
 
 \begin{table}[t]
 \centering
@@ -146,14 +140,9 @@ evidence supports, and escalating expensive steps only under uncertainty, cuts
 per-window cost (wall-clock time and model usage) by $40\%$, $63\%$, and $78\%$
 on the three datasets relative to a cascade that runs everything (Table~\ref{tab:agent}),
 and the saving grows with scale, since larger workloads contain more windows the
-cheap path can settle. Crucially, this thrift costs no accuracy: an ablation that
+cheap path can settle. This thrift costs no accuracy: an ablation that
 removes each component in turn moves \hit{1} by at most $0.012$, and sweeping the
-evidence-gathering budget leaves \hit{5} unchanged. The same measurements carry a
-candid message: because no single component is load-bearing, the heavyweight
-evidence-gathering tools contribute little measurable \hit{} gain on these
-datasets; their role is to keep cost low by running only when cheaper steps are
-unsure, and the headroom they could add is bounded by how often retrieval is
-already correct.
+evidence-gathering budget leaves \hit{5} unchanged. The same measurements carry a candid message: because no single component is load-bearing, the heavyweight evidence-gathering tools add little measurable \hit{} gain on these datasets; they keep cost low by running only when cheaper steps are unsure, and their potential headroom is bounded by how often retrieval is already correct.
 
 \smallskip
 \noindent The ablation isolates one capability that sits apart from retrieval rank,
@@ -205,10 +194,7 @@ memorization of which incidents carry tickets. This check is informative only th
 the other telemetry set contained no orphan faults, and on the real corpus triage is
 already at chance, leaving the orphan split uninformative.
 
-This reframes how operational triage should be measured: the part that looks
-solved on synthetic data is the part that does not transfer, while the part that
-does transfer (retrieving which past incident a live one resembles) is where the
-real headroom lies, and where our system is strongest.
+This reframes how operational triage should be measured: the part that looks solved on synthetic data does not transfer, while the part that does (retrieving which past incident a live one resembles) is where the real headroom lies, and where our system is strongest.
 
 Because the real dataset's matches are inferred rather than human-labelled, we
 validated them with an LLM-as-judge. Asked to rate each gold match against a random

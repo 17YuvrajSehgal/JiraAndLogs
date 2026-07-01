@@ -16,12 +16,12 @@ Our evaluation is organized around four questions:
   system retrieve effectively end to end, and does the \emph{same} system hold up
   as the available evidence degrades from full telemetry to text alone?
   \item[\textbf{RQ3}] \textbf{(Cost of adaptive execution).} What does the system's
-  capability gating buy? Specifically, how much triage cost does it save relative
+  capability gating buy? How much triage cost does it save relative
   to running every step on every window, at equal accuracy, and which components
   carry the result?
   \item[\textbf{RQ4}] \textbf{(Synthetic vs.\ real).} How do triage and retrieval
   behave on synthetic versus real incidents, and what does the contrast reveal
-  about where the difficulty truly lies?
+  about where the difficulty lies?
 \end{itemize}
 
 \subsection{Systems and Baselines}
@@ -30,10 +30,9 @@ Our evaluation is organized around four questions:
 We compare our hybrid retriever and full system against three groups of baselines,
 all evaluated under an identical memory, time-aware visibility, and gold contract.
 
-\noindent\emph{Constituent retrievers.} To show that fusion is more than the sum
-of its parts, we report our fine-tuned dense bi-encoder and our knowledge-graph
-retriever on their own, alongside the full hybrid that fuses them with a learned
-sparse retriever.
+\noindent\emph{Constituent retrievers.} To show fusion exceeds the sum of its parts, we report our fine-tuned dense
+bi-encoder and our knowledge-graph retriever on their own, alongside the full
+hybrid that fuses them with a learned sparse retriever.
 
 \noindent\emph{Prior-art retrieval.} We add widely used, off-the-shelf retrievers
 applied zero-shot: three strong dense embedding models (BGE, E5, and
@@ -58,10 +57,9 @@ Hit@$k$ (the correct prior incident appears in the top $k$, for
 $k\in\{1,5\}$) and mean reciprocal rank (MRR), averaged over queries that have
 at least one ground-truth match; on the real dataset we report both the coarse
 and strict matching relations of \S\ref{sec:datasets-wol}. \emph{Triage} is a
-calibrated classification problem, so beyond accuracy we report the area under the
-precision--recall curve, the area under the ROC curve, and expected calibration
-error. We also report, operationally, pages per
-incident, which captures whether duplicate alerts are suppressed. Finally,
+calibrated classification problem, so beyond accuracy we report the areas under the precision--recall and ROC
+curves, and expected calibration error. We also report pages per incident, which captures whether duplicate alerts are
+suppressed. Finally,
 \emph{cost} is measured per window as wall-clock time and language-model token
 usage, relative to a counterfactual cascade that runs every step on every window.
 
@@ -75,14 +73,13 @@ fault families, and the real dataset by holding out two entire project domains
 \noindent\emph{Statistics.} Every reported difference uses a paired bootstrap
 ($1{,}000$ resamples, $95\%$ confidence intervals) in which the same resampled
 windows are scored for both systems, preserving per-window correlation; a
-difference is significant when its interval excludes zero. Because we run many
-comparisons, we control the false-discovery rate across the whole family of tests
-with the Benjamini--Hochberg procedure and report corrected $q$-values.
+difference is significant when its interval excludes zero. Because we run many comparisons, we control the false-discovery rate across the
+test family with the Benjamini--Hochberg procedure and report corrected $q$-values.
 
-\noindent\emph{Gold validation.} Because the real dataset's matches are inferred
-rather than human-labelled, we additionally validate them with an LLM-as-judge: a
-language model rates the relevance of each gold match and of a random control, and
-we report the gap between the two as evidence that the labels carry signal.
+\noindent\emph{Gold validation.} Because the real dataset's matches are inferred rather than human-labelled, we
+validate them with an LLM-as-judge: a language model rates the relevance of each
+gold match and of a random control, and we report the gap as evidence that the
+labels carry signal.
 
 \noindent\emph{Implementation.} The dense retriever is a compact MiniLM
 bi-encoder fine-tuned for five epochs with hard negatives mined by lexical search;
@@ -92,8 +89,7 @@ entity overlap. The retrieval-augmented and judge models run offline with
 deterministic (greedy) decoding. Every experiment uses a fixed random seed, and
 full configurations and seeds are released with the artifact.
 
-\noindent\emph{Compute environment.} All experiments were executed on the
-Trillium cluster, a system administered by the Digital Research Alliance of
-Canada.\footnote{\url{https://alliancecan.ca}} Each training and sampling job was
-allocated a single NVIDIA H100 GPU (80\,GB) together with up to 24 CPU cores and
-the node's per-GPU share of host memory.
+\noindent\emph{Compute environment.} All experiments ran on the Trillium cluster, administered by the Digital
+Research Alliance of Canada.\footnote{\url{https://alliancecan.ca}} Each training
+and sampling job used a single NVIDIA H100 GPU (80\,GB) with up to 24 CPU cores
+and the node's per-GPU share of host memory.

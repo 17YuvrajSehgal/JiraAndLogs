@@ -7,12 +7,9 @@ generate incident volumes that overwhelm manual on-call triage, motivating a lar
 AIOps literature~\cite{notaro2021aiops,he2021survey}. Ghosh et al.~\cite{ghosh2022incidents}
 document the long detection-to-mitigation pipeline that motivates automation, and
 Chen et al.~\cite{chen2019triage} frame \emph{continuous incident triage} as
-routing incidents to the correct team. \sys{} targets the same bottleneck but
-reframes it as retrieval against a memory of resolved incidents rather than
-classification.
+routing incidents to the correct team. \sys{} reframes this bottleneck as retrieval against a memory of resolved incidents rather than classification.
 
-\noindent\textbf{LLMs for incident diagnosis.} Recent work applies large language
-models to root-causing and mitigation: Ahmed et al.~\cite{ahmed2023rootcause}
+\noindent\textbf{LLMs for incident diagnosis.} Recent work applies LLMs to root-causing and mitigation: Ahmed et al.~\cite{ahmed2023rootcause}
 study LLM-recommended root causes at scale, RCACopilot~\cite{chen2024rcacopilot}
 couples diagnostic-data collection with LLM reasoning and matches incidents to
 handlers by alert type, and D-Bot~\cite{zhou2024dbot} diagnoses database faults
@@ -48,8 +45,7 @@ SoftNER~\cite{shetty2022softner} mines them from cloud incidents, informing
 \sys{}'s graph retriever. Our ``retrieve the most similar past incident'' framing
 also descends from duplicate and similar bug-report
 retrieval~\cite{runeson2007duplicate,sun2010duplicate,he2020dccnn}, which \sys{}
-extends from bug reports to operational incidents with telemetry-aware,
-capability-gated retrieval.
+extends to operational incidents with telemetry-aware, capability-gated retrieval.
 
 \noindent\textbf{Benchmark systems and data.} Our two collected
 microservice-telemetry datasets build on Google's Online

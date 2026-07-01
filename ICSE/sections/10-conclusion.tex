@@ -2,11 +2,11 @@
 \section{Conclusion}
 \label{sec:conclusion}
 
-Incident triage is, at its core, an exercise in analogy: the fastest route from a
+Incident triage is an exercise in analogy: the fastest route from a
 new alert to a resolution is recognizing which past incident it resembles. We
 built \sys, a capability-aware system that operationalizes this view, retrieving
 similar resolved incidents by fusing dense, sparse, and graph signals, adapting
-which reasoning steps it runs to the evidence each window carries, and suppressing
+which reasoning steps it runs to each window's evidence, and suppressing
 duplicate pages across an incident's lifetime. Across a realism spectrum from fully
 instrumented synthetic services to real Apache Jira incidents, hybrid retrieval
 locates the right prior incident in its top five $97\%$ of the time on real data,
@@ -16,14 +16,14 @@ text-only operation. Our broadest finding is a caution about evaluation: the
 ticket-worthiness classification that dominates synthetic benchmarks is trivially
 solved on injected faults yet unlearnable on real ones, so it measures the data
 rather than the method, while the difficulty that transfers lies in retrieval. We
-hope the datasets, harness, and baselines we release help the community study
-triage where it is genuinely hard.
+hope the datasets, harness, and baselines help the community study triage where it
+is genuinely hard.
 
 \section*{Data Availability}
 
 All source code, the evaluation harness, the collected telemetry datasets, and
-the complete result set, including the prior-art and LLM baselines, ablations, and
-significance tests, are released to support reproduction. The datasets are openly
+the complete result set (prior-art and LLM baselines, ablations, and significance
+tests) are released to support reproduction. The datasets are openly
 available at Zenodo, \url{https://zenodo.org/records/21082064}
 (DOI~10.5281/zenodo.21082064), and the source code and evaluation harness at
 \url{https://zenodo.org/records/21083181} (DOI~10.5281/zenodo.21083181). Only the derived Apache-project Jira
