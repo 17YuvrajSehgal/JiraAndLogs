@@ -21,24 +21,24 @@
 \usepackage{xspace}
 
 % ---------- convenience macros (names are PLACEHOLDERS; see ICSE/README.md) ----------
-\newcommand{\sys}{\textsc{Remedy}\xspace}         % working system name (placeholder)
+\newcommand{\sys}{\textsc{Arise}\xspace}         % ARISE: Adaptive Retrieval for Incident Support and Explanation
 \newcommand{\hit}[1]{Hit@#1}
 
 \begin{document}
 
 % \title{Capability-Gated Agentic Incident Triage:\\
 % Matching Live Incidents to Resolved Tickets from Telemetry to the Real World}
-\title{Capability-Aware Incident Retrieval from Telemetry to Real-World Incident Reports}
+\title{ARISE: Adaptive Retrieval for Incident Support and Explanation}
 
 % --- double-blind: anonymized authors ---
-\author{\IEEEauthorblockN{Anonymous Author(s)}
-\IEEEauthorblockA{Submitted for double-blind review, ICSE 2027}}
+%\author{\IEEEauthorblockN{Anonymous Author(s)}
+%\IEEEauthorblockA{Submitted for double-blind review, ICSE 2027}}
 
 \maketitle
 
 \begin{abstract}
 On-call engineers triage a steady stream of alerts, and their most valuable diagnostic resource is institutional memory: how similar past incidents were diagnosed and resolved. Retrieving the right prior incident is hard, yet existing automated-triage methods are evaluated almost entirely on synthetic fault-injection telemetry under fixed observability assumptions, leaving their effectiveness on real engineer-written incidents largely unknown.
-We present \textbf{REMEDY}, an adaptive incident-triage framework that retrieves past incidents by fusing dense, lexical, and knowledge-graph retrieval and invokes additional reasoning only when uncertainty justifies its cost, letting one system span regimes from rich telemetry to text-only reports. We evaluate it on three datasets of increasing realism: two new telemetry-to-ticket datasets that pair multi-signal telemetry with incident tickets and per-window labels, and a real-world corpus of 38,642 resolved Apache Jira incidents across 24 projects. On real incidents, REMEDY retrieves the correct prior incident in its top five 97\% of the time, significantly outperforming strong dense, lexical, graph, and retrieval-augmented LLM baselines, while cutting triage cost by up to 78\% with no loss in quality.
+We present \textbf{ARISE}, an adaptive incident-triage framework that retrieves past incidents by fusing dense, lexical, and knowledge-graph retrieval and invokes additional reasoning only when uncertainty justifies its cost, letting one system span regimes from rich telemetry to text-only reports. We evaluate it on three datasets of increasing realism: two new telemetry-to-ticket datasets that pair multi-signal telemetry with incident tickets and per-window labels, and a real-world corpus of 38,642 resolved Apache Jira incidents across 24 projects. On real incidents, ARISE retrieves the correct prior incident in its top five 97\% of the time, significantly outperforming strong dense, lexical, graph, and retrieval-augmented LLM baselines, while cutting triage cost by up to 78\% with no loss in quality.
 A controlled synthetic-versus-real comparison further shows that the ticket-worthiness classification dominating existing benchmarks is nearly saturated on synthetic telemetry yet no better than chance on real incidents: the transferable challenge is retrieving the right past incident, not classifying alerts, reframing how triage systems should be evaluated. We release our datasets, code, evaluation harness, and results.
 
 \end{abstract}

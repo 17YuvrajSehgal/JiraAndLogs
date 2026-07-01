@@ -1,6 +1,6 @@
-# Memory-Augmented Agentic Incident Triage
+# ARISE: Adaptive Retrieval for Incident Support and Explanation
 
-Research artifact for an ICSE submission on **agentic incident triage**: a
+Research artifact for the ICSE submission **ARISE**: a
 capability-gated controller that retrieves similar past incidents from a memory
 of resolved tickets (dense + sparse + knowledge-graph fusion), triages new
 telemetry windows, and suppresses duplicate pages — evaluated on two synthetic

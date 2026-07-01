@@ -43,7 +43,7 @@ DEFAULT_STAGING = os.path.join(os.path.dirname(os.path.abspath(__file__)),
 # ---- ANONYMIZED metadata (edit text freely; keep it identity-free) ----
 METADATA = {
     "upload_type": "dataset",
-    "title": "Memory-Augmented Incident Triage Datasets: Online Boutique, "
+    "title": "ARISE Datasets: Online Boutique, "
              "OpenTelemetry Demo, and World of Logs",
     "creators": [{"name": "Anonymous"}],          # <-- double-blind: no names/affiliation/ORCID
     "access_right": "open",
