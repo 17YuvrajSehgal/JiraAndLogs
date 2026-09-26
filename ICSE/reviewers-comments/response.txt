@@ -1,0 +1,27 @@
+We thank all three reviewers for their careful and constructive reviews. All three found the problem highly relevant, and R3 valued the budgeted reasoning. While checking our code to answer the reviewers' questions, we found errors in some reported analyses. We report them first and openly. Our core retrieval results (RQ1 and end-to-end retrieval in RQ2) are not affected.
+
+R1/R2/R3 — Corrections we found
+(1) Real-data triage classifiers (R2 Q3). These classifiers use numeric telemetry features. World of Logs does not have any telemetry features, and in our pipeline these features were all zero, so the classifiers could only give a constant output. The chance-level result (ROC 0.50) is therefore caused by missing input, not by the difficulty of the task. We withdraw the claim that triage classification falls to chance on real incidents. In the revision, we will either evaluate text-based classifiers or remove this claim. This also answers R1's point that the RQ4 conclusion is overstated.
+(2) Cost savings (R2). The 40–78% figures are estimates from a per-skill cost model applied to the steps the controller skipped. They are not measured time or tokens. What the logs show directly is how often expensive steps were skipped: on about 79% of World of Logs windows. We will report these skip rates and measured run times and clearly label any cost model as an estimate.
+(3) Annotation kit (R3). The sentence in §IX saying we release a human-annotation kit is wrong. We will remove it. The human-annotation kit was basically the ticket annotations we did in synthetic data. I can see why this line can confuse the readers.
+(4) Artifact (R1). Sorry about the confusion about versioning of the artifact. The World of Logs corpus versioning was something that came from our internal versioning. While working – we worked with 3 versions -smaller, medium, and large, and we named it v1, v2, and v3 respectively. But we have reported only v3 results because it v1 & v2 were subset of v3. I see that name got reflected in the artifact.
+
+R1/R2/R3 — What the paper claims
+ARISE does not claim that telemetry reasoning transfers to production (§IX). Our claim is that one system works "from rich telemetry to text-only reports" (abstract). No public dataset pairs metrics, traces, and logs with tickets and per-window labels, so we built two. The real Jira reports have no metrics, traces, or cluster events, only issue text, which includes log lines pasted by engineers. We will describe this precisely. On this real data, the same controller runs unchanged and keeps retrieval quality (Hit@5 0.96).
+R1/R2 — Are the real-data labels trustworthy?
+We agree that the 97% result depends on an inferred rule (same project, shared Jira component), and the paper calls it "inferred." Three facts show the labels do not favor ARISE (R2 Q1). First, project and component are set by each project's engineers. Second, the graph retriever does not use the Jira component field; it uses components extracted from ticket text by a language model. Third, the graph is the weakest method (Hit@5 0.308) and removing it from fusion makes no significant difference (§VII-A). Under the stricter rule, Hit@5 is 0.74 and holds in both held-out projects (Kafka 0.80, MariaDB 0.73).
+We also agree with R1 and R2 that our LLM-as-judge check is weak. Its random controls come from other projects, so they are easy negatives, and its absolute ratings of gold pairs are low (mean 2.6/5). We will not present it as validation. In the revision, we will add a study with human raters using hard negatives from the same project, and we will report all methods under the strict rule.
+
+R2 — MAXCONF and thresholds
+MAXCONF(R) is the highest calibrated ticket-worthiness probability (0 to 1) among the retrievers' outputs. It is not the fused RRF score, whose maximum is about 0.049, as R2 correctly notes. The 0.90 and 0.5 thresholds were fixed in advance, not tuned. On World of Logs, the cheap path always escalates because there is no numeric triage signal. We will define all of this in §IV-A.
+
+R3 — Multiple runs and confidence intervals
+§VII-A reports three seeds on both telemetry datasets (0.632 ± 0.015, 0.678 ± 0.004). Only the World of Logs retriever was trained once (§IX) due to high time consumption. It is fine-tuned once, offline, then frozen; it is never updated per incident. We will add multiple seeds on World of Logs and add confidence intervals to Figure 4.
+
+R3 — Clarity
+Each memory item is one resolved ticket: a real Jira issue, or a ticket generated for each injected fault (§V-A). No manual labeling was done. Synthetic labels come from the known fault injection, and Jira labels come from issue type and resolution. The judge is Qwen2.5-7B, rating 300 gold and 300 random pairs per dataset on a 1–5 scale. "Hybrid-RRF" in Figure 3 is "Hybrid fusion" in Table II. We use windows because on-call monitoring decides per time slice. We will rewrite the two unclear introduction sentences.
+
+R1 — Related systems and labels
+Regarding the comparison to other approaches. DeepCT and Triangle assign incidents to teams, and FLASH supports diagnosis; ARISE finds similar past incidents that could feed such systems. We will add a comparison table. We agree that Jira resolution is not page-worthiness, and we will report how many issues lack a component.
+Summary
+The main retrieval results stand. We have openly corrected two analysis errors and several unclear descriptions. We believe all issues can be fixed, and we would be grateful for a major revision.

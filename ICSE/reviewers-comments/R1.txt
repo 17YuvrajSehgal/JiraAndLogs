@@ -1,0 +1,65 @@
+Review #5913A
+Overall merit
+2. 
+Weak reject
+
+Novelty
+2. 
+Incremental - modest extension, adaptation, combination, or improvement
+
+Rigor
+2. 
+Fair - some weaknesses, but the main claims are at least partially supported
+
+Relevance
+3. 
+High - addresses an important SE problem and is likely to influence research or practice under clear assumptions
+
+Verifiability and Transparency
+3. 
+Good - Sufficient information is provided to understand the work and support verification of the main claims
+
+Presentation
+3. 
+Good - clear, well organized, and easy to follow
+
+Paper summary
+The paper presents ARISE, an adaptive incident-triage framework that retrieves similar resolved incidents from an incident memory. The system combines dense retrieval, sparse lexical retrieval, and knowledge-graph retrieval, then uses capability gating to decide which retrieval or reasoning steps to run depending on available evidence and uncertainty. The evaluation uses three datasets: two newly collected telemetry-to-ticket datasets based on Online Boutique and OpenTelemetry Demo, and a real-world text-only corpus of 38,642 resolved Apache Jira incidents from 24 projects. The main result is that on the real corpus ARISE retrieves an inferred relevant prior incident in the top five 97% of the time, outperforming dense, lexical, graph, cross-encoder, and retrieval-augmented LLM baselines. Capability gating reduces per-window cost by up to 78% relative to a run-all cascade.
+
+Strengths
+The paper addresses an important and realistic operational problem: on-call engineers often rely on memory of prior incidents, and finding the right prior ticket is itself a hard retrieval problem.
+
+The evaluation includes two newly collected telemetry-to-ticket datasets plus a large real-world Jira corpus.
+
+Weaknesses
+The headline 97% Hit@5 result on real incidents depends on an inferred relevance relation, not manually validated ground truth. A query and prior ticket are considered relevant if they share project and component, with a stricter symptom-overlap variant. This relation may overestimate operational usefulness: two tickets can share project/component without being a genuinely helpful prior incident for on-call triage.
+
+The LLM-as-judge validation of inferred labels is not enough to remove the construct-validity concern. The judge compares inferred gold matches to random controls, which only shows that the inferred matches are less random than random tickets. It does not show that they are the right or useful incidents an engineer would retrieve.
+
+The real-world corpus is text-only, while the telemetry-rich datasets are synthetic. As a result, the paper cannot show that ARISE’s evidence-gathering and capability-gated telemetry reasoning transfer to real production telemetry. The strongest real-world result is essentially text-based incident retrieval.
+
+The triage-classification conclusion may be overstated. The paper shows that ticket-worthiness classification fails on text-only, resolution-derived Jira labels, but this does not necessarily imply that triage classification is generally a weak target. It may instead reflect noisy labels, missing telemetry, or mismatch between Jira resolution status and on-call ticket-worthiness.
+
+Limited comparison with related works.
+
+Detailed comments for authors
+The related-work discussion links incident-memory retrieval mainly to duplicate and similar bug-report retrieval. However, retrieving historical incidents has also been directly used in cloud incident management, for example to support root-cause analysis and to select candidate teams during incident triage. The paper should compare ARISE with these incident-level systems, or at least provide a clear task and capability comparison, rather than comparing only individual retrieval methods. For example: Yu et al. “Triangle: Empowering Incident Triage with Multi-Agent.” ASE 2025, pp. 674-686.
+
+The paper should be more careful in wording the 97% Hit@5 result. It is “97% under an inferred project-component relevance relation,” not necessarily 97% retrieval of genuinely useful prior incidents.
+
+The paper should report how often project/component metadata is missing, noisy, or inconsistent in World of Logs. Since the main real-corpus metric depends on these fields, their quality is load-bearing.
+
+The paper's real-world triage labels are derived from Jira resolution status, with fixed bugs treated as ticket-worthy and rejected/non-bug issues treated as noise. This creates a potential construct-validity problem: final resolution status may not correspond to on-call ticket-worthiness or page-worthiness. A rejected issue may still have required operational investigation, and a fixed issue may be low urgency. The authors should clarify this distinction and qualify the claim that triage classification collapses to chance in real operations.
+
+Artifact assessment
+2. 
+Partially Satisfactory, i.e., the artifacts partially contain what is declared in the submission form or the paper.
+
+Comments on artifact assessment
+Most of the artifacts declared in the paper are available. However, there are some issues—for example, the WOL-v3 mentioned in the paper is not in the link; only WOL-v2 is currently available.
+
+Questions for authors’ response
+Can the authors provide human judgments showing that the inferred project–component matches are genuinely useful prior incidents, rather than merely more relevant than random controls?
+Can the authors justify conclusions about capability-gated telemetry reasoning when the telemetry-rich datasets are synthetic and the real-world dataset is text-only?
+Why is final Jira resolution an appropriate proxy for on-call ticket/page-worthiness, and would the triage conclusion hold under human-annotated page-worthiness labels, e.g., urgent ticket-worthy, valid but not urgent, or no immediate action?
+Can the authors compare ARISE with incident-level systems that already retrieve similar historical incidents for RCA or team assignment (e.g., FLASH, Triangle, DeepCT, COMET), rather than only with individual retrieval methods, and clarify their differences in inputs, outputs, and evaluation?

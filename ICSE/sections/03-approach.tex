@@ -12,7 +12,7 @@ throughout, we return the $k=5$ most similar past incidents for each window.
 
 \begin{figure*}[t]
 \centering
-\includegraphics[width=\textwidth]{figures/pipeline.png}
+\includegraphics[width=.9\textwidth]{figures/pipeline.png}
 \caption{Overview of \sys. For each window (rich telemetry or bare text), a
 capability-gated planner profiles the evidence and assembles a cost-gated,
 cheap-first plan. Hybrid retrieval matches the window against a time-aware corpus
@@ -93,17 +93,11 @@ Algorithm~\ref{alg:window} summarizes the per-window procedure.
 \end{algorithmic}
 \end{algorithm}
 
-\noindent\textbf{Why a gated controller rather than a free-form agent.} \sys{} is
-deliberately \emph{agentic in capability but not autonomous in control}. Letting a
-language model choose each next tool would forfeit three properties triage cannot
-give up: \emph{reproducibility} (the same incident yields the same decision),
-\emph{bounded cost and latency} (no open-ended reasoning loop per window), and
-\emph{auditability} (every action traces to an explicit rule and budget, not an
-opaque model choice). \sys{} instead embeds the useful agentic behaviors
-(selective evidence-gathering and natural-language verification) in a
-deterministic, capability-gated skeleton,
-invoking the language model only where calibration shows it helps: an agent's
-adaptivity with the predictability production triage demands.
+\noindent\textbf{Deterministic control.}  ARISE uses adaptive tool selection but keeps
+control deterministic. This preserves reproducibility, bounded cost,
+and auditability: each action follows an explicit capability rule and
+budget rather than an open-ended model loop. Language-model calls
+are therefore limited to gated verification and reformulation steps.
 
 \subsection{Hybrid Memory Retrieval}
 \label{sec:approach-retrieval}
@@ -135,11 +129,7 @@ incident $m$ in retriever $r$'s list, the fused score is
 s_{\text{fuse}}(m)=\sum_{r\in\{\text{dense},\,\text{sparse},\,\text{graph}\}}
 \frac{1}{\kappa+\mathrm{rank}_r(m)},\qquad \kappa=60,
 \end{equation}
-where an incident contributes nothing from a retriever that does not rank it. A
-final composition step sharpens the head of the list, anchoring on the dense
-retriever's strongest candidates and promoting those the sparse and graph
-retrievers independently corroborate. One view's blind spot is thus covered by
-another's strength, the central reason the fused ranker beats every constituent
+where an incident contributes nothing from a retriever that does not rank it. A final composition step sharpens the head of the list, anchoring on the dense retriever's strongest candidates and promoting those the sparse and graph retrievers independently corroborate. One view's blind spot is thus covered by another's strength, the central reason the fused ranker beats every constituent
 alone (\S\ref{sec:results}).
 
 \subsection{Knowledge-Graph Construction and Retrieval}
@@ -209,7 +199,7 @@ which lack a telemetry classifier, the decision rests on retrieval confidence
 alone. A window is flagged \emph{novel}, signalling a failure mode with no
 precedent in memory, when no source is confident: the disjunction of a low maximum
 retriever confidence, a verifier judgement of novelty when the verifier ran, and an
-optional learned novelty score.
+optional learned novelty score. We treat novelty detection as an auxiliary signal rather than as a fully validated claim on real data, because the text-only real corpus does not provide reliable labels for no-precedent incidents.
 
 Because a single incident unfolds across many windows, paging on each would bury
 the on-call engineer. \sys{} keeps a per-service ring buffer of its last twelve

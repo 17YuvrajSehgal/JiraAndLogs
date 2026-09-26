@@ -1,0 +1,94 @@
+Review #5913C
+Overall merit
+3.
+Weak accept
+
+Novelty
+2.
+Incremental - modest extension, adaptation, combination, or improvement
+
+Rigor
+3.
+Good - appropriate methods and evidence adequately support the claims
+
+Relevance
+3.
+High - addresses an important SE problem and is likely to influence research or practice under clear assumptions
+
+Verifiability and Transparency
+2.
+Fair - Some information is provided, but not enough to support independent scrutiny, verification, or replication where appropriate
+
+Presentation
+2.
+Fair - understandable, but with noticeable clarity or organization issues
+
+Paper summary
+The authors promote a reasoning and retrieval system that helps links current incidents to past incidents. It includes a budgetter that helps budget how much reasoning and work should be done. The authors demonstrate on 3 datasets the effectiveness of the approach.
+
+Strengths
+budgetted reasoning
+uses bootstrapping for comparison
+Weaknesses
+lack of multiple runs
+not a consistently thorough analysis
+lack of clarity in some of the methodology.
+Detailed comments for authors
+It's never really clear what reports and documents they are using "(logs, metrics, traces)". Furthermore the formalism becomes too hand-wavy and it is not each to follow what is actually being stored. For instance there's this idea of an incident which is fundamental to memory but it's never clear where the incident comes from, who wrote it, and what is the core document behind the incident.
+
+I assume it is a jira ticket.
+
+Writing
+Most striking, the ticket-worthiness classification that dominates synthetic benchmarks is near- perfect there yet no better than chance on real incidents
+
+Sorry what does this mean? It's in the introduction.
+
+An empirical reframing showing that the ticket- worthiness classification dominating synthetic benchmarks does not transfer to real incidents, identifying retrieval over incident memory as the challenge that does.
+
+This does not parse. Identifying retrieval as the challenge that does?
+
+Windowing
+Q: Why a windowed approach? Why not a continuous approach? The memory formalism already allows for memory before a certain time.
+
+Favorite Part
+The budgeting. Cool.
+
+Methodology: Labelling
+Where do labels come from? There's suggestion there's LLM labelling but the manual process of labelling is implied and not described.
+
+In threats we see:
+
+and release a human-annotation kit,
+
+I do not know what the authors mean.
+
+I am left in the dark how labels are achieved.
+
+They keep referring to the label as LLM-as-judge but there's no methodology here. I don't know how they did it.
+
+Figure 3.
+Figure 3 is really important because this some of the main comparison of the author's model and other alternatives.
+
+Except one problem Hybrid-RRF does not appear in the paper. And RRF appready once in algorithm 1.
+
+I assume since the authors keep saying Hybrid that its obviously their system but RRF is probably recirprocal-rank-fusion?
+
+The confidence intervals are important, but they lead us to an inconsistency with Figure 4. Why not apply the same methdoology for effect of tools or not here? Furthermore is this thing deterministic, why is there only 1 point plotted? Shouldn't there be multiple runs?
+
+Multiple Runs
+The authors claims:
+
+Implementation. The dense retriever is a compact MiniLM bi- encoder fine-tuned for five epochs with hard negatives mined by lexical search; the hybrid fuses each retriever’s top candidates by reciprocal rank fusion. Graph entities are extracted from tickets by a small language model and matched by entity overlap. The retrieval-augmented and judge models run offline with deterministic (greedy) decoding. Every experiment uses a fixed random seed, and full configurations and seeds are released with the artifact.
+
+Which implies that perhaps we should see multiple runs and fixed seed is not really enough. If others deploy your algorithm they are going to have different seeds and choices. We're dealing with an intentionally stochastic process so we need to use statistics to evaluate performance.
+
+Fine-tuning is used in the paper and it's not clear when that is done. It is said it done per incident? But is that learned network passed on to the next? How is the fine-tuned dense MiniLM actually dealt with? This seems fundamental non-deterministic, even with fixed seeds. So that implies we need to have to multiple runs of the same operation and produce statistics in order to compare performance. It isn't called stochastic gradient descent because it was deterministic. The authors use GPUs and multicore CPUs so there's no guarantee of determinism for many of these baselines and experiments.
+
+Conclusions
+There's lot of methodological issues and confounds. Parts of the paper will not be replicable by a research assistant due to lack of details. The evaluation would be stronger if it was repeated. Some statistics are helpful, such as the use of confidence intervals. There's a lack of clarity in the use of human labellers and when fine-tuning is applied.
+
+The authors push a budgetting approach which is evaluated somewhat and seems to have some progress.
+
+Questions for authors’ response
+Why not use multiple runs in evaluation?
+Why the lack of the confidence interval treatment for figure 4?

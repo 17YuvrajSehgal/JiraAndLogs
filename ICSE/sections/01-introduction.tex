@@ -10,10 +10,7 @@ flood of low-value pages erodes trust in the alerting system. What makes an
 on-call engineer effective is rarely raw signal-reading; it is \emph{memory}. Most
 incidents rhyme with one the team has resolved before, and the fastest path from
 symptom to fix is to recognize ``the message-broker outage from
-last quarter'' and reuse the diagnosis that worked. The institutional record
-of past resolutions, typically a backlog of closed issue-tracker tickets, is
-therefore a team's most valuable triage aid, yet largely untapped: finding the
-\emph{right} prior incident for a live one is itself a hard retrieval problem.
+last quarter'' and reuse the diagnosis that worked. The institutional record of past resolutions, typically a backlog of closed issue-tracker tickets, is therefore one of a team’s most useful triage resources, yet it is often hard to use at incident time because finding the right prior incident is itself a retrieval problem.
 
 This need has motivated growing work on automated incident triage and
 AIOps~\cite{he2021survey,chen2019triage,ghosh2022incidents}, increasingly powered
@@ -53,11 +50,11 @@ To test adaptability and synthetic-to-real transfer, we study \sys on three
 datasets of increasing realism: two newly released microservice-telemetry datasets
 (Online Boutique and OpenTelemetry Demo)\footnote{\url{https://zenodo.org/records/21096887}}
 and 38,642 real Apache Jira incidents from 24 projects (World of
-Logs~\cite{wang2026worldoflogs}). On the hardest, real incidents, hybrid retrieval
-finds the correct prior incident in its top five $97\%$ of the time, beating every
+Logs~\cite{wang2026worldoflogs}). On the real text-only incidents, hybrid retrieval
+finds an inferred relevant prior incident in its top five $97\%$ of the time, beating every
 fused component and external baseline (each gap surviving multiple-comparison
 correction), while capability gating cuts per-window cost by up to $78\%$ at no loss
-in quality. Most striking, the ticket-worthiness classification that dominates
+in quality. For the real corpus, relevance is necessarily inferred rather than manually labeled: a retrieved incident is counted as relevant when it satisfies the project-component relation defined in §V-B, and we additionally report a stricter symptom-overlap variant and an LLM-as-judge validation. Most striking, the ticket-worthiness classification that dominates
 synthetic benchmarks is near-perfect there yet no better than chance on real
 incidents: the challenge is not \emph{whether} a window is an incident but
 \emph{which} past one it resembles, reframing how triage ought to be measured.
@@ -69,10 +66,7 @@ incidents: the challenge is not \emph{whether} a window is an incident but
   full telemetry to text-only reports while cutting per-window cost via
   uncertainty-aware execution.
 
-  \item \textbf{A hybrid retriever} fusing dense, lexical, and knowledge-graph
-  signals that, on real engineer-written incidents, significantly outperforms
-  every constituent retriever, strong prior-art baselines, and a
-  retrieval-augmented LLM.
+  \item \textbf{A hybrid retriever} fusing dense, lexical, and knowledge-graph signals that, on real engineer-written incidents, significantly improves Hit@5 over each constituent retriever, strong prior-art baselines, and a sampled retrieval-augmented LLM reranker.
 
   \item \textbf{An empirical reframing} showing that the ticket-worthiness
   classification dominating synthetic benchmarks does not transfer to real

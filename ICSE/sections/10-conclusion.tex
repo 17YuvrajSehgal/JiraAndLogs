@@ -1,31 +1,33 @@
 % === Conclusion ===
-\section{Conclusion}
+\section{Conclusion and Future Work}
 \label{sec:conclusion}
 
-Incident triage is an exercise in analogy: the fastest route from a
-new alert to a resolution is recognizing which past incident it resembles. We
-built \sys, a capability-aware system that operationalizes this view, retrieving
-similar resolved incidents by fusing dense, sparse, and graph signals, adapting
-which reasoning steps it runs to each window's evidence, and suppressing
-duplicate pages across an incident's lifetime. Across a realism spectrum from fully
-instrumented synthetic services to real Apache Jira incidents, hybrid retrieval
-locates the right prior incident in its top five $97\%$ of the time on real data,
-beating strong dense, lexical, graph, and LLM baselines, while capability gating
-matches that quality at up to $78\%$ lower cost and degrades gracefully to
-text-only operation. Our broadest finding is a caution about evaluation: the
-ticket-worthiness classification that dominates synthetic benchmarks is trivially
-solved on injected faults yet unlearnable on real ones, so it measures the data
-rather than the method, while the difficulty that transfers lies in retrieval. We
-hope the datasets, harness, and baselines help the community study triage where it
-is genuinely hard.
+Incident triage often relies on analogy to previously resolved failures. We
+built \sys, a capability-aware system that retrieves similar incidents by fusing
+dense, sparse, and graph signals, adapts its reasoning steps to the evidence
+available in each window, and suppresses duplicate pages across an incident's
+lifetime. Across fully instrumented synthetic services and real Apache Jira
+incidents, hybrid retrieval returns an inferred relevant prior incident within
+the top five results for $97\%$ of real-corpus queries, improving top-five
+retrieval over dense, lexical, graph, and LLM baselines. Capability gating
+preserves retrieval quality while reducing cost by up to $78\%$ and degrading
+gracefully to text-only operation. Our main evaluation lesson is that
+ticket-worthiness classification is nearly solved on injected faults but fails
+under text-only, resolution-derived real-incident labels; incident-memory
+retrieval is therefore a more transferable target for operational triage.
+
+Future work should evaluate \sys on production telemetry paired with
+human-written incident tickets, validate incident similarity through
+multi-annotator judgments from engineers, and improve graph retrieval through
+richer relation extraction or learned graph matching.
 
 \section*{Data Availability}
 
 All source code, the evaluation harness, the collected telemetry datasets, and
-the complete result set (prior-art and LLM baselines, ablations, and significance
-tests) are released to support reproduction. The datasets are openly
+the complete result set are released to support reproduction. The datasets are
 available at Zenodo, \url{https://zenodo.org/records/21096887}
 (DOI~10.5281/zenodo.21096887), and the source code and evaluation harness at
-\url{https://zenodo.org/records/21096898} (DOI~10.5281/zenodo.21096898). Only the derived Apache-project Jira
-subset of the World of Logs corpus is redistributed there, under CC~BY~4.0; the full
-corpus is publicly available from its original authors under its own terms.
+\url{https://zenodo.org/records/21096898}
+(DOI~10.5281/zenodo.21096898). Only the derived Apache-project Jira subset of the
+World of Logs corpus is redistributed there, under CC~BY~4.0; the full corpus is
+available from its original authors under its own terms.

@@ -2,7 +2,7 @@
 \section{Datasets}
 \label{sec:datasets}
 
-A faithful evaluation must cover the range a deployed system faces: from richly instrumented services with logs, metrics, and traces down to bare, text-only reports. We therefore use three datasets along this realism spectrum (Table~\ref{tab:datasets}). The first two we \emph{collect and release}: instrumented microservice systems under controlled fault injection, pairing multi-signal telemetry with incident tickets and exact per-window labels. The third we \emph{reuse}: a large corpus of real, engineer-written Apache Jira incidents testing whether methods tuned on synthetic data hold up in the field.
+A faithful evaluation must cover the range a deployed system faces: from richly instrumented services with logs, metrics, and traces down to bare, text-only reports. We therefore use three datasets along this realism spectrum (Table~\ref{tab:datasets}). The first two we \emph{collect and release}: instrumented microservice systems under controlled fault injection, pairing multi-signal telemetry with incident tickets and exact per-window labels. The third we \emph{reuse}: a large corpus of real, engineer-written Apache Jira incidents testing whether methods tuned on synthetic data hold up in the field. The synthetic datasets support exact window-to-ticket evaluation and telemetry-based gating; the real corpus supports large-scale text-only retrieval under noisier, inferred relevance labels.
 
 \begin{table}[t]
 \centering
@@ -33,7 +33,7 @@ Split            & by family        & by family        & leave-domain-out \\
 
 \begin{figure}[t]
 \centering
-\includegraphics[width=\columnwidth]{figures/data-collection.png}
+\includegraphics[width=.95\columnwidth]{figures/data-collection.png}
 \caption{Data-collection pipeline for the two telemetry datasets. A load
 generator exercises an open-source microservice application in Kubernetes while
 controlled faults (application-level failures and chaos-engineering network
@@ -101,13 +101,10 @@ This corpus is deliberately the hardest of the three, for two reasons. It is
 telemetry whatsoever, exactly the degraded regime to which our controller must
 fall back. And we evaluate it under a \emph{leave-domain-out} split, holding out
 two entire project families (a message broker and a database engine, $13{,}388$
-incidents) so the system must match incidents in projects it never saw while
-training. Real incidents come with no ground-truth ``which past ticket is the
-answer,'' so we follow the collection's inferred matching: a query and a past
-ticket match when they share a project and at least one software component, with
-a stricter variant that also requires overlapping symptom terms. We report
-retrieval quality under both relations and, because inferred labels deserve
-scrutiny, separately validate them with an LLM-as-judge check
-(\S\ref{sec:results}). Only genuine bug reports have matches; borderline and
+incidents) so the system must match incidents in projects it never saw while training. 
+
+The counts serve different roles. The 78,140 Jira issues form the labelled triage pool before the held-out-domain split. Table I reports the 13,388 held-out issues used as test windows for end-to-end triage. Retrieval metrics are computed only on held-out fixed-bug queries that have at least one eligible past match under the inferred relation; this yields 5,150 retrieval queries in Table II. Borderline and noise issues are retained for triage evaluation but excluded from Hit@k and MRR because they have no relevant prior incident by construction.
+
+Real incidents come with no manually curated answer key linking each query to the past ticket that would best support triage, so we use an inferred matching relation: a query and a past ticket match when they share a project and at least one software component, with a stricter variant that also requires overlapping symptom terms. We report retrieval quality under both relations and, because inferred labels deserve scrutiny, separately validate them with an LLM-as-judge check (\S\ref{sec:results}). Only genuine bug reports have matches; borderline and
 noise queries have none by construction and are excluded from the retrieval
 measurements.

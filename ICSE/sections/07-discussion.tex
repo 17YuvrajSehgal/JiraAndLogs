@@ -2,7 +2,7 @@
 \section{Discussion}
 \label{sec:discussion}
 
-\noindent\textbf{Triage-as-classification is the wrong yardstick.} The task most
+\noindent\textbf{Triage-as-classification is a weak yardstick.} The task most
 automated-triage work optimizes, deciding whether a window is ticket-worthy at
 all, is saturated where it is usually measured and barely learnable where it
 matters: on injected faults an active fault is separable from a healthy baseline
@@ -48,11 +48,4 @@ peak-quality retrieval when warranted, a lightweight path when not,
 and roughly one alert per incident are precisely what makes a triage
 assistant deployable.
 
-\noindent\textbf{Open problems.} Two gaps frame future work. First, the knowledge
-graph supplies correct candidates the other retrievers miss yet moves top-five
-recall little; richer relational extraction or a learned graph matcher, rather
-than entity overlap, may convert that latent signal into measured gains. Second,
-our real-world data is text only while our telemetry-rich data is synthetic: the
-open frontier is real telemetry paired with real, human-written tickets at scale.
-The datasets, harness, and baselines we release lower the barrier;
-\S\ref{sec:threats} discusses the limitations that temper these conclusions.
+%\noindent\textbf{Open problems.} Two gaps frame future work. First, the knowledge graph supplies correct candidates the other retrievers miss yet moves top-five recall little; richer relational extraction or a learned graph matcher, rather than entity overlap, may convert that latent signal into measured gains. Second, our real-world data is text only while our telemetry-rich data is synthetic: the open frontier is real telemetry paired with real, human-written tickets at scale. The datasets, harness, and baselines we release lower the barrier; \S\ref{sec:threats} discusses the limitations that temper these conclusions.

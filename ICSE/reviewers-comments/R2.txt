@@ -1,0 +1,62 @@
+Review #5913B
+Overall merit
+2.
+Weak reject
+
+Novelty
+2.
+Incremental - modest extension, adaptation, combination, or improvement
+
+Rigor
+2.
+Fair - some weaknesses, but the main claims are at least partially supported
+
+Relevance
+3.
+High - addresses an important SE problem and is likely to influence research or practice under clear assumptions
+
+Verifiability and Transparency
+3.
+Good - Sufficient information is provided to understand the work and support verification of the main claims
+
+Presentation
+3.
+Good - clear, well organized, and easy to follow
+
+Paper summary
+This paper proposes ARISE, which retrieves similar resolved incidents to support on-call triage. It combines dense, sparse, and graph retrieval, then uses a deterministic controller to run expensive steps only when needed. It also suppresses repeated pages for the same incident. The evaluation uses two fault-injection datasets and an Apache Jira corpus with 38,642 resolved issues in retrieval memory. On Jira, hybrid retrieval reaches 0.970 Hit@5 under the paper's project-component relevance rule. The paper reports cost reductions of 40% to 78% against a run-all cascade.
+
+Strengths
+The problem is important to cloud incident mangement practice.
+The evaluation covers both telemetry-rich and text-only settings.
+The paper reports positive findings as well as negative ones.
+Weaknesses
+The main Jira result uses a relevance rule that overlaps with ARISE's retrieval features.
+The synthetic and real evaluations use different inputs and label definitions.
+The controller and cost evaluation lack important details.
+Novelty detection and evidence gathering are not fully evaluated on real data.
+Detailed comments for authors
+Rigor
+An important problem is the Jira relevance definition. A past issue is considered relevant when it shares the query's project and at least one component. ARISE's graph retriever directly uses component overlap. The 0.970 Hit@5 result may therefore partly reflect the labeling rule, rather than finding incidents with a similar cause or useful resolution. The paper's nonsignificant graph ablation (Section VII-A) alleviates this concern but does not address its validity.
+
+The stricter relevance rule also requires symptom overlap and yields a lower Hit@5 of 0.74, making the evaluation more meaningful. However, the graph retriever also uses symptom overlap, so some alignment between the method and the labels remains. The LLM validation uses random controls, which may be easy negatives. Stronger evidence would come from engineers evaluating the actual top-ranked results against difficult alternatives from the same project.
+
+The synthetic-versus-real comparison is a bit overstated. The synthetic data consists of telemetry windows labeled by whether they should trigger a page, while the Jira data consists of filed issues labeled by their type and final resolution. A fixed Jira bug is not necessarily an alert that should have triggered an on-call page. The inputs also change from telemetry to text, and the paper does not explain what features the standard classifiers use for Jira. Because both the task and the input change, the result shows a difference between datasets, not clear evidence of transfer failure.
+
+"MAXCONF(R)" is not defined in the paper. If it refers to the maximum RRF score from Equation 2, then comparing it with 0.5 is not meaningful, because the maximum possible score is only (3/61
+≈
+≈ 0.049). The paper should define "MAXCONF(R)" and explain its scale.
+
+Relevance
+The work is relevant to incident management and software maintenance. Its focus on retrieving past resolutions is practical and complements work on root-cause analysis.
+
+Verifiability and Transparency
+The code is accessible and contains configuration, tests, and reproduction instructions.
+
+Presentation
+The paper is generally clear and well organized, and Figure 1 gives a helpful overview of ARISE. However, some important details are hard to follow, especially how confidence scores are calculated and how the reported cost savings are measured. These details should be explained more directly.
+
+Questions for authors’ response
+Since both the relevance labels and ARISE's graph retriever use component overlap, how do you ensure that the evaluation does not favor ARISE? How do the other methods perform under the stricter relevance rule?
+What does "MAXCONF(R)" measure, and how is its value and 0.5 threshold determined?
+What inputs were used by the standard classifiers for the Jira AUPRC and ROC results, given that the corpus has no numeric telemetry?

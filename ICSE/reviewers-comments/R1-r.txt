@@ -1,0 +1,11 @@
+vo bol raha hai ki real data pr 97% hit@5 depend krta hia inferred relevance relation k upper - humney manually validate nahi kiya hai ground truth ko. Humara evaluation ka method hai -> agr ek ticket project or component ko
+
+hum overestimate kr rhe hai operational usefulness ko.
+
+2 tickets ek project or component share kr skte hai - without being relevant to each other.
+
+
+
+The paper should report how often project/component metadata is missing, noisy, or inconsistent in World of Logs. Since the main real-corpus metric depends on these fields, their quality is load-bearing.
+
+--> in the paper, WoL it
