@@ -1,0 +1,70 @@
+{
+  "config": {
+    "global_dir": "data/derived/global/2026-06-17-wol-real-v3-global",
+    "humanized_root": "jira-shadow-humanized-v2",
+    "humanized_subdir": "bulk-20260617",
+    "n_hard_negs": 2,
+    "n_random_negs": 1,
+    "use_all_golds": false,
+    "finetune_epochs": 5,
+    "max_chars": 512,
+    "seed": 42
+  },
+  "metadata": {
+    "n_predictions": 13388,
+    "fit_seconds": 8561.913132190704,
+    "predict_seconds": 0.002807140350341797,
+    "wall_seconds": 8592.236095905304,
+    "train_n": 60916,
+    "val_n": 3836,
+    "test_n": 13388,
+    "n_memory": 38642,
+    "n_finetune_pairs": 23320,
+    "backbone": "sentence-transformers/all-MiniLM-L6-v2",
+    "embed_dim": 384,
+    "device": "cuda",
+    "retrieval": "bi_encoder_dense"
+  },
+  "coarse": {
+    "label": "coarse",
+    "n_with_gold": 5150,
+    "hit_at_1": 0.8530097087378641,
+    "hit_at_5": 0.8980582524271845,
+    "mrr": 0.8680614886731386,
+    "per_project": {
+      "wol-kafka": {
+        "n": 803,
+        "hit_at_1": 0.9140722291407223,
+        "hit_at_5": 0.9327521793275217,
+        "mrr": 0.9215857202158572
+      },
+      "wol-mariadb-server": {
+        "n": 4347,
+        "hit_at_1": 0.8417299286864505,
+        "hit_at_5": 0.8916494133885439,
+        "mrr": 0.8581742197684225
+      }
+    }
+  },
+  "strong": {
+    "label": "strong",
+    "n_with_gold": 4362,
+    "hit_at_1": 0.23635946813388353,
+    "hit_at_5": 0.4805135259055479,
+    "mrr": 0.3237696775179586,
+    "per_project": {
+      "wol-kafka": {
+        "n": 672,
+        "hit_at_1": 0.3273809523809524,
+        "hit_at_5": 0.6130952380952381,
+        "mrr": 0.4335565476190473
+      },
+      "wol-mariadb-server": {
+        "n": 3690,
+        "hit_at_1": 0.21978319783197833,
+        "hit_at_5": 0.45636856368563683,
+        "mrr": 0.3037759710930455
+      }
+    }
+  }
+}
