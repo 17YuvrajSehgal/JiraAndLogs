@@ -4,10 +4,11 @@
 
 \noindent\textbf{Triage-as-classification is a weak yardstick.} The task most
 automated-triage work optimizes, deciding whether a window is ticket-worthy at
-all, is saturated where it is usually measured and barely learnable where it
+all, is saturated where it is usually measured and only weakly learnable where it
 matters: on injected faults an active fault is separable from a healthy baseline
-almost by construction, while on real engineer-filed tickets every classifier we
-tried sat at chance (\S\ref{sec:results-rq4}). Strong synthetic triage numbers
+almost by construction (ROC area $1.00$), while on real engineer-filed tickets the
+best classifier we tried reaches ROC area $0.60$ and barely improves on predicting
+the majority class (\S\ref{sec:results-rq4}). Strong synthetic triage numbers
 therefore certify the dataset, not the method, and a system tuned to maximize them
 optimizes a quantity that does not transfer. The problem worth solving is the one
 that does: recognizing \emph{which} past incident a live one resembles, far from

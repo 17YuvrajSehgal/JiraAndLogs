@@ -180,17 +180,20 @@ these tools only when cheaper steps are unsure, not to add accuracy.}
 Our most consequential finding concerns the triage \emph{classification} task
 that dominates synthetic benchmarks, deciding whether a window is ticket-worthy
 at all. On synthetic data it is trivially easy: standard classifiers over the
-telemetry features reach a near-perfect area under the precision--recall curve and
-are well calibrated. On the real incidents, the very same
-classifiers collapse to chance: their area under the precision--recall curve is
-$0.51$, identical to the positive base rate a random ranker would score, and their
-ROC area is exactly $0.50$. The system's own triage accuracy ($0.51$) likewise
-matches the majority-class baseline ($0.51$), confirming that no usable signal is
-being learned. The
-difficulty of synthetic triage is an artifact of fault injection, where active
-faults are separable from baselines by construction; on real, engineer-written
-tickets, whether an issue was ultimately deemed worth fixing is simply not
-predictable from its text alone. We further confirm that the synthetic signal is
+telemetry features reach a near-perfect area under the precision--recall curve
+(ROC area $1.00$) and are well calibrated.
+
+Real incidents carry no telemetry features, so the comparison must be made on
+the input that corpus actually has, its text. Under the identical
+leave-domain-out protocol and five seeds, a TF--IDF linear model reaches ROC
+area $0.601$ ($95\%$ CI $[0.592,0.611]$), gradient boosting over a truncated-SVD
+projection $0.583$, and logistic regression $0.572$. The intervals exclude
+$0.50$, so real-incident text does carry signal, but the task retains only a
+small fraction of what injected telemetry offers, and at the operating threshold
+the gain over the majority-class baseline ($0.506$) is slight. The near-perfect
+synthetic number is thus an artifact of fault injection, where active faults are
+separable from baselines by construction, rather than evidence that
+ticket-worthiness is an easy prediction on real, engineer-written tickets. We further confirm that the synthetic signal is
 genuine rather than memorized: on Online Boutique we inject \emph{orphan} faults,
 real ticket-worthy failures deliberately left with no matching ticket in memory, and
 the triage classifiers flag them as reliably as the reported faults (recall gap
@@ -198,7 +201,15 @@ within $5$ points, and $1.00$ versus $1.00$ for the gradient-boosted model), so 
 near-perfect synthetic number reflects fault-versus-baseline separability, not
 memorization of which incidents carry tickets. This check is informative only there:
 the other telemetry set contained no orphan faults, and on the real corpus triage is
-already at chance.
+already weak.
+
+The real-data conclusion is not an artifact of how we binarize the three-way
+label. Dropping the ambiguous \emph{borderline} class and classifying
+ticket-worthy against noise alone raises the best text model to ROC area $0.704$
+($95\%$ CI $[0.688,0.721]$) on $8{,}024$ held-out issues, still far below the
+synthetic $1.00$ and still at the majority-class accuracy ($0.844$). Both
+binarizations agree: real-incident text carries measurable but weak
+ticket-worthiness signal.
 
 This reframes how operational triage should be measured: the part that looks solved on synthetic data does not transfer, while the part that does (retrieving which past incident a live one resembles) is where the real headroom lies, and where our system is strongest.
 
