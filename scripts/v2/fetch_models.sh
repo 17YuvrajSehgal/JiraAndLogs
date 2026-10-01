@@ -37,6 +37,7 @@ MODELS = [
     ("intfloat/e5-large-v2",                    "e5 baseline"),
     ("cross-encoder/ms-marco-MiniLM-L-6-v2",    "cross-encoder reranker"),
     ("naver/splade-cocondenser-ensembledistil", "learned sparse retriever"),
+    ("Qwen/Qwen2.5-7B-Instruct",                "LLM-as-judge + RAG baseline (~15G)"),
 ]
 failed = []
 for name, why in MODELS:
