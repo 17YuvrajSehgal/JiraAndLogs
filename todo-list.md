@@ -256,8 +256,15 @@ misleading "human-annotation kit" phrasing in §IX. Rename the real-data target
 
 ### 17. Writing pass
 - **Naming:** "Hybrid-RRF" appears in Fig 3 but nowhere in the text; RRF is used
-  once in Algorithm 1 unexpanded. Also settle **ARISE vs "Remedy"** — commit
-  7c64207 renamed the architecture, `main.tex` still says ARISE.
+  once in Algorithm 1 unexpanded. ✅ unified to "hybrid fusion".
+- **ARISE vs Remedy — RESOLVED, keep ARISE.** Commit 7c64207's message says it
+  "renamed architecture to Remedy", but the diff shows it did not touch the
+  system name anywhere in the text; it rewrote the abstract's claims and changed
+  the **draw.io diagram tab name** to `Remedy-Architecture`. That string is
+  internal metadata — the rendered figure is name-agnostic (boxes read
+  "Observation Window", "Capability-Gated Planner", …). `main.tex` defines
+  `\sys` as ARISE and titles the paper ARISE. Nothing to decide; optionally
+  clean the vestigial `Remedy-Architecture` string out of `pipeline.drawio`.
 - **Training vs inference:** R3 thought fine-tuning might be per-incident and
   carried forward. It is a single offline once-per-dataset step; the model is
   frozen for every test query.
@@ -266,6 +273,26 @@ misleading "human-annotation kit" phrasing in §IX. Rename the real-data target
 ---
 
 ## P4 — Infrastructure
+
+### Branch divergence — RESOLVED, local `master` is canonical
+
+The cluster checkout sits on `master-agent-new`, which looked like a competing
+line of paper work. It is not: both branches fork from `37a6ccc`, and
+
+| Branch | Last paper commit | Has the reviews? |
+|---|---|---|
+| `master-agent-new` | **2026-06-30** | no |
+| `master` | 2026-07-01 "final reduction", then **2026-09-25** | yes (R1/R2/R3) |
+
+`master-agent-new` stopped before the final length reduction and before
+submission; `master` is the line that was submitted and that the reviews landed
+on. So the v2 edits are on the right base.
+
+Critically, the **analysis code is identical across the two** — a diff of
+`run_biencoder_wol_mode3.py`, `run_baseline_retrievers.py`, `src/neural_models/`
+and `src/memorygraph/` between them is empty. The cluster results are therefore
+not computed with stale code, which was the real risk. The stale checkout only
+affects `ICSE/`, which the jobs never read.
 
 ### 19. v2 branch and Trillium runs
 - ✅ branch `v2-research`; `*.tar.zst` now ignored (data.tar.zst, 11GB, was not)
