@@ -19,12 +19,20 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import os
 import sys
 import time
 import zipfile
 from pathlib import Path
 
-PROJECT_ROOT = Path("C:/workplace/JiraAndLogs")
+#: Repo root. Derived from this file's location (scripts/agent/<this>.py) so the
+#: bundler runs wherever the repo is checked out; previously hardcoded to a
+#: Windows path, which made it unrunnable on the cluster where the 5.1 GB WoL-v3
+#: dataset actually lives. Override with --project-root or V2_PROJECT_ROOT.
+PROJECT_ROOT = Path(
+    os.environ.get("V2_PROJECT_ROOT")
+    or Path(__file__).resolve().parents[2]
+)
 
 PRECOMPRESSED_SUFFIXES = {".gz", ".zip", ".archive", ".pdf", ".tar", ".tgz", ".bz2", ".xz", ".zst"}
 
@@ -62,6 +70,29 @@ DATASETS = {
 #: leaked retrieval quality. Excluded from the bundle and documented in README.
 QUARANTINED_FILES = {"jira-memory-corpus.jsonl"}
 
+#: Directories excluded from published bundles, relative to the dataset root.
+#: Each is either not part of the released dataset or exactly redundant with a
+#: consolidated file that IS released. Verified on WoL-v3 before excluding.
+EXCLUDED_DIRS = {
+    # Sampling-stage candidate pools (2.8 GB of a 4.8 GB bundle). These are the
+    # UNSAMPLED per-project pools the corpus was drawn from, including buckets
+    # that never entered the dataset at all. Publishing them would ship a far
+    # larger slice of the source corpus than the derived subset the paper states
+    # it redistributes, so they stay out on both size and licensing grounds.
+    ".pool_cache",
+    # Per-item LLM-extraction caches. Exactly redundant: ticket/ holds 38,600
+    # single-record files against all_extractions.jsonl's 38,600 rows, and
+    # window/ holds 78,139 against 78,140. Dropping them removes ~116.7k files
+    # with no information loss; the consolidated JSONLs are still published.
+    "v2_kg_extractions/ticket",
+    "v2_kg_extractions_windows/window",
+}
+
+
+def _is_excluded(rel: str) -> bool:
+    """True when a dataset-root-relative path falls under an excluded dir."""
+    return any(rel == d or rel.startswith(d + "/") for d in EXCLUDED_DIRS)
+
 
 def _zip_compression_for(path: Path) -> int:
     if path.suffix.lower() in PRECOMPRESSED_SUFFIXES:
@@ -97,6 +128,8 @@ def _enumerate_simple(
                   f"Components metadata; excluded from the bundle")
             continue
         rel = f.relative_to(src_dir).as_posix()
+        if _is_excluded(rel):
+            continue
         out.append((f, rel))
     return out
 
@@ -123,6 +156,8 @@ def _enumerate_full(
                   f"Components metadata; excluded from the bundle")
             continue
         rel = f.relative_to(src_dir).as_posix()
+        if _is_excluded(rel):
+            continue
         out.append((f, f"data/derived/global/{dataset_id}/{rel}"))
 
     # 2) Per-run derived caches (data/derived/<dataset-prefix>-*-r##/)
@@ -225,25 +260,52 @@ def main() -> None:
     p = argparse.ArgumentParser(description=__doc__)
     p.add_argument("--slug", required=True, choices=list(DATASETS.keys()))
     p.add_argument("--variant", required=True, choices=["simple", "full"])
-    p.add_argument("--published-root", type=Path,
-                   default=PROJECT_ROOT / "data/published")
+    p.add_argument("--project-root", type=Path, default=PROJECT_ROOT,
+                   help="repo root; defaults to this script's repo, or "
+                        "$V2_PROJECT_ROOT")
+    p.add_argument("--published-root", type=Path, default=None)
+    p.add_argument("--dry-run", action="store_true",
+                   help="enumerate and report what would be bundled, write nothing")
     args = p.parse_args()
+
+    project_root = args.project_root.resolve()
+    published_root = args.published_root or (project_root / "data/published")
 
     cfg = DATASETS[args.slug]
     dataset_id = cfg["dataset_id"]
-    out_dir = (args.published_root / args.slug).resolve()
-    out_dir.mkdir(parents=True, exist_ok=True)
+    out_dir = (published_root / args.slug).resolve()
     out_zip = out_dir / f"{args.variant}_dataset.zip"
 
     print(f"[{args.slug}/{args.variant}]  dataset_id={dataset_id}")
+    print(f"  project root: {project_root}")
+    src_dir = project_root / "data/derived/global" / dataset_id
+    if not src_dir.is_dir():
+        raise SystemExit(
+            f"dataset not found: {src_dir}\n"
+            f"  (is --project-root correct? on the cluster this is "
+            f"/scratch/$USER/JiraAndLogs_scratch/JiraAndLogs)"
+        )
+
     if args.variant == "simple":
-        entries = _enumerate_simple(dataset_id, PROJECT_ROOT)
+        entries = _enumerate_simple(dataset_id, project_root)
     else:
-        entries = _enumerate_full(args.slug, dataset_id, PROJECT_ROOT)
+        entries = _enumerate_full(args.slug, dataset_id, project_root)
     print(f"  {len(entries)} files to include")
 
+    if args.dry_run:
+        total = sum(p.stat().st_size for p, _ in entries if p.exists())
+        print(f"  [dry-run] would write {out_zip}")
+        print(f"  [dry-run] total raw: {total / 1024**3:.2f} GB")
+        for p_, rel in entries[:12]:
+            print(f"      {rel}")
+        if len(entries) > 12:
+            print(f"      ... and {len(entries) - 12} more")
+        return
+
+    out_dir.mkdir(parents=True, exist_ok=True)
+
     # Read README from the dataset dir (single source of truth)
-    readme_src = PROJECT_ROOT / "data/derived/global" / dataset_id / "README.md"
+    readme_src = src_dir / "README.md"
     readme_bytes = readme_src.read_bytes()
 
     manifest_bytes, total = _build_manifest_in_memory(entries)
