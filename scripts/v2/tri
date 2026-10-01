@@ -12,6 +12,13 @@
 # -- so anything with --gpus-per-node must be submitted from trig-login01. The
 # -g flag hops there internally (passwordless within the cluster).
 #
+# IMPORTANT: these are two SEPARATE Slurm clusters with INDEPENDENT job-ID
+# spaces (the GPU side reports ClusterName=grillium). Running `squeue -j <id>`
+# or `sacct -j <id>` for a GPU job on the CPU login node silently reports some
+# other user's job with the same number -- which once looked like our job had
+# been cancelled by a stranger. ALWAYS use -g for squeue/sacct/scancel on GPU
+# jobs.
+#
 # Usage:
 #   scripts/v2/tri 'squeue -u $USER'          # inline command, CPU login node
 #   scripts/v2/tri -g 'sbatch gpu_job.sbatch' # run on the GPU login node

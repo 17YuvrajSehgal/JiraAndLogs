@@ -40,8 +40,31 @@ exec > >(stdbuf -oL -eL tee -a "$LOGFILE") 2>&1
 module load python/3.12 arrow/21.0.0
 source .venv/bin/activate
 export PYTHONPATH="src:${PYTHONPATH:-}" PYTHONUNBUFFERED=1 PYTHONUTF8=1
-export HF_HOME="/scratch/${USER}/hf_cache" HF_HUB_OFFLINE=1 TRANSFORMERS_OFFLINE=1
+# /project is NOT subject to the scratch purge, which is what removed the
+# previous /scratch/$USER/hf_cache and made every seed fail in ~9s with
+# LocalEntryNotFoundError. Pre-populate with scripts/v2/fetch_models.sh.
+export HF_HOME="${V2_HF_HOME:-/project/def-naser2/${USER}/hf_cache}"
+export HF_HUB_OFFLINE=1 TRANSFORMERS_OFFLINE=1
 export BIENC_BM25_JOBS="${SLURM_CPUS_PER_TASK:-24}" TOKENIZERS_PARALLELISM=false
+
+# Fail fast and loudly rather than "continuing" through every seed. A missing
+# cache is a setup error, not a per-seed failure, and burning the whole seed
+# grid on it wastes an allocation and looks like a result.
+if [[ ! -d "$HF_HOME" ]]; then
+  echo "!! HF_HOME does not exist: $HF_HOME"
+  echo "!! Run scripts/v2/fetch_models.sh on a LOGIN node first (compute nodes have no outbound network)."
+  exit 1
+fi
+python - <<'PY' || exit 1
+import os, sys
+from huggingface_hub import snapshot_download
+try:
+    p = snapshot_download("sentence-transformers/all-MiniLM-L6-v2", local_files_only=True)
+    print(f"  HF cache OK: {p}")
+except Exception as e:
+    print(f"!! HF cache unusable at {os.environ.get('HF_HOME')}: {type(e).__name__}")
+    sys.exit(1)
+PY
 
 SEEDS="${V2_SEEDS:-42 1 2 3 4}"
 echo "=== v2 multi-seed  node=$(hostname)  $(date -Is) ==="

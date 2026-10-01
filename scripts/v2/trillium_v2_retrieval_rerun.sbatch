@@ -36,13 +36,26 @@ module load python/3.12 arrow/21.0.0
 source .venv/bin/activate
 export PYTHONPATH="src:${PYTHONPATH:-}"
 export PYTHONUNBUFFERED=1
-export HF_HOME="/scratch/${USER}/hf_cache" HF_HUB_OFFLINE=1 TRANSFORMERS_OFFLINE=1
+# /project is NOT purged like /scratch; see trillium_v2_multiseed.sbatch.
+export HF_HOME="${V2_HF_HOME:-/project/def-naser2/${USER}/hf_cache}"
+export HF_HUB_OFFLINE=1 TRANSFORMERS_OFFLINE=1
 export TOKENIZERS_PARALLELISM=false
 
 GLOBAL="data/derived/global/2026-06-17-wol-real-v3-global"
 HSUB="bulk-20260617"
 OUT="paper-results-v2/baselines/wol-v3"
 mkdir -p "$OUT"
+
+# Only the HF-backed methods need the cache; tfidf is pure sklearn. Check once
+# up front so a setup error is not mistaken for a modelling result.
+if [[ ! -d "$HF_HOME" ]]; then
+  echo "!! HF_HOME missing: $HF_HOME -- run scripts/v2/fetch_models.sh on a login node"
+  exit 1
+fi
+
+# Skip methods whose predictions already exist, so a partially-completed run
+# can be resumed without redoing finished work.
+METHODS="${V2_METHODS:-tfidf mpnet bge e5 ce}"
 
 echo "=== v2 retrieval re-run ==="
 echo "  repo:   $REPO"
@@ -54,8 +67,12 @@ nvidia-smi --query-gpu=name,memory.total --format=csv,noheader 2>/dev/null | hea
 # The two methods whose predictions are missing from the paired panel, plus the
 # three already present -- re-run together so every row of the strict-relation
 # table comes from one commit with identical corpus and visibility rules.
-for METHOD in tfidf mpnet bge e5 ce; do
+for METHOD in $METHODS; do
   echo ""
+  if [[ -s "$OUT/${METHOD}-predictions.jsonl" ]]; then
+    echo "--- [$METHOD] predictions already present, skipping ---"
+    continue
+  fi
   echo "--- [$METHOD] ---"
   python scripts/research-lab/run_baseline_retrievers.py \
       --global-dir "$GLOBAL" \
