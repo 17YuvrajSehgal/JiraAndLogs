@@ -41,11 +41,26 @@ DATASETS = {
         "raw_root_name": "otel-demo-runs",
     },
     "world-of-logs": {
-        "dataset_id": "2026-06-15-wol-real-v2-global",   # v2 refresh 2026-06-16 (Phase B augmented)
+        # v3 (2026-06-17) is the corpus EVERY reported result is computed from.
+        # This was pinned to v2 at ICSE submission time, so the Zenodo record
+        # shipped v2 while the paper reported v3 — the reviewer-flagged artifact
+        # defect. make_release_archives.sh always used v3; only this bundler
+        # lagged. Keep these two in sync.
+        "dataset_id": "2026-06-17-wol-real-v3-global",
         "raw_id_prefix": None,
         "raw_root_name": "wol",   # full dir; gzipped-only inclusion handled below
     },
 }
+
+#: Files that must never ship in a published bundle, keyed by dataset id prefix.
+#: `jira-memory-corpus.jsonl` composes `memory_text` as
+#: "Summary / Components: <...> / Description / Log lines", so it embeds the
+#: Jira `components` metadata that *defines* the coarse relevance relation —
+#: 100% of gold component names appear verbatim. It is NOT what the retrievers
+#: index (that is the humanized corpus, see memorygraph/humanized_loader.py),
+#: but shipping it unlabelled lets a reproducer index it by mistake and measure
+#: leaked retrieval quality. Excluded from the bundle and documented in README.
+QUARANTINED_FILES = {"jira-memory-corpus.jsonl"}
 
 
 def _zip_compression_for(path: Path) -> int:
@@ -77,6 +92,10 @@ def _enumerate_simple(
             continue
         if f.name.startswith("MANIFEST") or f.name.endswith(".tmp"):
             continue
+        if f.name in QUARANTINED_FILES:
+            print(f"  [quarantined] {f.name} — embeds the gold-defining "
+                  f"Components metadata; excluded from the bundle")
+            continue
         rel = f.relative_to(src_dir).as_posix()
         out.append((f, rel))
     return out
@@ -98,6 +117,10 @@ def _enumerate_full(
         if not f.is_file():
             continue
         if f.name.startswith("MANIFEST") or f.name.endswith(".tmp"):
+            continue
+        if f.name in QUARANTINED_FILES:
+            print(f"  [quarantined] {f.name} — embeds the gold-defining "
+                  f"Components metadata; excluded from the bundle")
             continue
         rel = f.relative_to(src_dir).as_posix()
         out.append((f, f"data/derived/global/{dataset_id}/{rel}"))

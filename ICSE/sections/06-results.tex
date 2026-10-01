@@ -160,11 +160,17 @@ synthetic telemetry data alone.
 \caption{Adaptive execution on the fully-instrumented Online Boutique system
 (RQ3). (a)~Raising the evidence-gathering budget leaves retrieval accuracy
 unchanged (\hit{5} flat at $0.76$; \hit{1} within a $0.024$ band) while wall-clock
-time grows $6.7\times$: more budget buys latency, not accuracy. (b)~No single
-evidence tool is load-bearing, and the extended-trace reader is
-net-\emph{harmful} to top-1 retrieval ($-0.018$); the peer-incident lookup is the
-only clearly beneficial tool. The controller's value is to invoke these tools only when cheaper steps are
-unsure, not to add accuracy.}
+time grows $6.7\times$: more budget buys latency, not accuracy. (b)~Single-tool
+effect on \hit{1} with $95\%$ paired-bootstrap confidence intervals ($1{,}000$
+resamples, the same procedure as Fig.~\ref{fig:forest}); $*$ marks an interval
+excluding zero. \emph{No evidence tool has a demonstrable benefit}: the
+peer-incident lookup, the largest positive point estimate, is
+$+0.015$ with CI $[-0.006,+0.033]$. Only the extended-trace reader has a
+demonstrable effect and it is \emph{harmful} ($-0.018$, CI $[-0.033,-0.006]$),
+and only when it runs alone: added alongside the peer lookup the effect falls to
+$-0.003$ (CI $[-0.009,+0.000]$, n.s.). On OTel Demo and World of Logs every tool
+effect is identically $0.000$. The controller's value is therefore to invoke
+these tools only when cheaper steps are unsure, not to add accuracy.}
 \label{fig:adaptive}
 \end{figure*}
 

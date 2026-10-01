@@ -191,31 +191,45 @@ def fig_adaptive_execution():
     # ── panel (b): single-tool effect on Hit@1 (synthetic, telemetry tools) ──
     TOOL = {"events": "events", "trace": "trace",
             "metrics": "metrics", "peers": "peers"}
-    ta = _load(PR / "agent-value" / "online-boutique" / "tool-ablation.json")
+    # Paired-bootstrap CIs (scripts/v2/tool_ablation_ci.py). R3 asked why this
+    # panel lacked the interval treatment Fig. 3 gets; there was no reason, the
+    # per-case data was already in the artifact. Only `trace` clears zero, and
+    # it does so only in isolation — see the script's context table.
+    ci = _load(Path("paper-results-v2") / "tool-ablation-ci" / "tool-ablation-ci.json")
+    ob_ci = (ci or {}).get("online-boutique", {}).get("singles", {})
     drew = False
-    if ta and ta.get("all_subsets"):
-        base = next((s for s in ta["all_subsets"] if s["subset_label"] == "none"), None)
-        singles = {s["subset_label"]: s for s in ta["all_subsets"] if s.get("n_tools") == 1}
-        if base and singles:
-            b1 = base["hit_at_1"]
-            labs, deltas = [], []
-            for key in ("events", "trace", "metrics", "peers"):
-                if key in singles:
-                    labs.append(TOOL[key]); deltas.append(singles[key]["hit_at_1"] - b1)
-            ypos = np.arange(len(labs))
-            cols = [C["good"] if dv > 0 else (C["bad"] if dv < 0 else C["prior"]) for dv in deltas]
-            axR.barh(ypos, deltas, 0.6, color=cols, edgecolor="black", linewidth=0.3)
-            axR.axvline(0, color=C["ink"], lw=0.9)
-            for yi, dv in zip(ypos, deltas):
-                axR.text(dv + (0.0008 if dv >= 0 else -0.0008), yi, f"{dv:+.3f}",
-                         va="center", ha="left" if dv >= 0 else "right", fontsize=6.8)
-            axR.set_yticks(ypos); axR.set_yticklabels(labs, fontsize=7.6)
-            axR.set_xlabel(r"$\Delta$ Hit@1 vs no tools")
-            axR.set_title("(b) single-tool effect (Online Boutique)", fontsize=8.2)
-            mx = max(abs(min(deltas)), abs(max(deltas))) * 1.5 or 0.01
-            axR.set_xlim(-mx, mx)
-            axR.grid(axis="x", alpha=0.25, linewidth=0.4)
-            drew = True
+    if ob_ci:
+        labs, deltas, errlo, errhi, sig = [], [], [], [], []
+        for key in ("events", "trace", "metrics", "peers"):
+            r = ob_ci.get(key, {}).get("hit_at_1")
+            if not r:
+                continue
+            labs.append(TOOL[key]); deltas.append(r["delta"])
+            errlo.append(r["delta"] - r["ci_low"]); errhi.append(r["ci_high"] - r["delta"])
+            sig.append(r["significant"])
+        ypos = np.arange(len(labs))
+        # Only a bar whose interval excludes zero earns a verdict colour; the
+        # rest are drawn neutral so the figure cannot imply an effect we did
+        # not measure.
+        cols = [(C["good"] if dv > 0 else C["bad"]) if s else C["prior"]
+                for dv, s in zip(deltas, sig)]
+        axR.barh(ypos, deltas, 0.6, color=cols, edgecolor="black", linewidth=0.3)
+        axR.errorbar(deltas, ypos, xerr=[errlo, errhi], fmt="none",
+                     ecolor=C["ink"], elinewidth=0.9, capsize=2.5, capthick=0.9)
+        axR.axvline(0, color=C["ink"], lw=0.9)
+        for yi, dv, s in zip(ypos, deltas, sig):
+            off = errhi[yi] + 0.004 if dv >= 0 else -(errlo[yi] + 0.004)
+            axR.text(dv + off, yi, f"{dv:+.3f}{'*' if s else ''}",
+                     va="center", ha="left" if dv >= 0 else "right", fontsize=6.8)
+        axR.set_yticks(ypos); axR.set_yticklabels(labs, fontsize=7.6)
+        axR.set_xlabel(r"$\Delta$ Hit@1 vs no tools")
+        axR.set_title("(b) single-tool effect, 95% CI (Online Boutique)", fontsize=8.2)
+        # Leave room for the value labels, which sit outside the whiskers.
+        reach = max(abs(min(d - e for d, e in zip(deltas, errlo))),
+                    abs(max(d + e for d, e in zip(deltas, errhi))))
+        axR.set_xlim(-(reach * 2.1 or 0.01), (reach * 2.1 or 0.01))
+        axR.grid(axis="x", alpha=0.25, linewidth=0.4)
+        drew = True
     if not drew:
         axR.text(0.5, 0.5, "tool-ablation data unavailable", ha="center", va="center",
                  transform=axR.transAxes, fontsize=8, color="0.5")
