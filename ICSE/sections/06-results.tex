@@ -145,6 +145,45 @@ removes each component in turn moves \hit{1} by at most $0.012$, and sweeping th
 evidence-gathering budget leaves \hit{5} unchanged. The same measurements carry a candid message: no single component is load-bearing, so the heavyweight evidence-gathering tools add little measurable \hit{} gain here; they keep cost low by running only when cheaper steps are unsure, and their headroom is bounded by how often retrieval is already correct.
 
 \smallskip
+\noindent\textbf{Where the gate thresholds sit.} Because the escalation decision
+is driven by a threshold on $\mathrm{maxconf}$ (Eq.~\ref{eq:maxconf}), its value
+deserves a sensitivity analysis rather than an assertion. Using the per-window
+counterfactual between the cheap-path-only and full-stack configurations, we
+sweep a unified escalation threshold over the realized confidence distribution on
+the real corpus (Table~\ref{tab:threshold}). Escalation is worth $+0.059$ \hit{5}
+in aggregate ($0.904\!\rightarrow\!0.963$), but the curve saturates early: a
+threshold of $0.477$ already reaches the full-escalation quality of $0.963$ while
+escalating three quarters of windows, and $0.362$ retains $0.935$ while escalating
+only a quarter. The shipped $0.5$ is thus on the saturated plateau, buying no
+additional quality over $0.477$ at a higher escalation rate. On the telemetry
+datasets the sweep is flat at every threshold, consistent with the finding above
+that the expensive path never changes their rankings.
+
+\begin{table}[t]
+\centering
+\caption{Escalation-threshold sensitivity on World of Logs ($n{=}5{,}150$). A
+window escalates when its cheap-path confidence falls below the threshold.
+Quality saturates well before the shipped operating point.}
+\label{tab:threshold}
+\footnotesize
+\setlength{\tabcolsep}{5pt}
+\begin{tabular}{cccl}
+\toprule
+Threshold & Windows escalated & \hit{5} & \\
+\midrule
+$0.000$ & \phantom{0}0.0\% & 0.904 & (never escalate) \\
+$0.293$ & \phantom{0}5.0\% & 0.911 & \\
+$0.362$ & 25.0\% & 0.935 & \\
+$0.400$ & 41.8\% & 0.955 & \\
+$0.450$ & 61.0\% & 0.963 & \\
+$0.477$ & 75.0\% & 0.963 & cheapest to match full escalation \\
+$0.500$ & 85.4\% & 0.963 & shipped operating point \\
+$0.600$ & 100.0\% & 0.963 & (always escalate) \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\smallskip
 \noindent The ablation isolates one capability that sits apart from retrieval rank,
 \emph{novelty detection}: removing the novelty-composition step leaves \hit{5}
 unchanged but drops recall of novel, no-precedent incidents from $0.54$ to $0$ on

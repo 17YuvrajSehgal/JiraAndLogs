@@ -47,18 +47,39 @@ text-only window drives the identical controller to a compact dense-and-graph pl
 with no code or configuration change.
 
 Planning is also cost-aware. Skills are ordered cheapest first, and the expensive
-ones sit behind \emph{gates} that open only under uncertainty. A fast pass runs a
-numeric triage classifier and a dense lookup; the costly sparse and graph
-retrievers and the language-model verifier are scheduled only when this cheap path
-is unconvincing, that is, when the numeric triage score falls below $0.90$ or the
-dense retriever returns no confident match. A second gate triggers query
-reformulation only when the best retriever confidence is below $0.5$. Here
-\emph{confidence} $c\in[0,1]$ is the score a skill attaches to its output, the
-triage classifier's ticket-worthiness probability or a retriever's best-match
-strength: $c\ge0.90$ on the cheap path commits and skips the expensive steps (a
-text-only window, lacking a numeric signal, always escalates), while $c<0.5$
-signals no acceptable precedent, triggering a rewrite and, if it persists, a
-novelty flag; the same $0.5$ separates ticket-worthy from noise. A
+ones sit behind two \emph{gates} that open only under uncertainty.
+
+\noindent\emph{Confidence.} Both gates read a confidence $c\in[0,1]$, the score a
+skill attaches to its own output: for the numeric triage classifier its
+calibrated ticket-worthiness probability, and for a retriever the calibrated
+probability its logistic head assigns to the window given its best match. We
+write
+\begin{equation}
+\mathrm{maxconf}(R)=\max_{r\in\{\text{dense},\,\text{sparse},\,\text{graph}\}} c_r,
+\label{eq:maxconf}
+\end{equation}
+the largest such confidence over the retrievers that have run. We stress that
+$\mathrm{maxconf}$ is \emph{not} the fused score of Eq.~\ref{eq:rrf}: reciprocal
+rank fusion produces an unnormalized quantity bounded above by
+$3/(\kappa+1)\approx0.049$, which would make a comparison against $0.5$
+meaningless. The two live on different scales and are never compared. On the real
+corpus the realized $\mathrm{maxconf}$ spans $[0.00,0.57]$ with median $0.42$ and
+quartiles $0.36$ and $0.48$, so a $0.5$ threshold sits just above the upper
+quartile of the distribution it is applied to.
+
+\noindent\emph{The gates.} A fast pass runs the numeric triage classifier and a
+dense lookup. The \emph{escalation gate} schedules the costlier sparse and graph
+retrievers and the language-model verifier when this cheap path is unconvincing:
+when the numeric triage score falls below $0.90$ or the dense retriever returns no
+confident match. A text-only window has no numeric signal to read, so this gate
+opens on essentially every window of the real corpus, which is the intended
+degraded-mode behaviour. The \emph{reformulation gate} then triggers query
+rewriting when $\mathrm{maxconf}(R)<0.5$, signalling that no acceptable precedent
+was found; if that persists, the window is flagged novel. Both thresholds are the
+components' own operating points, fixed in advance rather than tuned on test
+data: $0.5$ is the calibrated ticket-worthy/noise boundary shared by every
+retrieval head, and $0.90$ is the numeric classifier's high-confidence commit
+point. We report their sensitivity in \S\ref{sec:results-rq3}. A
 hard per-window budget bounds the worst case, capping language-model tokens
 ($10^5$), wall-clock time ($90$\,s), monetary cost (\$$0.50$), and total skill
 invocations ($12$); an exhausted budget returns the best partial result. Because
@@ -81,7 +102,9 @@ Algorithm~\ref{alg:window} summarizes the per-window procedure.
 \State $c\gets \textsc{NumericTriage}(w)$ if $\textsc{Numeric}\!\in\!\mathcal{C}$;\;\; $R_d\gets \textsc{Dense}(w,\mathcal{M}_{<t})$
 \If{$c<0.90$ \textbf{ or } $|R_d|<1$} \Comment{escalation gate}
   \State $R\gets \textsc{RRF}\big(\textsc{Dense},\textsc{Sparse},\textsc{Graph};\,\mathcal{M}_{<t}\big)$
-  \If{$\textsc{MaxConf}(R)<0.5$} \State $R\gets \textsc{Reformulate}(w,\mathcal{M}_{<t})$ \EndIf
+  \If{$\mathrm{maxconf}(R)<0.5$} \Comment{Eq.~\ref{eq:maxconf}, not Eq.~\ref{eq:rrf}}
+    \State $R\gets \textsc{Reformulate}(w,\mathcal{M}_{<t})$
+  \EndIf
   \If{telemetry available \textbf{ and } still uncertain}
     \State $R\gets \textsc{RerankByEvidence}\big(R,\textsc{Gather}(w)\big)$
   \EndIf
@@ -128,6 +151,7 @@ incident $m$ in retriever $r$'s list, the fused score is
 \begin{equation}
 s_{\text{fuse}}(m)=\sum_{r\in\{\text{dense},\,\text{sparse},\,\text{graph}\}}
 \frac{1}{\kappa+\mathrm{rank}_r(m)},\qquad \kappa=60,
+\label{eq:rrf}
 \end{equation}
 where an incident contributes nothing from a retriever that does not rank it. A final composition step sharpens the head of the list, anchoring on the dense retriever's strongest candidates and promoting those the sparse and graph retrievers independently corroborate. One view's blind spot is thus covered by another's strength, the central reason the fused ranker beats every constituent
 alone (\S\ref{sec:results}).

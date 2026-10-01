@@ -176,29 +176,50 @@ public corpus as actual baselines.
 
 ## P2 — Novelty. This is what decides the score.
 
-### 14. Learned cost-sensitive escalation controller ← primary contribution
-Replace the hand-set 0.90/0.5 gates with a policy that predicts **whether
-escalating will change the answer**, and spends budget only where predicted
-value exceeds cost.
+### 20. Escalation-value training set ✅ DONE (commit a979db5)
+Measured headroom, from pairing the `dense_only` (gate never opens) and
+`baseline` (gate always opens) ablation cells per window:
 
-Why this is defensible rather than incremental:
-- the counterfactual training data already exists — every cell in
-  `paper-results/agent-value/*/{skill,tool}-cells` records what the answer *was*
-  and *would have been* per window
-- our own measurements show the current gates are poorly targeted: the 0.90
-  gate never fires on WoL, and `reformulate_query` escalates on 2,810 windows
-  with no measurable Hit@5 benefit — there is real, demonstrable headroom
-- it gives R3's "favourite part" a method contribution with a stated objective
+| Dataset | Escalation changes the answer | Shipped gates escalate | An oracle needs |
+|---|---|---|---|
+| Online Boutique | **0.0%** of windows | 20.9% | 0% |
+| OTel Demo | **0.0%** of windows | 17.4% | 0% |
+| World of Logs | 6.2% helped / 0.3% hurt | **99.9%** | **6.2%** (16.2× reducible) |
 
-Target headline: a **cost-quality Pareto curve** where the learned policy
-dominates both the hand-tuned gates and the run-all cascade. Ablate against
-always-escalate, never-escalate, and random-escalate at matched budget.
+Escalation is worth $+0.0592$ Hit@5 overall on WoL, but the accuracy ceiling of
+a *perfect* policy over always-escalating is only $+0.0025$. So this was always
+going to be a cost story, not an accuracy story.
 
-### 20. Escalation-value training set ← prerequisite for #14
-Join the ablation cells into one `window_id × configuration` table and derive
-the per-window escalation-value label. Quantify the headroom up front: what
-fraction of windows does escalation help / hurt / not change? The large
-"no change" mass *is* the opportunity.
+### 14. Learned escalation controller — ⚠️ FIRST PASS NEGATIVE (commit 62d584a)
+Built and evaluated leave-project-out on WoL, using only features available
+before escalating. The result does not support the planned contribution:
+
+| Fold | Policy ROC-AUC | vs. the confidence ordering the controller already computes |
+|---|---|---|
+| test = Kafka | 0.924 | **+0.0012** (matches always-escalate at 20% escalation) |
+| test = MariaDB | 0.690 | **−0.0012** (never matches always-escalate below 100%) |
+
+The folds cancel. **A learned policy does not beat thresholding the signal the
+system already has.** The shipped controller's defect is its *threshold*, not
+its ranking signal.
+
+**Decision needed.** Three ways forward:
+
+- **(a) Rescue with better features.** The oracle reaches $0.9685$ at 8%
+  escalation on MariaDB and neither method gets near it, so headroom exists but
+  is not in the persisted features. The obvious missing one is the retriever's
+  **top-1/top-2 score margin** — a standard signal for this decision, not
+  recorded by the current pipeline. One Trillium re-run decides it.
+- **(b) Reframe as a calibration finding.** Solid and already proven: the gates
+  escalate 99.9% / 17–21% of windows where escalation provably does nothing, and
+  well-chosen thresholds on the existing signal match that accuracy far cheaper.
+  Honest and defensible — but a calibration result, not a method contribution,
+  so it does not fix Novelty = 2 on its own.
+- **(c) Switch novelty strategy** to the real-telemetry+real-tickets dataset
+  (strongest, longest lead time) or the SafeSet direction.
+
+Recommended: try (a) once, keep (b) as the guaranteed fallback. **Do not build
+the paper around a learned controller until (a) reports.**
 
 ### 21. Paper restructure for fresh submission
 New spine:
