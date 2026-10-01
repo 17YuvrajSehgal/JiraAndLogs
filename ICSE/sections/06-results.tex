@@ -277,22 +277,36 @@ evidence supports, and escalating expensive steps only under uncertainty,
 reduces per-window cost by $40\%$, $63\%$, and $78\%$ on the three datasets
 relative to a cascade that runs everything (Table~\ref{tab:agent}).
 
-We are precise about what that figure is, because it is easy to over-read. It is
-an \emph{estimated counterfactual}, not a measured wall-clock comparison: we log,
-per window, which skills ran and which a gate skipped, then price both the actual
-plan and the run-everything plan with one fixed per-skill cost model (the
-language-model verifier at $1{,}969$ tokens and $15.4$\,s per call, the
-reformulator at $400$ tokens, the precomputed skills at approximately zero). The
-cost model is released with the artifact. The ranking across datasets is robust
-to it, since the savings are dominated by call counts rather than per-call
-prices, but the absolute percentages inherit its assumptions.
+We are precise about what that figure is and is not. The \emph{counts} are
+measured: we log per window which skills ran and which a gate skipped
+($75{,}334$ invocations and $31{,}734$ gate skips on the real corpus). The
+\emph{per-call unit costs} are modelled, from a fixed table released with the
+artifact. The reported percentage is counts $\times$ modelled units, so calling
+it a measured wall-clock reduction, as our earlier phrasing did, overstates it.
 
-It is also worth saying what drives each number rather than attributing it to
-scale. The $78\%$ on the real corpus is almost entirely one gated skill: query
-reformulation is skipped on $10{,}566$ of $13{,}376$ windows. The telemetry
-figures come from the evidence-gathering tools being skipped on $41\%$ and $65\%$
-of windows. So the saving does not "grow with scale" so much as reflect how often
-each deployment's dominant gate happens to close.
+The natural objection is that the conclusion then rests on the cost table. It
+does not, and the reason is structural. Every gated skill sits behind the
+\emph{same} escalation gate, so each is skipped at nearly the same rate; the
+saving therefore approximates that gate's closure rate almost independently of
+what the individual skills cost. Recomputing the entire saving with each skill's
+\emph{measured} mean duration as its unit cost, instead of the modelled one,
+gives $79.0\%$ against the modelled $77.9\%$, a difference of $1.1$ points, even
+though the table misprices individual skills badly (it overstates query
+reformulation by three orders of magnitude and understates the peer-incident
+lookup, the only step doing real I/O, by $68\times$). Varying the verifier's
+assumed per-call cost between $0.5\times$ and $2\times$ moves the real-corpus
+figure not at all, since that skill is disabled there.
+
+What the figure does \emph{not} capture is equally important: this evaluation
+harness replays precomputed predictions, so its measured end-to-end wall-clock
+($43$\,ms per window) is the cost of replaying a decision, not of making one. We
+therefore report cost as an explicitly modelled counterfactual rather than as a
+deployment measurement, and treat the gate-closure rates as the quantity the
+result actually rests on. Those rates are what differ across datasets: the $78\%$
+on the real corpus reflects reformulation being skipped on $10{,}566$ of
+$13{,}376$ windows, and the telemetry figures reflect the evidence tools being
+skipped on $41\%$ and $65\%$. The saving does not "grow with scale" so much as
+track how often each deployment's dominant gate closes.
 
 This thrift costs no accuracy: an ablation that
 removes each component in turn moves \hit{1} by at most $0.012$, and sweeping the
