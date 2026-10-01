@@ -72,3 +72,4 @@ referenced-research-papers
 # v2 result set: commit summaries/JSON metrics, not bulk per-window output
 paper-results-v2/**/*-predictions.jsonl
 paper-results-v2/**/traces/
+paper-results-v2/**/*-predictions.jsonl
