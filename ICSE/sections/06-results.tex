@@ -218,13 +218,38 @@ robustness across evidence regimes: the \emph{same} system, with no
 reconfiguration, retrieves strongly whether it has complete telemetry or only text,
 reaching \hit{5}~$0.96$ on the real, text-only incidents (essentially realizing the
 hybrid retriever's quality end to end) and $0.76$ on the fully instrumented
-synthetic systems. Page suppression works: across all three datasets the system emits about one page per incident, the mechanism firing $3{,}061$ times on the real corpus to fold repeat windows into the alert already raised rather than paging afresh for every window.
+synthetic systems.
+
+Duplicate suppression fires where there are duplicates to suppress, and we report
+it as a rate rather than as pages per incident, which our harness makes $1.0$ by
+construction. On the real corpus, $3{,}061$ of $10{,}566$ would-be pages
+($29.0\%$) are folded into an incident already raised. The telemetry corpora give
+it far less to do ($5.3\%$ and $0.9\%$), since their scenarios are short and
+rarely span many consecutive ticket-worthy windows; the mechanism is therefore
+exercised meaningfully only on the real corpus, and we do not claim it as
+validated on the synthetic ones.
+
+Triage accuracy tells a different story across regimes. On the telemetry datasets
+the system clears the majority-class baseline by a useful margin ($0.841$ against
+$0.784$, and $0.846$ against $0.725$). On the real corpus it reaches $0.506$
+against a $0.506$ baseline, i.e.\ no better than always predicting the majority
+class. We say this plainly: our own end-to-end triage on real incidents carries
+no usable signal either, which is consistent with, not an exception to, the
+reframing in \S\ref{sec:results-rq4}. Part of that shortfall is an artifact of our
+own label space, since the controller emits a third \emph{borderline} decision for
+suppressed windows that the binary resolution-derived gold can never score as
+correct; we report the number as measured rather than adjusting it post hoc.
 
 \begin{table}[t]
 \centering
 \caption{End-to-end system (RQ2) and the cost saved by capability gating (RQ3),
-per dataset. Cost saving is the per-window reduction in wall-clock and model
-usage relative to a cascade that runs every step.}
+per dataset. Triage accuracy is reported against the majority-class baseline,
+which it does not beat on the real corpus. Duplicate suppression is given as the
+share of would-be pages folded into an existing incident; we do not report pages
+per incident, which is $1.0$ by construction in our harness and therefore
+uninformative. Cost saving is an \emph{estimated} counterfactual: gate decisions
+priced with a fixed per-skill cost model (\S\ref{sec:results-rq3}), not a
+measured wall-clock comparison.}
 \label{tab:agent}
 \footnotesize
 \setlength{\tabcolsep}{5pt}
@@ -232,13 +257,14 @@ usage relative to a cascade that runs every step.}
 \toprule
  & Online Boutique & OTel Demo & World of Logs \\
 \midrule
-\hit{1}              & 0.689 & 0.647 & 0.859 \\
-\hit{5}              & 0.758 & 0.756 & 0.963 \\
-MRR                  & 0.714 & 0.688 & 0.902 \\
-Triage accuracy      & 0.841 & 0.846 & 0.506 \\
-Pages per incident   & 1.0   & 1.0   & 1.0 \\
+\hit{1}                        & 0.689 & 0.647 & 0.859 \\
+\hit{5}                        & 0.758 & 0.756 & 0.963 \\
+MRR                            & 0.714 & 0.688 & 0.902 \\
+Triage accuracy                & 0.841 & 0.846 & 0.506 \\
+\quad\emph{majority baseline}  & \emph{0.784} & \emph{0.725} & \emph{0.506} \\
+Would-be pages suppressed      & 5.3\% & 0.9\% & 29.0\% \\
 \midrule
-Cost saved (gating)  & 40\%  & 63\%  & 78\% \\
+Cost saved (gating, estimated) & 40\%  & 63\%  & 78\% \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -247,11 +273,28 @@ Cost saved (gating)  & 40\%  & 63\%  & 78\% \\
 \label{sec:results-rq3}
 
 What does the capability-gated controller buy? Running only the steps the
-evidence supports, and escalating expensive steps only under uncertainty, cuts
-per-window cost (wall-clock time and model usage) by $40\%$, $63\%$, and $78\%$
-on the three datasets relative to a cascade that runs everything (Table~\ref{tab:agent}),
-and the saving grows with scale, since larger workloads contain more windows the
-cheap path can settle. This thrift costs no accuracy: an ablation that
+evidence supports, and escalating expensive steps only under uncertainty,
+reduces per-window cost by $40\%$, $63\%$, and $78\%$ on the three datasets
+relative to a cascade that runs everything (Table~\ref{tab:agent}).
+
+We are precise about what that figure is, because it is easy to over-read. It is
+an \emph{estimated counterfactual}, not a measured wall-clock comparison: we log,
+per window, which skills ran and which a gate skipped, then price both the actual
+plan and the run-everything plan with one fixed per-skill cost model (the
+language-model verifier at $1{,}969$ tokens and $15.4$\,s per call, the
+reformulator at $400$ tokens, the precomputed skills at approximately zero). The
+cost model is released with the artifact. The ranking across datasets is robust
+to it, since the savings are dominated by call counts rather than per-call
+prices, but the absolute percentages inherit its assumptions.
+
+It is also worth saying what drives each number rather than attributing it to
+scale. The $78\%$ on the real corpus is almost entirely one gated skill: query
+reformulation is skipped on $10{,}566$ of $13{,}376$ windows. The telemetry
+figures come from the evidence-gathering tools being skipped on $41\%$ and $65\%$
+of windows. So the saving does not "grow with scale" so much as reflect how often
+each deployment's dominant gate happens to close.
+
+This thrift costs no accuracy: an ablation that
 removes each component in turn moves \hit{1} by at most $0.012$, and sweeping the
 evidence-gathering budget leaves \hit{5} unchanged. The same measurements carry a candid message: no single component is load-bearing, so the heavyweight evidence-gathering tools add little measurable \hit{} gain here; they keep cost low by running only when cheaper steps are unsure, and their headroom is bounded by how often retrieval is already correct.
 

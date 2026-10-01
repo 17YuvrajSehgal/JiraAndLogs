@@ -53,8 +53,8 @@ and 38,642 real Apache Jira incidents from 24 projects (World of
 Logs~\cite{wang2026worldoflogs}). On the real text-only incidents, hybrid retrieval
 finds an inferred relevant prior incident in its top five $97\%$ of the time, beating every
 fused component and external baseline (each gap surviving multiple-comparison
-correction), while capability gating cuts per-window cost by up to $78\%$ at no loss
-in quality. For the real corpus, relevance is necessarily inferred rather than manually labeled: a retrieved incident is counted as relevant when it satisfies the project-component relation defined in §V-B, and we additionally report a stricter symptom-overlap variant and an LLM-as-judge validation. Most striking is what happens to the task these benchmarks usually
+correction), while capability gating cuts estimated per-window cost by up to
+$78\%$ at no loss in quality. For the real corpus, relevance is necessarily inferred rather than manually labeled: a retrieved incident is counted as relevant when it satisfies the project-component relation defined in §V-B, and we additionally report a stricter symptom-overlap variant and an LLM-as-judge validation. Most striking is what happens to the task these benchmarks usually
 optimize. Deciding whether a window warrants a ticket at all is almost perfectly
 solvable on injected telemetry (ROC area $1.00$) but only weakly predictable from
 real, engineer-written ticket text (ROC area $0.57$--$0.60$, barely above a
