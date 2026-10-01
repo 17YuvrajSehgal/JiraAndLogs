@@ -7,6 +7,39 @@
 
 Source reviews: `ICSE/reviewers-comments/R{1,2,3}.txt`.
 Evidence backing the diagnoses below: `scripts/rebuttal/` (see its README).
+v2 analysis code: `scripts/v2/`. v2 results: `paper-results-v2/`.
+
+---
+
+## Status — 2026-10-01
+
+**Done (14):** #1 triage claim · #2 *closed as non-bug* · #3 cost framing ·
+#9 Fig 4 CIs · #10 metadata · #11 non-leakage · #12 maxconf · #13 related work ·
+#15 formalism · #16 label provenance · #17 naming+training · #19 cluster access ·
+#20 escalation headroom · branch + naming questions resolved
+
+**Running on Trillium:** `1013073` HF baselines (→ #7) · `1013076_[10-14]` WoL
+seeds (→ #8) · judge job queued (→ #6)
+
+**Blocked on a human:** #4 needs sign-off to publish to a public DOI · #5 needs
+annotators
+
+**Gated on results:** #14 (needs the score-margin rerun) → #21 (needs #14)
+
+### Three catalogued "defects" that did not survive investigation
+
+Worth remembering when reading the P0 list below — it was a hypothesis list,
+not a findings list.
+
+- **#2 was not a bug.** The harness already maps suppressed windows back to
+  `ticket_worthy` before scoring; suppression-on and suppression-off classify
+  *exactly* the same 6,769 windows correctly. The 0.506 is a real absence of
+  signal, which is a stronger claim than the hedge it replaced.
+- **#3 needed the opposite fix.** The runner already measures wall-clock; the
+  problem is that the harness *replays cached predictions*, so reporting the
+  measured 43 ms/window would overclaim far worse than the estimate does.
+- **#4's one-line fix was inadequate.** The bundler also could not run outside
+  Windows, and would have shipped 2.8 GB of unsampled source-corpus pools.
 
 ---
 
