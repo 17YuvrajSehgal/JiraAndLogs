@@ -77,12 +77,68 @@ the small synthetic corpora it ties or trails the fine-tuned dense retriever.}
 \label{fig:forest}
 \end{figure}
 
-This advantage survives a stricter test. Under the strict matching relation, which
-demands substantial symptom overlap rather than mere topical relatedness, hybrid
-retrieval still places the correct incident in its top five $74\%$ of the time
-(MRR~$0.60$), and the result holds across \emph{both} held-out project domains
-(Kafka~$0.80$, MariaDB~$0.73$), evidence that the headline number is neither an
-artifact of one project nor of a lenient label.
+\subsubsection*{The stricter relation, and what the numbers are worth}
+\label{sec:results-strict}
+
+The coarse relation is permissive, and we think the honest way to present it is
+alongside both a stricter relation and a reference point for what the scores
+mean. Table~\ref{tab:strict} reports every method we have per-query predictions
+for under the strict relation, which additionally demands substantial symptom
+overlap.
+
+Two calibration facts frame the table. First, the relations differ greatly in how
+much of memory they admit: the average query has $288$ relevant items under the
+coarse relation ($0.75\%$ of the $38{,}642$-item memory) but only $34.5$ under the
+strict one ($0.09\%$). Second, the corresponding expected \hit{5} for a uniformly
+random ranker is therefore $0.036$ coarse and $0.0044$ strict. Hybrid retrieval's
+$0.970$ and $0.744$ sit $27\times$ and $169\times$ above those references.
+
+Under the strict relation hybrid fusion remains best on all three metrics against
+every system we could test pairwise, and the margins survive correction: $+0.038$
+\hit{5} over BGE ($95\%$ CI $[+0.025,+0.051]$), $+0.050$ over the cross-encoder
+($[+0.038,+0.064]$), and $+0.221$ over our own dense retriever
+($[+0.206,+0.237]$), all with Benjamini--Hochberg $q<0.001$. The single exception
+is \hit{5} against raw-corpus BM25 ($+0.004$, $[-0.011,+0.019]$, $q=0.54$); that
+method's \hit{1} of $0.015$ reflects a degenerate top-rank ordering, and hybrid
+beats it on MRR by $+0.271$. The result also holds across \emph{both} held-out
+project domains (Kafka~$0.80$, MariaDB~$0.73$).
+
+One result in Table~\ref{tab:strict} deserves emphasis because it cuts against
+our own method. Our fine-tuned dense retriever, which is trained against the
+coarse relation, is the \emph{largest} loser under the strict one, falling from
+$0.905$ to $0.523$ and dropping below every zero-shot embedder. Fusion does not:
+it falls from $0.970$ to $0.744$ and stays on top. We read this as evidence that
+the evaluation is not simply rewarding methods aligned with the labelling rule
+(\S\ref{sec:results-leakage}), since the component most aligned with that rule
+degrades the most.
+
+\begin{table}[t]
+\centering
+\caption{Retrieval on World of Logs under the \emph{strict} relation (coarse
+$+$ symptom-token overlap), on the $n{=}4{,}362$ held-out queries that retain a
+gold match under it. Best per column in \textbf{bold}. A uniformly random ranker
+would score \hit{5}~$0.0044$ here. The fine-tuned dense retriever, trained
+against the coarse relation, degrades most; fusion holds up.}
+\label{tab:strict}
+\footnotesize
+\setlength{\tabcolsep}{5pt}
+\begin{tabular}{lccc}
+\toprule
+Method & \hit{1} & \hit{5} & MRR \\
+\midrule
+\multicolumn{4}{l}{\emph{Prior art, zero-shot}}\\
+\quad BGE (dense)          & 0.474 & 0.706 & 0.564 \\
+\quad E5 (dense)           & 0.450 & 0.698 & 0.544 \\
+\quad TF--IDF (lexical)    & 0.445 & 0.715 & 0.559 \\
+\quad BM25 (raw corpus)    & 0.015 & 0.740 & 0.332 \\
+\quad Cross-encoder rerank & 0.418 & 0.694 & 0.523 \\
+\multicolumn{4}{l}{\emph{Ours}}\\
+\quad Dense bi-encoder     & 0.260 & 0.523 & 0.356 \\
+\quad Knowledge graph      & 0.016 & 0.036 & 0.023 \\
+\quad Hybrid fusion        & \textbf{0.511} & \textbf{0.744} & \textbf{0.602} \\
+\bottomrule
+\end{tabular}
+\end{table}
 
 We isolated the graph's contribution by comparing fusion with and without it. It surfaces correct candidates the
 others miss (on $14\%$ of Online Boutique queries it retrieves the right
@@ -90,6 +146,47 @@ incident where the dense retriever fails), but in fusion this rarely changes
 top-five recall (the $\pm$graph difference is not significant on any dataset).
 The graph is therefore a real but marginal contributor: useful for top-rank
 precision and coverage, not a driver of \hit{5}.
+
+\subsubsection*{Does the relevance rule leak into the retrievers?}
+\label{sec:results-leakage}
+
+The coarse relation is defined on a ticket's Jira \texttt{components} metadata,
+and our graph retriever scores candidates partly by component overlap. That
+coincidence invites a serious objection: perhaps the headline reflects the
+labelling rule rather than retrieval quality. We take it seriously and report
+four independent checks, three of which we ran specifically to test it.
+
+\emph{(i) The retrievers never see the field.} The indexed corpus is built from
+ticket narrative and pasted log and code blocks only. Sampling $3{,}000$ indexed
+memory documents, \emph{none} contains a \texttt{Components} field, and only
+$34.6\%$ of gold component names appear anywhere in the indexed text at all, as
+incidental prose mentions. On the query side the figure is $15.9\%$. (A legacy
+composed-text file in our data release does embed the field verbatim; it is not
+what is indexed, and we exclude it from the published bundle to prevent a reader
+from reproducing against it by mistake.)
+
+\emph{(ii) The graph's vocabulary barely overlaps the gold vocabulary.} Graph
+entities are extracted from ticket text by a language model, not read from
+metadata. Over the $38{,}600$ memory extractions the extracted component
+vocabulary has $1{,}559$ distinct terms and the gold vocabulary $1{,}101$; they
+share $109$, or $9.9\%$ of the gold vocabulary. Roughly nine in ten terms that
+define relevance never enter the graph.
+
+\emph{(iii) The graph retriever is the worst system, not the best.} If the rule
+leaked through it, it would dominate. It is last under both relations (coarse
+\hit{5}~$0.308$, strict $0.036$), and removing it from fusion changes \hit{5}
+significantly on no dataset.
+
+\emph{(iv) The component most aligned with the rule degrades the most.} As noted
+above, our dense retriever is fine-tuned against the coarse relation and loses
+most under the strict one ($0.905\!\rightarrow\!0.523$), while fusion holds up
+($0.970\!\rightarrow\!0.744$). An evaluation rigged toward our method would not
+behave this way.
+
+None of this makes the coarse relation a measure of diagnostic usefulness, which
+it is not (\S\ref{sec:threats}); it addresses only the narrower question of
+whether the labelling rule leaks into the systems being compared. We find no
+evidence that it does.
 
 \smallskip
 \noindent The fine-tuned retriever's advantage is also stable across random seeds:
@@ -253,8 +350,15 @@ ticket-worthiness signal.
 This reframes how operational triage should be measured: the part that looks solved on synthetic data does not transfer, while the part that does (retrieving which past incident a live one resembles) is where the real headroom lies, and where our system is strongest.
 
 Because the real dataset's matches are inferred rather than human-labelled, we
-validated them with an LLM-as-judge. Asked to rate each gold match against a random
-control, the judge separates the two on every dataset, most sharply on the real
-incidents (a gold-versus-random gap of $1.24$ on a five-point scale, versus
-$0.34$--$0.47$ on synthetic), so the matches our real-world numbers are measured
-against carry genuine signal.
+probed them with an LLM-as-judge. Asked to rate each gold match against a control,
+the judge separates the two on every dataset, most sharply on the real incidents
+(a gold-versus-control gap of $1.24$ on a five-point scale, versus $0.34$--$0.47$
+on synthetic). The same run, however, qualifies what that gap establishes: only
+$6.3\%$ of coarse-gold matches are rated $4$ or $5$, against $0\%$ of controls. So
+the judge finds the relation clearly non-random, but it does \emph{not} find most
+coarse-gold pairs to be strongly related. Together with the controls being
+uniformly sampled, and therefore easy, this check should be read as evidence that
+the coarse relation captures topical relatedness, not that it identifies the
+prior incident an engineer would most want. We report the strict relation
+(\S\ref{sec:results-strict}) for that reason, and a human study remains the
+right instrument (\S\ref{sec:threats}).

@@ -108,3 +108,24 @@ The counts serve different roles. The 78,140 Jira issues form the labelled triag
 Real incidents come with no manually curated answer key linking each query to the past ticket that would best support triage, so we use an inferred matching relation: a query and a past ticket match when they share a project and at least one software component, with a stricter variant that also requires overlapping symptom terms. We report retrieval quality under both relations and, because inferred labels deserve scrutiny, separately validate them with an LLM-as-judge check (\S\ref{sec:results}). Only genuine bug reports have matches; borderline and
 noise queries have none by construction and are excluded from the retrieval
 measurements.
+
+\smallskip
+\noindent\textbf{Component metadata is load-bearing, so we characterize it.}
+Because the relation is defined on the \texttt{project} and \texttt{components}
+fields, the quality and coverage of those fields bound what the metric can mean.
+Across all $78{,}140$ issues, $75.3\%$ carry at least one component ($80.5\%$ on
+the test split); most carry exactly one ($48{,}394$ issues) or two ($8{,}935$).
+Vocabularies are project-local and very uneven, from $205$ distinct components in
+Camel to $9$ in IMPALA, and they are not a clean taxonomy: alongside subsystem
+names they include release numbers such as \texttt{10.3} and \texttt{2.2.1}, so
+two issues can share a ``component'' only by sharing a version.
+
+This directly conditions the evaluation, and we state the consequence plainly
+rather than leaving it to be inferred from a table. Of the $6{,}773$ held-out
+ticket-worthy queries, $1{,}621$ ($23.9\%$) carry no component at all and
+therefore have no gold match by construction. The retrieval results in
+\S\ref{sec:results} are computed on the remaining $5{,}150$, and the strict
+relation reduces this further to $4{,}362$. Our real-corpus retrieval numbers are
+thus conditioned on issues whose authors filled in component metadata, a
+non-random three quarters of ticket-worthy issues, and they should be read as
+describing that subpopulation rather than all real incidents.

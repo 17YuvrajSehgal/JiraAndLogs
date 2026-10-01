@@ -7,12 +7,30 @@ telemetry-rich datasets are synthetic while our real dataset is text only, so
 on-demand evidence-gathering is exercised only on injected faults and we
 do not claim it transfers to production telemetry; the open-source Apache
 incidents and two demonstration applications are not a representative sample of
-all deployments. On \emph{construct} validity, the real dataset has no
-ground-truth answer key, so matches are inferred from project, component, and
-symptom overlap; we mitigate this with an LLM-as-judge check that separates true
-matches from random controls on every dataset (\S\ref{sec:results-rq4}), report
-both a coarse and a strict relation, and release a human-annotation kit, but the
-labels remain a proxy rather than a multi-annotator study. For \emph{internal}
+all deployments.
+
+On \emph{construct} validity there are two distinct threats, and we separate
+them. First, the real dataset has no ground-truth answer key, so matches are
+inferred from project, component, and symptom overlap. We report both relations,
+show that the rule does not leak into the systems compared
+(\S\ref{sec:results-leakage}), and give random-ranker reference points, but the
+relation measures topical relatedness rather than diagnostic usefulness, and our
+LLM-as-judge probe is explicitly not a substitute for human judgement: its
+controls are easy, and it rates only $6.3\%$ of coarse-gold pairs highly. No
+human has annotated relevance in this work. We release the sampling script,
+rubric, and annotation schema so that a multi-annotator study can be run, and
+report that study as necessary future work rather than claiming its conclusion.
+
+Second, and separately, our real triage labels are derived from a ticket's final
+Jira resolution, which is not the same construct as on-call page-worthiness. An
+issue closed \textsc{Won't Fix} may still have demanded operational
+investigation, and a fixed bug may never have warranted a page. Our real-data
+triage results should therefore be read as predicting \emph{eventual resolution
+status from ticket text}, and we do not generalize them to whether an alert
+should have paged an engineer; establishing that would require independently
+annotated operational urgency, which this corpus does not carry.
+
+For \emph{internal}
 validity, time-aware visibility and held-out fault families and project domains
 prevent leakage of future or training information, though only the costly
 real-data retriever is trained on a single seed (the two telemetry retrievers are
