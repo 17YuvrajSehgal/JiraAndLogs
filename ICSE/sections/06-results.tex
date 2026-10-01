@@ -238,10 +238,16 @@ $0.784$, and $0.846$ against $0.725$). On the real corpus it reaches $0.506$
 against a $0.506$ baseline, i.e.\ no better than always predicting the majority
 class. We say this plainly: our own end-to-end triage on real incidents carries
 no usable signal either, which is consistent with, not an exception to, the
-reframing in \S\ref{sec:results-rq4}. Part of that shortfall is an artifact of our
-own label space, since the controller emits a third \emph{borderline} decision for
-suppressed windows that the binary resolution-derived gold can never score as
-correct; we report the number as measured rather than adjusting it post hoc.
+reframing in \S\ref{sec:results-rq4}.
+
+One might suspect this is an artifact of page suppression, which re-labels a
+suppressed window \emph{borderline}, a class the binary resolution-derived gold
+cannot match. It is not. The harness scores triage on the pre-suppression
+decision precisely to avoid charging a paging action as a triage error, and the
+effect is verifiable: a configuration with suppression disabled, which emits no
+borderline decisions at all, classifies exactly the same $6{,}769$ of $13{,}388$
+windows correctly as the configuration that suppresses $3{,}061$ pages. The
+$0.506$ is therefore a genuine absence of signal, not a scoring artifact.
 
 \begin{table}[t]
 \centering
