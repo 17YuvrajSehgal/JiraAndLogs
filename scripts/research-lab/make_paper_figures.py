@@ -113,8 +113,8 @@ def fig_significance_forest():
                 ha="left", va="center")
     ax.set_yticks(yt); ax.set_yticklabels(ytl, fontsize=7.4)
     ax.set_ylim(-0.8, y - 0.8); ax.set_xlim(xmin, xmax)
-    ax.set_xlabel(r"$\Delta$ \,Hit@5  vs Hybrid-RRF  (95\% CI)" if matplotlib.rcParams["text.usetex"]
-                  else r"$\Delta$ Hit@5  vs Hybrid-RRF  (95% CI)")
+    ax.set_xlabel(r"$\Delta$ \,Hit@5  vs hybrid fusion  (95\% CI)" if matplotlib.rcParams["text.usetex"]
+                  else r"$\Delta$ Hit@5  vs hybrid fusion  (95% CI)")
     ax.plot([], [], "o-", color=C["good"], lw=1.8, label="significant (BH $q<0.05$)")
     ax.plot([], [], "o-", color=C["prior"], lw=1.8, label="not significant")
     ax.legend(frameon=False, loc="lower right", fontsize=6.8, handlelength=1.4)
@@ -123,31 +123,60 @@ def fig_significance_forest():
 
 
 def fig_triage_reframing():
-    """The reframing (RQ4): classifier ROC-AUC is saturated on synthetic, exactly
-    at chance (0.50) on real data.
+    """The reframing (RQ4): triage classification is saturated on injected
+    telemetry and only weakly learnable on real ticket text.
 
-    We plot ROC-AUC, for which 0.5 is the correct no-skill baseline (the previous
-    version drew a 0.5 'chance' line under PR-AUC, whose no-skill baseline is the
-    positive prevalence, not 0.5). PR-AUC values are annotated for completeness.
+    The earlier version of this figure plotted the WoL numeric classifiers at
+    ROC-AUC 0.50 and drew a "chance" line under them. That comparison was void:
+    those classifiers were fitted on the 94 telemetry feature columns, which are
+    zero-filled for a text-only corpus, so 0.50 was forced by a constant design
+    matrix rather than measured. We now plot the telemetry classifier for the
+    synthetic datasets and the best TEXT classifier for World of Logs -- the
+    input each corpus actually has -- with its bootstrap CI.
     """
-    roc, pr = [], []
+    roc, pr, err, note = [], [], [], []
     for d in DS:
-        rep = _load(PR / "triage-leaderboard" / d / "report.json")
-        h = (rep or {}).get("headline", {}).get("hist_gradient_boosting_numeric", {})
-        roc.append(h.get("triage.roc_auc", np.nan))
-        pr.append(h.get("triage.pr_auc", np.nan))
+        if d == "wol-v3":
+            t = _load(Path("paper-results-v2") / "triage-text" / "wol-v3"
+                      / "wol-text-triage-paper.json")
+            if not t:
+                roc.append(np.nan); pr.append(np.nan); err.append(0.0); note.append("")
+                continue
+            models = {k: v for k, v in t["summary"].items() if k != "majority_baseline"}
+            best = max(models.items(), key=lambda kv: kv[1]["roc_auc"]["mean"])
+            m = best[1]
+            lo, hi = m["roc_auc"]["ci95"]
+            roc.append(m["roc_auc"]["mean"]); pr.append(m["pr_auc"]["mean"])
+            err.append((m["roc_auc"]["mean"] - lo, hi - m["roc_auc"]["mean"]))
+            note.append("text")
+        else:
+            rep = _load(PR / "triage-leaderboard" / d / "report.json")
+            h = (rep or {}).get("headline", {}).get("hist_gradient_boosting_numeric", {})
+            roc.append(h.get("triage.roc_auc", np.nan))
+            pr.append(h.get("triage.pr_auc", np.nan))
+            err.append((0.0, 0.0)); note.append("telemetry")
+
     fig, ax = plt.subplots(figsize=(3.3, 2.5))
     x = np.arange(len(DS))
-    colors = [C["ours"] if (v == v and v > 0.6) else C["bad"] for v in roc]
-    bars = ax.bar(x, roc, 0.58, color=colors, edgecolor="black", linewidth=0.3)
+    colors = [C["ours"] if (v == v and v > 0.8) else C["graph"] for v in roc]
+    ax.bar(x, roc, 0.58, color=colors, edgecolor="black", linewidth=0.3)
+    yerr = np.array([[e[0] for e in err], [e[1] for e in err]])
+    ax.errorbar(x, roc, yerr=yerr, fmt="none", ecolor=C["ink"],
+                elinewidth=0.9, capsize=3, capthick=0.9)
     ax.axhline(0.5, ls="--", lw=1.0, color=C["ink"])
-    ax.text(len(DS) - 1.5, 0.555, "chance (0.50)", color=C["ink"], fontsize=7,
-            va="bottom", ha="center")
-    for xi, (b, rv, pv) in enumerate(zip(bars, roc, pr)):
+    ax.text(-0.42, 0.515, "no skill (0.50)", color=C["ink"], fontsize=6.6,
+            va="bottom", ha="left")
+    for xi, (rv, pv, nt) in enumerate(zip(roc, pr, note)):
         if rv == rv:
-            ax.text(xi, rv + 0.015, f"{rv:.2f}", ha="center", fontsize=7.5, fontweight="bold")
+            ax.text(xi, rv + err[xi][1] + 0.02, f"{rv:.2f}", ha="center",
+                    fontsize=7.5, fontweight="bold")
         if pv == pv:
             ax.text(xi, 0.045, f"PR-AUC\n{pv:.2f}", ha="center", fontsize=6.3, color="0.25")
+        # Name the input each bar was computed from -- the whole point of the
+        # figure is that the real corpus has no telemetry to classify.
+        if nt:
+            ax.text(xi, 0.22, f"({nt})", ha="center", fontsize=6.4,
+                    color="0.95" if rv > 0.8 else "0.25", style="italic")
     ax.set_xticks(x); ax.set_xticklabels([NAME1[d] for d in DS], fontsize=7.8)
     ax.set_ylabel("triage classifier ROC-AUC"); ax.set_ylim(0, 1.08)
     ax.grid(axis="y", alpha=0.3, linewidth=0.4)

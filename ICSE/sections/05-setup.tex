@@ -101,13 +101,28 @@ result, also the fraction of gold matches the judge rates highly
 easy negative; we treat this check as exploratory evidence that the labels carry
 signal, not as a substitute for human judgement.
 
-\noindent\emph{Implementation.} The dense retriever is a compact MiniLM
-bi-encoder fine-tuned for five epochs with hard negatives mined by lexical search;
-the hybrid fuses each retriever's top candidates by reciprocal rank fusion. Graph
-entities are extracted from tickets by a small language model and matched by
-entity overlap. The retrieval-augmented and judge models run offline with
-deterministic (greedy) decoding. Every experiment uses a fixed random seed, and
-full configurations and seeds are released with the artifact.
+\noindent\emph{What is trained, and when.} All learning happens \emph{offline and
+once per dataset}, strictly before evaluation; nothing is trained, adapted, or
+carried forward at incident time. Concretely: the dense retriever is a compact
+MiniLM bi-encoder fine-tuned for five epochs on the \emph{training} split's
+window--ticket pairs, with hard negatives mined by lexical search; it is then
+frozen, and every test query is served by that same frozen model. Graph entities
+are extracted from tickets by a small language model in a single offline indexing
+pass. At incident time the system only performs inference: embedding lookup,
+reciprocal rank fusion over the retrievers' candidates, and the gated
+language-model calls. No state, no gradients, and no learned parameters pass from
+one incident to the next.
+
+\noindent\emph{What is and is not deterministic.} Exactly one component is
+stochastic: fine-tuning the bi-encoder, which uses stochastic gradient descent on
+a GPU and is not bit-reproducible even at a fixed seed. Everything downstream is
+deterministic conditional on that trained model: nearest-neighbour scoring,
+reciprocal rank fusion, and a rule-based controller with no model-driven loop.
+The retrieval-augmented and judge models use greedy decoding at temperature zero,
+and the bootstrap is seeded. We therefore treat retriever training as the source
+of run-to-run variation and quantify it directly by retraining under multiple
+seeds (\S\ref{sec:results-rq1}), rather than relying on a fixed seed to stand in
+for repetition. Full configurations and seeds are released with the artifact.
 
 \noindent\emph{Compute environment.} All experiments ran on the Trillium cluster, administered by the Digital
 Research Alliance of Canada.\footnote{\url{https://alliancecan.ca}} Each training

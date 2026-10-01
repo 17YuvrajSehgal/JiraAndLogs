@@ -70,7 +70,7 @@ pairwise comparison with its bootstrap confidence interval and significance.
 \begin{figure}[t]
 \centering
 \includegraphics[width=0.82\columnwidth]{figures/fig_significance_forest.png}
-\caption{Difference in \hit{5} between Hybrid-RRF and each alternative (paired
+\caption{Difference in \hit{5} between hybrid fusion and each alternative (paired
 bootstrap, $95\%$ CI; green = significant after Benjamini--Hochberg). Hybrid wins
 decisively on real data (WoL) and beats the graph baseline on every dataset; on
 the small synthetic corpora it ties or trails the fine-tuned dense retriever.}
@@ -189,12 +189,26 @@ whether the labelling rule leaks into the systems being compared. We find no
 evidence that it does.
 
 \smallskip
-\noindent The fine-tuned retriever's advantage is also stable across random seeds:
-retraining it under three seeds leaves coarse \hit{5} within a narrow band on both
-telemetry datasets (Online Boutique $0.632\pm0.015$, OTel Demo $0.678\pm0.004$;
-mean$\pm$std), so its lead over the zero-shot embedders is not an artifact of a
-lucky initialization. Only the costlier real-data retriever is trained once
-(\S\ref{sec:threats}).
+\noindent\textbf{How much does the training seed matter?} Retriever fine-tuning
+is the only stochastic step in the pipeline (\S\ref{sec:setup-protocol}), so we
+quantify its contribution rather than assume it away. Retraining under three
+seeds leaves coarse \hit{5} at $0.632\pm0.018$ on Online Boutique and
+$0.678\pm0.005$ on OTel Demo (mean $\pm$ sample standard deviation over the three
+runs), so the lead over the zero-shot embedders is not an artifact of a lucky
+initialization.
+
+It is worth decomposing that variability against the other source, which is
+sampling the test queries. On OTel Demo the seed standard deviation ($0.005$) is
+dwarfed by the query-bootstrap standard deviation ($0.043$), contributing about
+$1\%$ of the total variance; there, reporting a single run is defensible. On
+Online Boutique, however, the two are comparable ($0.018$ versus $0.026$) and the
+seed accounts for roughly a third of the variance, so an interval computed from
+query resampling alone understates the true uncertainty on that dataset. We
+report both components and note that the real corpus, which carries our main
+claims, is trained once (\S\ref{sec:threats}); its headline margin of $+0.065$
+\hit{5} over the dense retriever exceeds the largest full seed-to-seed range we
+observe anywhere ($0.036$) by a factor of $1.8$, which bounds but does not
+substitute for the multi-seed replication that corpus still needs.
 
 \subsection{RQ2: End-to-End Triage and Graceful Degradation}
 \label{sec:results-rq2}
