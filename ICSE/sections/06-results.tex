@@ -93,15 +93,17 @@ strict one ($0.09\%$). Second, the corresponding expected \hit{5} for a uniforml
 random ranker is therefore $0.036$ coarse and $0.0044$ strict. Hybrid retrieval's
 $0.970$ and $0.744$ sit $27\times$ and $169\times$ above those references.
 
-Under the strict relation hybrid fusion remains best on all three metrics against
-every system we could test pairwise, and the margins survive correction: $+0.038$
-\hit{5} over BGE ($95\%$ CI $[+0.025,+0.051]$), $+0.050$ over the cross-encoder
-($[+0.038,+0.064]$), and $+0.221$ over our own dense retriever
-($[+0.206,+0.237]$), all with Benjamini--Hochberg $q<0.001$. The single exception
-is \hit{5} against raw-corpus BM25 ($+0.004$, $[-0.011,+0.019]$, $q=0.54$); that
+Under the strict relation hybrid fusion is best on all three metrics against
+every one of the eight alternatives, on the $4{,}362$ queries all nine systems
+score. Of the $24$ paired comparisons, $23$ are significant after
+Benjamini--Hochberg correction: $+0.038$ \hit{5} over BGE ($95\%$ CI
+$[+0.025,+0.051]$), $+0.077$ over MPNet ($[+0.063,+0.090]$), $+0.050$ over the
+cross-encoder ($[+0.038,+0.064]$), $+0.029$ over TF--IDF ($[+0.017,+0.042]$), and
+$+0.221$ over our own dense retriever ($[+0.206,+0.237]$). The one exception is
+\hit{5} against raw-corpus BM25 ($+0.004$, $[-0.011,+0.019]$, $q=0.54$); that
 method's \hit{1} of $0.015$ reflects a degenerate top-rank ordering, and hybrid
-beats it on MRR by $+0.271$. The result also holds across \emph{both} held-out
-project domains (Kafka~$0.80$, MariaDB~$0.73$).
+beats it on MRR by $+0.271$ ($q<0.001$). The result also holds across \emph{both}
+held-out project domains (Kafka~$0.80$, MariaDB~$0.73$).
 
 One result in Table~\ref{tab:strict} deserves emphasis because it cuts against
 our own method. Our fine-tuned dense retriever, which is trained against the
@@ -129,7 +131,8 @@ Method & \hit{1} & \hit{5} & MRR \\
 \multicolumn{4}{l}{\emph{Prior art, zero-shot}}\\
 \quad BGE (dense)          & 0.474 & 0.706 & 0.564 \\
 \quad E5 (dense)           & 0.450 & 0.698 & 0.544 \\
-\quad TF--IDF (lexical)    & 0.445 & 0.715 & 0.559 \\
+\quad MPNet (dense)        & 0.444 & 0.667 & 0.530 \\
+\quad TF--IDF (lexical)    & 0.445 & 0.715 & 0.549 \\
 \quad BM25 (raw corpus)    & 0.015 & 0.740 & 0.332 \\
 \quad Cross-encoder rerank & 0.418 & 0.694 & 0.523 \\
 \multicolumn{4}{l}{\emph{Ours}}\\
