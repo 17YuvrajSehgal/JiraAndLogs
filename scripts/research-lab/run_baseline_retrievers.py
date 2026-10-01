@@ -148,6 +148,11 @@ def main() -> int:
         visible = {m.jira_shadow_issue_id for m in corpus.visible_to(w)}
         row = sims[i]
         order = np.argsort(-row)
+        # `scores` parallels `top`: the ranking score of each returned candidate.
+        # Persisting these is what lets downstream analysis compute a top-1/top-2
+        # margin, the standard confidence signal for deciding whether a retrieval
+        # is worth escalating. The original runs kept only the id list, which is
+        # why no margin feature was available to the escalation policy.
         if args.method == "ce":
             # take dense top-N visible candidates, then cross-encode rerank
             cand = []
@@ -157,22 +162,28 @@ def main() -> int:
                     cand.append(j)
                 if len(cand) >= CE_CANDIDATES:
                     break
+            ce_by_idx: dict[int, float] = {}
             if cand:
                 pairs = [[q_texts[i], mem_texts[j]] for j in cand]
                 ce_scores = ce.predict(pairs, batch_size=128, show_progress_bar=False)
+                ce_by_idx = {j: float(s) for j, s in zip(cand, ce_scores)}
                 cand = [j for _, j in sorted(zip(ce_scores, cand), key=lambda x: -x[0])]
             top = [mem_ids[j] for j in cand[:TOP_K]]
+            scores = [ce_by_idx[j] for j in cand[:TOP_K]]
         else:
-            top = []
+            top, scores = [], []
             for j in order:
                 mid = mem_ids[j]
                 if mid in visible:
                     top.append(mid)
+                    scores.append(float(row[j]))
                 if len(top) >= TOP_K:
                     break
         predictions.append({
             "window_id": w.window_id,
             "matched_issue_ids": top,
+            "candidate_scores": scores,
+            "score_margin_top1_top2": (scores[0] - scores[1]) if len(scores) > 1 else None,
             "gold_matched_issue_ids": list(w.matched_memory_issue_ids or []),
             "scenario_family": getattr(w, "scenario_family", None),
         })
