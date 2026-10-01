@@ -1,0 +1,49 @@
+#!/usr/bin/env bash
+# Run a command on Trillium through the WSL ssh ControlPersist socket.
+#
+# The Windows/Git-Bash ssh cannot authenticate to Trillium (Duo MFA needs a TTY),
+# but the user's WSL Ubuntu instance holds a live multiplexed session. This
+# wrapper relays through it. Script text is base64-encoded so no layer of
+# quoting (Git Bash -> wsl.exe -> ssh -> remote shell) can mangle it.
+#
+# Trillium splits its login nodes: the default (tri-loginNN) is CPU-only and
+# REFUSES to accept jobs requesting GPUs --
+#   "GPU resources requested from a CPU login node; please submit from trig-login01"
+# -- so anything with --gpus-per-node must be submitted from trig-login01. The
+# -g flag hops there internally (passwordless within the cluster).
+#
+# Usage:
+#   scripts/v2/tri 'squeue -u $USER'          # inline command, CPU login node
+#   scripts/v2/tri -g 'sbatch gpu_job.sbatch' # run on the GPU login node
+#   scripts/v2/tri -f local_script.sh         # run a local script remotely
+#   scripts/v2/tri -gf local_script.sh        # ... on the GPU login node
+#   echo 'hostname' | scripts/v2/tri -        # from stdin
+set -uo pipefail
+
+DISTRO="${V2_WSL_DISTRO:-Ubuntu}"
+HOST="${V2_HOST:-trillium}"
+GPU_LOGIN="${V2_GPU_LOGIN:-trig-login01}"
+gpu=0
+
+case "${1:-}" in
+  -g)  gpu=1; shift ;;
+  -gf) gpu=1; set -- -f "$2" ;;
+esac
+
+case "${1:-}" in
+  -f) src=$(cat "$2") ;;
+  -)  src=$(cat) ;;
+  "") echo "usage: $0 [-g] {'<command>' | -f <script> | -}" >&2; exit 2 ;;
+  *)  src="$*" ;;
+esac
+
+# When targeting the GPU login node, wrap the payload in a second base64 hop so
+# the inner script survives the extra shell without any quoting surprises.
+if [[ $gpu -eq 1 ]]; then
+  inner=$(printf '%s' "$src" | base64 -w0)
+  src="ssh -o BatchMode=yes -o StrictHostKeyChecking=accept-new ${GPU_LOGIN} \"echo ${inner} | base64 -d | bash\""
+fi
+
+b64=$(printf '%s' "$src" | base64 -w0)
+wsl.exe -d "$DISTRO" -- ssh -o BatchMode=yes -o ConnectTimeout=20 "$HOST" \
+    "echo $b64 | base64 -d | bash" 2>&1 | tr -d '\0'
