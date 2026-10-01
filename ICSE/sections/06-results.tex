@@ -429,16 +429,54 @@ ticket-worthiness signal.
 
 This reframes how operational triage should be measured: the part that looks solved on synthetic data does not transfer, while the part that does (retrieving which past incident a live one resembles) is where the real headroom lies, and where our system is strongest.
 
+\subsubsection*{Is the retrieved incident any good?}
+\label{sec:results-judge}
+
 Because the real dataset's matches are inferred rather than human-labelled, we
-probed them with an LLM-as-judge. Asked to rate each gold match against a control,
-the judge separates the two on every dataset, most sharply on the real incidents
-(a gold-versus-control gap of $1.24$ on a five-point scale, versus $0.34$--$0.47$
-on synthetic). The same run, however, qualifies what that gap establishes: only
-$6.3\%$ of coarse-gold matches are rated $4$ or $5$, against $0\%$ of controls. So
-the judge finds the relation clearly non-random, but it does \emph{not} find most
-coarse-gold pairs to be strongly related. Together with the controls being
-uniformly sampled, and therefore easy, this check should be read as evidence that
-the coarse relation captures topical relatedness, not that it identifies the
-prior incident an engineer would most want. We report the strict relation
-(\S\ref{sec:results-strict}) for that reason, and a human study remains the
-right instrument (\S\ref{sec:threats}).
+probe them with an LLM-as-judge. Our first protocol rated each \emph{gold} match
+against a uniformly sampled control and reported the gap ($1.24$ on a five-point
+scale). That protocol is weak in two ways we now correct: a uniform control from
+a $38{,}642$-item memory is an easy negative, and the operationally interesting
+object is not the gold match but \emph{the incident the system actually returns}.
+
+The revised protocol judges three candidates per query in independent
+single-blind calls, with call order shuffled: the system's top-1 retrieved
+incident; a \emph{hard} negative drawn from the same project, outside the gold
+set, chosen as the most lexically similar such ticket; and the original uniform
+control, retained for comparability. Over $300$ held-out queries
+($900$ judgements):
+
+\begin{center}\footnotesize
+\begin{tabular}{lccc}
+\toprule
+Candidate & Mean & Rated $\ge4$ & Rated $\ge3$ \\
+\midrule
+System top-1        & \textbf{3.65} & \textbf{39.0\%} & \textbf{94.0\%} \\
+Hard (same project) & 3.10 & 25.3\% & 79.3\% \\
+Uniform control     & 1.32 & \phantom{0}0.0\% & 15.7\% \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+The system's top-1 beats a confusable same-project alternative by $+0.55$
+($95\%$ bootstrap CI $[+0.36,+0.73]$; paired sign test $121$ wins, $47$ losses,
+$132$ ties, $p\approx10^{-8}$). This is a more demanding comparison than the
+original and the system still wins it.
+
+Two qualifications matter. First, the hard negative is itself rated fairly well
+($3.10$), which is the expected consequence of drawing it from the same project:
+same-project tickets are often somewhat related, so the achievable gap is
+genuinely narrow. Second, the judge uses a coarser scale than five points
+suggests: on the system's output it emits only $1$, $3$ and $5$ in practice
+($6.0\%$, $55.0\%$ and $38.3\%$, with $4$ used twice), so ``rated $\ge4$''
+should be read as ``rated $5$''.
+
+The contrast with the gold-based protocol is instructive. Only $6.3\%$ of
+coarse-\emph{gold} pairs are rated $\ge4$, but $39.0\%$ of the system's actual
+top-1 results are, and $94\%$ are rated at least $3$. A gold match is an
+arbitrary member of a large relevant set; the system returns the member it ranks
+highest, which is a substantially better document. This supports the retrieval
+claim without rehabilitating the coarse relation itself, which remains a measure
+of topical relatedness. A multi-annotator human study remains the right
+instrument, and this check is designed to give it a pre-registered quantity to
+validate against (\S\ref{sec:threats}).

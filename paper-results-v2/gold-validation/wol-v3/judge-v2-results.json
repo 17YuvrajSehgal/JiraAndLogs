@@ -1,0 +1,37 @@
+{
+  "model": "Qwen/Qwen2.5-7B-Instruct",
+  "seed": 42,
+  "prompt": "Rate how relevant a PAST TICKET is to a CURRENT incident window \u2014 i.e. whether the past ticket describes the same or a closely related problem and would help triage the incident.\n\nCURRENT INCIDENT WINDOW:\n{query}\n\nPAST TICKET:\n{ticket}\n\nReply with ONLY a single integer 1-5: 5=clearly the same/related issue, 1=unrelated. Answer:",
+  "n_queries": 300,
+  "n_calls": 900,
+  "conditions": {
+    "system": {
+      "n": 300,
+      "mean": 3.6533333333333333,
+      "frac_ge4": 0.39,
+      "frac_ge3": 0.94
+    },
+    "hard": {
+      "n": 300,
+      "mean": 3.1033333333333335,
+      "frac_ge4": 0.25333333333333335,
+      "frac_ge3": 0.7933333333333333
+    },
+    "easy": {
+      "n": 300,
+      "mean": 1.3166666666666667,
+      "frac_ge4": 0.0,
+      "frac_ge3": 0.15666666666666668
+    }
+  },
+  "system_vs_hard_paired": {
+    "n": 300,
+    "system_higher": 121,
+    "tie": 132,
+    "hard_higher": 47,
+    "mean_delta": 0.55
+  },
+  "elapsed_s": 62.854002952575684,
+  "gap_system_minus_hard": 0.5499999999999998,
+  "gap_system_minus_easy": 2.336666666666667
+}
