@@ -60,6 +60,10 @@ temp
 
 DOCS/icse-planned.md
 data.tar.gz
+# Release/transfer archives — large, reproducible, never tracked
+*.tar.zst
+*.tar.gz
+*.zst
 # paper-results: commit metrics/summaries; large per-window predictions ship as a release archive
 paper-results.zip
 paper-results
