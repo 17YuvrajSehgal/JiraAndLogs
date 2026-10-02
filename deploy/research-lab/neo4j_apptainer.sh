@@ -9,7 +9,7 @@
 #
 # Verified working pattern: `apptainer run <sandbox> &` launches the neo4j
 # docker-entrypoint (CMD=neo4j -> `neo4j console`) in the foreground, which we
-# background and track via a pidfile. Bolt comes up on 127.0.0.1:7687.
+# background and track via a pidfile. Bolt comes up on 127.0.0.1:${NEO4J_BOLT_PORT:-7687}.
 #
 # Usage:
 #   neo4j_apptainer.sh start     # launch neo4j + block until bolt is ready
@@ -49,6 +49,8 @@ start() {
     # container, where neo4j's entrypoint parses every NEO4J_* var as a config
     # setting and aborts ("No declared setting with name: ..."). With cleanenv
     # only the explicit --env settings below reach neo4j.
+    : "${NEO4J_BOLT_PORT:=7687}"
+    : "${NEO4J_HTTP_PORT:=7474}"
     apptainer run --cleanenv --writable-tmpfs \
         --bind "$NEO4J_TMP:/tmp" \
         --bind "$NEO4J_BASE/data:/data" \
@@ -57,8 +59,8 @@ start() {
         --env NEO4J_AUTH="neo4j/${NEO4J_PASSWORD}" \
         --env JAVA_OPTS="-Djava.io.tmpdir=/tmp -Djna.tmpdir=/tmp -Djna.nounpack=false" \
         --env NEO4J_server_default__listen__address=127.0.0.1 \
-        --env NEO4J_server_bolt_listen__address=127.0.0.1:7687 \
-        --env NEO4J_server_http_listen__address=127.0.0.1:7474 \
+        --env NEO4J_server_bolt_listen__address=127.0.0.1:${NEO4J_BOLT_PORT:-7687} \
+        --env NEO4J_server_http_listen__address=127.0.0.1:${NEO4J_HTTP_PORT:-7474} \
         --env NEO4J_server_memory_heap_initial__size="${NEO4J_HEAP}" \
         --env NEO4J_server_memory_heap_max__size="${NEO4J_HEAP}" \
         --env NEO4J_server_memory_pagecache_size="${NEO4J_PAGECACHE}" \
@@ -69,7 +71,7 @@ start() {
 }
 
 wait_ready() {
-    echo "[neo4j] waiting for bolt on 127.0.0.1:7687 ..."
+    echo "[neo4j] waiting for bolt on 127.0.0.1:${NEO4J_BOLT_PORT:-7687} ..."
     local pid=""; [[ -f "$PIDFILE" ]] && pid=$(cat "$PIDFILE")
     for i in $(seq 1 120); do   # up to ~10 min
         # Fast-fail: if the neo4j process already died, stop waiting.
@@ -82,7 +84,7 @@ wait_ready() {
 import sys
 from neo4j import GraphDatabase
 try:
-    d = GraphDatabase.driver("neo4j://127.0.0.1:7687",
+    d = GraphDatabase.driver("neo4j://127.0.0.1:${NEO4J_BOLT_PORT:-7687}",
                              auth=("neo4j", "${NEO4J_PASSWORD}"))
     d.verify_connectivity(); d.close()
 except Exception:
