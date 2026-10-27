@@ -1,0 +1,15 @@
+{
+  "model": "Qwen/Qwen2.5-7B-Instruct",
+  "backend": "local-hf",
+  "seed": 42,
+  "n_queries": 500,
+  "n_generations": 2000,
+  "k_context": 5,
+  "gen_prompt": "You are a senior site-reliability engineer diagnosing a software incident.\n\nINCIDENT REPORT:\n{query}\n\nPAST RESOLVED INCIDENTS THAT MAY BE RELATED:\n{context}\n\nBased on the incident report{ctx_clause}, state the most likely root cause and a fix. Be specific to THIS incident. Answer in exactly this format:\nROOT CAUSE: <one short paragraph>\nFIX: <one line>",
+  "contexts_shorter_than_k": {
+    "arise": 12,
+    "hard": 0,
+    "oracle": 2
+  },
+  "elapsed_s": 1250.5134027004242
+}

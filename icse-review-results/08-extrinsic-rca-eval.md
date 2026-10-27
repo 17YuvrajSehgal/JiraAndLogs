@@ -109,16 +109,65 @@ into study #5); report judge–human agreement.
 
 ## Results
 
-*(to be filled when the run completes — do not edit the design above after
-this section is populated)*
+**Run 1 (2026-10-27, job 1180029): NULL, with a diagnosed design confound.**
+Design above unchanged, as pre-registered. n=500 queries, all four conditions
+judged on every query. Source: `paper-results-v2/extrinsic-rca/extrinsic-results.json`.
 
-| Condition | n | mean score | ≥4 (%) |
-|---|---|---|---|
-| none | — | — | — |
-| arise | — | — | — |
-| hard | — | — | — |
-| oracle | — | — | — |
+| Condition | n | mean score | >=4 (%) | >=3 (%) |
+|---|---|---|---|---|
+| none | 500 | 3.536 | 45.4 | 81.4 |
+| arise | 500 | 3.572 | 47.8 | 80.8 |
+| hard | 500 | 3.564 | 45.4 | 82.8 |
+| oracle | 500 | 3.588 | 47.6 | 81.8 |
 
-Deltas: (b)−(a) = — · (b)−(c) = — · (d)−(b) = —
+All six pre-registered tests non-significant after BH (largest delta:
+arise-none +0.024 on >=4, CI [-0.020,+0.066], q=0.93). Decisively:
+**oracle ~ none** -- even true gold context does not beat no context, so the
+measurement has no dynamic range anywhere.
 
-Interpretation: —
+### Diagnosis: the target is derivable from the input (circularity)
+
+The judge target (`root_cause`) was LLM-extracted *from the query's own ticket
+text*, and the query input IS that ticket's evidence text. Measured: 39.2% of
+the target's content words appear verbatim in the own query text vs 7.3% in a
+mismatched control -- and the structural relationship is identity, not mere
+vocabulary. Worked example: the query contains
+`Assertion 'precision || !scale' failed`; the target reads "assertion failure
+due to invalid precision and scale values"; the no-context model restates the
+assertion line and is (correctly) rated 5. **The question contains the
+answer**, so context has nothing to add in any arm.
+
+This is NOT "context does not help RCA". It is: *filed bug reports are
+post-hoc documents that typically state their own diagnosis*, so a
+resolved-ticket corpus cannot measure diagnostic headroom. Note the kinship
+with the paper's triage-saturation finding -- fault-injected windows are
+separable by construction; filed tickets are self-explanatory by construction.
+Both are structural properties of the corpus genre inflating downstream-task
+scores. This is itself a reportable methodological finding.
+
+What this run also established (useful, not wasted):
+- the judge behaves sanely (score spread, no floor/ceiling pathology)
+- the pipeline (firewall, four arms, blind judging, paired stats) works
+  end-to-end at 500x4 scale in ~25 min on one H100
+- the fix field has lower query-overlap (0.205 vs 0.357) but fix texts are
+  often generic -- a fix-prediction variant has some, not much, headroom
+
+### Redesign options (decide before any run 2; new pre-registration required)
+
+**A. Telemetry-query variant (recommended).** Run on Online Boutique (331
+queries with gold) and OTel Demo (119): the query is a raw telemetry window
+(logs/metrics text), the target is the *injected fault's ground truth* from the
+scenario manifest -- never shown to the model, no narrative, no circularity.
+Retrieved ticket context then carries genuinely absent information. This is
+also exactly the parent framework's use case (observability bundle in ->
+context -> RCA). Smaller n, two corpora.
+
+**B. Fix-prediction variant on WoL.** Target = the recorded fix; the model
+proposes remediation. Headroom exists but is modest, and fix texts are often
+vague; usable as a secondary task, not the headline.
+
+**C. Logs-only WoL queries.** Weak: the worked example's leak came through a
+pasted stack trace, i.e. through the logs themselves. Rejected.
+
+**D. Stronger generator/judge via API.** Does not address circularity; defer
+until after A (it would, if anything, raise the no-context ceiling further).
