@@ -52,20 +52,37 @@ Method & \hit{1} & \hit{5} & MRR & \hit{1} & \hit{5} & MRR & \hit{1} & \hit{5} &
 \end{tabular}
 \end{table*}
 
-Second, the value of \emph{fusion} depends on the setting. On the large,
-heterogeneous real corpus, fusing the dense, sparse, and graph retrievers lifts
-\hit{5} from $0.91$ to $0.97$, placing the correct prior incident in the top
-five $97\%$ of the time, at \hit{1}~$0.84$ and MRR~$0.90$. This gain is large and
-statistically significant: against the dense retriever the paired-bootstrap
-difference is $+0.065$ ($95\%$ CI $[+0.058,+0.073]$), and against the strongest
-baselines it ranges from $+0.12$ (the LLM) to $+0.14$ (zero-shot dense), all with
-Benjamini--Hochberg $q\approx 0$. On the two small synthetic corpora, by
-contrast, the fine-tuned dense retriever is already so strong that fusion does
-not help, and on Online Boutique it is slightly worse ($-0.076$, $q=0.03$):
-when one retriever dominates a small memory, blending in weaker signals only adds
-noise. Fusion's advantage thus \emph{emerges with scale and diversity}, precisely
-the conditions of real operations. Figure~\ref{fig:forest} summarizes every
-pairwise comparison with its bootstrap confidence interval and significance.
+Second, the value of \emph{fusion} depends on the setting, and measuring it
+properly requires accounting for training-seed variance
+(\S\ref{sec:results-seeds}). On the large, heterogeneous real corpus we retrain
+both the dense retriever and the full hybrid under five seeds and compare them
+seed-matched. Fusion lifts coarse \hit{5} from $0.919\pm0.020$ to
+$0.974\pm0.004$, a paired margin of $+0.055$ ($95\%$ t-interval
+$[+0.035,+0.075]$, $n{=}5$ seeds) --- and, more robustly, \emph{every} hybrid
+seed exceeds \emph{every} dense-retriever seed, with a gap of $0.025$ between
+the closest pair. Under the strict relation the seed-matched margin is
+$+0.274$ $[+0.249,+0.299]$ with the ranges separated by $0.221$.
+
+Fusion is not, however, a uniform improvement. On the same five seed pairs it
+\emph{degrades} \hit{1} by $0.041$ ($[-0.069,-0.013]$): widening the candidate
+pool with sparse and graph signals blunts top-one precision even as it improves
+top-five recall, and MRR is a wash ($+0.009$, interval includes zero). Which
+side of this trade-off matters depends on the consumer --- an engineer scanning
+a shortlist benefits from the \hit{5} gain, while an automated handoff acting on
+the top result pays the \hit{1} cost. A secondary benefit is stability: the
+hybrid's seed standard deviation is $5.4\times$ smaller than the dense
+retriever's ($0.004$ versus $0.020$), consistent with two of its three
+constituent retrievers being untrained.
+
+On the two small synthetic corpora, by contrast, the fine-tuned dense retriever
+is already so strong that fusion does not help, and on Online Boutique it is
+significantly worse ($-0.076$, $q=0.03$): when one retriever dominates a small
+memory, blending in weaker signals only adds noise. Fusion's advantage thus
+\emph{emerges with scale and diversity}, precisely the conditions of real
+operations --- and had we evaluated only on the demonstration systems, as is
+common, we would have concluded fusion is harmful.
+Figure~\ref{fig:forest} summarizes every pairwise comparison with its bootstrap
+confidence interval and significance.
 
 \begin{figure}[t]
 \centering
@@ -194,12 +211,27 @@ whether the labelling rule leaks into the systems being compared. We find no
 evidence that it does.
 
 \smallskip
+\label{sec:results-seeds}
 \noindent\textbf{How much does the training seed matter?} Retriever fine-tuning
 is the only stochastic step in the pipeline (\S\ref{sec:setup-protocol}), so we
 quantify its contribution rather than assume it away. Retraining under five
-seeds leaves coarse \hit{5} at $0.636\pm0.016$ on Online Boutique and
-$0.676\pm0.005$ on OTel Demo (mean $\pm$ sample standard deviation), so the lead
-over the zero-shot embedders is not an artifact of a lucky initialization.
+seeds leaves coarse \hit{5} at $0.636\pm0.016$ on Online Boutique,
+$0.676\pm0.005$ on OTel Demo, and $0.919\pm0.020$ on World of Logs (mean $\pm$
+sample standard deviation), so the lead over the zero-shot embedders is not an
+artifact of a lucky initialization. The real corpus shows the \emph{largest}
+seed variance of the three, which matters because it carries the headline
+comparisons; we therefore run the fused system under the same five seeds and
+report every system-versus-system margin seed-matched
+(\S\ref{sec:results-rq1}).
+
+Fixed seeds, moreover, are not reproducibility. Re-running the seed-42
+configuration unchanged --- same data, hyperparameters, and fine-tuning pairs,
+on different hardware --- moved coarse \hit{5} from $0.905$ to $0.898$ and strict
+\hit{5} from $0.523$ to $0.481$. The five zero-shot baselines reproduced their
+published numbers \emph{exactly} under the same conditions, so the
+non-determinism is confined to GPU fine-tuning, as one reviewer of an earlier
+version of this work predicted. Single-seed results for trained components
+should be read as draws from a distribution, not as constants.
 
 Decomposing that variability against the other source, sampling of the test
 queries, shows the two datasets behave quite differently. On OTel Demo the seed
@@ -214,9 +246,13 @@ We therefore report seed-aware intervals, $\sqrt{\sigma^2_{\text{seed}}+
 We note two things about the magnitude. Top-1 is markedly less stable than
 top-5 on Online Boutique (\hit{1} spans $0.417$--$0.468$ across seeds, a range of
 $0.051$, against $0.039$ for \hit{5}), so single-seed \hit{1} comparisons on the
-small corpora deserve particular caution. And the largest full seed-to-seed range
-we observe anywhere is $0.039$, against which the real corpus's headline margin
-of $+0.065$ \hit{5} over the dense retriever is a factor of $1.7$ larger.
+small corpora deserve particular caution. And the practical consequence is
+visible in our own history: the originally reported fusion margin of $+0.065$
+was computed against a single dense-retriever run that turned out to sit near
+the low end of that retriever's seed range; the seed-matched margin is
+$+0.055$ (\S\ref{sec:results-rq1}), and the interval honest about seed variance
+is roughly $2.6\times$ wider than the query-bootstrap interval originally
+quoted.
 
 \subsection{RQ2: End-to-End Triage and Graceful Degradation}
 \label{sec:results-rq2}

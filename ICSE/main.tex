@@ -28,7 +28,8 @@
 
 % \title{Capability-Gated Agentic Incident Triage:\\
 % Matching Live Incidents to Resolved Tickets from Telemetry to the Real World}
-\title{ARISE: Adaptive Retrieval for Incident Support and Explanation}
+\title{What Should Incident-Triage Systems Be Evaluated On?\\
+\large A Measurement Study Across Synthetic and Real Incidents}
 
 % --- double-blind: anonymized authors ---
 %\author{\IEEEauthorblockN{Anonymous Author(s)}
@@ -37,10 +38,33 @@
 \maketitle
 
 \begin{abstract}
-On-call engineers triage a steady stream of alerts, and their most valuable diagnostic resource is institutional memory: how similar past incidents were diagnosed and resolved. Retrieving the right prior incident is hard, yet existing automated-triage methods are evaluated almost entirely on synthetic fault-injection telemetry under fixed observability assumptions, leaving their effectiveness on real engineer-written incidents largely unknown.
-We present \textbf{ARISE}, an adaptive incident-triage framework that retrieves past incidents by fusing dense, lexical, and knowledge-graph retrieval and invokes additional reasoning only when uncertainty justifies its cost, letting one system span regimes from rich telemetry to text-only reports. We evaluate it on three datasets of increasing realism: two new telemetry-to-ticket datasets that pair multi-signal telemetry with incident tickets and per-window labels, and a real-world corpus of 38,642 resolved Apache Jira incidents across 24 projects. On real incidents, under an inferred project-component relevance relation, ARISE retrieves a relevant prior incident in its top five 97\% of the time, improving over dense, lexical, graph, and sampled retrieval-augmented LLM baselines on Hit@5, while capability gating cuts estimated per-window cost by up to 78\% relative to a run-all cascade.
-A synthetic-versus-real comparison further shows that ticket-worthiness classification is saturated on injected telemetry (ROC area $1.00$) but only weakly predictable from real, engineer-written ticket text (ROC area $0.57$--$0.60$), where it barely improves on a majority-class baseline. This contrast suggests that the more transferable benchmark target is incident-memory retrieval rather than alert classification alone. We release our datasets, code, evaluation harness, and results.
+Automated incident triage is evaluated with striking uniformity: faults are
+scripted into a demonstration microservice application, and a system is scored
+on whether it can separate a faulty observation window from a healthy one.
+Reported numbers are high and still improving. We ask whether that is the right
+thing to measure.
 
+We report a measurement study across three corpora of increasing realism: two
+newly released datasets pairing multi-signal microservice telemetry with
+incident tickets and per-window labels, and 38,642 real Apache Jira incidents
+from 24 projects. We find that the dominant benchmark target is saturated by
+construction and does not transfer --- ticket-worthiness classification reaches
+ROC area 1.00 on injected faults but only 0.57--0.70 on real engineer-written
+ticket text --- whereas incident-memory retrieval is measured identically on
+both and does transfer.
+
+We further find that evaluation choices routinely left implicit change not only
+the magnitude of a result but its direction. Retrieval fusion is significantly
+worse than a single dense retriever on a 347-item memory and significantly
+better on a 38,642-item one. The training seed accounts for up to 28\% of
+variance in a headline metric, and GPU fine-tuning does not reproduce at a fixed
+seed. Moving between two defensible relevance relations changes Hit@5 by 0.23
+and reorders the method table. Each of these reversed or materially altered one
+of our own conclusions.
+
+We conclude with a protocol for evaluating incident triage, each item tied to a
+specific way our own results would have misled without it, and release the
+datasets, code, and full result set.
 \end{abstract}
 
 \begin{IEEEkeywords}
@@ -55,6 +79,7 @@ incident triage, AIOps, information retrieval, large language models, empirical 
 \input{sections/05-setup}
 \input{sections/06-results}
 \input{sections/07-discussion}
+\input{sections/11-recommendations}
 \input{sections/08-threats}
 \input{sections/10-conclusion}
 

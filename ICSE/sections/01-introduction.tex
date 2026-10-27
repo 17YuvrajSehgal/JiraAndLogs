@@ -4,82 +4,87 @@
 
 Modern cloud services emit a relentless stream of alerts, and on-call engineers
 must decide, often within minutes, which signal a genuine incident and which are
-noise~\cite{he2021survey,ghosh2022incidents}. The
-decision is consequential both ways: a missed incident becomes an outage, while a
-flood of low-value pages erodes trust in the alerting system. What makes an
-on-call engineer effective is rarely raw signal-reading; it is \emph{memory}. Most
-incidents rhyme with one the team has resolved before, and the fastest path from
-symptom to fix is to recognize ``the message-broker outage from
-last quarter'' and reuse the diagnosis that worked. The institutional record of past resolutions, typically a backlog of closed issue-tracker tickets, is therefore one of a team’s most useful triage resources, yet it is often hard to use at incident time because finding the right prior incident is itself a retrieval problem.
+noise~\cite{he2021survey,ghosh2022incidents}. The decision is consequential both
+ways: a missed incident becomes an outage, while a flood of low-value pages
+erodes trust in the alerting system. What makes an on-call engineer effective is
+rarely raw signal-reading; it is \emph{memory}. Most incidents rhyme with one the
+team has resolved before, and the fastest path from symptom to fix is to
+recognize ``the message-broker outage from last quarter'' and reuse the
+diagnosis that worked.
 
-This need has motivated growing work on automated incident triage and
+This has motivated a large literature on automated incident triage and
 AIOps~\cite{he2021survey,chen2019triage,ghosh2022incidents}, increasingly powered
-by large language models (LLMs)~\cite{ahmed2023rootcause,chen2024rcacopilot}.
-However, two assumptions limit how far these approaches carry into practice.
+by large language models~\cite{ahmed2023rootcause,chen2024rcacopilot}. That
+literature is evaluated in a strikingly uniform way: faults are scripted into a
+demonstration microservice application, telemetry is collected, and a system is
+scored on whether it can tell a faulty window from a healthy
+one~\cite{chen2025aiopslab}. Reported numbers are high and still improving.
 
-First, evaluation is conducted almost exclusively on \emph{synthetic}
-fault-injection telemetry~\cite{chen2025aiopslab}: faults scripted into
-demonstration microservice applications produce incidents that are clean, balanced,
-and easily separable, and whether methods that excel there transfer to the noisy,
-imbalanced, free-text incidents of real operations remains largely unexplored.
-Progress is further hindered by a lack of public datasets pairing telemetry (logs,
-metrics, traces) with incident tickets and ground-truth labels: existing resources
-offer telemetry or tickets in isolation~\cite{zhu2023loghub,montgomery2022jira}, not
-the paired, per-window-labeled corpus triage evaluation requires.
+This paper asks whether that is the right thing to measure.
 
-Second, existing systems largely assume a fixed observability environment, building
-retrieval and reasoning pipelines for telemetry-rich
-settings~\cite{ahmed2023rootcause,chen2024rcacopilot,zhou2024dbot}. Yet real
-deployments are heterogeneous: some incidents arrive with detailed logs, metrics,
-and traces, others as little more than a brief text report. A triage system should
-adapt to the evidence actually available rather than rely on a fixed pipeline, a
-capability rarely evaluated under realistic conditions.
+\smallskip
+\noindent\textbf{The problem.} We find that the dominant benchmark target is
+saturated by construction and does not survive contact with real incidents.
+Deciding whether a window warrants a ticket is almost perfectly solvable on
+injected faults --- an active fault differs from a healthy baseline by
+design --- yet only weakly predictable from the text of real, engineer-written
+tickets. On our corpora the same task moves from ROC area $1.00$ to
+$0.57$--$0.70$. A strong score on fault-injection data therefore certifies the
+dataset, not the method.
 
-We present \sys (Adaptive Retrieval for Incident Support and Explanation), an
-adaptive incident-triage framework organized around retrieval from a memory of
-resolved incidents. Rather than assuming a fixed workflow, \sys selects retrieval
-and reasoning capabilities from the evidence available for each incident, letting
-one framework span regimes from telemetry-rich deployments to text-only reports. Its
-design follows three principles: \emph{hybrid memory retrieval} (dense, lexical, and
-knowledge-graph similarity between live and historical incidents),
-\emph{capability-aware execution} (running only the steps the evidence supports and
-uncertainty justifies), and \emph{incident-aware paging} (tracking evolving incidents
-to suppress duplicate pages).
+Worse, we find that several evaluation choices which are routinely left
+implicit change not just the magnitude of a result but its \emph{direction}.
+Whether retrieval fusion helps or hurts depends on the size of the corpus it is
+measured on. Whether a reported margin is significant depends on whether the
+training seed is treated as a source of variance. Whether a method looks best
+depends on which of two defensible relevance relations is used. We know these
+because each of them reversed or materially altered one of our own conclusions.
 
-To test adaptability and synthetic-to-real transfer, we study \sys on three
-datasets of increasing realism: two newly released microservice-telemetry datasets
-(Online Boutique and OpenTelemetry Demo)\footnote{\url{https://zenodo.org/records/21096887}}
-and 38,642 real Apache Jira incidents from 24 projects (World of
-Logs~\cite{wang2026worldoflogs}). On the real text-only incidents, hybrid retrieval
-finds an inferred relevant prior incident in its top five $97\%$ of the time, beating every
-fused component and external baseline (each gap surviving multiple-comparison
-correction), while capability gating cuts estimated per-window cost by up to
-$78\%$ at no loss in quality. For the real corpus, relevance is necessarily inferred rather than manually labeled: a retrieved incident is counted as relevant when it satisfies the project-component relation defined in §V-B, and we additionally report a stricter symptom-overlap variant and an LLM-as-judge validation. Most striking is what happens to the task these benchmarks usually
-optimize. Deciding whether a window warrants a ticket at all is almost perfectly
-solvable on injected telemetry (ROC area $1.00$) but only weakly predictable from
-real, engineer-written ticket text (ROC area $0.57$--$0.60$, barely above a
-majority-class baseline). The hard question in real operations is therefore not
-\emph{whether} a window is an incident but \emph{which} past one it resembles,
-which reframes how triage ought to be measured.
+\smallskip
+\noindent\textbf{What we do.} We run a measurement study across three corpora of
+increasing realism: two newly released microservice-telemetry datasets that pair
+multi-signal telemetry with incident tickets and per-window labels (Online
+Boutique and OTel Demo)\footnote{\url{https://zenodo.org/records/21096887}} and
+$38{,}642$ real Apache Jira incidents across 24 projects (World of
+Logs~\cite{wang2026worldoflogs}). Throughout we use \sys{}, a retrieval system
+that fuses dense, lexical, and knowledge-graph matching behind a cost-aware
+controller, as the \emph{instrument}: a strong, realistic baseline whose
+behaviour exposes the measurement problems we are studying. Several of our findings
+are unflattering to it, which is the point --- the object of study is the
+evaluation, not the system.
 
-\noindent\textbf{Contributions.} This paper contributes:
+\smallskip
+\noindent\textbf{Contributions.}
 \begin{itemize}
-  \item \textbf{A capability-gated triage framework} that composes retrieval and
-  reasoning steps to each incident's available evidence, running one workflow from
-  full telemetry to text-only reports while cutting per-window cost via
-  uncertainty-aware execution.
+  \item \textbf{Evidence that the dominant target does not transfer.}
+  Ticket-worthiness classification is saturated on injected faults and only
+  weakly learnable on real incidents, while incident-memory retrieval is
+  measurable identically on both and does transfer. We also show that our own
+  earlier reading of this result was an artifact of a degenerate feature matrix,
+  and how a one-line check catches it.
 
-  \item \textbf{A hybrid retriever} fusing dense, lexical, and knowledge-graph signals that, on real engineer-written incidents, significantly improves Hit@5 over each constituent retriever, strong prior-art baselines, and a sampled retrieval-augmented LLM reranker.
+  \item \textbf{A quantification of how much protocol choices move results.}
+  The training seed accounts for up to $28\%$ of variance in a headline metric;
+  GPU fine-tuning does not reproduce at a fixed seed; the choice of relevance
+  relation moves \hit{5} by $0.23$ and reorders methods; and retrieval-fusion
+  conclusions \emph{reverse} between a $347$-item and a $38{,}642$-item memory.
 
-  \item \textbf{An empirical reframing} showing that ticket-worthiness
-  classification, the task synthetic benchmarks optimize, is far weaker on real
-  incidents than on injected faults, whereas retrieval over incident memory
-  transfers across both settings and is therefore the more informative
-  benchmark target.
+  \item \textbf{Two released telemetry-to-ticket datasets} pairing logs,
+  metrics, traces, and cluster events with incident tickets and per-window
+  labels (26 and 52 fault scenarios), to our knowledge the first public corpora
+  coupling telemetry and tickets at this granularity, alongside all code,
+  baselines, ablations, and significance
+  tests.\footnote{\url{https://zenodo.org/records/21096898}}
 
-  \item \textbf{Two released telemetry-to-ticket datasets} pairing logs, metrics,
-  traces, and cluster events with incident tickets and per-window labels (26 and
-  52 fault scenarios), the first public datasets to our knowledge coupling telemetry
-  and tickets at this granularity, alongside all code, baselines, ablations, and
-  significance tests.\footnote{\url{https://zenodo.org/records/21096898}}
+  \item \textbf{A protocol for evaluating incident triage}
+  (\S\ref{sec:recommendations}), each item tied to a specific way our own
+  results would have misled without it.
 \end{itemize}
+
+\noindent We report findings that are unfavourable to the instrument as
+readily as favourable ones: no evidence-gathering tool in \sys{} has a
+measurable benefit, its escalation gates fire roughly $16\times$ more often than
+necessary, and its retrieval fusion improves top-five recall while
+significantly degrading top-one precision. These are the kinds of result a
+system paper is tempted to omit, and the kinds a measurement paper exists to
+report.

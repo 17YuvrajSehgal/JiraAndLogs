@@ -1,28 +1,40 @@
-% === Experimental Setup ===
-\section{Experimental Setup}
+% === Study Design ===
+\section{Study Design}
 \label{sec:setup}
 
 \subsection{Research Questions}
 \label{sec:setup-rqs}
 
-Our evaluation is organized around four questions:
+This is a measurement study. We ask what incident-triage systems should be
+evaluated \emph{on}, and how sensitive the resulting conclusions are to choices
+that are usually left implicit. Four questions organize it:
 
 \begin{itemize}
-  \item[\textbf{RQ1}] \textbf{(Retrieval).} How accurately can a live incident be
-  matched to the most similar resolved incident in memory, and does fusing dense,
-  lexical, and graph retrieval outperform each in isolation, as well as strong
-  prior-art and LLM-based retrievers?
-  \item[\textbf{RQ2}] \textbf{(End-to-end triage).} Does the capability-gated
-  system retrieve effectively end to end, and does the \emph{same} system hold up
-  as the available evidence degrades from full telemetry to text alone?
-  \item[\textbf{RQ3}] \textbf{(Cost of adaptive execution).} What does the system's
-  capability gating buy? How much triage cost does it save relative
-  to running every step on every window, at equal accuracy, and which components
-  carry the result?
-  \item[\textbf{RQ4}] \textbf{(Synthetic vs.\ real).} How do triage and retrieval
-  behave on synthetic versus real incidents, and what does the contrast reveal
-  about where the difficulty lies?
+  \item[\textbf{RQ1}] \textbf{(Does the dominant target transfer?)}
+  Ticket-worthiness classification --- deciding whether a window warrants an
+  issue at all --- is what most automated-triage work optimizes and reports.
+  Does performance on that target carry from injected faults to real,
+  engineer-written incidents?
+
+  \item[\textbf{RQ2}] \textbf{(Does retrieval transfer, and are rankings
+  stable?)} Does matching a live incident against a memory of resolved ones
+  behave consistently across corpora, and do the \emph{relative} conclusions
+  about retrieval methods hold as corpus scale and realism change?
+
+  \item[\textbf{RQ3}] \textbf{(How much do protocol choices move the answer?)}
+  Reported results depend on the training seed, the relevance relation, the
+  feature construction, and the cost model. How large are those effects
+  compared with the differences between methods they are used to establish?
+
+  \item[\textbf{RQ4}] \textbf{(What does adaptive execution actually buy?)}
+  Capability gating is intended to cut cost without cost to quality. Which
+  components carry that result, and is the gating calibrated?
 \end{itemize}
+
+RQ1 and RQ2 concern \emph{what} to measure; RQ3 and RQ4 concern \emph{how}. We
+use \sys{}, the retrieval-and-gating system described in \S\ref{sec:approach},
+as the instrument throughout: it is a strong and realistic baseline rather than
+the object of study, and several of our findings are unflattering to it.
 
 \subsection{Systems and Baselines}
 \label{sec:setup-baselines}

@@ -1,0 +1,87 @@
+% === Recommendations ===
+\section{How to Evaluate Incident Triage}
+\label{sec:recommendations}
+
+The findings above are only useful if they change practice. This section states
+what we would ask of a future incident-triage evaluation, including our own.
+Each recommendation is tied to a specific way our own results would have
+misled, had we not run the corresponding check.
+
+\smallskip
+\noindent\textbf{R1. Report retrieval on a real corpus; do not let
+classification stand alone.} Ticket-worthiness classification is near-perfectly
+separable on injected faults (ROC area $1.00$) because an active fault differs
+from a healthy baseline by construction. On real engineer-written tickets the
+same question is only weakly answerable from text (ROC area $0.57$--$0.70$,
+\S\ref{sec:results-rq4}). A strong classification number on fault-injection data
+therefore certifies the dataset, not the method. Retrieval, by contrast, is
+measured identically on both and transfers.
+
+\smallskip
+\noindent\textbf{R2. Compare trained components seed-matched, with seed-aware
+intervals.} Retriever fine-tuning is the only stochastic step in our pipeline,
+and it contributes roughly $28\%$ of \hit{5} variance on one dataset and $1\%$
+on another (\S\ref{sec:results-seeds}). Our own headline margin was originally
+computed from one run of each system against a query-bootstrap interval that
+ignored seed variance entirely; the bi-encoder draw it happened to use sat near
+the low end of that retriever's range, and the interval was roughly $2.6\times$
+too narrow. Report $\sqrt{\sigma^2_{\text{seed}}+\sigma^2_{\text{sample}}}$, or
+the paired per-seed difference, whenever a retrained component is involved.
+
+Two corollaries. First, \emph{a fixed seed is not reproducibility} for GPU
+training: re-running our own configuration unchanged moved \hit{5} by $0.007$.
+Second, where the ranges of two systems do not overlap across seeds, say so ---
+it is a stronger and more assumption-free claim than any difference of means.
+
+\smallskip
+\noindent\textbf{R3. When ground truth is inferred, report more than one
+relation, and calibrate against chance.} Moving from our coarse relation to a
+stricter one changes \hit{5} from $0.970$ to $0.744$ and reorders the method
+table. Neither number is meaningful without knowing how much of memory each
+relation admits: the average held-out query has $410$ relevant items under the
+coarse relation and $50$ under the strict one, so a uniformly random ranker
+would score $0.051$ and $0.006$ respectively. Publishing that reference costs
+one sentence and lets a reader judge the result independently.
+
+\smallskip
+\noindent\textbf{R4. Audit the feature matrix before interpreting a
+classifier.} Our own reported finding that real-incident triage sits at chance
+came from classifiers fitted to $94$ telemetry feature columns that are
+zero-filled for a text-only corpus --- $0$ of $78{,}140$ rows carried a
+non-zero value. The result was a constant predictor, and its bootstrap interval
+was exactly $[0.5000, 0.5000]$, which should have been read as a symptom rather
+than a tight estimate. A one-line check for degenerate inputs would have caught
+it; we now run one as the first output of that experiment.
+
+\smallskip
+\noindent\textbf{R5. Separate measured quantities from modelled ones in cost
+claims.} Our cost saving is a counterfactual: measured invocation and
+gate-skip counts, multiplied by modelled per-call costs. Calling it a measured
+wall-clock reduction, as we originally did, overstates it. The honest version is
+also more informative --- because every gated step sits behind the same gate,
+the saving approximates that gate's closure rate almost independently of the
+cost table, which we verify by recomputing with measured durations
+($79.0\%$ versus $77.9\%$).
+
+Note also what a naive fix would have done. Our evaluation harness replays
+precomputed predictions, so its measured end-to-end time is $43$\,ms per
+window: the cost of replaying a decision, not of making one. Reporting that as
+a deployment figure would have been considerably worse than the estimate.
+
+\smallskip
+\noindent\textbf{R6. Evaluate at more than one corpus scale.} Our conclusion
+about retrieval fusion \emph{reverses} between a $347$-item memory and a
+$38{,}642$-item one: fusion is significantly worse than a single dense retriever
+on the former and significantly better on the latter
+(\S\ref{sec:results-rq1}). Had we evaluated only on the demonstration systems,
+as is common, we would have reported that fusing retrievers is harmful. Scale
+and heterogeneity are not incidental properties of a benchmark; they decide the
+answer.
+
+\smallskip
+\noindent\textbf{R7. State which metric the claim is about.} Fusion improves
+\hit{5} and simultaneously \emph{degrades} \hit{1}
+(\S\ref{sec:results-rq2}). Both are significant; neither is the whole picture.
+Which one matters depends on whether the consumer is an engineer scanning a
+shortlist or an automated handoff acting on the top result. Reporting a single
+headline metric hides the trade-off.
