@@ -1,0 +1,73 @@
+{
+  "config": {
+    "global_dir": "data/derived/global/2026-06-17-wol-real-v3-global",
+    "humanized_root": "jira-shadow-humanized-v2",
+    "humanized_subdir": "bulk-20260617",
+    "biencoder_finetune_epochs": 5,
+    "skip_window_extraction": true,
+    "skip_graph": false,
+    "seed": 1
+  },
+  "metadata": {
+    "n_predictions": 13388,
+    "fit_seconds": 18833.080488443375,
+    "predict_seconds": 0.15175747871398926,
+    "wall_seconds": 18837.601409196854,
+    "train_n": 5000,
+    "val_n": 1666,
+    "test_n": 13388,
+    "n_memory": 38642,
+    "rrf_k": 60.0,
+    "retriever_weights": {
+      "splade": 1.0,
+      "biencoder": 1.0,
+      "graph": 1.0
+    },
+    "splade_model": "naver/splade-cocondenser-ensembledistil",
+    "biencoder_backbone": "sentence-transformers/all-MiniLM-L6-v2",
+    "graph_enabled": false,
+    "retrieval": "hybrid_rrf"
+  },
+  "coarse": {
+    "label": "coarse",
+    "n_with_gold": 5150,
+    "hit_at_1": 0.8252427184466019,
+    "hit_at_5": 0.9710679611650486,
+    "mrr": 0.8921844660194171,
+    "per_project": {
+      "wol-kafka": {
+        "n": 803,
+        "hit_at_1": 0.8293897882938979,
+        "hit_at_5": 0.9539227895392279,
+        "mrr": 0.889933582399336
+      },
+      "wol-mariadb-server": {
+        "n": 4347,
+        "hit_at_1": 0.8244766505636071,
+        "hit_at_5": 0.9742351046698873,
+        "mrr": 0.8926002607162029
+      }
+    }
+  },
+  "strong": {
+    "label": "strong",
+    "n_with_gold": 4362,
+    "hit_at_1": 0.5515818431911967,
+    "hit_at_5": 0.7647867950481431,
+    "mrr": 0.6310025981965467,
+    "per_project": {
+      "wol-kafka": {
+        "n": 672,
+        "hit_at_1": 0.6354166666666666,
+        "hit_at_5": 0.8244047619047619,
+        "mrr": 0.7110367063492058
+      },
+      "wol-mariadb-server": {
+        "n": 3690,
+        "hit_at_1": 0.5363143631436315,
+        "hit_at_5": 0.753929539295393,
+        "mrr": 0.6164272809394755
+      }
+    }
+  }
+}

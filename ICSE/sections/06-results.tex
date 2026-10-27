@@ -86,12 +86,14 @@ mean. Table~\ref{tab:strict} reports every method we have per-query predictions
 for under the strict relation, which additionally demands substantial symptom
 overlap.
 
-Two calibration facts frame the table. First, the relations differ greatly in how
-much of memory they admit: the average query has $288$ relevant items under the
-coarse relation ($0.75\%$ of the $38{,}642$-item memory) but only $34.5$ under the
-strict one ($0.09\%$). Second, the corresponding expected \hit{5} for a uniformly
-random ranker is therefore $0.036$ coarse and $0.0044$ strict. Hybrid retrieval's
-$0.970$ and $0.744$ sit $27\times$ and $169\times$ above those references.
+Two calibration facts frame the table, computed over the held-out queries the
+metrics are actually averaged across. First, the relations differ greatly in how
+much of memory they admit: the average test query has $410$ relevant items under
+the coarse relation ($1.06\%$ of the $38{,}642$-item memory, median $218$) but
+only $50$ under the strict one ($0.13\%$, median $16$). Second, the corresponding
+expected \hit{5} for a uniformly random ranker is therefore $0.051$ coarse and
+$0.006$ strict. Hybrid retrieval's $0.970$ and $0.744$ sit $19\times$ and
+$116\times$ above those references.
 
 Under the strict relation hybrid fusion is best on all three metrics against
 every one of the eight alternatives, on the $4{,}362$ queries all nine systems
@@ -119,7 +121,7 @@ degrades the most.
 \caption{Retrieval on World of Logs under the \emph{strict} relation (coarse
 $+$ symptom-token overlap), on the $n{=}4{,}362$ held-out queries that retain a
 gold match under it. Best per column in \textbf{bold}. A uniformly random ranker
-would score \hit{5}~$0.0044$ here. The fine-tuned dense retriever, trained
+would score \hit{5}~$0.006$ here. The fine-tuned dense retriever, trained
 against the coarse relation, degrades most; fusion holds up.}
 \label{tab:strict}
 \footnotesize
