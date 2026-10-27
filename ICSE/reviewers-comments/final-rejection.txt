@@ -1,0 +1,386 @@
+Dear Yuvraj,
+
+Thank you for your submission to the 49th IEEE/ACM International
+Conference on Software Engineering (ICSE 2027). We regret to inform you
+that your paper
+
+* Submission: #5913
+* Title: ARISE: Adaptive Retrieval for Incident Support and Explanation
+
+was not accepted for inclusion in the ICSE 2027 program.
+
+By the submission deadline, ICSE 2027 received 2,375 submissions.
+Submissions went through a thorough review process, with at least three
+members of the program committee reviewing each manuscript. Each
+submission was also assigned an Area Chair. Following an online
+discussion, at this stage, the program committee accepted 119 papers and
+requested major revisions for 300 papers.
+
+We include all the reviews as well as the meta-review for your paper
+below, and you can also see the reviews on the HotCRP site. We hope the
+reviews will be useful as you continue your research.
+
+We encourage you to consider submissions to other events at ICSE 2027
+(those with a forthcoming submission date). More information is
+available at the conference website
+(https://conf.researchr.org/home/icse-2027).
+
+We would like to thank you again for your interest in ICSE 2027 and hope
+that you consider attending the conference in Dublin, Ireland.
+
+Yours Sincerely,
+
+Dongmei Zhang and Andrea Zisman
+ICSE 2027 PC Co-Chairs
+
+
+## Reviews and Meta-Review ##
+
+Review #5913A
+===========================================================================
+
+Overall merit
+-------------
+2. Weak reject
+
+Novelty
+-------
+2. Incremental - modest extension, adaptation, combination, or improvement
+
+Rigor
+-----
+2. Fair - some weaknesses, but the main claims are at least partially
+   supported
+
+Relevance
+---------
+3. High - addresses an important SE problem and is likely to influence
+   research or practice under clear assumptions
+
+Verifiability and Transparency
+------------------------------
+3. Good - Sufficient information is provided to understand the work and
+   support verification of the main claims
+
+Presentation
+------------
+3. Good - clear, well organized, and easy to follow
+
+Paper summary
+-------------
+The paper presents ARISE, an adaptive incident-triage framework that retrieves similar resolved incidents from an incident memory. The system combines dense retrieval, sparse lexical retrieval, and knowledge-graph retrieval, then uses capability gating to decide which retrieval or reasoning steps to run depending on available evidence and uncertainty. The evaluation uses three datasets: two newly collected telemetry-to-ticket datasets based on Online Boutique and OpenTelemetry Demo, and a real-world text-only corpus of 38,642 resolved Apache Jira incidents from 24 projects. The main result is that on the real corpus ARISE retrieves an inferred relevant prior incident in the top five 97% of the time, outperforming dense, lexical, graph, cross-encoder, and retrieval-augmented LLM baselines. Capability gating reduces per-window cost by up to 78% relative to a run-all cascade.
+
+Strengths
+---------
+- The paper addresses an important and realistic operational problem: on-call engineers often rely on memory of prior incidents, and finding the right prior ticket is itself a hard retrieval problem.
+
+- The evaluation includes two newly collected telemetry-to-ticket datasets plus a large real-world Jira corpus.
+
+Weaknesses
+----------
+- The headline 97% Hit@5 result on real incidents depends on an inferred relevance relation, not manually validated ground truth. A query and prior ticket are considered relevant if they share project and component, with a stricter symptom-overlap variant. This relation may overestimate operational usefulness: two tickets can share project/component without being a genuinely helpful prior incident for on-call triage.
+
+- The LLM-as-judge validation of inferred labels is not enough to remove the construct-validity concern. The judge compares inferred gold matches to random controls, which only shows that the inferred matches are less random than random tickets. It does not show that they are the right or useful incidents an engineer would retrieve.
+
+- The real-world corpus is text-only, while the telemetry-rich datasets are synthetic. As a result, the paper cannot show that ARISE’s evidence-gathering and capability-gated telemetry reasoning transfer to real production telemetry. The strongest real-world result is essentially text-based incident retrieval.
+
+- The triage-classification conclusion may be overstated. The paper shows that ticket-worthiness classification fails on text-only, resolution-derived Jira labels, but this does not necessarily imply that triage classification is generally a weak target. It may instead reflect noisy labels, missing telemetry, or mismatch between Jira resolution status and on-call ticket-worthiness.
+
+- Limited comparison with related works.
+
+Detailed comments for authors
+-----------------------------
+- The related-work discussion links incident-memory retrieval mainly to duplicate and similar bug-report retrieval. However, retrieving historical incidents has also been directly used in cloud incident management, for example to support root-cause analysis and to select candidate teams during incident triage. The paper should compare ARISE with these incident-level systems, or at least provide a clear task and capability comparison, rather than comparing only individual retrieval methods. For example:
+ Yu et al. “Triangle: Empowering Incident Triage with Multi-Agent.” *ASE 2025*, pp. 674-686.
+
+- The paper should be more careful in wording the 97% Hit@5 result. It is “97% under an inferred project-component relevance relation,” not necessarily 97% retrieval of genuinely useful prior incidents.
+
+- The paper should report how often project/component metadata is missing, noisy, or inconsistent in World of Logs. Since the main real-corpus metric depends on these fields, their quality is load-bearing.
+
+- The paper's real-world triage labels are derived from Jira resolution status, with fixed bugs treated as ticket-worthy and rejected/non-bug issues treated as noise. This creates a potential construct-validity problem: final resolution status may not correspond to on-call ticket-worthiness or page-worthiness. A rejected issue may still have required operational investigation, and a fixed issue may be low urgency. The authors should clarify this distinction and qualify the claim that triage classification collapses to chance in real operations.
+
+Artifact assessment
+-------------------
+2. Partially Satisfactory, i.e., the artifacts partially contain what is
+   declared in the submission form or the paper.
+
+Comments on artifact assessment
+-------------------------------
+Most of the artifacts declared in the paper are available. However, there are some issues—for example, the WOL-v3 mentioned in the paper is not in the link; only WOL-v2 is currently available.
+
+Questions for authors’ response
+-------------------------------
+1. Can the authors provide human judgments showing that the inferred project–component matches are genuinely useful prior incidents, rather than merely more relevant than random controls?
+2. Can the authors justify conclusions about capability-gated telemetry reasoning when the telemetry-rich datasets are synthetic and the real-world dataset is text-only?
+3. Why is final Jira resolution an appropriate proxy for on-call ticket/page-worthiness, and would the triage conclusion hold under human-annotated page-worthiness labels, e.g., urgent ticket-worthy, valid but not urgent, or no immediate action?
+4. Can the authors compare ARISE with incident-level systems that already retrieve similar historical incidents for RCA or team assignment (e.g., FLASH, Triangle, DeepCT, COMET), rather than only with individual retrieval methods, and clarify their differences in inputs, outputs, and evaluation?
+
+
+* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+
+Review #5913B
+===========================================================================
+
+Overall merit
+-------------
+2. Weak reject
+
+Novelty
+-------
+2. Incremental - modest extension, adaptation, combination, or improvement
+
+Rigor
+-----
+2. Fair - some weaknesses, but the main claims are at least partially
+   supported
+
+Relevance
+---------
+3. High - addresses an important SE problem and is likely to influence
+   research or practice under clear assumptions
+
+Verifiability and Transparency
+------------------------------
+3. Good - Sufficient information is provided to understand the work and
+   support verification of the main claims
+
+Presentation
+------------
+3. Good - clear, well organized, and easy to follow
+
+Paper summary
+-------------
+This paper proposes ARISE, which retrieves similar resolved incidents to support on-call triage. It combines dense, sparse, and graph retrieval, then uses a deterministic controller to run expensive steps only when needed. It also suppresses repeated pages for the same incident. The evaluation uses two fault-injection datasets and an Apache Jira corpus with 38,642 resolved issues in retrieval memory. On Jira, hybrid retrieval reaches 0.970 Hit@5 under the paper's project-component relevance rule. The paper reports cost reductions of 40% to 78% against a run-all cascade.
+
+Strengths
+---------
+- The problem is important to cloud incident mangement practice.
+- The evaluation covers both telemetry-rich and text-only settings.
+- The paper reports positive findings as well as negative ones.
+
+Weaknesses
+----------
+- The main Jira result uses a relevance rule that overlaps with ARISE's retrieval features.
+- The synthetic and real evaluations use different inputs and label definitions.
+- The controller and cost evaluation lack important details.
+- Novelty detection and evidence gathering are not fully evaluated on real data.
+
+Detailed comments for authors
+-----------------------------
+### Rigor
+
+An important problem is the Jira relevance definition. A past issue is considered relevant when it shares the query's project and at least one component. ARISE's graph retriever directly uses component overlap. The 0.970 Hit@5 result may therefore partly reflect the labeling rule, rather than finding incidents with a similar cause or useful resolution. The paper's nonsignificant graph ablation (Section VII-A) alleviates this concern but does not address its validity.
+
+The stricter relevance rule also requires symptom overlap and yields a lower Hit@5 of 0.74, making the evaluation more meaningful. However, the graph retriever also uses symptom overlap, so some alignment between the method and the labels remains. The LLM validation uses random controls, which may be easy negatives. Stronger evidence would come from engineers evaluating the actual top-ranked results against difficult alternatives from the same project.
+
+The synthetic-versus-real comparison is a bit overstated. The synthetic data consists of telemetry windows labeled by whether they should trigger a page, while the Jira data consists of filed issues labeled by their type and final resolution. A fixed Jira bug is not necessarily an alert that should have triggered an on-call page. The inputs also change from telemetry to text, and the paper does not explain what features the standard classifiers use for Jira. Because both the task and the input change, the result shows a difference between datasets, not clear evidence of transfer failure.
+
+"MAXCONF(R)" is not defined in the paper. If it refers to the maximum RRF score from Equation 2, then comparing it with 0.5 is not meaningful, because the maximum possible score is only (3/61 $\approx$ 0.049). The paper should define "MAXCONF(R)" and explain its scale.
+
+### Relevance
+
+The work is relevant to incident management and software maintenance. Its focus on retrieving past resolutions is practical and complements work on root-cause analysis.
+
+### Verifiability and Transparency
+
+The code is accessible and contains configuration, tests, and reproduction instructions.
+
+### Presentation
+
+The paper is generally clear and well organized, and Figure 1 gives a helpful overview of ARISE. However, some important details are hard to follow, especially how confidence scores are calculated and how the reported cost savings are measured. These details should be explained more directly.
+
+Questions for authors’ response
+-------------------------------
+1. Since both the relevance labels and ARISE's graph retriever use component overlap, how do you ensure that the evaluation does not favor ARISE? How do the other methods perform under the stricter relevance rule?
+2. What does "MAXCONF(R)" measure, and how is its value and 0.5 threshold determined?
+3. What inputs were used by the standard classifiers for the Jira AUPRC and ROC results, given that the corpus has no numeric telemetry?
+
+
+* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+
+Review #5913C
+===========================================================================
+
+Overall merit
+-------------
+3. Weak accept
+
+Novelty
+-------
+2. Incremental - modest extension, adaptation, combination, or improvement
+
+Rigor
+-----
+3. Good - appropriate methods and evidence adequately support the claims
+
+Relevance
+---------
+3. High - addresses an important SE problem and is likely to influence
+   research or practice under clear assumptions
+
+Verifiability and Transparency
+------------------------------
+2. Fair - Some information is provided, but not enough to support
+   independent scrutiny, verification, or replication where appropriate
+
+Presentation
+------------
+2. Fair - understandable, but with noticeable clarity or organization
+   issues
+
+Paper summary
+-------------
+
+
+The authors promote a reasoning and retrieval system that helps links
+current incidents to past incidents. It includes a budgetter that
+helps budget how much reasoning and work should be done. The authors
+demonstrate on 3 datasets the effectiveness of the approach.
+
+Strengths
+---------
+- budgetted reasoning
+- uses bootstrapping for comparison
+
+Weaknesses
+----------
+
+- lack of multiple runs
+- not a consistently thorough analysis
+- lack of clarity in some of the methodology.
+
+Detailed comments for authors
+-----------------------------
+
+It's never really clear what reports and documents they are using
+"(logs, metrics, traces)". Furthermore the formalism becomes too
+hand-wavy and it is not each to follow what is actually being stored.
+For instance there's this idea of an incident which is fundamental to
+memory but it's never clear where the incident comes from, who wrote
+it, and what is the core document behind the incident.
+
+I assume it is a jira ticket.
+
+# Writing
+
+> Most striking, the ticket-worthiness
+> classification that dominates synthetic benchmarks is near-
+> perfect there yet no better than chance on real incidents
+
+Sorry what does this mean? It's in the introduction.
+
+> An empirical reframing showing that the ticket-
+> worthiness classification dominating synthetic benchmarks
+> does not transfer to real incidents, identifying retrieval
+> over incident memory as the challenge that does.
+
+This does not parse. Identifying retrieval as the challenge that does?
+
+# Windowing
+
+Q: Why a windowed approach? Why not a continuous approach? The memory
+formalism already allows for memory before a certain time.
+
+# Favorite Part
+
+The budgeting. Cool.
+
+# Methodology: Labelling
+
+Where do labels come from? There's suggestion there's LLM labelling
+but the manual process of labelling is implied and not described.
+
+In threats we see:
+
+> and release a human-annotation kit,
+
+I do not know what the authors mean.
+
+I am left in the dark how labels are achieved.
+
+They keep referring to the label as LLM-as-judge but there's no
+methodology here. I don't know how they did it.
+
+# Figure 3.
+
+Figure 3 is really important because this some of the main comparison
+of the author's model and other alternatives.
+
+Except one problem Hybrid-RRF does not appear in the paper. And RRF
+appready once in algorithm 1.
+
+I assume since the authors keep saying Hybrid that its obviously their
+system but RRF is probably recirprocal-rank-fusion?
+
+The confidence intervals are important, but they lead us to an
+inconsistency with Figure 4. Why not apply the same methdoology for
+effect of tools or not here? Furthermore is this thing deterministic,
+why is there only 1 point plotted? Shouldn't there be multiple runs?
+
+# Multiple Runs
+
+The authors claims:
+
+> Implementation. The dense retriever is a compact MiniLM bi-
+> encoder fine-tuned for five epochs with hard negatives mined by
+> lexical search; the hybrid fuses each retriever’s top candidates
+> by reciprocal rank fusion. Graph entities are extracted from
+> tickets by a small language model and matched by entity
+> overlap. The retrieval-augmented and judge models run offline
+> with deterministic (greedy) decoding. Every experiment uses
+> a fixed random seed, and full configurations and seeds are
+> released with the artifact.
+
+Which implies that perhaps we should see multiple runs and fixed seed
+is not really enough. If others deploy your algorithm they are going
+to have different seeds and choices. We're dealing with an
+intentionally stochastic process so we need to use statistics to
+evaluate performance.
+
+Fine-tuning is used in the paper and it's not clear when that is done.
+It is said it done per incident? But is that learned network passed on
+to the next? How is the fine-tuned dense MiniLM actually dealt with?
+This seems fundamental non-deterministic, even with fixed seeds. So
+that implies we need to have to multiple runs of the same operation
+and produce statistics in order to compare performance. It isn't
+called stochastic gradient descent because it was deterministic. The
+authors use GPUs and multicore CPUs so there's no guarantee of
+determinism for many of these baselines and experiments.
+
+# Conclusions
+
+There's lot of methodological issues and confounds. Parts of the paper
+will not be replicable by a research assistant due to lack of details.
+The evaluation would be stronger if it was repeated. Some statistics
+are helpful, such as the use of confidence intervals. There's a lack
+of clarity in the use of human labellers and when fine-tuning is
+applied.
+
+The authors push a budgetting approach which is evaluated somewhat and
+seems to have some progress.
+
+Questions for authors’ response
+-------------------------------
+1. Why not use multiple runs in evaluation?
+2. Why the lack of the confidence interval treatment for figure 4?
+
+
+* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+
+Review #5913D
+===========================================================================
+
+Metareview
+----------
+Thank you for submitting your work to the ICSE research track and providing responses and clarifications.
+
+On the positive side, all reviewers found the topic interesting, and highly timely given the growing reliance on coding agents. However, reviewers agreed that the paper is not ready for publication at ICSE 2027. The primary weakness identified was the lack of actionable implications beyond prior works analyzing agent context files broadly. Reviewers also pointed out several narrative shortcuts in the analysis that were not adequately addressed, as well as insufficient justification for focusing exclusively on not-to-do instructions rather than general rules.
+
+We hope that the provided feedback will be useful, and we look forward to seeing an improved version of this paper in the future.
+
+Recommendation
+--------------
+1. Reject

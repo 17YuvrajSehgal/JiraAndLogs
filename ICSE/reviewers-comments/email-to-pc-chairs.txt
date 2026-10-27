@@ -1,0 +1,39 @@
+To:      <ICSE 2027 PC Chairs — Dongmei Zhang, Andrea Zisman>
+Cc:      <ICSE 2027 submissions contact, if one is listed on HotCRP>
+Subject: ICSE 2027 submission #5913 — metareview appears to belong to a different paper
+
+
+Dear Prof. Zhang and Prof. Zisman,
+
+Thank you for handling our submission, #5913, "ARISE: Adaptive Retrieval for
+Incident Support and Explanation." We accept the outcome and are grateful for
+the three detailed reviews, which we are already using to improve the work.
+
+I am writing about one administrative point. The metareview included with our
+notification (Review #5913D) does not appear to describe our paper. It states
+that the topic is "highly timely given the growing reliance on coding agents,"
+and identifies the primary weaknesses as "lack of actionable implications
+beyond prior works analyzing agent context files" and "insufficient
+justification for focusing exclusively on not-to-do instructions rather than
+general rules."
+
+Our paper is about incident triage and retrieval over resolved issue-tracker
+tickets. It does not concern coding agents, agent context files, or not-to-do
+instructions, and none of these topics is raised anywhere in reviews #5913A,
+#5913B, or #5913C.
+
+We are not requesting reconsideration of the decision; the three reviews are
+clear and we are acting on them. We would, however, be grateful if you could
+check whether the metareview was misfiled, and if so share the one written for
+#5913. The Area Chair's synthesis is the part of the feedback we would most
+rely on in deciding how to revise the paper for another venue, and at present
+we do not have it.
+
+Thank you for your time, and for the considerable effort involved in handling
+2,375 submissions.
+
+With best regards,
+
+Yuvraj Sehgal
+<affiliation>
+<email>
