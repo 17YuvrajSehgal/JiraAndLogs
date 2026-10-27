@@ -1,0 +1,166 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1780 640"
+     font-family="Helvetica, Arial, sans-serif">
+  <defs>
+    <g id="i-bolt"><polygon points="18,0 4,20 13,20 8,36 26,14 15,14 22,0" fill="#F2B705" stroke="#B8860B" stroke-width="1.5" stroke-linejoin="round"/></g>
+    <g id="i-gear" stroke="#C96A3B" fill="#F4A261"><g stroke-width="5"><line x1="18" y1="0" x2="18" y2="36"/><line x1="0" y1="18" x2="36" y2="18"/><line x1="5" y1="5" x2="31" y2="31"/><line x1="31" y1="5" x2="5" y2="31"/></g><circle cx="18" cy="18" r="11" stroke-width="3"/><circle cx="18" cy="18" r="4.5" fill="#FDEFE6" stroke-width="2"/></g>
+    <g id="i-db"><path d="M2,7 v22 a16,6 0 0 0 32 0 v-22" fill="#7FA8D9" stroke="#3D6CA8" stroke-width="2"/><ellipse cx="18" cy="7" rx="16" ry="6" fill="#A9C6E8" stroke="#3D6CA8" stroke-width="2"/><path d="M2,15 a16,6 0 0 0 32 0 M2,22 a16,6 0 0 0 32 0" fill="none" stroke="#3D6CA8" stroke-width="1.6"/></g>
+    <g id="i-doc"><path d="M4,0 h20 l8,8 v28 h-28 z" fill="#FFFFFF" stroke="#3E9B5F" stroke-width="2"/><path d="M24,0 v8 h8" fill="none" stroke="#3E9B5F" stroke-width="2"/><text x="17" y="26" font-size="13" font-weight="bold" fill="#3E9B5F" text-anchor="middle" font-family="monospace">&lt;/&gt;</text></g>
+    <g id="i-git"><circle cx="8" cy="7" r="5.5" fill="#C9B6EA" stroke="#6E4FA8" stroke-width="2"/><circle cx="8" cy="31" r="5.5" fill="#C9B6EA" stroke="#6E4FA8" stroke-width="2"/><circle cx="28" cy="19" r="5.5" fill="#C9B6EA" stroke="#6E4FA8" stroke-width="2"/><path d="M8,12.5 v13 M12,10 C22,12 24,12 27,14" fill="none" stroke="#6E4FA8" stroke-width="2"/></g>
+    <g id="i-brain"><path d="M16,2 C8,2 4,8 5,13 C1,15 1,22 5,25 C4,31 10,35 16,33 L16,2 Z" fill="#F3B8CD" stroke="#B04A74" stroke-width="2" stroke-linejoin="round"/><path d="M20,2 C28,2 32,8 31,13 C35,15 35,22 31,25 C32,31 26,35 20,33 L20,2 Z" fill="#F3B8CD" stroke="#B04A74" stroke-width="2" stroke-linejoin="round"/><path d="M10,10 c3,2 3,5 0,7 M26,10 c-3,2 -3,5 0,7 M11,24 c2,2 3,2 5,1 M25,24 c-2,2 -3,2 -5,1" fill="none" stroke="#B04A74" stroke-width="1.6"/></g>
+    <g id="i-eye"><path d="M1,18 C8,6 28,6 35,18 C28,30 8,30 1,18 Z" fill="#FFFFFF" stroke="#3E9B5F" stroke-width="2"/><circle cx="18" cy="18" r="7" fill="#7CC79B" stroke="#3E9B5F" stroke-width="2"/><circle cx="18" cy="18" r="2.6" fill="#1F5132"/></g>
+    <g id="i-ctx"><rect x="8" y="1" width="26" height="20" rx="3" fill="#D7E6F6" stroke="#3D6CA8" stroke-width="1.8"/><rect x="4" y="8" width="26" height="20" rx="3" fill="#C2D9F0" stroke="#3D6CA8" stroke-width="1.8"/><rect x="0" y="15" width="26" height="20" rx="3" fill="#A9C6E8" stroke="#3D6CA8" stroke-width="1.8"/><line x1="4" y1="22" x2="22" y2="22" stroke="#3D6CA8" stroke-width="1.6"/><line x1="4" y1="28" x2="17" y2="28" stroke="#3D6CA8" stroke-width="1.6"/></g>
+    <g id="i-robot"><line x1="18" y1="6" x2="18" y2="1" stroke="#4B5563" stroke-width="2"/><circle cx="18" cy="1.5" r="2" fill="#F2B705"/><rect x="4" y="6" width="28" height="22" rx="6" fill="#C9D4E4" stroke="#4B5563" stroke-width="2"/><circle cx="12.5" cy="15" r="3.4" fill="#2F3A4A"/><circle cx="23.5" cy="15" r="3.4" fill="#2F3A4A"/><path d="M12,22 q6,4 12,0" fill="none" stroke="#2F3A4A" stroke-width="2" stroke-linecap="round"/><rect x="10" y="28" width="16" height="7" rx="2.5" fill="#C9D4E4" stroke="#4B5563" stroke-width="2"/></g>
+    <g id="i-star"><polygon points="18,1 22.5,13 35,13.5 25,21.5 28.8,34 18,26.5 7.2,34 11,21.5 1,13.5 13.5,13" fill="#F7CE46" stroke="#C99A06" stroke-width="1.6" stroke-linejoin="round"/></g>
+    <marker id="m-green" viewBox="0 0 10 10" refX="7" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#3E9B5F"/></marker>
+    <marker id="m-orange" viewBox="0 0 10 10" refX="7" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#E8794A"/></marker>
+    <marker id="m-blue" viewBox="0 0 10 10" refX="7" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#4A7FC1"/></marker>
+    <marker id="m-pink" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#D4537E"/></marker>
+  </defs>
+
+  <!-- ====================== INPUT CARD ====================== -->
+  <rect x="20" y="120" width="240" height="172" rx="10" fill="#EAF6EE" stroke="#3E9B5F" stroke-width="2"/>
+  <use href="#i-eye" x="36" y="132"/>
+  <text x="82" y="156" font-size="18" font-weight="bold" fill="#246B40">Observation Window</text>
+  <text x="36" y="192" font-size="15" fill="#555">logs &#183; metrics &#183; traces &#183;</text>
+  <text x="36" y="214" font-size="15" fill="#555">cluster events &#8212; or a</text>
+  <text x="36" y="236" font-size="15" fill="#555">text-only incident report</text>
+  <text x="36" y="272" font-size="13.5" font-style="italic" fill="#246B40">5-min slice of one service</text>
+
+  <!-- ============== GROUP B: CONTROLLER (frame first) ============== -->
+  <rect x="320" y="66" width="330" height="360" rx="14" fill="#FDFDFB" stroke="#333" stroke-width="2.2" stroke-dasharray="9 6"/>
+  <rect x="345" y="50" width="286" height="32" rx="8" fill="#FFF" stroke="#333" stroke-width="2"/>
+  <text x="488" y="72" font-size="20" font-weight="bold" text-anchor="middle" fill="#222">Capability-Gated Controller</text>
+
+  <rect x="340" y="106" width="290" height="86" rx="10" fill="#F2EDFA" stroke="#8E6CC8" stroke-width="2"/>
+  <use href="#i-ctx" x="356" y="118"/>
+  <text x="402" y="142" font-size="17" font-weight="bold" fill="#5A3E96">Capability Profiler</text>
+  <text x="356" y="178" font-size="15" fill="#555">11 binary evidence flags</text>
+
+  <rect x="340" y="206" width="290" height="100" rx="10" fill="#F2EDFA" stroke="#8E6CC8" stroke-width="2"/>
+  <use href="#i-gear" x="356" y="218"/>
+  <text x="402" y="242" font-size="17" font-weight="bold" fill="#5A3E96">Cheap-First Planner</text>
+  <text x="356" y="276" font-size="14.5" fill="#555">fast path: numeric triage + dense</text>
+  <text x="356" y="297" font-size="14.5" fill="#555">budget: 1e5 tok &#183; 90 s &#183; 12 calls</text>
+
+  <rect x="340" y="318" width="290" height="92" rx="10" fill="#FDEFE6" stroke="#E8794A" stroke-width="2"/>
+  <use href="#i-bolt" x="356" y="330"/>
+  <text x="402" y="354" font-size="17" font-weight="bold" fill="#A54B22">Two Uncertainty Gates</text>
+  <text x="356" y="384" font-size="14" fill="#555">escalate: triage &lt; 0.90 or no match</text>
+  <text x="356" y="404" font-size="14" fill="#555">reformulate: maxconf &lt; 0.5</text>
+
+  <!-- ============== GROUP C: HYBRID RETRIEVAL ============== -->
+  <rect x="710" y="66" width="440" height="360" rx="14" fill="#FDFDFB" stroke="#333" stroke-width="2.2" stroke-dasharray="9 6"/>
+  <rect x="770" y="50" width="320" height="32" rx="8" fill="#FFF" stroke="#333" stroke-width="2"/>
+  <text x="930" y="72" font-size="20" font-weight="bold" text-anchor="middle" fill="#222">Hybrid Memory Retrieval</text>
+
+  <rect x="730" y="106" width="200" height="88" rx="10" fill="#EAF2FB" stroke="#4A7FC1" stroke-width="2"/>
+  <use href="#i-brain" x="746" y="118"/>
+  <text x="792" y="142" font-size="16" font-weight="bold" fill="#2D5A94">Dense (MiniLM)</text>
+  <text x="746" y="178" font-size="14" fill="#555">fine-tuned bi-encoder</text>
+
+  <rect x="730" y="208" width="200" height="88" rx="10" fill="#EAF6EE" stroke="#3E9B5F" stroke-width="2"/>
+  <use href="#i-doc" x="746" y="220"/>
+  <text x="792" y="244" font-size="16" font-weight="bold" fill="#246B40">Sparse (SPLADE)</text>
+  <text x="746" y="280" font-size="14" fill="#555">lexical &#183; IDs &#183; errors</text>
+
+  <rect x="730" y="310" width="200" height="88" rx="10" fill="#FDEFE6" stroke="#E8794A" stroke-width="2"/>
+  <use href="#i-git" x="746" y="322"/>
+  <text x="792" y="346" font-size="16" font-weight="bold" fill="#A54B22">Graph (entities)</text>
+  <text x="746" y="382" font-size="14" fill="#555">typed entity overlap</text>
+
+  <rect x="970" y="166" width="160" height="152" rx="10" fill="#FFF8E4" stroke="#D9A520" stroke-width="2"/>
+  <use href="#i-bolt" x="986" y="178"/>
+  <text x="1032" y="202" font-size="17" font-weight="bold" fill="#8A6A10">RRF Fusion</text>
+  <text x="986" y="238" font-size="14" fill="#555">&#954; = 60</text>
+  <text x="986" y="260" font-size="13.5" fill="#555">top-20 / retriever</text>
+  <text x="986" y="282" font-size="13.5" fill="#555">+ composition</text>
+
+  <!-- thin arrows retrievers -> RRF -->
+  <line x1="930" y1="150" x2="962" y2="200" stroke="#4A7FC1" stroke-width="2.4" marker-end="url(#m-blue)"/>
+  <line x1="930" y1="252" x2="962" y2="245" stroke="#3E9B5F" stroke-width="2.4" marker-end="url(#m-green)"/>
+  <line x1="930" y1="354" x2="962" y2="292" stroke="#E8794A" stroke-width="2.4" marker-end="url(#m-orange)"/>
+
+  <!-- ============== STAGE D: REFINE + DECIDE ============== -->
+  <rect x="1210" y="100" width="250" height="110" rx="10" fill="#EAF6EE" stroke="#3E9B5F" stroke-width="2"/>
+  <use href="#i-eye" x="1226" y="112"/>
+  <text x="1272" y="136" font-size="17" font-weight="bold" fill="#246B40">Gated Refinement</text>
+  <text x="1226" y="170" font-size="14.5" fill="#555">ReAct: targeted evidence</text>
+  <text x="1226" y="192" font-size="14.5" fill="#555">re-rank by agreement</text>
+
+  <rect x="1210" y="250" width="250" height="134" rx="10" fill="#FDEEF3" stroke="#D4537E" stroke-width="2"/>
+  <use href="#i-brain" x="1226" y="262"/>
+  <text x="1272" y="286" font-size="17" font-weight="bold" fill="#A32C58">Decide &amp; Page</text>
+  <text x="1226" y="318" font-size="14" fill="#555">page if p &#8805; 0.5</text>
+  <text x="1226" y="339" font-size="14" fill="#555">novel if no source confident</text>
+  <text x="1226" y="360" font-size="14" fill="#555">suppress repeat pages</text>
+
+  <!-- refine -> decide (vertical thin arrow) -->
+  <line x1="1335" y1="210" x2="1335" y2="244" stroke="#D4537E" stroke-width="2.4" marker-end="url(#m-pink)"/>
+
+  <!-- ============== OUTPUTS ============== -->
+  <rect x="1520" y="120" width="240" height="100" rx="10" fill="#EAF2FB" stroke="#4A7FC1" stroke-width="2"/>
+  <use href="#i-doc" x="1536" y="132"/>
+  <text x="1582" y="156" font-size="16" font-weight="bold" fill="#2D5A94">Top-5 Incidents</text>
+  <text x="1536" y="190" font-size="14" fill="#555">ranked prior tickets</text>
+  <text x="1536" y="211" font-size="14" fill="#555">with resolutions</text>
+
+  <rect x="1520" y="250" width="240" height="104" rx="10" fill="#F4F5F7" stroke="#4B5563" stroke-width="2"/>
+  <use href="#i-robot" x="1536" y="262"/>
+  <text x="1582" y="286" font-size="16" font-weight="bold" fill="#2F3A4A">Page Decision</text>
+  <text x="1536" y="320" font-size="14" fill="#555">page / suppress / novel</text>
+  <text x="1536" y="341" font-size="14" fill="#555">one page per incident</text>
+
+  <!-- refine -> top-5 (thin), decide -> page decision (chevron) -->
+  <line x1="1460" y1="155" x2="1513" y2="168" stroke="#4A7FC1" stroke-width="2.4" marker-end="url(#m-blue)"/>
+
+  <!-- ====================== MAIN-FLOW CHEVRONS ====================== -->
+  <polygon points="262,194 290,194 290,182 320,205 290,228 290,216 262,216" fill="#D8EEDF" stroke="#3E9B5F" stroke-width="2" stroke-linejoin="round"/>
+  <polygon points="652,194 678,194 678,182 708,205 678,228 678,216 652,216" fill="#FBE3C9" stroke="#E8794A" stroke-width="2" stroke-linejoin="round"/>
+  <polygon points="1152,194 1178,194 1178,182 1208,205 1178,228 1178,216 1152,216" fill="#FBE3C9" stroke="#E8794A" stroke-width="2" stroke-linejoin="round"/>
+  <polygon points="1462,291 1488,291 1488,279 1518,302 1488,325 1488,313 1462,313" fill="#F6D7E2" stroke="#D4537E" stroke-width="2" stroke-linejoin="round"/>
+
+  <!-- step numbers -->
+  <circle cx="290" cy="162" r="12" fill="#3E9B5F"/>
+  <text x="290" y="167.5" font-size="15" font-weight="bold" fill="#FFF" text-anchor="middle">1</text>
+  <circle cx="680" cy="162" r="12" fill="#E8794A"/>
+  <text x="680" y="167.5" font-size="15" font-weight="bold" fill="#FFF" text-anchor="middle">2</text>
+  <circle cx="1180" cy="162" r="12" fill="#E8794A"/>
+  <text x="1180" y="167.5" font-size="15" font-weight="bold" fill="#FFF" text-anchor="middle">3</text>
+  <circle cx="1363" cy="227" r="12" fill="#D4537E"/>
+  <text x="1363" y="232.5" font-size="15" font-weight="bold" fill="#FFF" text-anchor="middle">4</text>
+  <circle cx="1490" cy="259" r="12" fill="#D4537E"/>
+  <text x="1490" y="264.5" font-size="15" font-weight="bold" fill="#FFF" text-anchor="middle">5</text>
+
+  <!-- ====================== BOTTOM ROW ====================== -->
+  <rect x="320" y="460" width="400" height="154" rx="10" fill="#EAF2FB" stroke="#4A7FC1" stroke-width="2"/>
+  <use href="#i-db" x="336" y="472"/>
+  <text x="382" y="496" font-size="17" font-weight="bold" fill="#2D5A94">Time-Aware Incident Memory</text>
+  <text x="336" y="530" font-size="14.5" fill="#555">resolved tickets: 38,642 real (WoL)</text>
+  <text x="336" y="552" font-size="14.5" fill="#555">347 / 147 synthetic (OB / OTel)</text>
+  <text x="336" y="574" font-size="14.5" fill="#555">visible only if resolved before t</text>
+
+  <rect x="760" y="460" width="380" height="154" rx="10" fill="#FDEFE6" stroke="#E8794A" stroke-width="2"/>
+  <use href="#i-gear" x="776" y="472"/>
+  <text x="822" y="496" font-size="17" font-weight="bold" fill="#A54B22">Offline KG Construction</text>
+  <text x="776" y="530" font-size="14.5" fill="#555">LLM extracts services &#183; components &#183;</text>
+  <text x="776" y="552" font-size="14.5" fill="#555">errors &#183; symptoms &#8594; typed graph</text>
+  <text x="776" y="574" font-size="14.5" fill="#555">built once per corpus</text>
+
+  <rect x="1180" y="460" width="580" height="154" rx="10" fill="#FFF8E4" stroke="#D9A520" stroke-width="2"/>
+  <use href="#i-star" x="1196" y="472"/>
+  <text x="1242" y="496" font-size="17" font-weight="bold" fill="#8A6A10">Instrument, measured (5 seeds)</text>
+  <text x="1196" y="530" font-size="14" fill="#555">fusion: +0.055 Hit@5 [+0.035,+0.075] &#183; &#8722;0.041 Hit@1 trade-off</text>
+  <text x="1196" y="552" font-size="14" fill="#555">hybrid 5.4&#215; more seed-stable (sd 0.004 vs 0.020) &#183; strict Hit@5 0.744</text>
+  <text x="1196" y="574" font-size="14" fill="#555">gates escalate 99.9% of windows where 6.2% would suffice</text>
+
+  <!-- memory -> retrievers (dashed blue, lands on group border between cards) -->
+  <path d="M 830,458 L 830,432" fill="none" stroke="#4A7FC1" stroke-width="3" stroke-dasharray="10 6" marker-end="url(#m-blue)"/>
+  <text x="845" y="450" font-size="13" font-style="italic" fill="#2D5A94">corpus read</text>
+
+  <!-- memory -> KG build (thin) -->
+  <line x1="720" y1="537" x2="753" y2="537" stroke="#4A7FC1" stroke-width="2.4" marker-end="url(#m-blue)"/>
+
+  <!-- KG build -> graph retriever (dashed orange) -->
+  <path d="M 1000,458 C 1000,430 960,440 936,400" fill="none" stroke="#E8794A" stroke-width="3" stroke-dasharray="10 6" marker-end="url(#m-orange)"/>
+  <text x="1012" y="442" font-size="13" font-style="italic" fill="#A54B22">offline</text>
+</svg>

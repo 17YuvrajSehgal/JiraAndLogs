@@ -12,15 +12,24 @@ throughout, we return the $k=5$ most similar past incidents for each window.
 
 \begin{figure*}[t]
 \centering
-\includegraphics[width=.9\textwidth]{figures/pipeline.png}
-\caption{Overview of \sys. For each window (rich telemetry or bare text), a
-capability-gated planner profiles the evidence and assembles a cost-gated,
-cheap-first plan. Hybrid retrieval matches the window against a time-aware corpus
-of resolved tickets, fusing dense, sparse, and graph retrievers with reciprocal
-rank fusion; bounded evidence-gathering then refines the ranking; and a state layer
-issues the triage decision while suppressing duplicate pages across an incident's
-windows. Solid arrows: per-window flow; dashed: memory access and cross-window
-state.}
+\includegraphics[width=.9\textwidth]{figures/arise-architecture.pdf}
+\caption{The \sys{} instrument. \circled{1}~Each observation window (rich
+telemetry or a bare text report) is profiled into eleven binary capability
+flags, from which a deterministic controller assembles a cheap-first plan under
+a hard per-window budget. \circled{2}~When the fast path is unconvincing
+(numeric triage ${<}\,0.90$ or no confident dense match), the escalation gate
+schedules the full hybrid retrieval: dense, sparse, and graph retrievers over a
+time-aware memory of resolved tickets, fused by reciprocal rank fusion
+($\kappa{=}60$, top-20 per retriever); a second gate triggers query
+reformulation when $\mathrm{maxconf}(R)<0.5$. \circled{3}~Bounded
+evidence-gathering refines the fused ranking, \circled{4}~a calibrated head
+issues the triage and novelty decisions, and \circled{5}~a state layer
+suppresses duplicate pages across an incident's windows. Dashed arrows are
+offline or asynchronous: the knowledge graph is built once per corpus by LLM
+extraction over ticket text, and retrievers see only tickets resolved before
+the window's timestamp. The gold card summarizes what we \emph{measure} about
+the instrument across five training seeds (\S\ref{sec:results-rq1},
+\S\ref{sec:results-rq3}).}
 \label{fig:arch}
 \end{figure*}
 
