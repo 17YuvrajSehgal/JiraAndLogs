@@ -1,118 +1,73 @@
-# ARISE — post-rejection plan
+# ARISE — plan v3 (post-rejection, reframed 2026-10-27)
 
-**Branch:** `v2-research` · **Status:** rejected after rebuttal, 2026-10
-**Prior work:** 24 commits already landed; see "Already fixed" at the bottom.
+**Branch:** `v2-research` · **Status:** rejected at ICSE; rebuilding for resubmission
+**Framing (FINAL):** system paper — *retrieval-augmented investigation context*.
+ARISE retrieves relevant prior incidents from observability data; the paper
+proves that component so it can anchor the author's larger RCA framework
+(observability bundle → investigation context builder → RCA agent).
+This OVERRIDES the brief measurement-paper pivot; rigor work all transfers.
 
-Reviews: `ICSE/reviewers-comments/R{1,2,3}.txt`
-Evidence: `scripts/rebuttal/`, `scripts/v2/`, `paper-results-v2/`
+**Why this framing survives Novelty=2:** the contribution is no longer "we
+fused three retrievers" but "retrieved prior-incident context measurably
+improves downstream RCA" — an extrinsic evaluation nobody has published on
+public data, runnable with data in hand (99.7% of memory tickets carry a
+recorded root cause, 98.4% a fix). The reviewers pointed here themselves:
+R2 called the focus on retrieving past resolutions "practical and
+complementary to work on root-cause analysis"; R1's requested comparison class
+is RCA-support systems.
 
----
-
-## Read the rejection correctly
-
-Scores were 2/2/3 on merit. But **every reviewer scored Novelty = 2
-("Incremental")**, and none of them raised it as a question — so the rebuttal
-could never touch it. We answered the rigor questions well and still got
-rejected. That tells us the rigor fixes were necessary and not sufficient.
-
-Second, harder problem: **we found a defect the reviewers did not.** The
-WoL bi-encoder varies ±0.020 Hit@5 across seeds, and the published 0.905 was a
-low draw. The headline "+0.065 for fusion" was computed against that draw with
-a CI that ignored seed variance entirely. Against the 5-seed mean it is +0.051;
-against the best seed, +0.025. **The fusion claim is currently unverified**, and
-resolving it may remove the paper's main quantitative result.
-
-So: do not rewrite the paper until P0 settles what we actually have.
+Reviews: `ICSE/reviewers-comments/` · Evidence: `icse-review-results/` ·
+Results: `paper-results-v2/` · Claim tracing: `scripts/v2/verify_claims.py`
 
 ---
 
-## P0 — Find out what survives
+## P0 — The experiment the resubmission hinges on
 
-### 1. Finish the hybrid seed sweep, restate the fusion margin
-Script is fixed and committed (`scripts/v2/trillium_v2_hybrid_seeds.sbatch`);
-two earlier attempts died on walltime because I rewrote the sbatch instead of
-reusing the working one. Submit, get hybrid on seeds 42/1/2/3/4, compute the
-seed-matched margin with a seed-aware interval.
+### Extrinsic RCA evaluation (task #25) — NEW
+Does ARISE's retrieved context improve a downstream LLM's root-cause diagnosis?
+~500 held-out WoL queries; four context conditions (none / ARISE top-5 /
+hard-negative / oracle gold), same model and prompt otherwise; output a
+root-cause hypothesis; judge against the ticket's own recorded root cause
+(blind, shuffled; human-rated subset calibrates the judge via task #5).
+Firewall: the query's own ticket and its duplicate cluster never appear in any
+context. Headline: the (ARISE − none) delta; (ARISE − hard-negative) shows
+ranking quality matters; (oracle − ARISE) bounds headroom.
 
-Three outcomes, all publishable, but they are different papers:
-- margin holds (≳0.04, interval clears 0) → fusion stays a contribution
-- margin shrinks but positive → report honestly, demote from headline
-- margin within noise → **fusion is not a result**; the paper is the datasets
-  and the empirical findings
+Risks designed in: distinct generator/judge prompts; report the no-context
+condition honestly (pretraining leakage on old Apache bugs is itself a
+finding); persist prompts + generations so `verify_claims.py` rows can be added.
 
-### 2. Decide the contribution, given #1
-The learned-controller plan already failed its first test: it did not beat
-thresholding the confidence signal the controller already computes (+0.0012 /
-−0.0012 across two folds). Do not build the paper on it without new evidence.
-
-Options, to choose deliberately:
-- **(a) Benchmark-validity paper.** Lead with the negative results, which are
-  genuinely surprising and all ours: triage saturation is a fault-injection
-  artifact; evidence tools are non-load-bearing; fusion conclusions flip with
-  corpus scale; GPU training does not reproduce at fixed seed. Cheapest, and
-  the one the evidence already supports.
-- **(b) Real telemetry + real tickets dataset.** Closes R1-Q2, which we never
-  fixed — we only narrowed the claim. Strongest contribution, longest lead.
-- **(c) Learned controller, rescued.** Needs the score-margin feature (now
-  persisted) to beat the confidence baseline. One experiment decides it.
-- **(d) SafeSet** (`DOCS/SafeSet-research-design.md`) — likely a separate paper.
-
-### 3. Pick the target venue
-Determines format, length, deadline, and whether (b) is feasible at all.
+### Reframe the paper around it (task #21)
+Title/abstract/intro redone for "retrieval-augmented investigation context";
+RQ2 becomes the extrinsic result. §11 recommendations survive as evaluation
+methodology; the triage-saturation finding becomes the *motivation* (why
+context-building should be retrieval-based, not classification-based).
+**Do not write the abstract until #25 produces its delta.**
 
 ---
 
 ## P1 — Reviewer asks still open
 
-### 4. Human study: relevance + page-worthiness
-R1-Q1 and R1-Q3. The only item nothing substitutes for, and the longest lead
-time — start recruiting regardless of P0.
-- blinded, system top-1 vs hard same-project negative, ≥2 annotators, kappa
-- second axis: urgent / valid-not-urgent / no-action, to test whether Jira
-  resolution proxies page-worthiness at all (R1-Q3 — currently unanswered)
-- the hard-negative LLM judge is built and run; it gives this study a
-  pre-registered quantity to validate against (system 3.65 vs hard 3.10,
-  p≈1e-8), but it is a model, not people
-
-### 5. Real telemetry paired with real tickets
-R1-Q2's actual fix. We currently claim graceful degradation but cannot show
-evidence-gathering transfers to production telemetry, because our telemetry is
-synthetic and our real data is text-only. Either collect this, or cut every
-claim that depends on it. Overlaps with P0 option (b).
-
-### 6. Finish the incident-level comparison
-DeepCT and Triangle are done from primary sources. FLASH and COMET were left
-out because I could not obtain them — FLASH surfaces only as an unindexed MSR
-tech report, COMET returns a commercial product. Get the references (ask the
-reviewer's citation trail, or search ACM/IEEE directly) or justify the omission.
-
-### 7. Measure per-call costs instead of modelling them
-The saving is counts × a modelled cost table. Shown robust (79.0% measured-unit
-vs 77.9% modelled), but the table is wrong by large factors in both directions.
-Microbenchmark the reformulator and peer-lookup for real, then drop "estimated".
-
-### 8. Publish the v3 artifact
-Code ready and dry-run verified: 54 files / 2.07 GB, contaminated corpus
-quarantined, pools excluded. Needs a human decision — it creates a new version
-of a public DOI printed in the submitted paper.
+- **Human study (#5)** — relevance + page-worthiness + NEW RCA-usefulness axis
+  that calibrates #25's judge. Longest lead; recruit now.
+- **RCA-systems positioning (#26)** — rewrite the comparison around outputs
+  (team / category / retrieved context); obtain FLASH + COMET or footnote the
+  omission. Add the ops-RAG literature sweep.
+- **R1-Q2 scope cut (#23)** — scope telemetry-reasoning claims to the synthetic
+  corpora; real telemetry + real tickets stays future work feeding the parent
+  framework. Priority lowered: the "so what" now comes from #25.
+- **Artifact publish (#4)** — ready, needs user sign-off (public DOI).
+- **Cost microbenchmark (#3)** — optional; result already shown insensitive.
 
 ---
 
-## P2 — Rebuild the paper
+## P2 — Write and verify
 
-### 9. Restructure around whatever P0 leaves standing
-Do not start before #1 and #2 report.
-
-### 10. Verification pass: every number traces to a run
-The submitted paper contained a claim built on an all-zero feature matrix, and
-I later propagated a second false claim from a draft without checking the
-scoring path. Before submission, each reported number gets checked against the
-script and result file that produced it. This is the habit that would have
-prevented the rejection-grade defect.
-
-### 11. Final editing pass
-R3 scored Presentation 2. Naming and the two flagged sentences are fixed; the
-broader pass should come last, after the restructure.
+- Section work per `icse-review-results/07-restructure-plan.md`, adapted to the
+  system framing (most of the evidence map is framing-independent).
+- Verification pass (#24): every number traces to a result file;
+  `scripts/v2/verify_claims.py` green; add rows for #25's outputs.
+- Final editing pass (#17) last.
 
 ---
 
