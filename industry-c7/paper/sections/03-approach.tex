@@ -11,11 +11,22 @@ similar resolved incidents and letting their fix commits vote for files.
 This section describes both, the firewall that keeps the memory honest,
 and the fusion that produces the final ranking.
 
+\begin{figure*}[t]
+\centering
+\includegraphics[width=0.96\textwidth]{figures/architecture.pdf}
+\caption{\sys{} overview. An issue report with its logs and the snapshot
+feed four ranked signals (1); the project's incident memory feeds the
+memory vote through the temporal firewall (2); regime-conditioned
+weighted reciprocal rank fusion merges the four lists (3) into ranked
+files, the affected module, and per-file provenance (4).}
+\label{fig:arch}
+\end{figure*}
+
 \subsection{Overview}
 \label{sec:approach:overview}
 
-The input matches the challenge: an issue report with its logs, and the
-code snapshot. The output is a ranked list of the snapshot's source
+The input matches the challenge (\cref{fig:arch}): an issue report with
+its logs, and the code snapshot. The output is a ranked list of the snapshot's source
 files, the affected module derived from that list, and, for every ranked
 file, the evidence that put it there. Four signals each produce a ranked
 list over the snapshot's non-test source files. A weighted fusion merges
