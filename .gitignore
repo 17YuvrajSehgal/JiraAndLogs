@@ -80,3 +80,4 @@ industry-c7/data/
 # raw dataset downloads (restored into MongoDB; too large for git)
 ThePublicJiraDataset/
 WoL/
+industry-c7/papers/pdfs/
