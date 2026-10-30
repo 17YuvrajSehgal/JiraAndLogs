@@ -10,27 +10,27 @@ $q < 0.05$ after Benjamini--Hochberg over all 64 tests
 (\cref{sec:setup:stats}).
 
 \begin{table}[t]
-\caption{File-level results on the evaluation split: Acc@5 (MRR in
-parentheses). S1--S4 are the standalone signals of \cref{sec:approach};
-``fused'' is unweighted fusion; ``cond.'' is regime-conditioned weighted
-fusion. Bold marks the best system per project.}
+\caption{File-level results on the evaluation split: Acc@5\,/\,MRR.
+S1--S4 are the standalone signals of \cref{sec:approach}; ``fused'' is
+unweighted fusion; ``cond.'' is regime-conditioned weighted fusion. Bold
+marks the best system per project.}
 \label{tab:files}
 \centering
-\small
-\setlength{\tabcolsep}{3.4pt}
-\begin{tabular}{lcccc}
+\footnotesize
+\setlength{\tabcolsep}{2pt}
+\begin{tabular}{@{}lcccc@{}}
 \toprule
  & Kafka & MariaDB & MongoDB & Qt \\
 \midrule
-S1 trace mentions   & .658 (.477) & .442 (.327) & .354 (.319) & .263 (.226) \\
-S2 path             & .481 (.379) & .259 (.198) & .370 (.268) & .266 (.195) \\
-S3 content          & .708 (.545) & .471 (.330) & .644 (.473) & .456 (.350) \\
-S4 memory           & .483 (.361) & .461 (.342) & .377 (.296) & .278 (.211) \\
+S1 trace mentions & .658\,/\,.477 & .442\,/\,.327 & .354\,/\,.319 & .263\,/\,.226 \\
+S2 path           & .481\,/\,.379 & .259\,/\,.198 & .370\,/\,.268 & .266\,/\,.195 \\
+S3 content        & .708\,/\,.545 & .471\,/\,.330 & .644\,/\,.473 & .456\,/\,.350 \\
+S4 memory         & .483\,/\,.361 & .461\,/\,.342 & .377\,/\,.296 & .278\,/\,.211 \\
 \midrule
-fused, no memory    & .767 (.611) & .443 (.342) & .530 (.420) & .353 (.292) \\
-fused, +memory      & .790 (.600) & .562 (.408) & .629 (.499) & .463 (.351) \\
-cond., no memory    & .792 (.625) & .642 (.479) & .693 (.566) & .456 (.350) \\
-cond., +memory (\sys{}) & \textbf{.794} (.625) & \textbf{.658} (.479) & \textbf{.700} (.552) & \textbf{.541} (.408) \\
+fused, no memory  & .767\,/\,.611 & .443\,/\,.342 & .530\,/\,.420 & .353\,/\,.292 \\
+fused, +memory    & .790\,/\,.600 & .562\,/\,.408 & .629\,/\,.499 & .463\,/\,.351 \\
+cond., no memory  & .792\,/\,.625 & .642\,/\,.479 & .693\,/\,.566 & .456\,/\,.350 \\
+\sys{} (cond., +memory) & \textbf{.794}\,/\,.625 & \textbf{.658}\,/\,.479 & \textbf{.700}\,/\,.552 & \textbf{.541}\,/\,.408 \\
 \bottomrule
 \end{tabular}
 \end{table}
