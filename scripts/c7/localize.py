@@ -148,21 +148,27 @@ class Snapshot:
         need = [(p, self.blob_of[p]) for p in paths
                 if p in self.blob_of and self.blob_of[p] not in cache]
         if need:
-            inp = "\n".join(b for _, b in need)
+            inp = "\n".join(b for _, b in need).encode()
+            # binary mode: sizes are in BYTES, and text=True's CRLF->LF
+            # translation silently desyncs the offsets on CRLF-bearing blobs
             r = subprocess.run(["git", "--git-dir", str(self.git_dir),
                                 "cat-file", "--batch"],
-                               input=inp, capture_output=True, text=True,
-                               encoding="utf-8", errors="replace")
+                               input=inp, capture_output=True)
             pos, out = 0, r.stdout
             for _, blob in need:
-                header_end = out.find("\n", pos)
+                header_end = out.find(b"\n", pos)
                 if header_end < 0:
                     break
                 header = out[pos:header_end].split()
-                size = int(header[2]) if len(header) == 3 and header[1] != "missing" else 0
-                body = out[header_end + 1:header_end + 1 + size]
-                pos = header_end + 1 + size + 1
-                cache[blob] = Counter(tokenize(body[:MAX_BLOB_BYTES]))
+                if len(header) == 3 and header[1] == b"blob":
+                    size = int(header[2])
+                    body = out[header_end + 1:header_end + 1 + size]
+                    pos = header_end + 1 + size + 1
+                else:  # "<sha> missing" or error line: header only, no body
+                    size, body = 0, b""
+                    pos = header_end + 1
+                text = body[:MAX_BLOB_BYTES].decode("utf-8", errors="replace")
+                cache[blob] = Counter(tokenize(text))
         return {p: cache[self.blob_of[p]] for p in paths
                 if p in self.blob_of and self.blob_of[p] in cache}
 

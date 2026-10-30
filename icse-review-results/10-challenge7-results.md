@@ -105,6 +105,60 @@ ARISE's top-5 hits are discarded as resolved-later plus 34% unlinked —
 3. deeper, time-sliced ARISE retrieval (Trillium job) replaces the
    top-5-only persisted predictions.
 
+## 3. MariaDB run (2026-10-30) — the memory-density test, PASSED
+
+Benchmark: 3,067 instances (funnel in datasheet: 5,626 → 3,741 linked 66.5%
+→ −674 no-source-gold). 46% hard stratum (vs Kafka 33%). Memory pool:
+3,067 linked incidents (≈5× Kafka). Protocol identical: dev = earliest 30%
+(n=920), eval = later 70% (n=2,147).
+
+Note: a CRLF/text-mode bug in `cat-file --batch` parsing crashed the first
+MariaDB run (byte-size offsets vs newline-translated text). Fixed to binary
+parsing; Kafka re-verified bit-identical on all 231 metric cells.
+
+### Eval (n=2,147; acc@5 / MRR)
+
+| system | overall | easy (1,163) | hard (984) |
+|---|---|---|---|
+| trace_grep | 0.434 / 0.306 | 0.800 / 0.565 | 0.000 / 0.000 |
+| path_bm25 | 0.256 / 0.190 | 0.442 / 0.328 | 0.037 / 0.026 |
+| content_bm25 | 0.425 / 0.284 | 0.495 / 0.312 | 0.342 / 0.251 |
+| memory_arise | 0.260 / 0.195 | 0.260 / 0.196 | 0.261 / 0.194 |
+| **memory_bm25** | 0.412 / **0.309** | 0.466 / 0.350 | **0.349 / 0.261** |
+| fused unweighted, no mem | 0.424 / 0.315 | 0.742 / 0.541 | 0.049 / 0.048 |
+| fused unweighted, +mem | 0.575 / 0.415 | 0.801 / 0.587 | 0.308 / 0.213 |
+| tuned_no_memory | 0.474 / 0.304 | 0.647 / 0.424 | 0.269 / 0.162 |
+| tuned_ours | 0.585 / 0.416 | 0.804 / 0.577 | 0.325 / 0.226 |
+| cond_no_memory | 0.593 / 0.433 | 0.840 / 0.612 | 0.301 / 0.223 |
+| **cond_ours** | **0.604 / 0.442** | 0.838 / 0.618 | 0.326 / 0.233 |
+
+### The density finding (Kafka vs MariaDB)
+
+| | Kafka (pool 634) | MariaDB (pool 3,067) |
+|---|---|---|
+| global tuner's memory weight | **0.0** (zeroed) | **2.0** (max in grid) |
+| dev acc@5 gain from memory | +0.000 | **+0.078** |
+| eval Δacc@5, unweighted fusion ±mem | +0.000 | **+0.151** |
+| eval Δacc@5 tuned ±mem | +0.000 | **+0.111** |
+| best single signal on HARD | content 0.430 | **memory_bm25 0.349** |
+
+On MariaDB the incident memory is no longer decoration: `memory_bm25` has
+the best single-signal MRR overall (0.309) and is the best single system on
+the hard stratum — past incidents beat reading the code exactly where the
+trace points at the wrong file. The full system beats the strongest
+baseline by +39% rel acc@5 and +44% rel MRR overall.
+
+This gives the paper its causal-shaped headline: *the memory prior's value
+scales with memory density* (two project-scale points: 634 → useless,
+3,067 → decisive), and makes Expansion A (full WoL, more linked history
+per project) an evidence-backed investment rather than a hope.
+
+Honest remainders: on MariaDB-hard, memory_bm25 alone (0.349) still edges
+every fusion (cond_ours 0.326) — fusion weight-tuning on hard remains
+imperfect; memory_arise (top-5, not time-sliced) underperforms memory_bm25
+everywhere — the deeper time-sliced ARISE rerun stays queued; deltas need
+paired bootstrap before any claim goes in the paper.
+
 ### Pending for the eval harness
 
 Paired bootstrap + BH for (cond_ours − cond_no_memory) and
