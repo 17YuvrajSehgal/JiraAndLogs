@@ -62,6 +62,24 @@ the fix commit's **parent** (the code as it was when broken). Target projects:
 Kafka + MariaDB (`MariaDB/server`, MDEV keys) = the WoL test split; more
 Apache projects if yield holds and time permits.
 
+**Mined (2026-10-29, `scripts/c7/mine_benchmark.py` → `data/c7-benchmark/`):**
+Kafka final = **634 instances** (1,147 ticket-worthy → 797 linked at 1–3
+non-revert non-merge commits → −163 with no modified non-test source file).
+Strata: 423 easy (gold file named in issue text, 67%) / 211 hard (33%);
+401 with stack trace (63%); gold files median 1, mean 2.19; 589 single-commit.
+MariaDB (5,626 issues) mining in progress.
+
+**Dataset expansion options (decided with user 2026-10-29):** core = Kafka +
+MariaDB now. Expansion A (depth): full WoL v1 release (zenodo 17569722,
+2.69M issues) widens the same two projects beyond our triage filters.
+Expansion B (breadth, higher value): The Public Jira Dataset v7 (zenodo
+15719919, CC-BY-4.0, 16 non-Apache trackers) adds MongoDB (`SERVER-` keys)
+and Qt (`Fixes: QTBUG-` trailer) as zero-shot non-Apache ecosystems — these
+were never in any training split, so they are cleaner generalization than
+more Apache projects would be. Both expansions only after the localizer runs
+end-to-end on the core. Synthetic corpora stay as the raw-bundle complement
+(OTel flag faults → 9 gold code sites in the vendored demo source).
+
 ## Pre-registered design guards (lessons from the circularity episode)
 
 1. **Snapshot = parent of fix commit** — the fix must not be in the code shown.
