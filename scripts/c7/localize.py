@@ -61,7 +61,9 @@ BENCH = ROOT / "data/c7-benchmark"
 OUT = ROOT / "data/c7-results"
 
 FULL_REPOS = {"kafka": ROOT / "data/c7-repos/kafka-full.git",
-              "mariadb": ROOT / "data/c7-repos/mariadb-full.git"}
+              "mariadb": ROOT / "data/c7-repos/mariadb-full.git",
+              "mongodb": ROOT / "data/c7-repos/mongo-full.git",
+              "qt": ROOT / "data/c7-repos/qtbase-full.git"}
 
 KS = (1, 5, 10)
 RRF_K = 60
@@ -114,6 +116,47 @@ def bm25_rank(query_toks: list[str], docs: dict[str, Counter],
             scored.append((doc_id, s))
     scored.sort(key=lambda x: (-x[1], x[0]))
     return scored
+
+
+class BM25Index:
+    """Inverted-index BM25 for large fixed corpora (the per-call DF scan in
+    bm25_rank is fine for a few hundred docs, hopeless for 40k memory docs)."""
+
+    def __init__(self, docs: dict[str, Counter], k1: float = 1.2, b: float = 0.75):
+        self.k1, self.b = k1, b
+        self.dl = {d: sum(c.values()) for d, c in docs.items()}
+        self.avgdl = (sum(self.dl.values()) / len(docs)) if docs else 1.0
+        self.n = len(docs)
+        self.post: dict[str, list[tuple[str, int]]] = defaultdict(list)
+        for d, c in docs.items():
+            for t, tf in c.items():
+                self.post[t].append((d, tf))
+
+    def rank(self, qtoks: list[str], topn: int) -> list[str]:
+        q = Counter(qtoks)
+        scores: dict[str, float] = defaultdict(float)
+        for t, qtf in q.items():
+            plist = self.post.get(t)
+            if not plist:
+                continue
+            df = len(plist)
+            idf = math.log(1 + (self.n - df + 0.5) / (df + 0.5))
+            w = idf * min(qtf, 3)
+            for d, tf in plist:
+                dl = self.dl[d]
+                scores[d] += w * (tf * (self.k1 + 1)) / (
+                    tf + self.k1 * (1 - self.b + self.b * dl / self.avgdl))
+        return [d for d, _ in sorted(scores.items(),
+                                     key=lambda x: (-x[1], x[0]))[:topn]]
+
+
+def parse_iso_epoch(ts: str | None) -> float | None:
+    if not ts:
+        return None
+    try:
+        return datetime.fromisoformat(ts.replace("+0000", "+00:00")).timestamp()
+    except ValueError:
+        return None
 
 
 def rrf(rankings: dict[str, list[str]], weights: dict[str, float]) -> list[str]:
@@ -202,50 +245,77 @@ def trace_rank(text: str, snap: Snapshot) -> tuple[list[str], bool]:
 
 
 def load_support(project: str, key_prefix: str):
-    mem = {}
-    for line in (G / "jira-memory-corpus.jsonl").open(encoding="utf-8"):
-        d = json.loads(line)
-        ts = d.get("available_as_memory_from") or ""
-        try:
-            epoch = datetime.fromisoformat(ts.replace("+0000", "+00:00")).timestamp()
-        except ValueError:
-            epoch = None
-        key = d.get("jira_issue_key") or ""
-        rec = {"key": key, "resolved": epoch}
-        if key.startswith(key_prefix + "-"):
-            rec["text"] = (d.get("memory_text") or "")[:MEM_TEXT_CHARS]
-        mem[d["jira_shadow_issue_id"]] = rec
-    clusters = defaultdict(list)
-    for line in (G / "global-triage-examples.jsonl").open(encoding="utf-8"):
-        d = json.loads(line)
-        if d.get("triage_label") != "ticket_worthy":
-            continue
-        clusters[d.get("incident_episode_id") or d["window_id"]].append(d["window_id"])
-    preds = {}
-    for line in PRED.open(encoding="utf-8"):
-        d = json.loads(line)
-        preds[d["window_id"]] = list(d.get("matched_issue_ids") or [])
-    # issue_key -> {fix_time, fix_shas, gold_files} for every linked issue,
-    # from the miner's treeless clone + on-disk cache (no network when cached)
-    cfg = PROJECTS[project]
-    linked, _ = link_commits(cfg["git_dir"], key_prefix)
-    cache_path = ROOT / f"data/c7-repos/cache-{project}.json"
-    file_cache = json.loads(cache_path.read_text(encoding="utf-8"))
-    linkage = {}
-    for key, commits in linked.items():
-        if not (1 <= len(commits) <= 3):
-            continue
-        gold, shas = set(), []
-        for c in sorted(commits, key=lambda c: c["ts"]):
-            shas.append(c["sha"])
-            for status, path in file_cache.get(c["sha"], []):
-                if (status == "M" and path.endswith(cfg["src_ext"])
-                        and not TEST_PATH.search(path)):
-                    gold.add(path)
-        if gold:
-            linkage[key] = {"fix_time": max(c["ts"] for c in commits),
-                            "fix_shas": shas, "gold_files": sorted(gold)}
-    return mem, clusters, preds, linkage
+    """Memory pool + firewall data.
+
+    Preferred source: the PJD-derived pool (build_memory_pools.py) -- every
+    fixed, fix-linked tracker issue votes, logs not required; true creation
+    and resolution times; duplicate clusters from PJD issue links. Falls
+    back to the old WoL-slice-derived pool when the files are absent.
+    """
+    pool_path = BENCH / f"{project}-memory.jsonl"
+    mem_by_key: dict[str, dict] = {}
+    if pool_path.exists():
+        for line in pool_path.open(encoding="utf-8"):
+            d = json.loads(line)
+            mem_by_key[d["key"]] = {
+                "key": d["key"],
+                "resolved": parse_iso_epoch(d.get("resolved")) or d["fix_time"],
+                "fix_shas": set(d["fix_shas"]),
+                "gold_files": d["gold_files"],
+                "toks": Counter(tokenize(f"{d.get('summary') or ''}\n{d.get('text') or ''}")),
+            }
+        dup = json.loads((BENCH / f"{project}-dupclusters.json")
+                         .read_text(encoding="utf-8"))
+        created = {k: parse_iso_epoch(v) for k, v in
+                   json.loads((BENCH / f"{project}-created.json")
+                              .read_text(encoding="utf-8")).items()}
+        log.info("PJD memory pool: %d entries; dup-cluster keys: %d",
+                 len(mem_by_key), len(dup))
+    else:  # legacy WoL-slice pool (kafka/mariadb before build_memory_pools)
+        cfg = PROJECTS[project]
+        linked, _ = link_commits(cfg["git_dir"], key_prefix,
+                                 cfg.get("link_via", "subject"))
+        file_cache = json.loads((ROOT / f"data/c7-repos/cache-{project}.json")
+                                .read_text(encoding="utf-8"))
+        texts = {}
+        for line in (G / "jira-memory-corpus.jsonl").open(encoding="utf-8"):
+            d = json.loads(line)
+            k = d.get("jira_issue_key") or ""
+            if k.startswith(key_prefix + "-"):
+                texts[k] = ((d.get("memory_text") or "")[:MEM_TEXT_CHARS],
+                            parse_iso_epoch(d.get("available_as_memory_from")))
+        for key, commits in linked.items():
+            if not (1 <= len(commits) <= 3) or key not in texts:
+                continue
+            gold, shas = set(), []
+            for c in sorted(commits, key=lambda c: c["ts"]):
+                shas.append(c["sha"])
+                for status, path in file_cache.get(c["sha"], []):
+                    if (status == "M" and path.endswith(cfg["src_ext"])
+                            and not TEST_PATH.search(path)):
+                        gold.add(path)
+            if gold:
+                text, resolved = texts[key]
+                mem_by_key[key] = {"key": key,
+                                   "resolved": resolved or max(c["ts"] for c in commits),
+                                   "fix_shas": set(shas),
+                                   "gold_files": sorted(gold),
+                                   "toks": Counter(tokenize(text))}
+        dup, created = {}, {}
+        log.info("legacy WoL-slice memory pool: %d entries", len(mem_by_key))
+
+    # ARISE predictions exist only for the WoL-slice projects' windows
+    wolm_to_key = {}
+    preds: dict[str, list[str]] = {}
+    if PROJECTS[project].get("source") != "wolv2":
+        for line in (G / "jira-memory-corpus.jsonl").open(encoding="utf-8"):
+            d = json.loads(line)
+            wolm_to_key[d["jira_shadow_issue_id"]] = d.get("jira_issue_key") or ""
+        for line in PRED.open(encoding="utf-8"):
+            d = json.loads(line)
+            preds[d["window_id"]] = [wolm_to_key.get(m, "")
+                                     for m in (d.get("matched_issue_ids") or [])]
+    return mem_by_key, dup, created, preds
 
 
 def evaluate(ranking: list[str], gold: list[str]) -> dict:
@@ -291,51 +361,46 @@ def main() -> int:
              (BENCH / f"{args.project}.jsonl").open(encoding="utf-8")]
     if args.limit:
         bench = bench[:args.limit]
-    mem, clusters, preds, linkage = load_support(args.project, cfg["key_prefix"])
-    log.info("instances=%d memory=%d linked-with-gold=%d", len(bench), len(mem), len(linkage))
-
-    # BM25 memory pool: linked, time-stamped, same-project tickets
-    mem_pool = {mid: Counter(tokenize(rec["text"]))
-                for mid, rec in mem.items()
-                if rec.get("text") and rec["resolved"] is not None
-                and rec["key"] in linkage}
-    log.info("BM25 memory pool: %d tickets", len(mem_pool))
+    mem_by_key, dupclusters, created_map, preds = load_support(
+        args.project, cfg["key_prefix"])
+    log.info("instances=%d memory-pool=%d", len(bench), len(mem_by_key))
+    mem_index = BM25Index({k: r["toks"] for k, r in mem_by_key.items()})
 
     tok_cache_path = OUT / f"blob-tokens-{args.project}.pkl"
     OUT.mkdir(parents=True, exist_ok=True)
     tok_cache: dict[str, Counter] = (pickle.loads(tok_cache_path.read_bytes())
                                      if tok_cache_path.exists() else {})
 
-    window_episode = {}
-    for ep, members in clusters.items():
-        for w in members:
-            window_episode[w] = ep
-
     rows, t0 = [], time.time()
     vote_stats = Counter()
 
-    def memory_votes(candidates: list[str], b: dict, fw: set[str],
-                     snap: Snapshot, tag: str) -> list[str]:
+    def memory_votes(candidate_keys: list[str], b: dict, cutoff: float,
+                     qcluster, snap: Snapshot, tag: str) -> list[str]:
+        """Firewall: the query issue itself, its PJD duplicate cluster, any
+        memory sharing a fix commit, any memory resolved after the query's
+        creation (cutoff)."""
         votes: dict[str, float] = defaultdict(float)
         rank = 0
-        for mid in candidates:
-            if mid in fw:
-                vote_stats[f"{tag}_fw_twin_or_cluster"] += 1
+        for key in candidate_keys:
+            rec = mem_by_key.get(key)
+            if not rec:
+                vote_stats[f"{tag}_not_in_pool"] += 1
                 continue
-            info = mem.get(mid)
-            link = linkage.get((info or {}).get("key") or "")
-            if not link:
-                vote_stats[f"{tag}_no_linkage"] += 1
+            if key == b["issue_key"]:
+                vote_stats[f"{tag}_fw_self"] += 1
                 continue
-            if set(link["fix_shas"]) & set(b["fix_shas"]):
+            if qcluster is not None and dupclusters.get(key) == qcluster:
+                vote_stats[f"{tag}_fw_dup_cluster"] += 1
+                continue
+            if rec["fix_shas"] & set(b["fix_shas"]):
                 vote_stats[f"{tag}_fw_same_fix_commit"] += 1
                 continue
-            if info["resolved"] is not None and info["resolved"] > b["fix_time"]:
+            if rec["resolved"] is not None and rec["resolved"] > cutoff:
                 vote_stats[f"{tag}_fw_resolved_later"] += 1
                 continue
             vote_stats[f"{tag}_voted"] += 1
             rank += 1
-            for f in link["gold_files"]:
+            for f in rec["gold_files"]:
                 if f in snap.blob_of:
                     votes[f] += 1.0 / rank
             if rank >= MEM_DEPTH:
@@ -345,19 +410,20 @@ def main() -> int:
     for i, b in enumerate(bench):
         snap = Snapshot(git_dir, b["snapshot_sha"], cfg["src_ext"])
         qtoks = tokenize(b["query_text"])
-
-        own_twin = "wol-m-" + b["window_id"][len("wol-q-"):]
-        fw = {own_twin}
-        for member in clusters.get(window_episode.get(b["window_id"], ""), []):
-            fw.add("wol-m-" + member[len("wol-q-"):])
+        # visibility cutoff: what an engineer could search when the bug
+        # arrived -- true creation time when known, else fix time
+        cutoff = (parse_iso_epoch(b.get("created"))
+                  or created_map.get(b["issue_key"]) or b["fix_time"])
+        qcluster = dupclusters.get(b["issue_key"])
 
         trace_grep, has_mention = trace_rank(b["query_text"], snap)
         path_docs = {f: Counter(tokenize(f) + [Path(f).stem.lower()] * 2)
                      for f in snap.files}
         path_ranked = [f for f, _ in bm25_rank(qtoks, path_docs)][:LIST_LEN]
-        memory_arise = memory_votes(preds.get(b["window_id"], []), b, fw, snap, "arise")
-        mem_ranked = [mid for mid, _ in bm25_rank(qtoks, mem_pool)[:MEM_DEPTH * 4]]
-        memory_bm25 = memory_votes(mem_ranked, b, fw, snap, "bm25")
+        memory_arise = memory_votes(preds.get(b["window_id"], []), b, cutoff,
+                                    qcluster, snap, "arise")
+        memory_bm25 = memory_votes(mem_index.rank(qtoks, MEM_DEPTH * 4), b,
+                                   cutoff, qcluster, snap, "bm25")
 
         pool = list(dict.fromkeys(trace_grep + path_ranked[:PATH_POOL]
                                   + memory_arise + memory_bm25))
