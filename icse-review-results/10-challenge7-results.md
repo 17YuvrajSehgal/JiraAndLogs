@@ -201,6 +201,28 @@ Hard stratum: cond_ours ≈ content-BM25 on mongodb (0.544 vs 0.548) and qt
 (0.361 = 0.361); memory_bm25 alone remains the best single signal there
 for mariadb-class density. Fusion on hard still has headroom.
 
+## 5. Significance (paired bootstrap 2,000×, BH over all 64 tests)
+
+`scripts/c7/stats.py` → `data/c7-results/stats.json`. Four pre-specified
+comparisons × {acc@5, mrr} × {overall, hard} × 4 projects.
+
+**Confirmed significant:**
+- **Ours > strongest baseline (content-BM25), overall: 8/8 tests SIG** —
+  acc@5 +0.063 [+0.027,+0.099] kafka, +0.175 [+0.152,+0.197] mariadb,
+  +0.057 [+0.046,+0.068] mongodb, +0.084 [+0.053,+0.119] qt.
+- **Memory lifts unweighted fusion on the HARD stratum on all four
+  projects:** +0.080 kafka, +0.242 mariadb, +0.165 mongodb, +0.153 qt
+  (all SIG). This is the universal form of the memory claim.
+- Ours > trace-grep everywhere (max delta: +0.544 acc@5, mongodb hard).
+- Conditioned-memory ablation: SIG only on Qt overall (+0.084); mongodb
+  mixed (+0.008 acc@5 SIG, −0.013 mrr SIG); kafka/mariadb n.s.
+
+**Confirmed honest negatives (quantified, to report):**
+- On HARD, cond_ours < content-BM25 on kafka (−0.093 SIG) and mariadb
+  (−0.035 SIG); statistical ties on mongodb/qt. Conditioned fusion still
+  under-serves the hard stratum relative to content-alone — fusion
+  headroom, stated openly.
+
 ### Pending for the eval harness
 
 Paired bootstrap + BH for (cond_ours − cond_no_memory) and
