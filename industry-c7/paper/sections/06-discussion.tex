@@ -1,29 +1,93 @@
 \section{Discussion and Limitations}
 \label{sec:discussion}
 
-% OUTLINE:
-%
-% What the three challenge difficulties look like in the data:
-%   - symptom-vs-cause is MEASURABLE: 33-68% of real reports do not name
-%     the fixed file; trace-grep scores exactly 0 there by construction.
-%   - noisy/incomplete logs: our logs are reporter-curated excerpts --
-%     easier than raw industrial bundles; the flag-fault complement with
-%     real runtime bundles (OTel demo, 9 known faulty code sites) covers
-%     the raw-bundle shape in miniature. [decide: include as subsection
-%     or future work depending on time]
-%   - evidence-to-code retrieval: content BM25 within per-snapshot pools
-%     is a strong, cheap, leak-free instantiation; semantic (dense/LLM)
-%     retrieval is a natural upgrade path.
-%
-% Explanation output (challenge output (iii)): the ranked list carries its
-%   provenance (which signal(s) put a file there: named in trace / matched
-%   log content / voted by incidents X,Y with links) -- state what is
-%   implemented vs. what needs an LLM. [honest status at submission time]
-%
-% Deployment notes for industry: all-CPU, no training, index per snapshot,
-%   16us-class fusion; memory pool grows as the tracker grows -- the
-%   method gets better with age (density finding).
-%
-% Threats: linkage noise; fix-file vs root-cause-file; single-platform
-%   trackers (Jira x2); generalization beyond 4 projects; time-split
-%   tuning bias (reported).
+This section reads the challenge's three stated difficulties against our
+measurements, states plainly what the explanation output is and is not,
+and lists the threats to validity.
+
+\subsection{The three difficulties, measured}
+\label{sec:discussion:difficulties}
+
+\textbf{Root cause beyond symptoms.} The challenge describes this as the
+hardest part, and our data agrees in a form that can be quantified: in
+53\% of real reports, no faulty file is named anywhere in the text, and
+on those instances every grep-style method scores zero. Incident memory
+is currently the only signal in our system that routinely recovers such
+files, because a past fix can point at code that no present log line
+mentions. The honest counterpart from \cref{sec:results:negatives} also
+stands: on one of four projects, fusing signals still performs worse on
+this stratum than content retrieval alone. The hard stratum is where
+future work on this challenge should be judged.
+
+\textbf{Noisy and incomplete log evidence.} Here our benchmark is kinder
+than industrial reality, and we say so. Its logs are the excerpts that
+reporters chose to paste into an issue, so a human has already filtered
+the noise once. A production log bundle with retries, background
+activity, and downstream errors is a harder input. The benchmark does
+capture the incompleteness side: in many instances the pasted evidence is
+a single generic error line, and 90\% of MongoDB reports contain no stack
+trace at all. Evaluating the same pipeline on raw, unfiltered runtime
+bundles is the clearest next step, and our architecture makes no
+assumption that prevents it: every signal consumes plain text.
+
+\textbf{Evidence-to-code semantic retrieval.} Our lexical instantiation
+is deliberately simple: BM25 over paths, over file contents within a
+per-instance pool, and over past incident reports. It is cheap,
+deterministic, and leak-free, and it was enough to beat the strongest
+baseline everywhere. Nothing in the fusion design depends on the signals
+being lexical. A dense retriever trained for log-to-code matching, or an
+LLM reranker over the fused top candidates, drops into the same slot and
+inherits the same firewall; we consider this the most promising upgrade
+path.
+
+\subsection{What the explanation output is}
+\label{sec:discussion:explanation}
+
+The challenge asks for an explanation linking symptoms, log events, and
+candidate regions. Our explanation is provenance, not generated text. For
+each ranked file the system reports which signals ranked it, the explicit
+mentions or matching terms behind the log-to-code signals, and for the
+memory signal the keys of the past incidents that voted for it. An
+engineer can open the cited prior issues and their fix commits directly.
+We prefer this form because every element of it is checkable; a fluent
+narrative written by a language model can be added on top, but the
+citations are the part an on-call engineer can trust at 3 a.m.
+
+\subsection{Deployment notes}
+\label{sec:discussion:deployment}
+
+Three properties matter for industrial adoption. First, cost: the whole
+pipeline is lexical, runs on a single CPU core in well under a second per
+issue with warm indexes, and needs no GPU and no training. Second,
+freshness: the memory pool is append-only, and every newly resolved issue
+with a linked fix commit widens the searchable history at no retraining
+cost. Consistent with this, memory was weakest in the earliest part of
+the evaluation period in three of four projects
+(\cref{sec:results:rq3}). Third, failure mode: with
+an empty or sparse memory pool the system degrades to its log-to-code
+signals, which already match the strongest baseline; memory is an
+additive signal behind a firewall, never a dependency.
+
+\subsection{Threats to validity}
+\label{sec:discussion:threats}
+
+\textbf{Construct.} Mined gold inherits the imperfections of
+\cref{sec:benchmark:limits}: a fix commit's files are the repair site,
+which is occasionally not the origin site, and commit-message linkage can
+be noisy despite our filters. The module metric depends on a per-project
+depth choice, which we fixed before evaluation and release with the
+artifact.
+
+\textbf{Internal.} The development split precedes the evaluation split in
+time, which protects against tuning on the future but, as
+\cref{sec:setup:protocol} records, biases tuned weights against memory.
+Our memory results are therefore conservative. The regime-conditioned
+tuning is fragile when a regime has few development instances, as Qt
+shows.
+
+\textbf{External.} Four projects, two tracker platforms, and one
+ecosystem of conventions (issue keys in commit messages) do not cover all
+industrial settings. Projects without disciplined issue--commit linkage
+cannot use our mining recipe directly, although organizations with any
+form of change tracking can substitute their own linkage. Logs in the
+benchmark are reporter-curated, as discussed above.
