@@ -1,0 +1,29 @@
+\section{Results}
+\label{sec:results}
+
+% OUTLINE:
+%
+% RQ1 (beats strongest baseline?): TABLE 2 -- file-level acc@5/MRR, eval
+%   split, 4 projects x {trace_grep, path, content, memory, fused-no-mem,
+%   ours}. Ours > content-BM25 on all four: +0.063/+0.175/+0.057/+0.084
+%   acc@5, 8/8 SIG after BH. Module-level: TABLE 3 -- Acc@1 0.815/0.797/
+%   0.841/0.669, Acc@5 0.991/0.963/0.979/0.925 (output (i) near-solved
+%   at K=5).
+%
+% RQ2 (does memory help, and where?): the universal result is on the HARD
+%   stratum (gold file not named in the report): memory lifts unweighted
+%   fusion +0.080/+0.242/+0.165/+0.153 acc@5 on kafka/mariadb/mongodb/qt,
+%   ALL significant. Qt showcase: trace-poorest project; conditioned
+%   fusion without memory only ties content retrieval (0.456); with
+%   memory 0.541 (+0.085, SIG). On easy instances memory is neutral --
+%   trace+content already suffice. FIGURE 2: per-stratum bars with CIs.
+%
+% RQ3 (density): memory value scales with linked history. Within-protocol
+%   contrast: kafka pool 634 -> tuner zeroes memory; same code, mariadb
+%   pool 6,014 -> tuner max weight, +0.136 fusion gain. Enlarged pools
+%   via PJD (no logs needed) is what made S4/S5 competitive.
+%
+% Honest negatives (own subsection, deliberately): on hard, conditioned
+%   fusion is SIG below content-alone on kafka (-0.093) and mariadb
+%   (-0.035), ties on mongodb/qt -- fusion headroom; memory-only is the
+%   best single hard-stratum signal at mariadb-class density.

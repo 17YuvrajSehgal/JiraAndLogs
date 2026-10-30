@@ -1,0 +1,29 @@
+\section{Discussion and Limitations}
+\label{sec:discussion}
+
+% OUTLINE:
+%
+% What the three challenge difficulties look like in the data:
+%   - symptom-vs-cause is MEASURABLE: 33-68% of real reports do not name
+%     the fixed file; trace-grep scores exactly 0 there by construction.
+%   - noisy/incomplete logs: our logs are reporter-curated excerpts --
+%     easier than raw industrial bundles; the flag-fault complement with
+%     real runtime bundles (OTel demo, 9 known faulty code sites) covers
+%     the raw-bundle shape in miniature. [decide: include as subsection
+%     or future work depending on time]
+%   - evidence-to-code retrieval: content BM25 within per-snapshot pools
+%     is a strong, cheap, leak-free instantiation; semantic (dense/LLM)
+%     retrieval is a natural upgrade path.
+%
+% Explanation output (challenge output (iii)): the ranked list carries its
+%   provenance (which signal(s) put a file there: named in trace / matched
+%   log content / voted by incidents X,Y with links) -- state what is
+%   implemented vs. what needs an LLM. [honest status at submission time]
+%
+% Deployment notes for industry: all-CPU, no training, index per snapshot,
+%   16us-class fusion; memory pool grows as the tracker grows -- the
+%   method gets better with age (density finding).
+%
+% Threats: linkage noise; fix-file vs root-cause-file; single-platform
+%   trackers (Jira x2); generalization beyond 4 projects; time-split
+%   tuning bias (reported).

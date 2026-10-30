@@ -1,0 +1,24 @@
+\section{Evaluation Setup}
+\label{sec:setup}
+
+% OUTLINE:
+%
+% 4.1 Protocol. Time-based split per project: earliest 30% by fix time =
+%   dev (all tuning), later 70% = eval (all reported numbers). Rationale +
+%   the trap we hit: tuning on the earliest slice structurally undervalues
+%   memory (oldest issues have the least history) -- reported as a
+%   methodological finding other memory-based systems will meet.
+%
+% 4.2 Metrics (per the challenge): Recall@K, MRR, Acc@K at FILE level
+%   (K=1,5,10) and Acc@K/MRR at MODULE level (module = first D path
+%   components; D per project since everything lives under src/ in two of
+%   the four).
+%
+% 4.3 Baselines: trace-grep (the "grep the report" engineer move), path
+%   BM25, content BM25 (strongest baseline in practice), memory-only;
+%   ablations: fused with/without memory, conditioned with/without.
+%   [LLM/agentic baselines: pending -- decide before submission]
+%
+% 4.4 Statistics: paired bootstrap (2,000 resamples, shared indices),
+%   BH correction across the full 64-test family. All runs deterministic;
+%   re-runs reproduce every table bit-identically.
