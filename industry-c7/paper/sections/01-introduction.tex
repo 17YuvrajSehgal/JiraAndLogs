@@ -1,38 +1,80 @@
 \section{Introduction}
 \label{sec:intro}
 
-% OUTLINE (prose to be written with /paper-language, section-by-section):
-%
-% P1 -- The problem, in the challenge's own terms. An engineer receives a
-%   natural-language issue report and logs. No failing test, no debugger,
-%   no reproducible execution. They must find the defective code region.
-%   Ground with one real benchmark example (a MariaDB or Kafka issue where
-%   the stack trace names the WRONG file).
-%
-% P2 -- Why existing routes fall short (mirrors the challenge text):
-%   test-based fault localization needs execution evidence that does not
-%   exist at report time; AIOps RCA ranks services/components, not code
-%   regions; codebase-retrieval methods treat every issue as the first
-%   issue ever filed.
-%
-% P3 -- The idea. Software failures recur. The incidents a team already
-%   resolved left two artifacts behind: a report describing symptoms, and
-%   a fix commit naming the code that was actually at fault. We treat the
-%   resolved history as INCIDENT MEMORY: past incidents similar to the new
-%   report vote for the files their fixes touched. This signal is fused
-%   with log-to-code retrieval.
-%
-% P4 -- The measurement problem and our benchmark: no public dataset pairs
-%   issue + logs + code snapshot + ground-truth faulty regions. We mine one
-%   from two public datasets x git history: \nInstances real incidents
-%   across \nProjects organizations (Kafka, MariaDB, MongoDB, Qt), gold =
-%   files modified by the fix commit, snapshot = parent of the fix.
-%   Stratified by whether the report names a gold file (\nHardPct hard).
-%
-% P5 -- Results preview + contributions list:
-%   C1 benchmark (released); C2 memory-augmented localizer, beats the
-%   strongest baseline on all four projects (acc@5 +0.057..+0.175, all
-%   significant after BH); C3 the memory finding: on the hard stratum
-%   memory lifts fusion on ALL FOUR projects (+0.080..+0.242 acc@5, all
-%   SIG), and its value scales with the density of linked history;
-%   C4 honest negatives (where fusion still loses to content retrieval).
+When a production issue is reported, an engineer typically receives two
+things: a natural-language description of what went wrong, and logs. There
+is no failing test, no debugger session, and often no way to reproduce the
+problem. From this evidence alone, the engineer must find the code that
+caused it. The challenge this paper answers calls for techniques that
+perform this step automatically: given an issue report, logs, and a source
+code snapshot, produce the affected module, a ranked list of suspicious
+code regions, and the evidence that connects them.
+
+The core difficulty is that logs show where a failure was \emph{detected},
+not where it was \emph{caused}. A real example from our benchmark makes
+this concrete. Kafka issue KAFKA-6624 reports that a disk is wrongly
+marked offline, and its stack trace points at
+\texttt{FileChannelImpl.force} and \texttt{FileRecords.flush}, the code
+that hit a closed file channel. The actual fix landed in
+\texttt{LogManager.scala}, which allowed a log to be deleted while it was
+still being flushed. Every file the trace names is innocent. Any method
+that works by matching the report against the code it mentions, which is
+what an engineer grepping the codebase does, starts from the wrong files.
+In our benchmark, \nHardPct{} of real reports name none of the files the
+fix later touched.
+
+Existing techniques approach this from two sides, and both stop short.
+Classical fault localization ranks suspicious code using failing tests or
+coverage, execution evidence that does not exist at report
+time~\cite{just2014defects4j}; recent agent-based variants retrieve over
+the codebase itself~\cite{rafi2024multiagent}, treating every issue as if
+it were the project's first. Log-based root cause analysis in cloud
+operations~\cite{wang2024rcagent} identifies the faulty service or
+component, but stops above the level of code regions.
+
+Our observation is that both sides ignore the richest evidence a mature
+project has: its own resolved history. Software failures recur. When an
+issue arrives, some past issue has often failed in a similar way, and its
+fix commit records exactly which files were at fault that time. We treat
+the resolved history as \emph{incident memory}: past incidents whose
+reports resemble the new one vote for the files their fixes touched, and
+this vote is fused with log-to-code retrieval over the snapshot. In the
+example above, this vote places \texttt{LogManager.scala}, the file the
+trace never names, among the top five candidates.
+
+Evaluating this idea required a benchmark that does not exist publicly:
+issue reports with logs, the code as it was when the issue was open, and
+ground-truth faulty regions. We mined one from two public datasets and
+project git histories. It contains \nInstances{} real incidents from four
+projects of four organizations (Apache Kafka, MariaDB, MongoDB, Qt),
+where the ground truth of each instance is the set of source files its
+fix commit modified, and the snapshot is the parent of that commit. The
+benchmark is stratified by exactly the difficulty the challenge names:
+whether the report names any faulty file.
+
+This paper makes four contributions.
+\begin{itemize}
+\item \textbf{A benchmark} of \nInstances{} issue--log--code--fix
+  instances across four organizations, with a per-filter datasheet and a
+  per-project incident-memory pool, released for reuse
+  (\cref{sec:benchmark}).
+\item \textbf{A localizer} that fuses log-to-code retrieval with
+  incident memory under a strict temporal firewall
+  (\cref{sec:approach}). It beats the strongest baseline on all four
+  projects (Acc@5 $+0.057$ to $+0.187$, significant in all eight tests),
+  and places a correct module in the top five for at least 92\% of
+  instances on every project (\cref{sec:results}).
+\item \textbf{Evidence about when memory matters}: on reports that name
+  no faulty file, where grep-style methods score zero, memory lifts
+  fusion by up to $+0.209$ Acc@5, and on one project memory alone beats
+  content retrieval outright. The gains concentrate exactly where textual
+  evidence is weakest (\cref{sec:results:rq2,sec:results:rq3}).
+\item \textbf{Honest negatives}: the strata where fusion still loses to
+  a single signal, and a tuning fragility that practitioners adopting
+  regime-conditioned fusion should know about
+  (\cref{sec:results:negatives}).
+\end{itemize}
+
+Everything in the paper is deterministic and reproducible: fixed seeds,
+no GPU training, and a released artifact in which every reported number
+is traced to the result file it came from.
