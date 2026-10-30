@@ -52,8 +52,11 @@ PROJECTS = {
         "src_ext": (".java", ".scala"),
     },
     "mariadb": {
+        # full clone (all blobs local) -- the treeless mariadb-server.git made
+        # every git show a network round-trip; kafka keeps its treeless clone
+        # because its benchmark was already mined from that head
         "key_prefix": "MDEV",
-        "git_dir": REPOS / "mariadb-server.git",
+        "git_dir": REPOS / "mariadb-full.git",
         "src_ext": (".c", ".cc", ".cpp", ".h", ".hpp", ".ic", ".inl", ".yy"),
     },
 }
