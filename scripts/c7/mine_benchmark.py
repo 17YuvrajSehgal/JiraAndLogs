@@ -46,23 +46,23 @@ REPOS = ROOT / "data/c7-repos"
 OUT = ROOT / "data/c7-benchmark"
 
 PROJECTS = {
-    # source "wol-slice": queries from the v3 global triage slice (original two)
+    # ALL projects use source "wolv2" (decision 2026-10-30): one population
+    # definition, fully reproducible from the public WoL v2 + PJD artifacts.
+    # The earlier "wol-slice" source (internal v3 triage labels) is retired;
+    # its loader remains below for provenance.
     "kafka": {
-        # kafka-full.git: same history with blobs local (the committed kafka
-        # benchmark was mined from kafka.git's head; sha-keyed caches agree)
         "key_prefix": "KAFKA",
         "git_dir": REPOS / "kafka-full.git",
         "src_ext": (".java", ".scala"),
-        "source": "wol-slice",
+        "source": "wolv2",
+        "link_via": "subject",
     },
     "mariadb": {
-        # full clone (all blobs local) -- the treeless mariadb-server.git made
-        # every git show a network round-trip; kafka keeps its treeless clone
-        # because its benchmark was already mined from that head
         "key_prefix": "MDEV",
         "git_dir": REPOS / "mariadb-full.git",
         "src_ext": (".c", ".cc", ".cpp", ".h", ".hpp", ".ic", ".inl", ".yy"),
-        "source": "wol-slice",
+        "source": "wolv2",
+        "link_via": "subject",
     },
     # source "wolv2": queries from the WoL v2 mongo restore (log-bearing,
     # fixed Bug, pred_uncertainty <= 0.05 per the WoL paper's guidance)

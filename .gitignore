@@ -76,3 +76,7 @@ paper-results-v2/**/*-predictions.jsonl
 
 # C7 benchmark data (published via Zenodo, not git)
 industry-c7/data/
+
+# raw dataset downloads (restored into MongoDB; too large for git)
+ThePublicJiraDataset/
+WoL/
