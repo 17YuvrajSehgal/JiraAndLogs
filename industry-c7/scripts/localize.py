@@ -106,8 +106,11 @@ def tokenize(text: str) -> list[str]:
 
 
 def bm25_rank(query_toks: list[str], docs: dict[str, Counter],
-              k1: float = 1.2, b: float = 0.75) -> list[tuple[str, float]]:
-    """Score docs (id -> token Counter) against the query; DF from the pool."""
+              k1: float = 1.2, b: float = 0.75,
+              explain: dict[str, list[str]] | None = None) -> list[tuple[str, float]]:
+    """Score docs (id -> token Counter) against the query; DF from the pool.
+    If `explain` is given, it is filled with each doc's top-3 contributing
+    terms. Scores and ordering are unaffected (provenance only)."""
     if not docs:
         return []
     n = len(docs)
@@ -120,14 +123,21 @@ def bm25_rank(query_toks: list[str], docs: dict[str, Counter],
     for doc_id, c in docs.items():
         dl = sum(c.values())
         s = 0.0
+        contrib: list[tuple[float, str]] = []
         for t, qtf in q.items():
             tf = c.get(t, 0)
             if not tf:
                 continue
             idf = math.log(1 + (n - df[t] + 0.5) / (df[t] + 0.5))
-            s += idf * (tf * (k1 + 1)) / (tf + k1 * (1 - b + b * dl / avgdl)) * min(qtf, 3)
+            w = idf * (tf * (k1 + 1)) / (tf + k1 * (1 - b + b * dl / avgdl)) * min(qtf, 3)
+            s += w
+            if explain is not None:
+                contrib.append((w, t))
         if s > 0:
             scored.append((doc_id, s))
+            if explain is not None:
+                contrib.sort(reverse=True)
+                explain[doc_id] = [t for _, t in contrib[:3]]
     scored.sort(key=lambda x: (-x[1], x[0]))
     return scored
 
@@ -230,9 +240,11 @@ class Snapshot:
                 if p in self.blob_of and self.blob_of[p] in cache}
 
 
-def trace_rank(text: str, snap: Snapshot) -> tuple[list[str], bool]:
+def trace_rank(text: str, snap: Snapshot) -> tuple[list[str], bool, dict]:
     """Explicit file mentions first (extension or JVM frame), stem counts after.
-    Returns (ranking, has_explicit_mention) -- the flag is observable at
+    Returns (ranking, has_explicit_mention, detail) where detail maps each
+    ranked file to how S1 found it ("explicit"/"stem") and the character
+    offset of its first mention. has_explicit_mention is observable at
     inference time (no gold knowledge), unlike the easy/hard stratum label."""
     by_base: dict[str, list[str]] = defaultdict(list)
     for f in snap.files:
@@ -246,6 +258,7 @@ def trace_rank(text: str, snap: Snapshot) -> tuple[list[str], bool]:
             for f in by_base.get(m.group(1) + ext, []):
                 explicit[f] = min(explicit.get(f, m.start()), m.start())
     ranked = [f for f, _ in sorted(explicit.items(), key=lambda x: (x[1], x[0]))]
+    detail = {f: {"kind": "explicit", "pos": int(p)} for f, p in explicit.items()}
     stems = []
     for f in snap.files:
         if f in explicit:
@@ -254,8 +267,9 @@ def trace_rank(text: str, snap: Snapshot) -> tuple[list[str], bool]:
         n = text.count(stem) if len(stem) >= 4 else 0
         if n:
             stems.append((f, n * 1000 - text.find(stem)))
+            detail[f] = {"kind": "stem", "pos": text.find(stem)}
     stems.sort(key=lambda x: (-x[1], x[0]))
-    return (ranked + [f for f, _ in stems])[:LIST_LEN], bool(ranked)
+    return (ranked + [f for f, _ in stems])[:LIST_LEN], bool(ranked), detail
 
 
 def load_support(project: str, key_prefix: str):
@@ -389,11 +403,14 @@ def main() -> int:
     vote_stats = Counter()
 
     def memory_votes(candidate_keys: list[str], b: dict, cutoff: float,
-                     qcluster, snap: Snapshot, tag: str) -> list[str]:
+                     qcluster, snap: Snapshot, tag: str
+                     ) -> tuple[list[str], dict[str, list[str]]]:
         """Firewall: the query issue itself, its PJD duplicate cluster, any
         memory sharing a fix commit, any memory resolved after the query's
-        creation (cutoff)."""
+        creation (cutoff). Also returns {file: [voter issue keys]} for the
+        provenance output."""
         votes: dict[str, float] = defaultdict(float)
+        voters: dict[str, list[str]] = defaultdict(list)
         rank = 0
         for key in candidate_keys:
             rec = mem_by_key.get(key)
@@ -417,9 +434,12 @@ def main() -> int:
             for f in rec["gold_files"]:
                 if f in snap.blob_of:
                     votes[f] += 1.0 / rank
+                    voters[f].append(key)
             if rank >= MEM_DEPTH:
                 break
-        return [f for f, _ in sorted(votes.items(), key=lambda x: (-x[1], x[0]))][:LIST_LEN]
+        ranking = [f for f, _ in
+                   sorted(votes.items(), key=lambda x: (-x[1], x[0]))][:LIST_LEN]
+        return ranking, dict(voters)
 
     for i, b in enumerate(bench):
         snap = Snapshot(git_dir, b["snapshot_sha"], cfg["src_ext"])
@@ -430,19 +450,22 @@ def main() -> int:
                   or created_map.get(b["issue_key"]) or b["fix_time"])
         qcluster = dupclusters.get(b["issue_key"])
 
-        trace_grep, has_mention = trace_rank(b["query_text"], snap)
+        trace_grep, has_mention, s1_detail = trace_rank(b["query_text"], snap)
         path_docs = {f: path_tokens(f) for f in snap.files}
         path_ranked = [f for f, _ in bm25_rank(qtoks, path_docs)][:LIST_LEN]
-        memory_arise = memory_votes(preds.get(b["window_id"], []), b, cutoff,
-                                    qcluster, snap, "arise")
-        memory_bm25 = memory_votes(mem_index.rank(qtoks, MEM_DEPTH * 4), b,
-                                   cutoff, qcluster, snap, "bm25")
+        memory_arise, arise_voters = memory_votes(
+            preds.get(b["window_id"], []), b, cutoff, qcluster, snap, "arise")
+        memory_bm25, bm25_voters = memory_votes(
+            mem_index.rank(qtoks, MEM_DEPTH * 4), b, cutoff, qcluster, snap, "bm25")
 
         pool = list(dict.fromkeys(trace_grep + path_ranked[:PATH_POOL]
                                   + memory_arise + memory_bm25))
         docs = snap.contents(pool, tok_cache)
-        content_ranked = [f for f, _ in bm25_rank(qtoks, docs)][:LIST_LEN]
+        s3_terms: dict[str, list[str]] = {}
+        content_ranked = [f for f, _ in
+                          bm25_rank(qtoks, docs, explain=s3_terms)][:LIST_LEN]
 
+        qtok_set = set(qtoks)
         rows.append({
             "issue_key": b["issue_key"],
             "fix_time": b["fix_time"],
@@ -456,6 +479,15 @@ def main() -> int:
                 "content_bm25": content_ranked,
                 "memory_arise": memory_arise,
                 "memory_bm25": memory_bm25,
+            },
+            # raw provenance, slimmed to the final top-20 at write time
+            "_prov": {
+                "s1": s1_detail,
+                "s3_terms": s3_terms,
+                "path_terms": {f: sorted(qtok_set & set(path_tokens(f)))[:3]
+                               for f in path_ranked[:LIST_LEN]},
+                "voters": {f: (bm25_voters.get(f, []) + arise_voters.get(f, []))[:5]
+                           for f in set(bm25_voters) | set(arise_voters)},
             },
         })
         if i % 50 == 0:
@@ -535,7 +567,27 @@ def main() -> int:
             # persist ALL systems' top-20 (incl. fused/conditioned) so
             # downstream aggregation (module metrics, stats) never has to
             # re-derive a fusion approximately
-            slim["rankings"] = {s: lst[:20] for s, lst in systems_for(r).items()}
+            systems = systems_for(r)
+            slim["rankings"] = {s: lst[:20] for s, lst in systems.items()}
+            # provenance for the final system's top-20: which signals ranked
+            # each file (with rank), S1 mention detail, S2/S3 matching terms,
+            # S4 voter issue keys (challenge output (iii))
+            prov = slim.pop("_prov")
+            out_prov = {}
+            for file in systems["cond_ours"][:20]:
+                entry = {"signals": {s: r["rankings"][s].index(file) + 1
+                                     for s in r["rankings"]
+                                     if file in r["rankings"][s]}}
+                if file in prov["s1"]:
+                    entry["mention"] = prov["s1"][file]
+                if file in prov["path_terms"] and prov["path_terms"][file]:
+                    entry["path_terms"] = prov["path_terms"][file]
+                if file in prov["s3_terms"]:
+                    entry["content_terms"] = prov["s3_terms"][file]
+                if file in prov["voters"]:
+                    entry["voted_by"] = prov["voters"][file]
+                out_prov[file] = entry
+            slim["provenance"] = out_prov
             f.write(json.dumps(slim, ensure_ascii=False) + "\n")
 
     hdr = f"{'system':<18}" + "".join(f"{m:>10}" for m in metric_names)
