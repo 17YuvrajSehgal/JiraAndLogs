@@ -73,3 +73,6 @@ referenced-research-papers
 paper-results-v2/**/*-predictions.jsonl
 paper-results-v2/**/traces/
 paper-results-v2/**/*-predictions.jsonl
+
+# C7 benchmark data (published via Zenodo, not git)
+industry-c7/data/
