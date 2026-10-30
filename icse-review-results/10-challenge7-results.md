@@ -223,6 +223,23 @@ comparisons × {acc@5, mrr} × {overall, hard} × 4 projects.
   under-serves the hard stratum relative to content-alone — fusion
   headroom, stated openly.
 
+## 6. Module-level metrics (challenge output (i))
+
+`scripts/c7/module_metrics.py` → `data/c7-results/module-metrics.json`.
+Module = first D path components (kafka 1, mariadb 2, mongodb 3, qt 2 —
+a single top-level dir is meaningless under src/); system module ranking =
+file ranking collapsed by first occurrence; eval split only.
+
+cond_ours module Acc@1 / Acc@5: kafka 0.815/0.991 · mariadb 0.797/0.963 ·
+mongodb 0.841/0.979 · qt 0.669/0.925. The affected-module output is
+near-solved at K=5 on all four projects; at module Acc@1, memory_bm25 is
+the best SINGLE signal on mariadb (0.744 vs content 0.729), and memory
+lifts Qt's module Acc@1 from 0.613 (cond_no_memory) to 0.669.
+
+All four re-runs with persisted fused rankings reproduced the committed
+results exactly: per-project summary tables line-identical, and all 64
+bootstrap tests match the committed stats.json with zero mismatches.
+
 ### Pending for the eval harness
 
 Paired bootstrap + BH for (cond_ours − cond_no_memory) and

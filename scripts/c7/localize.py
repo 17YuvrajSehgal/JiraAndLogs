@@ -448,6 +448,9 @@ def main() -> int:
         if i % 50 == 0:
             log.info("  %d/%d (%.0fs, blob cache %d)", i, len(bench),
                      time.time() - t0, len(tok_cache))
+        # the pickle reaches hundreds of MB -- rewriting it every 50
+        # instances dominated wall time once the cache warmed up
+        if i and i % 500 == 0:
             tok_cache_path.write_bytes(pickle.dumps(tok_cache))
     tok_cache_path.write_bytes(pickle.dumps(tok_cache))
 
@@ -516,7 +519,10 @@ def main() -> int:
     with (OUT / f"{args.project}-instances.jsonl").open("w", encoding="utf-8") as f:
         for r in rows:
             slim = dict(r)
-            slim["rankings"] = {s: lst[:20] for s, lst in r["rankings"].items()}
+            # persist ALL systems' top-20 (incl. fused/conditioned) so
+            # downstream aggregation (module metrics, stats) never has to
+            # re-derive a fusion approximately
+            slim["rankings"] = {s: lst[:20] for s, lst in systems_for(r).items()}
             f.write(json.dumps(slim, ensure_ascii=False) + "\n")
 
     hdr = f"{'system':<18}" + "".join(f"{m:>10}" for m in metric_names)
