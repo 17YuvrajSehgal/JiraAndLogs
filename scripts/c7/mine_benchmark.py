@@ -46,10 +46,14 @@ REPOS = ROOT / "data/c7-repos"
 OUT = ROOT / "data/c7-benchmark"
 
 PROJECTS = {
+    # source "wol-slice": queries from the v3 global triage slice (original two)
     "kafka": {
+        # kafka-full.git: same history with blobs local (the committed kafka
+        # benchmark was mined from kafka.git's head; sha-keyed caches agree)
         "key_prefix": "KAFKA",
-        "git_dir": REPOS / "kafka.git",
+        "git_dir": REPOS / "kafka-full.git",
         "src_ext": (".java", ".scala"),
+        "source": "wol-slice",
     },
     "mariadb": {
         # full clone (all blobs local) -- the treeless mariadb-server.git made
@@ -58,8 +62,28 @@ PROJECTS = {
         "key_prefix": "MDEV",
         "git_dir": REPOS / "mariadb-full.git",
         "src_ext": (".c", ".cc", ".cpp", ".h", ".hpp", ".ic", ".inl", ".yy"),
+        "source": "wol-slice",
+    },
+    # source "wolv2": queries from the WoL v2 mongo restore (log-bearing,
+    # fixed Bug, pred_uncertainty <= 0.05 per the WoL paper's guidance)
+    "mongodb": {
+        "key_prefix": "SERVER",
+        "git_dir": REPOS / "mongo-full.git",
+        "src_ext": (".c", ".cpp", ".h", ".hpp", ".idl"),
+        "source": "wolv2",
+        "link_via": "subject",
+    },
+    "qt": {
+        "key_prefix": "QTBUG",
+        "git_dir": REPOS / "qtbase-full.git",
+        "src_ext": (".cpp", ".h", ".c", ".hpp", ".mm", ".qml"),
+        "source": "wolv2",
+        "link_via": "fixes_trailer",  # Qt convention: "Fixes: QTBUG-nnn" trailer
     },
 }
+WOLV2_MONGO = "mongodb://localhost:27017"
+MAX_QUERY_CHARS = 20_000
+UNCERTAINTY_MAX = 0.05  # WoL paper: treat pred_uncertainty > 0.05 with caution
 
 TEST_PATH = re.compile(r"(^|/)(test|tests|testing|mysql-test|unittest|jtest)(/|$)"
                        r"|Test\.(java|scala)$|(^|/)Test[A-Z]\w*\.(java|scala)$", re.I)
@@ -109,19 +133,24 @@ def load_wol_issues(key_prefix: str) -> dict[str, dict]:
     return issues
 
 
-def link_commits(git_dir: Path, key_prefix: str) -> tuple[dict[str, list[dict]], Counter]:
+def link_commits(git_dir: Path, key_prefix: str,
+                 via: str = "subject") -> tuple[dict[str, list[dict]], Counter]:
     """key -> [{sha, ts, subject, parents}] from the default branch, with
-    revert/merge commits dropped (counted in the returned Counter)."""
+    revert/merge commits dropped (counted in the returned Counter).
+    via="subject" scans commit subjects; via="fixes_trailer" scans the
+    Fixes: trailer (the Qt convention)."""
     key_re = re.compile(rf"\b({key_prefix}-\d+)\b")
+    key_field = ("%s" if via == "subject"
+                 else "%(trailers:key=Fixes,valueonly,separator=;)")
     dropped = Counter()
     linked: dict[str, list[dict]] = defaultdict(list)
-    out = run_git(git_dir, "log", "--format=%H%x01%ct%x01%P%x01%s")
+    out = run_git(git_dir, "log", f"--format=%H%x01%ct%x01%P%x01%s%x01{key_field}")
     for line in out.splitlines():
         try:
-            sha, ts, parents, subj = line.split("\x01", 3)
+            sha, ts, parents, subj, keysrc = line.split("\x01", 4)
         except ValueError:
             continue
-        keys = set(key_re.findall(subj))
+        keys = set(key_re.findall(keysrc))
         if not keys:
             continue
         if "revert" in subj.lower():
@@ -134,6 +163,43 @@ def link_commits(git_dir: Path, key_prefix: str) -> tuple[dict[str, list[dict]],
             linked[k].append({"sha": sha, "ts": int(ts),
                               "parent": parents.strip(), "subject": subj})
     return linked, dropped
+
+
+def load_wolv2_issues(cfg: dict) -> dict[str, dict]:
+    """issue_key -> query record from the WoL v2 mongo restore: log-bearing,
+    fixed Bug, low-uncertainty. query_text = summary + description (the
+    description carries the reporter-pasted logs)."""
+    from pymongo import MongoClient
+    jira = MongoClient(WOLV2_MONGO)["WoL_v2_gh_so"]["JIRA"]
+    issues: dict[str, dict] = {}
+    cur = jira.find(
+        {"key": {"$regex": f"^{cfg['key_prefix']}-"},
+         "fields.issuetype.name": "Bug",
+         "fields.resolution.name": {"$in": ["Fixed", "Done"]}},
+        {"key": 1, "has_log_msg": 1, "log_msg_count": 1, "pred_uncertainty": 1,
+         "fields.summary": 1, "fields.description": 1, "fields.created": 1,
+         "fields.resolutiondate": 1, "fields.components.name": 1,
+         "fields.priority.name": 1})
+    for d in cur:
+        if not (d.get("has_log_msg") or (d.get("log_msg_count") or 0) > 0):
+            continue
+        if (d.get("pred_uncertainty") or 1) > UNCERTAINTY_MAX:
+            continue
+        f = d.get("fields") or {}
+        text = f"{f.get('summary') or ''}\n\n{f.get('description') or ''}"
+        issues[d["key"]] = {
+            "window_id": f"pjd-{d['key']}",
+            "evidence_text": text[:MAX_QUERY_CHARS],
+            "split": "test",
+            "service_name": None,
+            "triage_severity": (f.get("priority") or {}).get("name"),
+            "triage_components": [c.get("name") for c in (f.get("components") or [])],
+            "wol_source_id": None,
+            "created": f.get("created"),
+            "resolutiondate": f.get("resolutiondate"),
+            "n_windows": 1,
+        }
+    return issues
 
 
 def fetch_file_lists(git_dir: Path, shas: list[str], cache_path: Path) -> dict[str, list]:
@@ -159,9 +225,12 @@ def fetch_file_lists(git_dir: Path, shas: list[str], cache_path: Path) -> dict[s
                     status, path = fl.split("\t", 1)
                     files.append([status.strip(), path.strip()])
             cache[sha] = files
-        cache_path.write_text(json.dumps(cache), encoding="utf-8")
-        log.info("  %d/%d (%.0fs)", min(i + GIT_SHOW_BATCH, len(todo)), len(todo),
-                 time.time() - t0)
+        # rewriting a multi-MB cache every batch dominated runtime at 60k+ shas
+        if (i // GIT_SHOW_BATCH) % 20 == 0 or i + GIT_SHOW_BATCH >= len(todo):
+            cache_path.write_text(json.dumps(cache), encoding="utf-8")
+            log.info("  %d/%d (%.0fs)", min(i + GIT_SHOW_BATCH, len(todo)),
+                     len(todo), time.time() - t0)
+    cache_path.write_text(json.dumps(cache), encoding="utf-8")
     return cache
 
 
@@ -170,9 +239,14 @@ def mine_project(name: str) -> dict:
     OUT.mkdir(parents=True, exist_ok=True)
     funnel = Counter()
 
-    issues = load_wol_issues(cfg["key_prefix"])
-    funnel["wol_ticket_worthy_issues"] = len(issues)
-    linked, dropped_commits = link_commits(cfg["git_dir"], cfg["key_prefix"])
+    if cfg.get("source") == "wolv2":
+        issues = load_wolv2_issues(cfg)
+        funnel["wolv2_log_fixed_lowuncert_issues"] = len(issues)
+    else:
+        issues = load_wol_issues(cfg["key_prefix"])
+        funnel["wol_ticket_worthy_issues"] = len(issues)
+    linked, dropped_commits = link_commits(cfg["git_dir"], cfg["key_prefix"],
+                                           cfg.get("link_via", "subject"))
 
     candidates = {}
     for key, rec in issues.items():
@@ -220,6 +294,8 @@ def mine_project(name: str) -> dict:
             "service_name": rec["service_name"],
             "triage_severity": rec["triage_severity"],
             "triage_components": rec["triage_components"],
+            "created": rec.get("created"),
+            "resolutiondate": rec.get("resolutiondate"),
             "n_fix_commits": len(commits),
             "fix_sha": first["sha"],
             "fix_shas": [c["sha"] for c in commits],
