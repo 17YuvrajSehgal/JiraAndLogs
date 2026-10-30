@@ -31,11 +31,27 @@ Log-Guided Root-Cause Code Localization from Production Issues}
 \maketitle
 
 \begin{abstract}
-% WRITTEN LAST. One-paragraph plan:
-% problem (their words) -> idea (past resolved incidents vote for code) ->
-% benchmark (7,775 instances, 4 orgs, gold = fix commits) -> results
-% (beats strongest baseline on all 4, 8/8 SIG; memory lifts hard stratum
-% on all 4) -> density finding -> artifact released.
+When a production issue is reported, engineers receive a natural-language
+description and logs, but no failing test and no reproducible execution.
+The logs usually show where the failure was detected, not where it was
+caused: in 53\% of the real reports we study, no file touched by the
+eventual fix is named anywhere in the text. We present \sys{}, which
+treats a project's resolved history as \emph{incident memory}: past
+incidents whose reports resemble the new one vote for the files their
+fixes modified, behind a firewall that admits only incidents resolved
+before the report existed. This vote is fused with lexical log-to-code
+retrieval over the code snapshot. To evaluate it, we mined what is, to our
+knowledge, the first public benchmark pairing issue reports, logs, code
+snapshots, and ground-truth faulty files: \nInstances{} real incidents
+from Apache Kafka, MariaDB, MongoDB, and Qt. \sys{} beats the strongest
+baseline on all four projects (Acc@5 $+0.057$ to $+0.187$, significant
+after multiple-test correction) and places a correct module in the top
+five for at least 92\% of instances. On reports that name no faulty file,
+where grep-style methods score zero, adding memory lifts fusion by up to
+$+0.209$ Acc@5, and on one project memory alone beats retrieval over the
+code itself. The pipeline is deterministic, trains nothing, runs on a CPU
+in under a second per issue, and is released with the benchmark and a
+script that traces every reported number to its result file.
 \end{abstract}
 
 \begin{IEEEkeywords}
