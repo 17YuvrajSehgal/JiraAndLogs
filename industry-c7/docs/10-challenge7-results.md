@@ -240,6 +240,38 @@ All four re-runs with persisted fused rankings reproduced the committed
 results exactly: per-project summary tables line-identical, and all 64
 bootstrap tests match the committed stats.json with zero mismatches.
 
+## 7. UNIFIED protocol (2026-10-30, supersedes §4-6 numbers)
+
+Population unified on public data for all four projects (WoL v2 log-bearing
++ fixed Bug + uncertainty ≤0.05; query = summary+description): kafka 680 /
+mariadb 1,683 / mongodb 3,618 / qt 456 = **6,437 instances** (53% hard).
+Eval split n = 476/1,179/2,533/320. memory_arise retired (no ARISE
+predictions for the unified windows; pipeline now fully reproducible from
+public artifacts). Results moved UP for kafka/mariadb (cleaner queries):
+
+- cond_ours acc@5: **0.794 / 0.658 / 0.700 / 0.541** vs content-BM25
+  0.708/0.471/0.644/0.456 → +0.086/+0.187/+0.057/+0.084, **8/8 SIG**
+  (MRR +0.058..+0.148, also all SIG).
+- Module Acc@1 0.861/0.843/0.841/0.669 (beats content everywhere);
+  Acc@5 0.998/0.983/0.979/0.925.
+- Memory on hard (unweighted fusion): +0.209/+0.165/+0.153 SIG on
+  mariadb/mongodb/qt; kafka +0.081 q=0.068 n.s. (n=124) — the old "4/4"
+  claim weakens to 3/4 + same-direction. Conditioned-memory increment now
+  SIG on THREE projects overall (mariadb +0.016, mongodb +0.008, qt
+  +0.084). **Standalone-memory beats content on mariadb-hard (0.442 vs
+  0.406).**
+- Density claim REFRAMED: time-quartile analysis shows memory weakest in
+  the earliest eval quartile in 3/4 projects, but no clean monotone rise
+  (only mongodb). Paper's RQ3 = "memory matters where textual evidence is
+  weakest" (hard-share gradient + firewall cost 67-71% + Q1 minima); no
+  scaling-law claim.
+- Honest negatives: kafka-hard cond_ours −0.065 SIG below content (only
+  project still SIG below; was two); qt-easy conditioned-no-memory
+  collapses (0.654) from noisy small-regime dev tuning, full system
+  recovers (0.913).
+
+Paper §§2–5 written against these numbers (industry-c7/paper/).
+
 ### Pending for the eval harness
 
 Paired bootstrap + BH for (cond_ours − cond_no_memory) and

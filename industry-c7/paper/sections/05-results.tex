@@ -1,29 +1,130 @@
 \section{Results}
 \label{sec:results}
 
-% OUTLINE:
-%
-% RQ1 (beats strongest baseline?): TABLE 2 -- file-level acc@5/MRR, eval
-%   split, 4 projects x {trace_grep, path, content, memory, fused-no-mem,
-%   ours}. Ours > content-BM25 on all four: +0.063/+0.175/+0.057/+0.084
-%   acc@5, 8/8 SIG after BH. Module-level: TABLE 3 -- Acc@1 0.815/0.797/
-%   0.841/0.669, Acc@5 0.991/0.963/0.979/0.925 (output (i) near-solved
-%   at K=5).
-%
-% RQ2 (does memory help, and where?): the universal result is on the HARD
-%   stratum (gold file not named in the report): memory lifts unweighted
-%   fusion +0.080/+0.242/+0.165/+0.153 acc@5 on kafka/mariadb/mongodb/qt,
-%   ALL significant. Qt showcase: trace-poorest project; conditioned
-%   fusion without memory only ties content retrieval (0.456); with
-%   memory 0.541 (+0.085, SIG). On easy instances memory is neutral --
-%   trace+content already suffice. FIGURE 2: per-stratum bars with CIs.
-%
-% RQ3 (density): memory value scales with linked history. Within-protocol
-%   contrast: kafka pool 634 -> tuner zeroes memory; same code, mariadb
-%   pool 6,014 -> tuner max weight, +0.136 fusion gain. Enlarged pools
-%   via PJD (no logs needed) is what made S4/S5 competitive.
-%
-% Honest negatives (own subsection, deliberately): on hard, conditioned
-%   fusion is SIG below content-alone on kafka (-0.093) and mariadb
-%   (-0.035), ties on mongodb/qt -- fusion headroom; memory-only is the
-%   best single hard-stratum signal at mariadb-class density.
+We answer three questions. RQ1: does \sys{} beat the strongest baseline
+on the challenge's metrics? RQ2: what does the memory signal contribute,
+and where? RQ3: under what conditions does memory matter? All numbers
+come from the evaluation split (476, 1{,}179, 2{,}533, and 320 instances
+for Kafka, MariaDB, MongoDB, and Qt). Significance always means
+$q < 0.05$ after Benjamini--Hochberg over all 64 tests
+(\cref{sec:setup:stats}).
+
+\begin{table}[t]
+\caption{File-level results on the evaluation split: Acc@5 (MRR in
+parentheses). S1--S4 are the standalone signals of \cref{sec:approach};
+``fused'' is unweighted fusion; ``cond.'' is regime-conditioned weighted
+fusion. Bold marks the best system per project.}
+\label{tab:files}
+\centering
+\small
+\setlength{\tabcolsep}{3.4pt}
+\begin{tabular}{lcccc}
+\toprule
+ & Kafka & MariaDB & MongoDB & Qt \\
+\midrule
+S1 trace mentions   & .658 (.477) & .442 (.327) & .354 (.319) & .263 (.226) \\
+S2 path             & .481 (.379) & .259 (.198) & .370 (.268) & .266 (.195) \\
+S3 content          & .708 (.545) & .471 (.330) & .644 (.473) & .456 (.350) \\
+S4 memory           & .483 (.361) & .461 (.342) & .377 (.296) & .278 (.211) \\
+\midrule
+fused, no memory    & .767 (.611) & .443 (.342) & .530 (.420) & .353 (.292) \\
+fused, +memory      & .790 (.600) & .562 (.408) & .629 (.499) & .463 (.351) \\
+cond., no memory    & .792 (.625) & .642 (.479) & .693 (.566) & .456 (.350) \\
+cond., +memory (\sys{}) & \textbf{.794} (.625) & \textbf{.658} (.479) & \textbf{.700} (.552) & \textbf{.541} (.408) \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{RQ1: Against the strongest baseline}
+\label{sec:results:rq1}
+
+\Cref{tab:files} gives the file-level results. The strongest standalone
+baseline on every project is content retrieval (S3). \sys{} beats it on
+all four projects: Acc@5 improves by $+0.086$ $[+0.055, +0.118]$ on
+Kafka, $+0.187$ $[+0.160, +0.215]$ on MariaDB, $+0.057$
+$[+0.046, +0.067]$ on MongoDB, and $+0.084$ $[+0.053, +0.119]$ on Qt.
+MRR improves by $+0.058$ to $+0.148$. All eight tests are significant.
+Against the grep-style baseline S1, the margins are larger still, from
+$+0.137$ to $+0.347$ Acc@5 overall, and on hard instances S1 scores zero
+by construction while \sys{} reaches $0.361$ to $0.544$.
+
+\begin{table}[t]
+\caption{Module-level results on the evaluation split (challenge output
+(i)): Acc@1 and Acc@5 of \sys{} and of the strongest baseline.}
+\label{tab:modules}
+\centering
+\small
+\begin{tabular}{lcccc}
+\toprule
+ & Kafka & MariaDB & MongoDB & Qt \\
+\midrule
+S3 content, Acc@1   & .830 & .771 & .808 & .613 \\
+\sys{}, Acc@1       & \textbf{.861} & \textbf{.843} & \textbf{.841} & \textbf{.669} \\
+\sys{}, Acc@5       & .998 & .983 & .979 & .925 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+At the module level (\cref{tab:modules}), \sys{} places a correct module
+first for 67\% to 86\% of instances and within the top five for 93\% to
+nearly 100\%. For the challenge's first required output, the affected
+module, the problem is close to solved at $K = 5$ on these four projects.
+
+\subsection{RQ2: What memory contributes}
+\label{sec:results:rq2}
+
+The memory signal's contribution depends on the stratum. On easy
+instances, where the report already names a gold file, trace mentions and
+content retrieval suffice and memory adds little. The decisive case is
+the hard stratum: the 2{,}318 evaluation instances whose reports name no
+gold file, where grep returns nothing useful by definition.
+
+Three results describe memory's value there. First, standalone: on
+MariaDB's hard instances, memory alone (Acc@5 $0.442$) beats every other
+standalone signal including content retrieval ($0.406$). A project's
+resolved history can be a better guide to unnamed faulty files than the
+content of the files themselves. Second, in unweighted fusion, adding
+memory lifts hard-stratum Acc@5 by $+0.209$ on MariaDB, $+0.165$ on
+MongoDB, and $+0.153$ on Qt, all significant; on Kafka the direction is
+the same ($+0.081$) but the test misses significance ($q = 0.068$,
+$n = 124$, the smallest hard population). Third, in the fully tuned
+conditioned system, memory's increment is significant on three of four
+projects overall (MariaDB $+0.016$, MongoDB $+0.008$, Qt $+0.084$), and
+on Qt it is the entire margin over the strongest baseline: conditioning
+without memory only matches content retrieval there ($0.456$), while
+adding memory reaches $0.541$. Qt is the project whose reports carry the
+least usable text (68\% hard, 24\% with any stack trace), and it is where
+memory matters most.
+
+\subsection{RQ3: When memory matters}
+\label{sec:results:rq3}
+
+The pattern across projects and strata supports one working rule: memory
+earns its place where textual evidence is weakest. Projects with few
+traces and many hard instances (Qt, MongoDB) gain significantly from
+memory even after conditioning; the project with the most trace-rich
+reports (Kafka, 28\% hard) gains the least. Within projects, the gains
+concentrate on the hard stratum. Two further observations support the
+same rule. The strict firewall blocks 67\% to 71\% of candidate memory
+votes as resolved after the query's creation, and the gains above are
+what survives that cut. And in three of four projects, memory's
+standalone accuracy is at its minimum in the earliest quarter of the
+evaluation period, when the project's admissible history is smallest. We
+do not claim a general scaling law; these are consistent observations on
+four projects.
+
+\subsection{Honest negatives}
+\label{sec:results:negatives}
+
+Two results go against us, and we report them. First, on Kafka's hard
+stratum, \sys{} is significantly below standalone content retrieval
+($-0.065$ $[-0.113, -0.024]$): fusion still pays a price for mixing in
+signals that are weak on that stratum, and on the other three projects
+the same comparison is a statistical tie rather than a win. Localizing
+files that no text names remains the open part of this problem. Second,
+on Qt's easy instances the conditioned system without memory collapses to
+content-retrieval level ($0.654$ Acc@5 versus $0.904$ for unweighted
+fusion); Qt's development split holds few mention-regime instances, so
+its tuned weights are noisy. The full system recovers ($0.913$) because
+memory compensates, but small development splits make per-regime tuning
+fragile, which practitioners adopting this design should know.
