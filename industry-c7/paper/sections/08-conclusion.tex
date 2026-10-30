@@ -1,8 +1,28 @@
 \section{Conclusion}
 \label{sec:conclusion}
 
-% OUTLINE: restate the one idea (resolved history is a localization
-% signal), the benchmark as a community artifact, the density finding as
-% the deployment-relevant takeaway (the method improves as the tracker
-% accumulates history), and the open headroom (fusion on hard; raw
-% bundles; explanation generation).
+This paper answered the challenge with one idea and the evidence to judge
+it. The idea is that a project's resolved history is a localization
+signal: past incidents whose reports resemble a new one vote for the
+files their fixes touched, behind a firewall that admits only what an
+engineer could have searched at report time. To measure it, we mined the
+first public benchmark that pairs issue reports, logs, code snapshots,
+and ground-truth faulty files: \nInstances{} real incidents from four
+organizations, stratified by whether the report names any faulty file.
+
+On this benchmark, fusing incident memory with log-to-code retrieval
+beats the strongest baseline on all four projects on the challenge's
+metrics, places a correct module in the top five for at least 92\% of
+instances, and delivers its largest gains exactly where the challenge
+locates the core difficulty: reports that never name the faulty file. We
+reported with equal prominence what does not work yet. On one project,
+fusion still trails a single signal on that hardest stratum, and
+per-regime tuning is fragile when development data is scarce.
+
+For practice, the result reads simply. A team that keeps an issue tracker
+and links fixes to issues already owns the data this method needs. The
+pipeline runs on a CPU in under a second per issue, needs no training,
+and every ranked file comes with citations an engineer can check: the
+mentions that matched, and the past incidents whose fixes pointed there.
+The benchmark, the pipeline, and a script that traces every reported
+number to its result file are released with this paper.
