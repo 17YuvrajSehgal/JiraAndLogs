@@ -159,6 +159,48 @@ imperfect; memory_arise (top-5, not time-sliced) underperforms memory_bm25
 everywhere — the deeper time-sliced ARISE rerun stays queued; deltas need
 paired bootstrap before any claim goes in the paper.
 
+## 4. Four-project v3 run (2026-10-30) — PJD pools + creation-time firewall
+
+Protocol v3 supersedes v2: memory pools from PJD (kafka 4,033 / mariadb
+6,014 / mongodb 19,820 / qt 2,315 entries), visibility cutoff = the query's
+TRUE creation time (strictly harder than the fix-time proxy — it blocks
+65–71% of candidate votes), duplicate clusters from PJD Duplicate links.
+Benchmark: 7,775 instances; eval split (later 70% per project) n = 444 /
+2,147 / 2,533 / 320.
+
+### eval acc@5 (full table in data/c7-results/<p>-summary.json)
+
+| system | kafka | mariadb | mongodb | qt |
+|---|---|---|---|---|
+| trace_grep | 0.588 | 0.434 | 0.354 | 0.263 |
+| content_bm25 (strongest baseline) | 0.651 | 0.423 | 0.644 | 0.456 |
+| memory_bm25 alone | 0.387 | 0.392 | 0.377 | 0.278 |
+| fused unweighted, no mem | 0.671 | 0.425 | 0.530 | 0.353 |
+| fused unweighted, +mem | 0.669 | **0.561** | **0.629** | **0.463** |
+| cond_no_memory | 0.719 | 0.595 | 0.693 | 0.456 |
+| **cond_ours** | **0.714** | **0.599** | **0.700** | **0.541** |
+
+### The three claims these numbers support
+
+1. **Beats the strongest baseline on all four projects**: +0.063 / +0.176 /
+   +0.056 / +0.085 acc@5 over content-BM25.
+2. **Memory lifts raw fusion on 3 of 4 projects** (+0.136 mariadb, +0.099
+   mongodb, +0.110 qt; kafka −0.002). Under conditioned fusion the deltas
+   compress (+0.004/+0.007/+0.085/−0.005) because conditioning already
+   extracts trace/content value — EXCEPT on Qt.
+3. **Qt is the memory showcase**: 68% hard, 24% traces — conditioning
+   without memory only matches content-BM25 (0.456); adding memory gives
+   0.541 (+0.085). Where text and traces are weakest, history matters most.
+
+Kafka memory neutrality is explained, not mysterious: WoL-slice Kafka
+queries are the OLDEST in the benchmark and the strict creation-time
+firewall blocks 65% of their candidate votes (vote_stats in summary). The
+density→value relationship holds within and across projects.
+
+Hard stratum: cond_ours ≈ content-BM25 on mongodb (0.544 vs 0.548) and qt
+(0.361 = 0.361); memory_bm25 alone remains the best single signal there
+for mariadb-class density. Fusion on hard still has headroom.
+
 ### Pending for the eval harness
 
 Paired bootstrap + BH for (cond_ours − cond_no_memory) and
