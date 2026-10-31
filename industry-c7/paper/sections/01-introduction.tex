@@ -52,7 +52,7 @@ fix commit modified, and the snapshot is the parent of that commit. The
 benchmark is stratified by exactly the difficulty the challenge names:
 whether the report names any faulty file.
 
-This paper makes four contributions.
+This paper makes five contributions.
 \begin{itemize}
 \item \textbf{A benchmark} of \nInstances{} issue--log--code--fix
   instances across four organizations, with a per-filter datasheet and a
@@ -61,14 +61,19 @@ This paper makes four contributions.
 \item \textbf{A localizer} that fuses log-to-code retrieval with
   incident memory under a strict temporal firewall
   (\cref{sec:approach}). It beats the strongest baseline on all four
-  projects (Acc@5 $+0.057$ to $+0.187$, significant in all eight tests),
-  and ranks a correct module first for 67\% to 86\% of instances, well
-  above random and defect-frequency baselines (\cref{sec:results}).
+  projects, including classic IRBL methods re-implemented under the same
+  firewall (Acc@5 $+0.057$ to $+0.142$, all significant), and ranks a
+  correct module first for 67\% to 86\% of instances, well above random
+  and defect-frequency baselines (\cref{sec:results}).
 \item \textbf{Evidence about when memory matters}: on reports that name
   no faulty file, where grep-style methods score zero, memory lifts
   fusion by up to $+0.209$ Acc@5, and on one project memory alone beats
   content retrieval outright. The gains concentrate exactly where textual
   evidence is weakest (\cref{sec:results:rq2,sec:results:rq3}).
+\item \textbf{A leakage measurement}: the classic similar-report signal
+  (SimiScore), evaluated without report-time admissibility, overstates
+  Acc@5 by 9\% to 43\% relative, and the dominant leak is reports
+  resolved after the query was created (\cref{sec:results:leakage}).
 \item \textbf{Honest negatives}: the strata where fusion still loses to
   a single signal, and a tuning fragility that practitioners adopting
   regime-conditioned fusion should know about

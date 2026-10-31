@@ -111,7 +111,17 @@ def main() -> int:
     check("S5 2,318 hard eval instances", n_hard == 2318, str(n_hard))
 
     # ---- Sec. 1/5 RQ1 deltas, CIs, significance -------------------------------
-    rq1 = {"kafka": (+0.086, +0.055, +0.118), "mariadb": (+0.187, +0.160, +0.215),
+    # Per-project strongest baseline: S3 on kafka/mongodb/qt, BRTracer on mariadb.
+    stats_irbl = json.loads((RES / "stats-irbl.json").read_text(encoding="utf-8"))
+
+    def istat(project, comparison, metric, population):
+        for t in stats_irbl["tests"]:
+            if (t["project"], t["comparison"], t["metric"],
+                    t["population"]) == (project, comparison, metric, population):
+                return t
+        raise KeyError((project, comparison, metric, population))
+
+    rq1 = {"kafka": (+0.086, +0.055, +0.118),
            "mongodb": (+0.057, +0.046, +0.067), "qt": (+0.084, +0.053, +0.119)}
     for p, (d, lo, hi) in rq1.items():
         t = stat(p, "ours_vs_strongest", "acc@5", "overall")
@@ -121,9 +131,26 @@ def main() -> int:
               f"got {t['delta']:+.3f} [{t['ci_low']:+.3f},{t['ci_high']:+.3f}]")
         tm = stat(p, "ours_vs_strongest", "mrr", "overall")
         check(f"RQ1 {p} mrr SIG", tm["significant"])
-    mrr_d = [stat(p, "ours_vs_strongest", "mrr", "overall")["delta"] for p in P]
-    check("RQ1 mrr +0.058..+0.148", r3(min(mrr_d)) == .058 and r3(max(mrr_d)) == .148,
+    tb = istat("mariadb", "ours_vs_brtracer", "acc@5", "overall")
+    check("RQ1 mariadb vs brtracer +0.142 [+0.119,+0.167] SIG",
+          r3(tb["delta"]) == .142 and r3(tb["ci_low"]) == .119
+          and r3(tb["ci_high"]) == .167 and tb["significant"],
+          f"got {tb['delta']:+.3f} [{tb['ci_low']:+.3f},{tb['ci_high']:+.3f}]")
+    tbm = istat("mariadb", "ours_vs_brtracer", "mrr", "overall")
+    check("RQ1 mariadb vs brtracer mrr SIG", tbm["significant"])
+    mrr_d = [stat(p, "ours_vs_strongest", "mrr", "overall")["delta"]
+             for p in ("kafka", "mongodb", "qt")] + [tbm["delta"]]
+    check("RQ1 mrr +0.058..+0.097 (vs per-project strongest)",
+          r3(min(mrr_d)) == .058 and r3(max(mrr_d)) == .097,
           f"{min(mrr_d):.3f}..{max(mrr_d):.3f}")
+    ts = stat("mariadb", "ours_vs_strongest", "acc@5", "overall")
+    check("RQ1 mariadb vs S3 alone +0.187", r3(ts["delta"]) == .187)
+    # abstract/intro range: per-project strongest acc@5 deltas
+    strongest_d = [stat(p, "ours_vs_strongest", "acc@5", "overall")["delta"]
+                   for p in ("kafka", "mongodb", "qt")] + [tb["delta"]]
+    check("ABS acc@5 +0.057..+0.142",
+          r3(min(strongest_d)) == .057 and r3(max(strongest_d)) == .142,
+          f"{min(strongest_d):.3f}..{max(strongest_d):.3f}")
     grep_d = [stat(p, "ours_vs_tracegrep", "acc@5", "overall")["delta"] for p in P]
     check("S5 grep margins +0.137..+0.347",
           r3(min(grep_d)) == .137 and r3(max(grep_d)) == .347)
@@ -204,6 +231,74 @@ def main() -> int:
           all(mods[p]["systems"]["cond_ours"]["acc@5"]
               > mb[p]["most_frequent"]["acc@5"] for p in P))
 
+    # ---- Sec. 4/5 IRBL baselines + firewall leakage ---------------------------
+    isumm = {p: json.loads((RES / f"{p}-irbl-summary.json").read_text(encoding="utf-8"))
+             for p in P}
+    t2b = {  # Table 2 baseline rows: system -> project -> (acc@5, mrr)
+        "rvsm":             {"kafka": (.214, .192), "mariadb": (.239, .188),
+                             "mongodb": (.127, .097), "qt": (.122, .101)},
+        "buglocator_fw_a3": {"kafka": (.267, .199), "mariadb": (.300, .250),
+                             "mongodb": (.245, .152), "qt": (.166, .131)},
+        "brtracer_fw":      {"kafka": (.599, .479), "mariadb": (.516, .382),
+                             "mongodb": (.456, .380), "qt": (.316, .284)},
+    }
+    for sysname, per in t2b.items():
+        for p, (a5, mrr) in per.items():
+            got = isumm[p]["eval"][sysname]
+            check(f"T2 {p} {sysname} {a5}/{mrr}",
+                  r3(got["acc@5"]) == a5 and r3(got["mrr"]) == mrr,
+                  f"got {r3(got['acc@5'])}/{r3(got['mrr'])}")
+    check("RQ1 mariadb brtracer .516 tops S3 .471; S3 strongest elsewhere",
+          isumm["mariadb"]["eval"]["brtracer_fw"]["acc@5"]
+          > summ["mariadb"]["eval"]["content_bm25"]["acc@5"]
+          and all(summ[p]["eval"]["content_bm25"]["acc@5"]
+                  > isumm[p]["eval"]["brtracer_fw"]["acc@5"]
+                  for p in ("kafka", "mongodb", "qt")))
+    brt_o = [istat(p, "ours_vs_brtracer", "acc@5", "overall") for p in P]
+    check("RQ1 vs brtracer +0.142..+0.245 all SIG",
+          r3(min(t["delta"] for t in brt_o)) == .142
+          and r3(max(t["delta"] for t in brt_o)) == .245
+          and all(t["significant"] for t in brt_o))
+    brt_h = [istat(p, "ours_vs_brtracer", "acc@5", "hard") for p in P]
+    check("RQ1 vs brtracer hard +0.133..+0.371 all SIG",
+          r3(min(t["delta"] for t in brt_h)) == .133
+          and r3(max(t["delta"] for t in brt_h)) == .371
+          and all(t["significant"] for t in brt_h))
+
+    leak = {"kafka": .044, "mariadb": .031, "mongodb": .058, "qt": .094}
+    rels = []
+    for p, d in leak.items():
+        t = istat(p, "leak_simiscore", "acc@5", "overall")
+        check(f"LEAK {p} simiscore +{d} SIG",
+              r3(t["delta"]) == d and t["significant"], f"got {t['delta']:+.3f}")
+        rels.append(t["delta"] / isumm[p]["eval"]["simiscore_fw"]["acc@5"])
+    check("LEAK relative 9%..43%",
+          round(100 * min(rels)) == 9 and round(100 * max(rels)) == 43,
+          f"{100 * min(rels):.1f}%..{100 * max(rels):.1f}%")
+    check("LEAK kafka noR4 0.368 = leaky 0.368",
+          r3(isumm["kafka"]["eval"]["simiscore_noR4"]["acc@5"]) == .368
+          and r3(isumm["kafka"]["eval"]["simiscore_leaky"]["acc@5"]) == .368)
+    near = sum(1 for p in P
+               if abs(isumm[p]["eval"]["simiscore_noR4"]["acc@5"]
+                      - isumm[p]["eval"]["simiscore_leaky"]["acc@5"]) < 0.002)
+    check("LEAK noR4 reproduces leaky on 3 projects", near == 3, str(near))
+    check("LEAK noR2/noR3 recover nothing",
+          all(abs(isumm[p]["eval"][c]["acc@5"]
+                  - isumm[p]["eval"]["simiscore_fw"]["acc@5"]) < 0.001
+              for p in P for c in ("simiscore_noR2", "simiscore_noR3")))
+    for p, d, sig in (("kafka", .019, True), ("mariadb", .014, True),
+                      ("mongodb", None, False), ("qt", None, False)):
+        t = istat(p, "leak_buglocator", "acc@5", "overall")
+        ok = t["significant"] == sig and (d is None or r3(t["delta"]) == d)
+        check(f"LEAK {p} buglocator "
+              f"{'+' + format(d, '.3f') + ' SIG' if sig else 'ns'}", ok,
+              f"got {t['delta']:+.3f} {'SIG' if t['significant'] else 'ns'}")
+    for p, d in (("kafka", .160), ("mariadb", .122),
+                 ("mongodb", .109), ("qt", .059)):
+        t = istat(p, "s4_vs_simiscore", "acc@5", "overall")
+        check(f"LEAK {p} S4 vs simiscore +{d} SIG",
+              r3(t["delta"]) == d and t["significant"], f"got {t['delta']:+.3f}")
+
     # ---- Sec. 5 honest negatives ---------------------------------------------
     tn = stat("kafka", "ours_vs_strongest", "acc@5", "hard")
     check("NEG kafka hard -0.065 [-0.113,-0.024] SIG",
@@ -219,7 +314,9 @@ def main() -> int:
 
     # ---- Sec. 4/6 protocol + misc --------------------------------------------
     check("S4 64-test BH family", stats["n_tests"] == 64)
-    check("S4 bootstrap 2,000 resamples", stats["n_bootstrap"] == 2000)
+    check("S4 96-test baseline/leakage BH family", stats_irbl["n_tests"] == 96)
+    check("S4 bootstrap 2,000 resamples", stats["n_bootstrap"] == 2000
+          and stats_irbl["n_bootstrap"] == 2000)
     check("S6 90% of MongoDB reports traceless",
           round(100 * (1 - ds["mongodb"]["strata"]["trace_present"]
                        / ds["mongodb"]["funnel"]["final_instances"])) == 90)

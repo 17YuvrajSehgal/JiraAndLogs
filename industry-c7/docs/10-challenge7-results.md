@@ -298,3 +298,38 @@ Paired bootstrap + BH for (cond_ours − cond_no_memory) and
 (cond_ours − content_bm25), overall and per stratum, once MariaDB lands.
 Module-level Acc@K (challenge output (i)) and the explanation stage
 (challenge output (iii), needs LLM) not yet implemented.
+
+## 9. IRBL baselines + firewall-leakage experiment (reviewer W1/W2) — in paper
+
+`baselines_irbl.py` → `{proj}-irbl-{instances,summary}.json(l)`;
+`stats_irbl.py` → `stats-irbl.json` (96-test BH family, 2,000 resamples).
+
+Firewalled baselines, acc@5/mrr (Table II band 2):
+
+| | kafka | mariadb | mongodb | qt |
+|---|---|---|---|---|
+| rVSM | .214/.192 | .239/.188 | .127/.097 | .122/.101 |
+| BugLocator (α=.3) | .267/.199 | .300/.250 | .245/.152 | .166/.131 |
+| BRTracer-style | .599/.479 | .516/.382 | .456/.380 | .316/.284 |
+
+Consequence: strongest baseline is now per-project — S3 on kafka/mongodb/qt,
+**BRTracer-style on mariadb** (.516 > S3 .471). RQ1 reframed; headline range
+is now Acc@5 +0.057..+0.142 (mariadb vs BRTracer +0.142 [+0.119,+0.167] SIG;
+vs S3 alone still +0.187). ours_vs_brtracer +0.142..+0.245 overall,
++0.133..+0.371 hard, all 8 SIG.
+
+Leakage (new §V-D "What the firewall is worth"): leaky−firewalled SimiScore
+acc@5 = +0.044/+0.031/+0.058/+0.094 (k/m/mo/qt), all BH-SIG; relative
+inflation 9%–43%. Decomposition: re-opening rule 4 alone (future reports)
+reproduces leaky on 3 projects (kafka 0.368=0.368 exactly); noR2/noR3 alone
+recover nothing (future duplicates double-blocked); Qt remainder is the
+R4×R2 interaction. BugLocator leak diluted by α-blend: SIG kafka/mariadb
+(+0.019/+0.014), ns mongodb/qt. Fair fight: S4 memory_bm25 beats classic
+SimiScore under identical firewall on all 4 overall (+0.160/+0.122/+0.109/
++0.059, all SIG); qt hard ns (+0.037).
+
+Paper updates: Table II +3 rows, §IV-C baseline defs (+wong2014brtracer ref),
+§IV-D two BH families (64+96), §V-A rewritten for per-project strongest,
+§V-D new subsection, abstract + intro (now 5 contributions) + conclusion
+carry the leakage finding. 0.1425 renders as +0.142 (banker's rounding).
+Compiled 8pp, 0 overfull. verify_claims: 146/146.

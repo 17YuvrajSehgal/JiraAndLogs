@@ -43,13 +43,27 @@ Acc@K and MRR for the module ranking defined in
 Each signal from \cref{sec:approach} runs standalone as a baseline:
 trace mentions (S1), path retrieval (S2), content retrieval (S3), and
 memory alone (S4). S1 represents what an engineer gets by grepping the
-report. S3 is the strongest standalone baseline in practice and is the
-one to beat. On top of these we evaluate the fused system in two forms,
+report. On top of these we evaluate the fused system in two forms,
 unweighted fusion and regime-conditioned weighted fusion, and each form
 both with and without the memory signal. The without-memory variants are
 tuned with the same grid and the same development split as the full
 system, so the memory ablation compares two equally tuned systems rather
 than a tuned system against a crippled one.
+
+We additionally re-implement the classic IRBL baselines, since the
+original tools are Java-only. \textbf{rVSM} scores every file of the full
+snapshot with a length-favoring tf--idf cosine. \textbf{BugLocator}
+combines rVSM with SimiScore, the 2012 similar-report
+signal~\cite{zhou2012buglocator}: every past fixed report votes for its
+fix's files with weight $\mathrm{sim}(q,b)/n_b$; the blend weight uses
+the replication-standard $\alpha = 0.3$, with
+$\alpha \in \{0.2, 0.3, 0.5\}$ tuned on the development split as a
+variant. \textbf{BRTracer-style} adds the stack-trace boost of
+BRTracer~\cite{wong2014brtracer} ($+1/r$ for the file at trace rank
+$r \le 10$); we omit the original's file segmentation and state so. Unless noted otherwise, their SimiScore runs
+under the SAME firewall as our memory signal, so the comparison is honest
+on both sides; \cref{sec:results:leakage} measures what happens without
+it.
 
 \subsection{Statistical treatment}
 \label{sec:setup:stats}
@@ -57,10 +71,12 @@ than a tuned system against a crippled one.
 Every comparison in \cref{sec:results} is tested with a paired bootstrap
 over instances: 2{,}000 resamples, identical resample indices for all
 comparisons within a population, two-sided $p$-values from the bootstrap
-distribution, and 95\% confidence intervals. Because the paper reports a
-family of 64 tests (four comparisons, two metrics, two populations, four
-projects), all $p$-values are corrected with the Benjamini--Hochberg
-procedure, and we call a result significant only when the corrected
+distribution, and 95\% confidence intervals. The paper reports two test
+families, each corrected with the Benjamini--Hochberg procedure over the
+whole family: 64 tests for the main comparisons (four comparisons, two
+metrics, two populations, four projects) and 96 tests for the baseline
+and leakage experiment of \cref{sec:results:leakage} (six comparisons,
+same grid). We call a result significant only when the corrected
 $q < 0.05$. The pipeline itself is deterministic from end to end: fixed
 seeds, greedy decisions, and no GPU training. Re-running every experiment
 reproduces every table in this paper bit for bit, and the released

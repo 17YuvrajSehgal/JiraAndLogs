@@ -6,14 +6,16 @@ on the challenge's metrics? RQ2: what does the memory signal contribute,
 and where? RQ3: under what conditions does memory matter? All numbers
 come from the evaluation split (476, 1{,}179, 2{,}533, and 320 instances
 for Kafka, MariaDB, MongoDB, and Qt). Significance always means
-$q < 0.05$ after Benjamini--Hochberg over all 64 tests
+$q < 0.05$ after Benjamini--Hochberg correction within the test family
 (\cref{sec:setup:stats}).
 
 \begin{table}[t]
 \caption{File-level results on the evaluation split: Acc@5\,/\,MRR.
-S1--S4 are the standalone signals of \cref{sec:approach}; ``fused'' is
-unweighted fusion; ``cond.'' is regime-conditioned weighted fusion. Bold
-marks the best system per project.}
+S1--S4 are the standalone signals of \cref{sec:approach}; rVSM,
+BugLocator, and BRTracer-style are the classic IRBL baselines of
+\cref{sec:setup:systems} (firewalled SimiScore); ``fused'' is unweighted
+fusion; ``cond.'' is regime-conditioned weighted fusion. Bold marks the
+best system per project.}
 \label{tab:files}
 \centering
 \footnotesize
@@ -27,6 +29,10 @@ S2 path           & .481\,/\,.379 & .259\,/\,.198 & .370\,/\,.268 & .266\,/\,.19
 S3 content        & .708\,/\,.545 & .471\,/\,.330 & .644\,/\,.473 & .456\,/\,.350 \\
 S4 memory         & .483\,/\,.361 & .461\,/\,.342 & .377\,/\,.296 & .278\,/\,.211 \\
 \midrule
+rVSM              & .214\,/\,.192 & .239\,/\,.188 & .127\,/\,.097 & .122\,/\,.101 \\
+BugLocator        & .267\,/\,.199 & .300\,/\,.250 & .245\,/\,.152 & .166\,/\,.131 \\
+BRTracer-style    & .599\,/\,.479 & .516\,/\,.382 & .456\,/\,.380 & .316\,/\,.284 \\
+\midrule
 fused, no memory  & .767\,/\,.611 & .443\,/\,.342 & .530\,/\,.420 & .353\,/\,.292 \\
 fused, +memory    & .790\,/\,.600 & .562\,/\,.408 & .629\,/\,.499 & .463\,/\,.351 \\
 cond., no memory  & .792\,/\,.625 & .642\,/\,.479 & .693\,/\,.566 & .456\,/\,.350 \\
@@ -38,15 +44,23 @@ cond., no memory  & .792\,/\,.625 & .642\,/\,.479 & .693\,/\,.566 & .456\,/\,.35
 \subsection{RQ1: Against the strongest baseline}
 \label{sec:results:rq1}
 
-\Cref{tab:files} gives the file-level results. The strongest standalone
-baseline on every project is content retrieval (S3). \sys{} beats it on
-all four projects: Acc@5 improves by $+0.086$ $[+0.055, +0.118]$ on
-Kafka, $+0.187$ $[+0.160, +0.215]$ on MariaDB, $+0.057$
-$[+0.046, +0.067]$ on MongoDB, and $+0.084$ $[+0.053, +0.119]$ on Qt.
-MRR improves by $+0.058$ to $+0.148$. All eight tests are significant.
-Against the grep-style baseline S1, the margins are larger still, from
+\Cref{tab:files} gives the file-level results. The strongest baseline
+differs by project: content retrieval (S3) on Kafka, MongoDB, and Qt,
+and BRTracer-style on MariaDB, where the trace boost tops S3. \sys{}
+beats the per-project strongest baseline on all four: Acc@5 improves by
+$+0.086$ $[+0.055, +0.118]$ on Kafka, $+0.142$ $[+0.119, +0.167]$ on
+MariaDB, $+0.057$ $[+0.046, +0.067]$ on MongoDB, and $+0.084$
+$[+0.053, +0.119]$ on Qt, with MRR gains of $+0.058$ to $+0.097$, every
+test significant. Against S3 alone the MariaDB margin is larger still
+($+0.187$ Acc@5).
+Against the grep-style baseline S1, the margins grow further, from
 $+0.137$ to $+0.347$ Acc@5 overall, and on hard instances S1 scores zero
-by construction while \sys{} reaches $0.361$ to $0.544$.
+by construction while \sys{} reaches $0.361$ to $0.544$. The classic
+IRBL baselines sit lower on every project. The strongest of them,
+BRTracer-style, trails \sys{} by $+0.142$ to $+0.245$ Acc@5, all four
+significant. Its entire margin over BugLocator comes from the stack-trace
+boost, which is the same evidence as our S1, so on hard instances the gap
+to \sys{} widens further ($+0.133$ to $+0.371$, all significant).
 
 \begin{table}[t]
 \caption{Module-level results on the evaluation split (challenge output
@@ -128,6 +142,41 @@ standalone accuracy is at its minimum in the earliest quarter of the
 evaluation period, when the project's admissible history is smallest. We
 do not claim a general scaling law; these are consistent observations on
 four projects.
+
+\subsection{What the firewall is worth}
+\label{sec:results:leakage}
+
+The firewall is the design decision this paper leans on most, so we
+measure what happens without it. The vehicle is classic SimiScore, which
+we run in two ways on identical instances. The firewalled run admits only
+reports an engineer could have found at query time, under the same four
+rules as our memory signal. The leaky run admits every fixed report in
+the corpus, which is what an evaluation gets when it mines history
+without checking resolution dates against the query.
+
+Leakage inflates SimiScore on every project. Leaky minus firewalled
+Acc@5 is $+0.044$ on Kafka, $+0.031$ on MariaDB, $+0.058$ on MongoDB,
+and $+0.094$ on Qt, all significant. Relative to the firewalled score,
+that is an overstatement of 9\% to 43\%, largest on Qt, the project
+where similar-report evidence matters most. A per-rule decomposition
+shows where the leak lives: re-opening only the future-reports rule
+reproduces the leaky score almost exactly on three projects (Kafka
+$0.368$ versus $0.368$), while re-opening only the duplicate rule or the
+shared-fix-commit rule recovers nothing, because a future duplicate
+stays blocked by the future-reports rule. The dominant leak is reports
+that were resolved after the query was created. Inside full BugLocator
+the leak survives but diluted by the $\alpha$ blend: significant on
+Kafka and MariaDB ($+0.019$, $+0.014$), not on MongoDB and Qt.
+
+The firewall also does not explain our margin. Under the identical
+firewall, on the same admissible history, our memory signal S4 beats
+classic SimiScore on all four projects ($+0.160$, $+0.122$, $+0.109$,
+and $+0.059$ Acc@5, all significant). The two signals share the idea of
+past fixes voting for files; they differ in the similarity function and
+the vote weighting. The practical reading is simple: a deployed system
+only ever sees the firewalled number, so evaluations of similar-report
+signals that skip report-time admissibility overstate what a team will
+get.
 
 \subsection{Honest negatives}
 \label{sec:results:negatives}
