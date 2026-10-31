@@ -295,6 +295,55 @@ and generic-noise filtering are not the hard part of preprocessing;
 separating interleaved incidents is, and a system that feeds our
 pipeline should segment logs by incident before matching.
 
+\subsection{Dense retrieval in the same slots}
+\label{sec:results:dense}
+
+The challenge asks for joint log and code semantics, so we measure what
+a dense retriever buys inside our architecture. On the same 200-instance
+samples, a small general-purpose embedding model (bge-small-en-v1.5,
+33M parameters, CPU) replaces BM25 in one slot at a time: the content
+slot (S3), a file represented by up to four 350-word chunks with
+max-pooled cosine, and the memory slot (S4), incidents retrieved by
+embedding cosine under the identical firewall. Swapped variants reuse
+the clean-tuned weights, which slightly favors the lexical incumbents.
+
+\begin{table}[t]
+\caption{Dense versus lexical in each slot: Acc@5 on the 200-instance
+samples. ``cond.+dense S4'' swaps dense incident retrieval into the full
+conditioned system with frozen weights.}
+\label{tab:dense}
+\centering
+\footnotesize
+\setlength{\tabcolsep}{3pt}
+\begin{tabular}{@{}lcccc@{}}
+\toprule
+ & Kafka & MariaDB & MongoDB & Qt \\
+\midrule
+S3 content, BM25   & .690 & .425 & .665 & .460 \\
+S3 content, dense  & .485 & .350 & .460 & .425 \\
+\midrule
+S4 memory, BM25    & .460 & .455 & .410 & .305 \\
+S4 memory, dense   & .530 & .515 & .425 & .290 \\
+\midrule
+\sys{} (sample)    & .790 & .630 & .715 & .555 \\
+cond.\,+\,dense S4 & .795 & .675 & .720 & .555 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\Cref{tab:dense} shows that semantics pays off in one slot and not the
+other. In the code slot, dense retrieval loses to full-text BM25 on
+every project, by up to $0.205$ Acc@5: the embedder reads at most 1,400
+words of a file while BM25 sees all of it, and matching a log line to
+code is largely identifier matching, which is lexical's strength. In
+the memory slot, where the task is report-to-report similarity, dense
+retrieval wins on three of four projects ($+0.070$ Kafka, $+0.060$
+MariaDB, $+0.015$ MongoDB, $-0.015$ Qt), and swapping it into the full
+system lifts MariaDB by $+0.045$ Acc@5 even with weights tuned for the
+lexical signal. The practical reading: a mature embedding stack upgrades
+the incident-memory side first; the code side needs code-trained models
+with full-file coverage before it beats a well-fed BM25.
+
 \subsection{Honest negatives}
 \label{sec:results:negatives}
 

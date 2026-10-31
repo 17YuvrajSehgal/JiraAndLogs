@@ -41,10 +41,13 @@ is deliberately simple: BM25 over paths, over file contents within a
 per-instance pool, and over past incident reports. It is cheap,
 deterministic, and leak-free, and it was enough to beat the strongest
 baseline everywhere. Nothing in the fusion design depends on the signals
-being lexical. A dense retriever trained for log-to-code matching, or an
-LLM reranker over the fused top candidates, drops into the same slot and
-inherits the same firewall; we consider this the most promising upgrade
-path.
+being lexical, and \cref{sec:results:dense} measures the swap with a
+small embedder: dense retrieval already upgrades the incident-memory
+slot, while in the code slot full-text BM25 remains ahead. A code-trained
+dense retriever with full-file coverage, or an LLM reranker over the
+fused top candidates, drops into the same slot and inherits the same
+firewall; the memory-side result suggests the semantics are there to be
+captured.
 
 \subsection{What the explanation output is}
 \label{sec:discussion:explanation}

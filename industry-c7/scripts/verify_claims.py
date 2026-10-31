@@ -425,6 +425,35 @@ def main() -> int:
           f"mention {min(m_pct):.3f}..{max(m_pct):.3f} "
           f"voters {min(v_pct):.3f}..{max(v_pct):.3f}")
 
+    # ---- Sec. 5 dense-vs-lexical slots ----------------------------------------
+    dsum = {p: json.loads((RES / f"{p}-dense-summary.json")
+                          .read_text(encoding="utf-8"))["systems"] for p in P}
+    t6 = {  # (s3_bm25, s3_dense, s4_bm25, s4_dense, cond, cond_dense_s4)
+        "kafka":   (.690, .485, .460, .530, .790, .795),
+        "mariadb": (.425, .350, .455, .515, .630, .675),
+        "mongodb": (.665, .460, .410, .425, .715, .720),
+        "qt":      (.460, .425, .305, .290, .555, .555)}
+    for p, (c_b, c_d, m_b, m_d, co, cd4) in t6.items():
+        d = dsum[p]
+        check(f"T6 {p} dense row",
+              r3(d["content_bm25"]["acc@5"]) == c_b
+              and r3(d["content_dense"]["acc@5"]) == c_d
+              and r3(d["memory_bm25"]["acc@5"]) == m_b
+              and r3(d["memory_dense"]["acc@5"]) == m_d
+              and r3(d["cond_ours"]["acc@5"]) == co
+              and r3(d["cond_dense_s4"]["acc@5"]) == cd4,
+              f"got {[d[s]['acc@5'] for s in ('content_bm25','content_dense','memory_bm25','memory_dense','cond_ours','cond_dense_s4')]}")
+    check("DENSE S3 loses by up to 0.205; S4 wins 3 of 4; mariadb fused +0.045",
+          r3(max(dsum[p]["content_bm25"]["acc@5"]
+                 - dsum[p]["content_dense"]["acc@5"] for p in P)) == .205
+          and sum(dsum[p]["memory_dense"]["acc@5"]
+                  > dsum[p]["memory_bm25"]["acc@5"] for p in P) == 3
+          and r3(dsum["mariadb"]["cond_dense_s4"]["acc@5"]
+                 - dsum["mariadb"]["cond_ours"]["acc@5"]) == .045)
+    check("DENSE sample cond_ours anchors within 0.03 of main runs",
+          all(abs(dsum[p]["cond_ours"]["acc@5"]
+                  - summ[p]["eval"]["cond_ours"]["acc@5"]) <= 0.03 for p in P))
+
     # ---- Sec. 4/6 protocol + misc --------------------------------------------
     check("S4 64-test BH family", stats["n_tests"] == 64)
     check("S4 96-test baseline/leakage BH family", stats_irbl["n_tests"] == 96)

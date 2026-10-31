@@ -358,3 +358,23 @@ Table V + §V-F.
 
 Paper now 9 pp, 0 overfull; abstract/intro carry both experiments;
 verify_claims 168/168.
+
+## 11. Dense-retrieval baselines (reviewer W1/W4 + fix #4)
+
+`dense_baselines.py` (bge-small-en-v1.5, CPU, 200-sample/project, frozen
+clean-tuned weights, seed 42). Two swaps, acc@5:
+
+- **code slot (S3)**: dense LOSES everywhere — content_dense
+  .485/.350/.460/.425 vs BM25 .690/.425/.665/.460 (max −.205; 4×350-word
+  chunk truncation vs full-text BM25; identifier matching is lexical's
+  game). cond_dense_s3 hurts on all 4.
+- **memory slot (S4)**: dense WINS 3/4 — memory_dense .530/.515/.425/.290
+  vs BM25 .460/.455/.410/.305 (+.070/+.060/+.015/−.015);
+  cond_dense_s4 lifts mariadb +.045 even with frozen weights.
+
+Paper: new §V-G + Table VI; §VI semantic-retrieval paragraph updated to
+the measured answer. verify_claims 182/182; 10pp 0 overfull.
+
+Remaining review items needing the user: LLM localizer (API key; ~<$10
+on GPT-6 Luna for 800 instances), gold validation (validation/ sheets,
+2 raters), §7 related work (user-deferred).
