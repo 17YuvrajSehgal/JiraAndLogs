@@ -111,6 +111,19 @@ Every result in this paper is reported on both strata. We also record
 whether each instance contains a stack trace at all, which supports the
 same analysis from the input side.
 
+The definition is file-based, and that choice is not language-neutral:
+a Java frame names the file (class and file coincide), while a C++
+frame names a function. To bound this artifact we computed a second
+definition that also counts a mention of a gold file's basename stem or
+of any function defined in a gold file. The hard fraction then falls to
+14\% (Kafka), 33\% (MariaDB), 38\% (MongoDB), and 38\% (Qt): part of
+the Java-to-C++ gap is indeed the naming convention, and the three C++
+projects converge to a band of 33\% to 38\% while Kafka stays well
+below it. We
+keep the file-based definition for stratification because a file name
+is what grep turns into a candidate file directly, but both labels ship
+with the benchmark.
+
 \subsection{The incident memory pool}
 \label{sec:benchmark:memory}
 

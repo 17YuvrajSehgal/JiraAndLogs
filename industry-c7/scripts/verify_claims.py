@@ -371,6 +371,60 @@ def main() -> int:
           and r3(summ["qt"]["eval_easy"]["fused_no_memory"]["acc@5"]) == .904
           and r3(summ["qt"]["eval_easy"]["cond_ours"]["acc@5"]) == .913)
 
+    # ---- Sec. 2/5/6 review-response analyses ----------------------------------
+    roll = json.loads((RES / "rolling-origin.json").read_text(encoding="utf-8"))
+    deltas = [roll[p]["delta"] for p in P]
+    check("S6 rolling-origin delta -0.007..+0.021",
+          r3(min(deltas)) == -.007 and r3(max(deltas)) == .021,
+          f"{min(deltas)}..{max(deltas)}")
+    sv2 = json.loads((RES / "stratum-v2.json").read_text(encoding="utf-8"))
+    check("S2 stratum def2 hard 14/33/38/38",
+          tuple(sv2[p]["hard2_pct"] for p in P) == (14, 33, 38, 38),
+          str({p: sv2[p]["hard2_pct"] for p in P}))
+
+    # kafka-hard fusion-loss anatomy (honest negatives)
+    krows = [json.loads(l) for l in
+             (RES / "kafka-instances.jsonl").open(encoding="utf-8")]
+    krows.sort(key=lambda r: r["fix_time"])
+    khard = [r for r in krows[summ["kafka"]["n_dev"]:] if not r["strata"]["easy"]]
+    lost = [r for r in khard if r["metrics"]["content_bm25"]["acc@5"] == 1
+            and r["metrics"]["cond_ours"]["acc@5"] == 0]
+    won = [r for r in khard if r["metrics"]["content_bm25"]["acc@5"] == 0
+           and r["metrics"]["cond_ours"]["acc@5"] == 1]
+    check("NEG kafka-hard anatomy: 8 lost, 0 won, 8/8 trace file in top5",
+          len(lost) == 8 and len(won) == 0
+          and all(any(f in r["rankings"]["trace_grep"][:5]
+                      for f in r["rankings"]["cond_ours"][:5]) for r in lost),
+          f"lost={len(lost)} won={len(won)}")
+
+    # provenance citation coverage (Sec. 6 explanation)
+    m_pct, v_pct = [], []
+    for p in P:
+        rows_p = [json.loads(l) for l in
+                  (RES / f"{p}-instances.jsonl").open(encoding="utf-8")]
+        rows_p.sort(key=lambda r: r["fix_time"])
+        hits = cites = men = vot = 0
+        for r in rows_p[summ[p]["n_dev"]:]:
+            gset = set(r["gold_files"])
+            g = next((f for f in r["rankings"]["cond_ours"][:5] if f in gset), None)
+            if g is None:
+                continue
+            hits += 1
+            e = r["provenance"].get(g, {})
+            cites += any(k in e for k in ("mention", "content_terms",
+                                          "path_terms", "voted_by"))
+            men += "mention" in e
+            vot += "voted_by" in e
+        check(f"S6 {p} provenance citation on 100% of top-5 gold hits",
+              cites == hits, f"{cites}/{hits}")
+        m_pct.append(men / hits)
+        v_pct.append(vot / hits)
+    check("S6 mention 52-86%, voters 63-80%",
+          .515 <= min(m_pct) and max(m_pct) <= .86
+          and .625 <= min(v_pct) and max(v_pct) <= .80,
+          f"mention {min(m_pct):.3f}..{max(m_pct):.3f} "
+          f"voters {min(v_pct):.3f}..{max(v_pct):.3f}")
+
     # ---- Sec. 4/6 protocol + misc --------------------------------------------
     check("S4 64-test BH family", stats["n_tests"] == 64)
     check("S4 96-test baseline/leakage BH family", stats_irbl["n_tests"] == 96)

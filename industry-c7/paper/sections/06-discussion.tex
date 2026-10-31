@@ -16,7 +16,10 @@ is currently the only signal in our system that routinely recovers such
 files, because a past fix can point at code that no present log line
 mentions. The honest counterpart from \cref{sec:results:negatives} also
 stands: on one of four projects, fusing signals still performs worse on
-this stratum than content retrieval alone. The hard stratum is where
+this stratum than content retrieval alone. We also do not attempt
+reasoning over control flow, data flow, or dependency structure; memory
+is a statistical stand-in for that reasoning, and the challenge's full
+causal-analysis ask remains open. The hard stratum is where
 future work on this challenge should be judged.
 
 \textbf{Noisy and incomplete log evidence.} Here our benchmark is kinder
@@ -26,7 +29,10 @@ the noise once. A production log bundle with retries, background
 activity, and downstream errors is a harder input. The benchmark does
 capture the incompleteness side: in many instances the pasted evidence is
 a single generic error line, and 90\% of MongoDB reports contain no stack
-trace at all. Evaluating the same pipeline on raw, unfiltered runtime
+trace at all. The noise experiment of \cref{sec:results:noise} simulates
+the bundle side and bounds it: volume noise is nearly free, and the real
+requirement a raw bundle adds is separating interleaved incidents before
+matching. Evaluating on true unfiltered runtime
 bundles is the clearest next step, and our architecture makes no
 assumption that prevents it: every signal consumes plain text.
 
@@ -51,7 +57,13 @@ memory signal the keys of the past incidents that voted for it. An
 engineer can open the cited prior issues and their fix commits directly.
 We prefer this form because every element of it is checkable; a fluent
 narrative written by a language model can be added on top, but the
-citations are the part an on-call engineer can trust at 3 a.m.
+citations are the part an on-call engineer can trust at 3 a.m. Coverage
+is complete on the evaluation split: every gold file ranked in the top
+five carries at least one checkable element, always including the
+matched terms, with an explicit mention for 52\% to 86\% of hits and
+past-incident voter keys for 63\% to 80\%. Whether these citations
+actually speed engineers up is a user-study question this paper does not
+answer.
 
 \subsection{Deployment notes}
 \label{sec:discussion:deployment}
@@ -85,7 +97,13 @@ artifact.
 \textbf{Internal.} The development split precedes the evaluation split in
 time, which protects against tuning on the future but, as
 \cref{sec:setup:protocol} records, biases tuned weights against memory.
-Our memory results are therefore conservative. The regime-conditioned
+We tested how much this one-shot tuning costs with a rolling-origin
+variant that retunes the conditioned weights at every quarter of the
+evaluation period on all history available at that point: overall Acc@5
+moves by $-0.007$ to $+0.021$ across the four projects. Tuning once on
+the earliest 30\% is therefore stable rather than strongly conservative,
+and a maintained deployment that retunes quarterly should expect
+essentially the reported numbers. The regime-conditioned
 tuning is fragile when a regime has few development instances, as Qt
 shows.
 

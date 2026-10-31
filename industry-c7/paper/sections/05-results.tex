@@ -55,7 +55,12 @@ test significant. Against S3 alone the MariaDB margin is larger still
 ($+0.187$ Acc@5). Recall@5 follows the same ordering: \sys{} retrieves
 45\% to 61\% of each instance's gold files in the top five, against
 35\% to 54\% for S3; the gap to Acc@5 reflects the minority of
-instances whose fixes span several files.
+instances whose fixes span several files. \Cref{tab:files} also shows
+unweighted fusion below S3 on MariaDB and MongoDB. The cause is
+dilution: equal weights give trace stem-matches, path votes, and the
+sparse first memory variant the same say as content retrieval. The
+conditioned weights recover exactly by zeroing those signals in the
+regimes where they hurt.
 Against the grep-style baseline S1, the margins grow further, from
 $+0.137$ to $+0.347$ Acc@5 overall, and on hard instances S1 scores zero
 by construction while \sys{} reaches $0.361$ to $0.544$. The classic
@@ -302,7 +307,12 @@ on Kafka's hard stratum, \sys{} is significantly below standalone
 content retrieval
 ($-0.065$ $[-0.113, -0.024]$): fusion still pays a price for mixing in
 signals that are weak on that stratum, and on the other three projects
-the same comparison is a statistical tie rather than a win. Localizing
+the same comparison is a statistical tie rather than a win. The loss is
+concentrated and diagnosable: exactly eight hard instances where content
+retrieval hits the top five and fusion misses, none in the other
+direction, and in every one of the eight a file that the trace signal
+matched by basename stem sits in the fused top five, displacing the gold
+file. Localizing
 files that no text names remains the open part of this problem. Third,
 on Qt's easy instances the conditioned system without memory collapses to
 content-retrieval level ($0.654$ Acc@5 versus $0.904$ for unweighted

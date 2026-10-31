@@ -56,7 +56,8 @@ We additionally re-implement the classic IRBL baselines, since the
 original tools are Java-only. \textbf{rVSM} scores every file of the full
 snapshot with a length-favoring tf--idf cosine. \textbf{BugLocator}
 combines rVSM with SimiScore, the 2012 similar-report
-signal~\cite{zhou2012buglocator}: every past fixed report votes for its
+signal~\cite{zhou2012buglocator} that later rankers also build
+on~\cite{ye2014learning}: every past fixed report votes for its
 fix's files with weight $\mathrm{sim}(q,b)/n_b$; the blend weight uses
 the replication-standard $\alpha = 0.3$, with
 $\alpha \in \{0.2, 0.3, 0.5\}$ tuned on the development split as a
