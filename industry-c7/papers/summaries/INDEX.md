@@ -34,11 +34,13 @@ rafi-reformulate-2025 (survey misattribution corrected), fblbert-icse2022,
 sbest-2024, longcodearena-2024, cosil-2025, orcaloca-2025, genloc-2025,
 log-survey-csur2021.
 
-## Queue — just downloaded, to read next
+## Done, third batch
 
-deepirbl-survey-2025 (arXiv 2505.00144 — found via search; covers the
-whole deep-IRBL family incl. BLUiR/AmaLgam/BLIA/Locus details),
-irfl-llm-2024 (arXiv 2412.03754, bonus).
+deepirbl-survey-2025 — survey of record for the three IRBL generations;
+consecutive-validation + before-fix-version endorsements (our §4 protocol
+citations); the 0.0153-vs-0.0149 lexical-gap statistic.
+irfl-llm-2024 — GPT-4 query construction + report-type conditioning; the
+conditioning-precedent nuance for our regime-novelty sentence.
 
 ## Still to obtain (paywalled classics)
 
