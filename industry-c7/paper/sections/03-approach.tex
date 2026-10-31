@@ -101,6 +101,18 @@ Rule 4 is strict and it costs real signal: in our runs it blocks roughly
 two thirds of candidate votes. We accept the cost because the remaining
 signal is one a deployed system would truly have had.
 
+One residual channel remains, and we state it. The index that retrieves
+similar incidents computes its corpus statistics (inverse document
+frequency, average length) once over the full pool, so the text of
+excluded incidents still influences how terms are weighted. Excluded
+incidents never vote. The second-order effect cuts both ways: the
+direction of the term-weighting influence is unknown, while the slot
+effect is strictly against us, because S4 retrieves four times the
+voting depth of twenty before filtering and still ends with fifteen to
+seventeen admissible voters per query on average, fewer than a
+time-sliced index would return. Closing the channel entirely would
+require rebuilding the index for every query.
+
 \subsection{Fusion, modules, and evidence}
 \label{sec:approach:fusion}
 

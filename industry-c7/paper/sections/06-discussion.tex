@@ -57,8 +57,12 @@ citations are the part an on-call engineer can trust at 3 a.m.
 \label{sec:discussion:deployment}
 
 Three properties matter for industrial adoption. First, cost: the whole
-pipeline is lexical, runs on a single CPU core in well under a second per
-issue with warm indexes, and needs no GPU and no training. Second,
+pipeline is lexical, needs no GPU and no training, and we measured it on
+one laptop CPU core with warm caches. The median end-to-end time per
+issue, signals plus fusion, is 0.07\,s on Kafka, 0.22\,s on Qt, and
+0.41\,s on MariaDB and MongoDB; the 95th percentile stays below 0.7\,s
+everywhere, and building the incident-memory index takes at most 0.1\,s
+even for the largest pool. Second,
 freshness: the memory pool is append-only, and every newly resolved issue
 with a linked fix commit widens the searchable history at no retraining
 cost. Consistent with this, memory was weakest in the earliest part of

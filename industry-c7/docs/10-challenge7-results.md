@@ -333,3 +333,28 @@ Paper updates: Table II +3 rows, §IV-C baseline defs (+wong2014brtracer ref),
 §V-D new subsection, abstract + intro (now 5 contributions) + conclusion
 carry the leakage finding. 0.1425 renders as +0.142 (banker's rounding).
 Compiled 8pp, 0 overfull. verify_claims: 146/146.
+
+## 10. W4 answered: latency, function level, noise robustness
+
+**Latency** (localize.py instrumented, full deterministic re-run, 168/168
+claims bit-identical): per-issue median 0.07/0.41/0.41/0.22 s
+(k/m/mo/qt), p95 < 0.7 s everywhere, mem-index build <= 0.1 s. In §VI
+deployment notes.
+
+**Function stage** (`function_stage.py`, tree-sitter spans × `git diff
+-U0` snapshot-side hunks; candidates = functions in top-10 cond_ours
+files, BM25-ranked, untuned): eligible 95/92/94/87 %; eval acc@5
+.478/.274/.467/.288; oracle ceiling .856/.718/.747/.576. Bottleneck
+differs: qt = file stage (oracle .58), mariadb = in-file ranking (oracle
+.72, acc .27 — huge C++ files). Table IV + §V-E.
+
+**Noise** (`noise_robustness.py`, 200-sample/project, 11 conditions,
+clean-tuned frozen weights, seed 42; clean anchors within 0.025 of main
+runs): dup ×5 costs ≤.055; generic ×5 .06–.135 + mongodb .235; drop
+mentions .07–.165; foreign lines catastrophic (acc@5 → ≤37 % of clean at
+×5; mariadb .635→.285 already at ×1) via regime hijack (flips 1/3–1/2 at
+×1). Deployment reading: segment logs by incident before matching.
+Table V + §V-F.
+
+Paper now 9 pp, 0 overfull; abstract/intro carry both experiments;
+verify_claims 168/168.

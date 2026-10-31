@@ -392,7 +392,9 @@ def main() -> int:
     mem_by_key, dupclusters, created_map, preds = load_support(
         args.project, cfg["key_prefix"])
     log.info("instances=%d memory-pool=%d", len(bench), len(mem_by_key))
+    t_mi = time.perf_counter()
     mem_index = BM25Index({k: r["toks"] for k, r in mem_by_key.items()})
+    mem_index_build_s = time.perf_counter() - t_mi
 
     tok_cache_path = OUT / f"blob-tokens-{args.project}.pkl"
     OUT.mkdir(parents=True, exist_ok=True)
@@ -442,6 +444,7 @@ def main() -> int:
         return ranking, dict(voters)
 
     for i, b in enumerate(bench):
+        t_inst = time.perf_counter()
         snap = Snapshot(git_dir, b["snapshot_sha"], cfg["src_ext"])
         qtoks = tokenize(b["query_text"])
         # visibility cutoff: what an engineer could search when the bug
@@ -467,6 +470,7 @@ def main() -> int:
 
         qtok_set = set(qtoks)
         rows.append({
+            "_sig_s": time.perf_counter() - t_inst,
             "issue_key": b["issue_key"],
             "fix_time": b["fix_time"],
             "strata": {"easy": b["gold_named_in_text"], "trace": b["has_stack_trace"]},
@@ -532,8 +536,12 @@ def main() -> int:
         }
 
     for r in rows:
+        t_f = time.perf_counter()
+        systems = systems_for(r)
+        # per-issue latency: signal computation + fusion, warm caches
+        r["latency_s"] = round(r.pop("_sig_s") + time.perf_counter() - t_f, 6)
         r["metrics"] = {name: evaluate(ranking, r["gold_files"])
-                        for name, ranking in systems_for(r).items()}
+                        for name, ranking in systems.items()}
 
     system_names = list(rows[0]["metrics"])
     metric_names = list(rows[0]["metrics"][system_names[0]])
@@ -558,6 +566,12 @@ def main() -> int:
         "eval_trace_absent": agg([r for r in ev if not r["strata"]["trace"]]),
         "dev": agg(dev),
         "overall_all_rows": agg(rows),
+        "latency": (lambda ls: {
+            "mem_index_build_s": round(mem_index_build_s, 3),
+            "per_issue_median_s": round(ls[len(ls) // 2], 4),
+            "per_issue_p95_s": round(ls[int(len(ls) * 0.95)], 4),
+            "per_issue_mean_s": round(sum(ls) / len(ls), 4),
+        })(sorted(r["latency_s"] for r in rows)),
     }
     (OUT / f"{args.project}-summary.json").write_text(
         json.dumps(summary, indent=2), encoding="utf-8")

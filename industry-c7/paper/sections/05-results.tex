@@ -52,7 +52,10 @@ $+0.086$ $[+0.055, +0.118]$ on Kafka, $+0.142$ $[+0.119, +0.167]$ on
 MariaDB, $+0.057$ $[+0.046, +0.067]$ on MongoDB, and $+0.084$
 $[+0.053, +0.119]$ on Qt, with MRR gains of $+0.058$ to $+0.097$, every
 test significant. Against S3 alone the MariaDB margin is larger still
-($+0.187$ Acc@5).
+($+0.187$ Acc@5). Recall@5 follows the same ordering: \sys{} retrieves
+45\% to 61\% of each instance's gold files in the top five, against
+35\% to 54\% for S3; the gap to Acc@5 reflects the minority of
+instances whose fixes span several files.
 Against the grep-style baseline S1, the margins grow further, from
 $+0.137$ to $+0.347$ Acc@5 overall, and on hard instances S1 scores zero
 by construction while \sys{} reaches $0.361$ to $0.544$. The classic
@@ -178,15 +181,129 @@ only ever sees the firewalled number, so evaluations of similar-report
 signals that skip report-time admissibility overstate what a team will
 get.
 
+\subsection{From files to functions}
+\label{sec:results:functions}
+
+The challenge asks for code regions, so we add a second stage below the
+file level. Gold functions are derived mechanically: tree-sitter lists
+every function span in the snapshot, and a function is gold when its span
+overlaps a snapshot-side hunk of the fix diff. To keep line numbers
+exact we use only fix commits whose parent is the snapshot; later
+commits of multi-commit fixes are skipped and counted. This derivation
+yields at least one gold function for 87\% to 95\% of instances per
+project. The stage itself is deliberately simple: every function in
+\sys{}'s top ten files becomes a candidate, and BM25 ranks the function
+bodies against the report text. Nothing is tuned.
+
+\begin{table}[t]
+\caption{Function-level results on eligible evaluation instances (a gold
+function is derivable from the fix diff). Oracle is the fraction whose
+gold function appears anywhere in the top-10-file candidate set, the
+ceiling the file stage imposes.}
+\label{tab:functions}
+\centering
+\footnotesize
+\setlength{\tabcolsep}{3pt}
+\begin{tabular}{@{}lcccc@{}}
+\toprule
+ & Kafka & MariaDB & MongoDB & Qt \\
+\midrule
+eligible instances & .954 & .919 & .944 & .868 \\
+\midrule
+Acc@1  & .240 & .132 & .259 & .140 \\
+Acc@5  & .478 & .274 & .467 & .288 \\
+Acc@10 & .600 & .348 & .550 & .345 \\
+MRR    & .357 & .199 & .355 & .211 \\
+\midrule
+oracle (file stage) & .856 & .718 & .747 & .576 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\Cref{tab:functions} gives the results. A correct function ranks in the
+top five for 27\% to 48\% of eligible instances, from a report and logs
+alone. The oracle row separates the two bottlenecks. On Qt the file
+stage is the limit: the gold function reaches the candidate set for only
+58\% of instances, so no function ranker could pass that. On MariaDB the
+candidate set contains the gold function for 72\% of instances but
+Acc@5 is 0.27: its large C++ files hold hundreds of functions each, and
+ranking inside them is the open problem. We report this stage as a
+baseline for the region-level question rather than a solved component;
+a learned or semantic function ranker drops into the same slot.
+
+\subsection{Noise robustness}
+\label{sec:results:noise}
+
+Our reports carry log excerpts a human already selected, and the
+challenge stresses noisy industrial bundles, so we measure how accuracy
+degrades as noise grows. For a seeded sample of 200 evaluation instances
+per project we perturb the report text and re-run the whole pipeline
+with the clean-tuned weights frozen, as a deployed system would face it.
+Three perturbations add lines at a noise ratio $r$ (added lines equal
+$r$ times the original line count, interleaved at random positions):
+\textsc{dup} repeats the report's own lines, \textsc{generic} adds
+template infrastructure chatter (timeouts, retries, garbage-collection
+pauses, health checks), and \textsc{foreign} adds lines sampled from
+other issues of the same project. A fourth, \textsc{drop}, deletes every
+line carrying a file mention or stack frame.
+
+\begin{table}[t]
+\caption{Acc@5 under noise (200-instance evaluation samples, clean-tuned
+weights frozen). Ratio $\times 2$ values sit between $\times 1$ and
+$\times 5$ on every project and are in the artifact.}
+\label{tab:noise}
+\centering
+\footnotesize
+\setlength{\tabcolsep}{3.5pt}
+\begin{tabular}{@{}lcccc@{}}
+\toprule
+ & Kafka & MariaDB & MongoDB & Qt \\
+\midrule
+clean                      & .800 & .635 & .700 & .555 \\
+\midrule
+dup $\times 1$             & .790 & .590 & .710 & .545 \\
+dup $\times 5$             & .770 & .580 & .675 & .510 \\
+generic $\times 1$         & .780 & .590 & .595 & .470 \\
+generic $\times 5$         & .725 & .575 & .465 & .420 \\
+foreign $\times 1$         & .535 & .285 & .555 & .420 \\
+foreign $\times 5$         & .285 & .125 & .260 & .200 \\
+drop mentions              & .730 & .470 & .565 & .405 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\Cref{tab:noise} shows a clear split. Volume noise is almost free:
+quintupling the text with repeats costs at most $0.06$ Acc@5, because
+BM25's term-frequency saturation absorbs repetition. Generic chatter at
+ratio five costs $0.06$ to $0.14$ on three projects and $0.235$ on
+MongoDB. Deleting every mention and stack frame, which forces every
+instance into the no-mention regime, costs $0.07$ to $0.17$: the
+remaining signals absorb most of the loss. The failure mode is content
+noise. Lines from other incidents cost up to half of clean accuracy
+already at a one-to-one ratio (MariaDB $0.635$ to $0.285$) and cut
+every project to at most 37\% of clean at ratio five, because foreign
+lines carry other incidents' file mentions: they flip between a third
+and half of the sampled instances into the mention regime at ratio one,
+and up to 63\% at ratio five, with confidently wrong files, poisoning
+exactly the signal the easy stratum relies on. For deployment the reading is concrete: dedup
+and generic-noise filtering are not the hard part of preprocessing;
+separating interleaved incidents is, and a system that feeds our
+pipeline should segment logs by incident before matching.
+
 \subsection{Honest negatives}
 \label{sec:results:negatives}
 
-Two results go against us, and we report them. First, on Kafka's hard
-stratum, \sys{} is significantly below standalone content retrieval
+Three results go against us, and we report them. First, in
+\cref{tab:files}, adding memory to the conditioned system lowers MRR on
+MongoDB ($0.552$ versus $0.566$) while raising Acc@5: memory pulls extra
+gold files into the top five but sometimes above-ranks a wrong file, a
+reminder that its increment at full tuning is small outside Qt. Second,
+on Kafka's hard stratum, \sys{} is significantly below standalone
+content retrieval
 ($-0.065$ $[-0.113, -0.024]$): fusion still pays a price for mixing in
 signals that are weak on that stratum, and on the other three projects
 the same comparison is a statistical tie rather than a win. Localizing
-files that no text names remains the open part of this problem. Second,
+files that no text names remains the open part of this problem. Third,
 on Qt's easy instances the conditioned system without memory collapses to
 content-retrieval level ($0.654$ Acc@5 versus $0.904$ for unweighted
 fusion); Qt's development split holds few mention-regime instances, so

@@ -299,6 +299,65 @@ def main() -> int:
         check(f"LEAK {p} S4 vs simiscore +{d} SIG",
               r3(t["delta"]) == d and t["significant"], f"got {t['delta']:+.3f}")
 
+    # ---- Sec. 5 function-level stage -----------------------------------------
+    fsum = {p: json.loads((RES / f"{p}-functions-summary.json")
+                          .read_text(encoding="utf-8")) for p in P}
+    t4 = {  # (eligible, acc@1, acc@5, acc@10, mrr, oracle)
+        "kafka":   (.954, .240, .478, .600, .357, .856),
+        "mariadb": (.919, .132, .274, .348, .199, .718),
+        "mongodb": (.944, .259, .467, .550, .355, .747),
+        "qt":      (.868, .140, .288, .345, .211, .576)}
+    for p, (el, a1, a5, a10, mrr, orc) in t4.items():
+        f, e = fsum[p], fsum[p]["eval_eligible"]
+        check(f"T4 {p} functions {el}/{a1}/{a5}/{a10}/{mrr}/{orc}",
+              r3(f["eligible_fraction_all"]) == el and r3(e["acc@1"]) == a1
+              and r3(e["acc@5"]) == a5 and r3(e["acc@10"]) == a10
+              and r3(e["mrr"]) == mrr and r3(e["oracle_in_candidates"]) == orc,
+              f"got {f['eligible_fraction_all']}/{e}")
+    check("FUNC eligible 87-95%, acc@5 27-48%",
+          round(min(fsum[p]["eligible_fraction_all"] for p in P), 2) == .87
+          and round(max(fsum[p]["eligible_fraction_all"] for p in P), 2) == .95
+          and round(min(fsum[p]["eval_eligible"]["acc@5"] for p in P), 2) == .27
+          and round(max(fsum[p]["eval_eligible"]["acc@5"] for p in P), 2) == .48)
+
+    # ---- Sec. 5 noise robustness ----------------------------------------------
+    nsum = {p: json.loads((RES / f"{p}-noise-summary.json")
+                          .read_text(encoding="utf-8")) for p in P}
+    t5 = {  # (clean, dup1, dup5, gen1, gen5, for1, for5, drop)
+        "kafka":   (.800, .790, .770, .780, .725, .535, .285, .730),
+        "mariadb": (.635, .590, .580, .590, .575, .285, .125, .470),
+        "mongodb": (.700, .710, .675, .595, .465, .555, .260, .565),
+        "qt":      (.555, .545, .510, .470, .420, .420, .200, .405)}
+    keys = ("clean", "dup_x1", "dup_x5", "generic_x1", "generic_x5",
+            "foreign_x1", "foreign_x5", "drop")
+    for p, vals in t5.items():
+        a = nsum[p]["acc@5"]
+        check(f"T5 {p} noise row", all(r3(a[k]) == v for k, v in zip(keys, vals)),
+              f"got {[a[k] for k in keys]}")
+        check(f"NOISE {p} clean anchor within 0.025 of main run",
+              abs(a["clean"] - nsum[p]["clean_main_run_acc5"]) <= 0.025,
+              f"{a['clean']} vs {nsum[p]['clean_main_run_acc5']}")
+    check("NOISE dup x5 costs at most 0.06",
+          all(nsum[p]["acc@5"]["clean"] - nsum[p]["acc@5"]["dup_x5"] <= 0.06
+              for p in P))
+    check("NOISE drop costs 0.07..0.17",
+          all(0.07 <= round(nsum[p]["acc@5"]["clean"]
+                            - nsum[p]["acc@5"]["drop"], 3) <= 0.17 for p in P))
+    check("NOISE foreign x5 cuts to at most 37% of clean",
+          max(nsum[p]["acc@5"]["foreign_x5"] / nsum[p]["acc@5"]["clean"]
+              for p in P) <= 0.375)
+    f1 = [nsum[p]["regime_flips"]["foreign_x1"] / 200 for p in P]
+    f5max = max(nsum[p]["regime_flips"]["foreign_x5"] / 200 for p in P)
+    check("NOISE foreign flips third..half at x1, up to 63% at x5",
+          1 / 3 <= min(f1) and max(f1) <= 0.52 and 0.62 < f5max <= 0.63,
+          f"x1 {min(f1):.3f}..{max(f1):.3f}, x5 max {f5max:.3f}")
+    check("NOISE mongodb generic x5 costs 0.235; others 0.06-0.14",
+          r3(nsum["mongodb"]["acc@5"]["clean"]
+             - nsum["mongodb"]["acc@5"]["generic_x5"]) == .235
+          and all(0.06 <= r3(nsum[p]["acc@5"]["clean"]
+                             - nsum[p]["acc@5"]["generic_x5"]) <= 0.14
+                  for p in ("kafka", "mariadb", "qt")))
+
     # ---- Sec. 5 honest negatives ---------------------------------------------
     tn = stat("kafka", "ours_vs_strongest", "acc@5", "hard")
     check("NEG kafka hard -0.065 [-0.113,-0.024] SIG",
@@ -317,6 +376,14 @@ def main() -> int:
     check("S4 96-test baseline/leakage BH family", stats_irbl["n_tests"] == 96)
     check("S4 bootstrap 2,000 resamples", stats["n_bootstrap"] == 2000
           and stats_irbl["n_bootstrap"] == 2000)
+    lat_expected = {"kafka": .07, "qt": .22, "mariadb": .41, "mongodb": .41}
+    for p, med in lat_expected.items():
+        lat = summ[p]["latency"]
+        check(f"S6 {p} latency median {med}s, p95<0.7s, index<=0.1s",
+              round(lat["per_issue_median_s"], 2) == med
+              and lat["per_issue_p95_s"] < 0.7
+              and round(lat["mem_index_build_s"], 1) <= 0.1,
+              f"got {lat}")
     check("S6 90% of MongoDB reports traceless",
           round(100 * (1 - ds["mongodb"]["strata"]["trace_present"]
                        / ds["mongodb"]["funnel"]["final_instances"])) == 90)

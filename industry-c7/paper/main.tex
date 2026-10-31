@@ -53,7 +53,10 @@ score zero, adding memory lifts fusion by up to $+0.209$ Acc@5, and on
 one project memory alone beats retrieval over the code itself. Removing
 the firewall inflates the classic similar-report signal by 9\% to 43\%
 relative Acc@5: evaluations that ignore report-time admissibility
-overstate what a deployed system will see. The pipeline is deterministic, trains nothing, runs on a CPU
+overstate what a deployed system will see. A function-level second stage
+ranks a correct function in the top five for 27\% to 48\% of instances,
+and a noise study shows the pipeline absorbs repeated and generic log
+noise but needs logs separated by incident. The pipeline is deterministic, trains nothing, runs on a CPU
 in under a second per issue, and is released with the benchmark and a
 script that traces every reported number to its result file.
 \end{abstract}
