@@ -24,17 +24,30 @@ use-in-our-paper, thesis connections.
 | `mulocbench-2025.md` | 80→35 fresh-data collapse; non-code fix locations |
 | `abb-industrial-bl-2026.md` | Industry-track genre precedent; TF-IDF beats transformers |
 
-## Queue — downloaded, not yet summarized (11)
+## Done, second batch (12 more; all downloaded PDFs covered)
 
-cosil-2025, genloc-2025, longcodearena-2024, ahmed-icse2023-seip,
-finerbench4bl-2023, orcaloca-2025, leakage-linkpred-2022, fblbert-icse2022,
-sbest-2024, rafi-reformulate-2025, log-survey-csur2021.
+swebenchplus-2024, swebench-illusion-2025, locagent-acl2025, broccoli-2021,
+mulocbench-2025, abb-industrial-bl-2026, buglocator-icse2012 (ASSEMBLED
+from full-read replication sources; original paywalled — provenance note
+inside), leakage-linkpred-2022, finerbench4bl-2023, ahmed-icse2023-seip,
+rafi-reformulate-2025 (survey misattribution corrected), fblbert-icse2022,
+sbest-2024, longcodearena-2024, cosil-2025, orcaloca-2025, genloc-2025,
+log-survey-csur2021.
 
-## Still to obtain (classics; Semantic Scholar hunt rate-limited)
+## Queue — just downloaded, to read next
 
-BugLocator (ICSE'12), BRTracer (ICSME'14), BLUiR (ASE'13), Locus (ASE'16),
-Ye et al. LR (FSE'14), AmaLgam (ICPC'14) + AmaLgam+ (JSEP'16), ABLoTS
-original (MSR'18), SherLog (ASPLOS'10), CrashLocator (ISSTA'14), CraTer
-(JSS'19), Dao et al. (ICPC'17), LogFaultFlagger (ICSE'19), OpenRCA
-(ICLR'25), LLM-BL (ICPC'25), deep-IRBL survey (CSUR'25), Sisman&Kak
-(MSR'12), Lobster (ICSME'14), BLIA (APSEC'15).
+deepirbl-survey-2025 (arXiv 2505.00144 — found via search; covers the
+whole deep-IRBL family incl. BLUiR/AmaLgam/BLIA/Locus details),
+irfl-llm-2024 (arXiv 2412.03754, bonus).
+
+## Still to obtain (paywalled classics)
+
+BRTracer (ICSME'14), BLUiR (ASE'13), Locus (ASE'16), Ye et al. LR
+(FSE'14), AmaLgam (ICPC'14) + AmaLgam+ (JSEP'16), ABLoTS original
+(MSR'18), SherLog (ASPLOS'10), CrashLocator (ISSTA'14), CraTer (JSS'19),
+Dao et al. (ICPC'17), LogFaultFlagger (ICSE'19), OpenRCA (ICLR'25),
+LLM-BL (ICPC'25), Sisman&Kak (MSR'12), Lobster (ICSME'14), BLIA
+(APSEC'15). Strategy: the deep-IRBL survey + Bench4BL + ABLoTS
+replication already carry their mechanics; assemble provenance-noted
+summaries like buglocator-icse2012 where the paper needs them, and
+request library access via the user for any we must quote verbatim.
