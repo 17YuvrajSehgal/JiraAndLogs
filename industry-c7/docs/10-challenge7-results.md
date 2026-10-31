@@ -272,6 +272,26 @@ public artifacts). Results moved UP for kafka/mariadb (cleaner queries):
 
 Paper §§2–5 written against these numbers (industry-c7/paper/).
 
+## 8. Module sanity baselines (reviewer W5) — claim corrected
+
+`module_baselines.py` → `module-baselines.json`. Exact per-snapshot module
+counts; analytical random@K; most-frequent-module from dev gold.
+
+| | kafka | mariadb | mongodb | qt |
+|---|---|---|---|---|
+| modules (median) | 8 | 79 | 36 | 116 |
+| random@5 | .610 | .076 | .153 | .099 |
+| frequency@1 / @5 | .361 / .763 | .612 / .905 | .756 / .894 | .334 / .809 |
+| ours @1 / @5 | .861 / .998 | .843 / .983 | .841 / .979 | .669 / .925 |
+
+The reviewer's instinct was right in kind: defects concentrate (frequency
+alone = 0.76–0.91 Acc@5; ABB's Pareto observation reproduced), and
+Kafka's 8-module space makes random@5 = 0.61. **"Near-solved at K=5"
+retracted from the paper**; module claims now lead with Acc@1, where ours
+beats frequency by +0.08 (mongodb) to +0.50 (kafka). Abstract/§1/§5/§8
+updated; verify_claims extended (6 new assertions). Smallest margin is
+mongodb (+0.085 @1) — frequency is genuinely strong there.
+
 ### Pending for the eval harness
 
 Paired bootstrap + BH for (cond_ours − cond_no_memory) and

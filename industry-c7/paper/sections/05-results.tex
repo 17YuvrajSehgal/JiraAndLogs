@@ -50,25 +50,41 @@ by construction while \sys{} reaches $0.361$ to $0.544$.
 
 \begin{table}[t]
 \caption{Module-level results on the evaluation split (challenge output
-(i)): Acc@1 and Acc@5 of \sys{} and of the strongest baseline.}
+(i)), with sanity baselines: expected accuracy of a RANDOM module ranking
+(analytical, using each snapshot's true module count) and of ranking
+modules by their defect FREQUENCY on the development split.}
 \label{tab:modules}
 \centering
-\small
-\begin{tabular}{lcccc}
+\footnotesize
+\setlength{\tabcolsep}{3pt}
+\begin{tabular}{@{}lcccc@{}}
 \toprule
  & Kafka & MariaDB & MongoDB & Qt \\
 \midrule
+modules (median) & 8 & 79 & 36 & 116 \\
+\midrule
+random, Acc@1       & .129 & .015 & .032 & .037 \\
+frequency, Acc@1    & .361 & .612 & .756 & .334 \\
 S3 content, Acc@1   & .830 & .771 & .808 & .613 \\
 \sys{}, Acc@1       & \textbf{.861} & \textbf{.843} & \textbf{.841} & \textbf{.669} \\
-\sys{}, Acc@5       & .998 & .983 & .979 & .925 \\
+\midrule
+random, Acc@5       & .610 & .076 & .153 & .099 \\
+frequency, Acc@5    & .763 & .905 & .894 & .809 \\
+\sys{}, Acc@5       & \textbf{.998} & \textbf{.983} & \textbf{.979} & \textbf{.925} \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-At the module level (\cref{tab:modules}), \sys{} places a correct module
-first for 67\% to 86\% of instances and within the top five for 93\% to
-nearly 100\%. For the challenge's first required output, the affected
-module, the problem is close to solved at $K = 5$ on these four projects.
+The module level needs sanity baselines before any claim, because module
+spaces are small and defects concentrate in few modules
+(\cref{tab:modules}). Ranking modules by their past defect frequency
+alone reaches 0.76 to 0.91 Acc@5, and Kafka's eight-module space makes
+even a random top five succeed 61\% of the time. The informative number
+is therefore Acc@1: \sys{} places a correct module first for 67\% to 86\%
+of instances, beating the frequency baseline by $+0.08$ (MongoDB) to
+$+0.50$ (Kafka). At $K = 5$ \sys{} still clears the frequency baseline on
+every project, but the margin there partly reflects concentration rather
+than localization.
 
 \subsection{RQ2: What memory contributes}
 \label{sec:results:rq2}

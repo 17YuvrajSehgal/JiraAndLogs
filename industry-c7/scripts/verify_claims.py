@@ -184,8 +184,25 @@ def main() -> int:
               r3(m["content_bm25"]["acc@1"]) == c1
               and r3(m["cond_ours"]["acc@1"]) == o1
               and r3(m["cond_ours"]["acc@5"]) == o5)
-    check("S1 module top-5 at least 92% everywhere",
-          min(mods[p]["systems"]["cond_ours"]["acc@5"] for p in P) >= 0.92)
+    # module sanity baselines (reviewer W5): random/frequency vs ours
+    mb = json.loads((RES / "module-baselines.json").read_text(encoding="utf-8"))
+    mb_expected = {  # (median modules, random@5, frequent@1, frequent@5)
+        "kafka": (8, .610, .361, .763), "mariadb": (79, .076, .612, .905),
+        "mongodb": (36, .153, .756, .894), "qt": (116, .099, .334, .809)}
+    for p, (med, r5, f1, f5) in mb_expected.items():
+        check(f"T3 {p} module baselines med={med} rnd5={r5} frq1={f1} frq5={f5}",
+              mb[p]["modules_per_snapshot"]["median"] == med
+              and r3(mb[p]["random"]["acc@5"]) == r5
+              and r3(mb[p]["most_frequent"]["acc@1"]) == f1
+              and r3(mb[p]["most_frequent"]["acc@5"]) == f5)
+    check("S1/S5 module Acc@1 67-86% beats frequency by +0.08..+0.50",
+          all(mods[p]["systems"]["cond_ours"]["acc@1"]
+              - mb[p]["most_frequent"]["acc@1"] >= 0.08 for p in P)
+          and 0.66 <= min(mods[p]["systems"]["cond_ours"]["acc@1"] for p in P)
+          and max(mods[p]["systems"]["cond_ours"]["acc@1"] for p in P) <= 0.87)
+    check("S5 ours clears frequency baseline at K=5 on every project",
+          all(mods[p]["systems"]["cond_ours"]["acc@5"]
+              > mb[p]["most_frequent"]["acc@5"] for p in P))
 
     # ---- Sec. 5 honest negatives ---------------------------------------------
     tn = stat("kafka", "ours_vs_strongest", "acc@5", "hard")
