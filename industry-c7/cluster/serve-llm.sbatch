@@ -50,13 +50,16 @@ export TRITON_CACHE_DIR=$CACHE/triton TORCHINDUCTOR_CACHE_DIR=$CACHE/inductor
 # flashinfer kernels come from flashinfer-jit-cache-sm90a (installed via
 # `vllm download-kernels` on the login node; version-matched, offline-safe)
 
+# EXTRA_ARGS: optional space-separated vllm flags, e.g. for tool calling +
+# reasoning parsing: EXTRA_ARGS="--enable-auto-tool-choice --tool-call-parser hermes --reasoning-parser qwen3"
 SERVE_ARGS=(serve "$MODEL_DIR"
     --served-model-name "$NAME"
     --tensor-parallel-size "$TP"
     --max-model-len "$MAXLEN"
     --max-num-seqs "${MAXSEQS:-256}"
     --gpu-memory-utilization 0.92
-    --port $PORT)
+    --port $PORT
+    ${EXTRA_ARGS:-})
 # pip venv preferred (smaller, faster to stage); container is the fallback
 if [ -x $S/c7-llm/vllm-venv/bin/vllm ]; then
   echo "stack: pip venv"
