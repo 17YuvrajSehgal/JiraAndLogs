@@ -34,6 +34,7 @@ import re
 import subprocess
 import sys
 import threading
+import uuid
 import time
 from collections import defaultdict
 from pathlib import Path
@@ -53,8 +54,7 @@ LIST_LEN = 10
 # Hard cap on concurrent wsl.exe spawns (see call_llm). Independent of the
 # worker count, so --workers can stay high for tool work while transport
 # stays bounded.
-MAX_INFLIGHT = 6
-_SPAWN = threading.Semaphore(MAX_INFLIGHT)
+SPOOL = HERE.parents[0] / "data/agent/spool"
 
 # Evidence is a REQUIRED field of the submission rather than a separate
 # optional note_candidate call. Measured on v1: 37% of runs recorded no
@@ -118,24 +118,12 @@ def call_llm(messages: list, tools: list, seed: int = 42,
                        "tool_choice": choice, "temperature": 0, "seed": seed,
                        "max_tokens": max_tokens,
                        "chat_template_kwargs": {"enable_thinking": False}})
-    cmd = ["wsl", "-d", "Ubuntu", "ssh", "trillium",
-           f"ssh trig-login01 'curl -s -m {timeout - 30} "
-           f"http://{NODE}:8000/v1/chat/completions "
-           f"-H \"Content-Type: application/json\" -d @-'"]
     last = ""
     for attempt in range(1, retries + 1):
         try:
-            # Spawning wsl.exe is the scarce resource, not the GPU. A first
-            # run at 12 workers accumulated 44 concurrent wsl.exe processes
-            # and deadlocked WSL, stalling the batch at 168/790. The
-            # semaphore caps concurrent spawns; workers queue in Python
-            # instead of piling up Windows processes.
-            with _SPAWN:
-                r = subprocess.run(cmd, input=body.encode(),
-                                   capture_output=True, timeout=timeout)
-            out = r.stdout.decode("utf-8", "replace").strip()
+            out = _bridge_call(body, timeout)
             if not out:
-                last = f"empty stdout; stderr={r.stderr.decode()[:200]}"
+                last = "empty response from bridge"
             else:
                 d = json.loads(out)
                 if "choices" in d:
@@ -146,6 +134,34 @@ def call_llm(messages: list, tools: list, seed: int = 42,
         if attempt < retries:
             time.sleep(4 * attempt)
     return {"error": last}
+
+
+def _bridge_call(body: str, timeout: int) -> str:
+    """Send one request through the persistent WSL bridge (bridge.sh).
+
+    Python never spawns a process here: it drops a request file and waits
+    for the matching response. The earlier design spawned one wsl.exe per
+    call, which deadlocked WSL twice under 10-12 workers and froze the
+    batch with no error.
+    """
+    SPOOL.mkdir(parents=True, exist_ok=True)
+    rid = uuid.uuid4().hex
+    tmp = SPOOL / f".w-{rid}"
+    tmp.write_text(body, encoding="utf-8")
+    tmp.rename(SPOOL / f"req-{rid}.json")      # atomic: never seen partial
+    resp = SPOOL / f"resp-{rid}.json"
+    deadline = time.time() + timeout
+    while time.time() < deadline:
+        if resp.exists():
+            try:
+                out = resp.read_text(encoding="utf-8")
+            finally:
+                resp.unlink(missing_ok=True)
+            return out.strip()
+        time.sleep(0.25)
+    for leftover in (SPOOL / f"req-{rid}.json", SPOOL / f".busy-{rid}"):
+        leftover.unlink(missing_ok=True)
+    raise TimeoutError(f"bridge timeout after {timeout}s")
 
 
 REFORMULATE = {"type": "function", "function": {
