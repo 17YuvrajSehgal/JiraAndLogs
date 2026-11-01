@@ -33,6 +33,7 @@ import json
 import re
 import subprocess
 import sys
+import threading
 import time
 from collections import defaultdict
 from pathlib import Path
@@ -49,6 +50,11 @@ NODE = "trig0051"
 MAX_TURNS = 14
 MAX_TOOL_CHARS = 9000
 LIST_LEN = 10
+# Hard cap on concurrent wsl.exe spawns (see call_llm). Independent of the
+# worker count, so --workers can stay high for tool work while transport
+# stays bounded.
+MAX_INFLIGHT = 6
+_SPAWN = threading.Semaphore(MAX_INFLIGHT)
 
 # Evidence is a REQUIRED field of the submission rather than a separate
 # optional note_candidate call. Measured on v1: 37% of runs recorded no
@@ -119,8 +125,14 @@ def call_llm(messages: list, tools: list, seed: int = 42,
     last = ""
     for attempt in range(1, retries + 1):
         try:
-            r = subprocess.run(cmd, input=body.encode(), capture_output=True,
-                               timeout=timeout)
+            # Spawning wsl.exe is the scarce resource, not the GPU. A first
+            # run at 12 workers accumulated 44 concurrent wsl.exe processes
+            # and deadlocked WSL, stalling the batch at 168/790. The
+            # semaphore caps concurrent spawns; workers queue in Python
+            # instead of piling up Windows processes.
+            with _SPAWN:
+                r = subprocess.run(cmd, input=body.encode(),
+                                   capture_output=True, timeout=timeout)
             out = r.stdout.decode("utf-8", "replace").strip()
             if not out:
                 last = f"empty stdout; stderr={r.stderr.decode()[:200]}"

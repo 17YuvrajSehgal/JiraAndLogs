@@ -45,6 +45,7 @@ import math
 import re
 import subprocess
 import sys
+import threading
 from collections import Counter, defaultdict
 from pathlib import Path
 
@@ -61,6 +62,14 @@ SEG_TARGET_TOKENS = 500  # Pathidea measured 400-800 tokens as the useful range
 MEM_K = 5                # RCACopilot: K=5 neighbours, more did not help
 MEM_HALFLIFE_DAYS = 540  # recency weight; tuned shape, not RCACopilot's raw alpha
 GREP_CAP = 400
+
+# One BM25 index per PROJECT, shared across instances and threads. The
+# memory pool is identical for every instance of a project (MongoDB has
+# 19,819 incidents); only the firewall differs, and it is applied per
+# instance at vote time. Building this per Workspace made Phase 0b
+# CPU-bound once incident recall became unconditional.
+_MEM_INDEX: dict[str, "BM25Index"] = {}
+_MEM_LOCK = threading.Lock()
 
 FRAME_RE = re.compile(r"\bat\s+([\w.$]+)\.([A-Za-z_]\w*)\s*\(")
 CPP_FRAME_RE = re.compile(r"\b([A-Za-z_]\w*)::([A-Za-z_]\w*)\s*\(")
@@ -469,17 +478,32 @@ class Workspace:
         return {"file": path, "from_line": start + 1,
                 "code": body[:SNIPPET_CHARS]}
 
+    def _memory_index(self):
+        """BM25 over the project's memory pool, built ONCE per project.
+
+        The pool is identical for every instance of a project (MongoDB:
+        19,819 incidents); only the firewall differs, and that is applied
+        per instance at vote time. Building it per Workspace made Phase 0b
+        CPU-bound and stalled a 12-worker run to a standstill while the
+        GPU sat idle.
+        """
+        with _MEM_LOCK:
+            idx = _MEM_INDEX.get(self.project)
+            if idx is None:
+                idx = BM25Index({k_: r["toks"]
+                                 for k_, r in self.memory.items()})
+                _MEM_INDEX[self.project] = idx
+        return idx
+
     def recall_incidents(self, query: str, k: int = MEM_K) -> dict:
         """Past incidents that read like this one, and the files their fixes
         touched. Votes are weighted by similarity / fix size, so a sweeping
         refactor does not outweigh a surgical fix, and by recency."""
-        if self._mem_index is None:
-            self._mem_index = BM25Index({k_: r["toks"]
-                                         for k_, r in self.memory.items()})
+        mem_index = self._memory_index()
         qtoks = tokenize(query or self.query_text)
         k = max(1, min(int(k or MEM_K), 8))
         out = []
-        for rank, key in enumerate(self._mem_index.rank(qtoks, k * 10), start=1):
+        for rank, key in enumerate(mem_index.rank(qtoks, k * 10), start=1):
             if not self._admissible(key):
                 continue
             rec = self.memory[key]
