@@ -9,18 +9,51 @@ Nothing here is chosen by taste.
 
 ## 0. What the agent has to beat
 
-Measured tonight on 4,508 evaluation instances, not assumed:
+Measured, not assumed. Two populations, and the distinction matters:
 
-| system | Acc@5 | note |
+| system | full eval split (n=4,508) | **agent population (n=790)** |
 |---|---|---|
-| REMEMBER (ours, lexical) | 0.688 | CPU, sub-second |
-| Qwen3.8-27B standalone (Agentless-style) | 0.775 | beats ours on all 4 projects |
-| LLM rerank of our top-20 | 0.772 | |
-| **RRF(ours + LLM)** | **0.804** | **the real bar** |
-| oracle: union of all three top-5 | 0.884 | ceiling for selection-only methods |
+| REMEMBER (ours, lexical) | 0.688 | 0.681 |
+| Qwen3.8-27B standalone (Agentless-style) | 0.775 | 0.832 |
+| LLM rerank of our top-20 | 0.772 | 0.780 |
+| **RRF(ours + LLM)** | **0.804** | **0.839** |
+| oracle: union of top-5 lists | 0.884 | — |
 
-The bar is **0.804**, not 0.775. Beating the plain LLM is not enough,
-because a trivial fusion already does that.
+The agent is evaluated on the seeded 200/project sample (minus
+test-only-gold instances, §0.1), which is **easier** than the full split:
+every baseline scores higher on it. So the bar the agent must clear is
+**0.839**, not 0.804. Any comparison that mixed the two populations would
+flatter the agent by about 3.5 points. All systems in the agent
+comparison are rescored on this exact population.
+
+Beating the plain LLM (0.832) is not sufficient either, because a trivial
+RRF of our lexical ranking with the LLM already reaches 0.839.
+
+### 0.1 The test-only-gold exclusion, and a corrected justification
+
+10 instances of the sample (109 of the full eval split, all MongoDB) have
+gold sets consisting ONLY of test files, because MongoDB names tests
+`*_test.cpp` outside any test directory and the miner's path filter did
+not catch that.
+
+The first justification written here was that *no localizer can be
+usefully right about them*. **That was wrong, and the data says so:**
+
+| group | n (full eval split) | ours Acc@5 |
+|---|---|---|
+| test-only gold | 109 | **0.780** |
+| mixed test + product | 579 | 0.732 |
+| clean | 3,820 | 0.679 |
+
+They are **easier** than average, not impossible: when a fix only edits
+`query_planner_test.cpp`, the test's name usually appears in the report.
+
+The defensible reason to exclude them is **construct validity**: a commit
+that modifies only a test file is not a bug whose root cause lives in
+product code, so scoring it measures something other than root-cause
+localization. A useful consequence is that the exclusion is
+*conservative* — it removes above-average-easy instances and therefore
+lowers our own reported numbers rather than flattering them.
 
 ---
 
@@ -275,7 +308,7 @@ reviewer can check.
 
 ## 5. What we expect, and how it could fail
 
-**Expected gain.** The agent should clear 0.804 by converting ranking
+**Expected gain.** The agent should clear 0.839 by converting ranking
 failures (§1.2, 73% of the LLM's misses) into hits, using evidence the
 plain LLM never had. The selection-only ceiling is 0.884; the agent can
 exceed it, because it can find files that appear in no baseline's list.
@@ -297,7 +330,8 @@ exceed it, because it can find files that appear in no baseline's list.
 **Pre-commitment:** the comparison is on the same 200/project evaluation
 sample as the dense and noise experiments, scored by the same
 `evaluate()`, tested with the same paired bootstrap and BH correction.
-If the agent does not beat 0.804, that is the result we report.
+If the agent does not beat 0.839 on this population, that is the result
+we report.
 
 **Required validity check — seed-order shuffle.** [R14] found that the
 initial ordering handed to an agent moves Top-1 by up to **22%**, even
