@@ -1,0 +1,137 @@
+\section{\sys{}: localization as an investigation}
+\label{sec:agent}
+
+The comparative study leaves a specific gap. The retrieval layer and the
+model alone fail on different instances, and a perfect choice between
+their shortlists would reach $0.892$ where each alone reaches $0.681$
+and $0.832$ (\cref{sec:results:study}). Fusion cannot claim that gap,
+because it can only reorder files the two already produced. Closing it
+needs a method that can look for evidence rather than rank a fixed list.
+
+A second measurement says what that method should look for. We
+decomposed the plain model's misses on the evaluation split. In $72.9\%$
+of them the model had already selected the directory containing the
+faulty file and then chose the wrong file from it. Only $27.1\%$ were
+failures to search in the right place at all. The reason is structural:
+prompted with a file tree, the model sees path names and never a line of
+code. The useful addition is therefore evidence about candidates, not
+broader search.
+
+\sys{} is an agent built on that reading. It runs on the same 27B
+open-weights model used in the study, self-hosted on one GPU, at
+temperature zero with a fixed seed.
+
+\subsection{The shape of a run}
+
+One issue goes in and a ranked list of files comes out, through four
+stages.
+
+\textbf{Preparation, without the model.} The retrieval layer produces
+its ranked candidates, as in \cref{sec:approach}. Symbols are parsed out
+of the report: stack frames first, then identifiers. Symbols that do not
+occur anywhere in this snapshot are dropped, which keeps the agent from
+spending turns resolving library names such as
+\texttt{NullPointerException}.
+
+\textbf{Restating the problem.} One model call rewrites the report as a
+description of the faulty \emph{behaviour} in the vocabulary the code
+would use, together with the identifiers and error strings it mentions.
+The raw report is symptom-shaped, so searching code with it tends to
+return the detection site. That restatement then drives a content search
+and a query into incident memory, both run before the agent starts.
+
+\textbf{Investigation.} The model works with the tools below for at most
+fourteen turns. It averages $12.2$ model calls and $16.1$ tool calls per
+issue.
+
+\textbf{Commitment.} The run ends when the model submits a ranked list.
+Every file in that list must carry the evidence that put it there; the
+submission is rejected by the tool schema otherwise. If the model has
+not submitted by the final turn, the submission tool is forced. All 790
+runs in our evaluation ended in a submission.
+
+A deterministic backstop sits behind the result: if the agent returns
+fewer than ten files, the retrieval layer's ranking fills the remaining
+slots. It never reorders what the agent produced. An earlier design
+blended the two rankings instead, and that was measurably worse, because
+the lexical votes displaced correct answers the agent had ranked highly.
+
+\subsection{The tools}
+
+\begin{table}[t]
+\caption{What the agent can ask, and how often it asks. Usage is the
+mean number of calls per issue over the 790 study instances. Incident
+memory is also queried once for every issue before the loop begins, so
+it is consulted on every run regardless of the figure shown here.}
+\label{tab:tools}
+\centering
+\footnotesize
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{@{}llc@{}}
+\toprule
+tool & question it answers & uses \\
+\midrule
+\texttt{read\_code}        & what does this code actually do?      & 7.28 \\
+\texttt{search\_symbol}    & where is this defined, used, called?  & 3.42 \\
+\texttt{search\_text}      & which file's code matches this?       & 2.61 \\
+\texttt{note\_candidate}   & record a suspect and the evidence     & 2.38 \\
+\texttt{recall\_incidents} & which past fixes resemble this?       & 0.28 \\
+\texttt{list\_dir}         & what is in this directory?            & 0.13 \\
+\texttt{read\_skeleton}    & what does this file declare?          & 0.10 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\Cref{tab:tools} lists the tools and how heavily each is used. Two
+deserve explanation.
+
+\texttt{search\_symbol} is the one that addresses the ranking failure
+directly. A stack frame names a symbol, not a file, and the file that
+raises an exception is usually not the file that caused it. The tool
+resolves a symbol across the whole snapshot into the places that define
+it and the places that use it, and returns the functions that call it in
+the same result. We first offered those callers as a separate tool and
+the model almost never chose it: one call in 105 runs. Returning them
+inside a tool the model already uses three times per issue delivers the
+same evidence without depending on the model to ask.
+
+\texttt{recall\_incidents} carries the incident memory of
+\cref{sec:approach:memory} into the agent, behind the same four firewall
+rules. A past incident is admissible only if it is not the query itself,
+not in its duplicate cluster, does not share its fix commit, and was
+resolved before the query was filed. Votes are divided by the number of
+files that past fix touched, so a forty-file refactor cannot outweigh a
+one-file fix, and are weighted by recency.
+
+Every tool is a pure function of the snapshot, the memory pool and the
+query. None can reach the ground truth: the gold files of the instance
+under investigation are not in the memory pool, in any index, or on any
+path a tool will read.
+
+\subsection{What the model is not trusted to remember}
+
+Three behaviours matter to the design, and in an earlier version all
+three were written in the instructions and skipped in practice
+(\cref{sec:results:ablation}). Incident memory was consulted in $0.4$
+calls per run. The caller tool was used once in 105 runs. Evidence was
+recorded in under two thirds of runs.
+
+The current version does not instruct those behaviours, it builds them
+in. Incident memory is retrieved before the loop and handed to the model
+as evidence. Callers arrive inside the symbol lookup. Evidence is a
+required field of the submission schema. The principle generalises
+beyond this system: if a result depends on the agent doing something,
+asking it in the prompt is not a mechanism, and the gap between asking
+and getting is large enough to measure.
+
+\subsection{Reproducing an agent}
+
+An agent is not deterministic in the way the retrieval layer is, and we
+do not claim otherwise. Four things make its results checkable anyway.
+Every call uses temperature zero and a fixed seed. Every tool is a pure
+function of the snapshot, so a recorded run replays to identical tool
+results, and the only remaining source of variation is the model. Every
+run is persisted in full: the system prompt, each response, each tool
+call and its result, the recorded evidence, and the final ranking. The
+harness is restart-safe, so an interrupted batch resumes without
+repeating or losing work.

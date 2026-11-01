@@ -17,6 +17,7 @@
 % --- macros: single source for every headline number -------------------------
 % (values locked from data/c7-results/; each traces via verify_claims.py)
 \newcommand{\sys}{\textsc{Remember}\xspace} % working name, can change
+\newcommand{\retr}{the retrieval layer\xspace}  % lexical+memory pipeline; a tool inside the agent
 \newcommand{\nInstances}{6{,}437\xspace}
 \newcommand{\nProjects}{four\xspace}
 \newcommand{\nHardPct}{53\%\xspace}
@@ -31,34 +32,50 @@ Log-Guided Root-Cause Code Localization from Production Issues}
 \maketitle
 
 \begin{abstract}
-When a production issue is reported, engineers receive a natural-language
-description and logs, but no failing test and no reproducible execution.
-The logs usually show where the failure was detected, not where it was
-caused: in 53\% of the real reports we study, no file touched by the
-eventual fix is named anywhere in the text. We present \sys{}, which
-treats a project's resolved history as \emph{incident memory}: past
-incidents whose reports resemble the new one vote for the files their
-fixes modified, behind a firewall that admits only incidents resolved
-before the report existed. This vote is fused with lexical log-to-code
-retrieval over the code snapshot. To evaluate it, we mined what is, to our
-knowledge, the first public benchmark pairing issue reports, logs, code
-snapshots, and ground-truth faulty files: \nInstances{} real incidents
-from Apache Kafka, MariaDB, MongoDB, and Qt. \sys{} beats the strongest
-baseline on all four projects, including classic IRBL methods
-re-implemented under the same firewall (Acc@5 $+0.057$ to $+0.142$,
-significant after multiple-test correction), and ranks a correct module
-first for 67\% to 86\% of instances, well above a defect-frequency
-baseline. On reports that name no faulty file, where grep-style methods
-score zero, adding memory lifts fusion by up to $+0.209$ Acc@5, and on
-one project memory alone beats retrieval over the code itself. Removing
-the firewall inflates the classic similar-report signal by 9\% to 43\%
-relative Acc@5: evaluations that ignore report-time admissibility
-overstate what a deployed system will see. A function-level second stage
-ranks a correct function in the top five for 27\% to 48\% of instances,
-and a noise study shows the pipeline absorbs repeated and generic log
-noise but needs logs separated by incident. The pipeline is deterministic, trains nothing, runs on a CPU
-in under a second per issue, and is released with the benchmark and a
-script that traces every reported number to its result file.
+When a production issue is reported, engineers receive a description and
+logs, but no failing test and no way to reproduce the fault. The logs
+show where the failure was detected, not where it was caused. In 53\% of
+the real reports we study, no file touched by the eventual fix is named
+anywhere in the report text.
+To study this we mined a benchmark that pairs issue reports, their logs,
+the code as it stood when the issue was filed, and the files the fix
+later changed: \nInstances{} real incidents from Apache Kafka, MariaDB,
+MongoDB, and Qt.
+We use it for a comparative study of what different families of method
+achieve on the same instances, under one protocol and one temporal
+firewall. The families are classic information-retrieval bug
+localization, lexical log-to-code retrieval fused with an
+\emph{incident memory} in which past resolved issues vote for the files
+their fixes touched, a general-purpose open 27B model prompted with the
+report and the file tree, and that model used as a re-ranker. Accuracy
+in the top five rises across the families from $0.180$ to $0.839$, and
+no family dominates: the retrieval and the model succeed on different
+instances, and together they cover more than either alone.
+We build on that finding and present \sys{}, an agent that keeps the
+retrieval and the incident memory as tools, and adds tools that read
+code, resolve a symbol from a stack trace to the file that defines it,
+and consult past incidents behind the same firewall. \sys{} uses the
+same 27B model as the study, so the gain is attributable to the
+architecture rather than to a stronger model. It reaches Acc@5 $0.903$
+and Acc@1 $0.723$. That is $+0.071$ Acc@5 and $+0.129$ Acc@1 over the
+same model prompted directly, and $+0.063$ and $+0.185$ over the best
+combination of non-agent systems. \sys{} improves on every family in
+the study, and every comparison is significant under a paired bootstrap
+with multiple-test correction. The margins are widest on the reports
+that name no faulty file, which the challenge identifies as the core
+difficulty: there \sys{} gains $+0.091$ Acc@5 and $+0.181$ Acc@1 over
+the same model prompted directly, and $+0.099$ and $+0.275$ over the
+best non-agent combination.
+Three checks support these numbers. The model cannot recall these public
+fixes from the issue key alone, scoring below a defect-frequency prior.
+Shuffling the order of the retrieved candidates changes no result.
+Removing the temporal firewall inflates the classic similar-report signal
+by 9\% to 43\%, so evaluations that ignore report-time admissibility
+overstate what a deployed system will see.
+We report cost on both sides: the agent spends 12.2 model calls and 90k
+prompt tokens per issue, while the retrieval layer alone answers in under
+a second on one CPU core. The benchmark, the agent, and a script
+that traces every number in this paper to its result file are released.
 \end{abstract}
 
 \begin{IEEEkeywords}
@@ -68,6 +85,7 @@ log analysis, fault localization, root cause analysis, incident management
 \input{sections/01-introduction}
 \input{sections/02-benchmark}
 \input{sections/03-approach}
+\input{sections/04-agent}
 \input{sections/04-setup}
 \input{sections/05-results}
 \input{sections/06-discussion}

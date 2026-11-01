@@ -26,25 +26,25 @@ fix later touched.
 Existing techniques approach this from two sides, and both stop short.
 Classical fault localization ranks suspicious code using failing tests or
 coverage, execution evidence that does not exist at report
-time~\cite{just2014defects4j}; recent agent-based variants retrieve over
+time~\cite{just2014defects4j}. Recent agent-based variants retrieve over
 the codebase itself~\cite{rafi2024multiagent}, treating every issue as if
 it were the project's first. Log-based root cause analysis in cloud
 operations~\cite{wang2024rcagent} identifies the faulty service or
 component, but stops above the level of code regions.
 
-Our observation is that both sides ignore the richest evidence a mature
-project has: its own resolved history. Software failures recur. When an
-issue arrives, some past issue has often failed in a similar way, and its
-fix commit records exactly which files were at fault that time. We treat
-the resolved history as \emph{incident memory}: past incidents whose
-reports resemble the new one vote for the files their fixes touched, and
-this vote is fused with log-to-code retrieval over the snapshot. In the
-example above, this vote places \texttt{LogManager.scala}, the file the
-trace never names, among the top five candidates.
+One source of evidence is missing from both: the project's own resolved
+history. Software failures recur. When an issue arrives, some past issue
+has often failed in a similar way, and its fix commit records exactly
+which files were at fault that time. We call this \emph{incident
+memory}. Past incidents whose reports resemble the new one vote for the
+files their fixes touched. A memory used carelessly would cheat, because
+the history of a project contains fixes that did not exist when the
+report was filed, so every use of it here sits behind a temporal
+firewall that admits only incidents resolved before that moment.
 
-Evaluating this idea required a benchmark that does not exist publicly:
-issue reports with logs, the code as it was when the issue was open, and
-ground-truth faulty regions. We mined one from two public datasets and
+Studying any of this required a benchmark that was not available: issue
+reports with logs, the code as it was when the issue was open, and
+ground-truth faulty files. We mined one from two public datasets and
 project git histories. It contains \nInstances{} real incidents from four
 projects of four organizations (Apache Kafka, MariaDB, MongoDB, Qt),
 where the ground truth of each instance is the set of source files its
@@ -52,37 +52,62 @@ fix commit modified, and the snapshot is the parent of that commit. The
 benchmark is stratified by exactly the difficulty the challenge names:
 whether the report names any faulty file.
 
-This paper makes five contributions.
+We then use the benchmark to compare four families of method on the same
+instances, under one protocol and one firewall: classic
+information-retrieval bug localization, lexical log-to-code retrieval
+fused with incident memory, a general-purpose open 27B model prompted
+with the report and the file tree, and that model used to re-rank
+retrieved candidates. Accuracy in the top five rises across the families
+from $0.180$ to $0.839$. The more useful result is that no family
+dominates. Retrieval alone and the model alone solve different
+instances: retrieval is the only one of the two to succeed on 6.1\% of
+instances, the model alone on 21.1\%, and the union of their top-five
+lists reaches $0.892$ where each alone reaches $0.681$ and $0.832$.
+
+That gap between what the parts find separately and what either finds
+alone is the opening this paper takes. We present \sys{}, an agent that
+keeps the retrieval and the incident memory as tools and adds tools that
+read code, resolve a symbol from a stack trace to the file that defines
+it, and consult past incidents behind the same firewall. \sys{} runs on
+the same 27B model used in the study, so what it adds is the
+architecture, not a larger model. Kafka issue KAFKA-7693 shows the
+pattern. The report is a crash on a negative sequence number, and
+retrieval returns nothing useful. \sys{} resolves the symbol in the
+trace, reads the code that produces that number, and ranks
+\texttt{TransactionManager.java} first, the file whose arithmetic
+creates the negative value. On 105 of the 375 hard instances it ranks the
+faulty file first where retrieval does not place it in the top five at
+all.
+
+This paper makes four contributions.
 \begin{itemize}
 \item \textbf{A benchmark} of \nInstances{} issue--log--code--fix
   instances across four organizations, with a per-filter datasheet and a
   per-project incident-memory pool, released for reuse
   (\cref{sec:benchmark}).
-\item \textbf{A localizer} that fuses log-to-code retrieval with
-  incident memory under a strict temporal firewall
-  (\cref{sec:approach}). It beats the strongest baseline on all four
-  projects, including classic IRBL methods re-implemented under the same
-  firewall (Acc@5 $+0.057$ to $+0.142$, all significant), and ranks a
-  correct module first for 67\% to 86\% of instances, well above random
-  and defect-frequency baselines (\cref{sec:results}). A function-level
-  second stage and a noise-robustness study answer the challenge's
-  region and noise requirements
-  (\cref{sec:results:functions,sec:results:noise}).
-\item \textbf{Evidence about when memory matters}: on reports that name
-  no faulty file, where grep-style methods score zero, memory lifts
-  fusion by up to $+0.209$ Acc@5, and on one project memory alone beats
-  content retrieval outright. The gains concentrate exactly where textual
-  evidence is weakest (\cref{sec:results:rq2,sec:results:rq3}).
-\item \textbf{A leakage measurement}: the classic similar-report signal
-  (SimiScore), evaluated without report-time admissibility, overstates
-  Acc@5 by 9\% to 43\% relative, and the dominant leak is reports
-  resolved after the query was created (\cref{sec:results:leakage}).
-\item \textbf{Honest negatives}: the strata where fusion still loses to
-  a single signal, and a tuning fragility that practitioners adopting
-  regime-conditioned fusion should know about
-  (\cref{sec:results:negatives}).
+\item \textbf{A comparative study} of four families of localization
+  method on those instances, under one protocol and one temporal
+  firewall (\cref{sec:results}). It reports what each family achieves,
+  where each fails, and that they fail on different instances. It also
+  measures what the firewall is worth: the classic similar-report
+  signal, evaluated without report-time admissibility, overstates Acc@5
+  by 9\% to 43\% relative (\cref{sec:results:leakage}).
+\item \textbf{\sys{}}, an agent that turns the retrieval, the incident
+  memory, and the code itself into tools (\cref{sec:agent}). It reaches
+  Acc@5 $0.903$ and Acc@1 $0.723$, improving on every family in the
+  study and on the best combination of them, with the widest margins on
+  the reports that name no faulty file. Its cost is reported next to its
+  accuracy.
+\item \textbf{Three validity checks} that a reviewer of an
+  LLM-based result should expect, each of which could have invalidated
+  the result and did not (\cref{sec:results:validity}). The model cannot
+  recall these public fixes from the issue key alone. Shuffling the
+  order of the retrieved candidates changes no outcome. Every baseline
+  is rescored on the exact instances the agent ran, because the
+  evaluation sample is easier than the full split.
 \end{itemize}
 
-Everything in the paper is deterministic and reproducible: fixed seeds,
-no GPU training, and a released artifact in which every reported number
-is traced to the result file it came from.
+The lexical parts of the system are deterministic, and the agent's tools
+are pure functions of the snapshot, so a recorded run replays to
+identical tool results. Every reported number traces to a result file
+through a released script.

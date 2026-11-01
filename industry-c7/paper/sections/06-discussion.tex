@@ -11,16 +11,22 @@ and lists the threats to validity.
 \textbf{Root cause beyond symptoms.} The challenge describes this as the
 hardest part, and our data agrees in a form that can be quantified: in
 53\% of real reports, no faulty file is named anywhere in the text, and
-on those instances every grep-style method scores zero. Incident memory
-is currently the only signal in our system that routinely recovers such
-files, because a past fix can point at code that no present log line
-mentions. The honest counterpart from \cref{sec:results:negatives} also
-stands: on one of four projects, fusing signals still performs worse on
-this stratum than content retrieval alone. We also do not attempt
-reasoning over control flow, data flow, or dependency structure; memory
-is a statistical stand-in for that reasoning, and the challenge's full
-causal-analysis ask remains open. The hard stratum is where
-future work on this challenge should be judged.
+on those instances a method that matches the report against the code it
+mentions scores zero by construction. This is where the three approaches
+separate most sharply. The retrieval layer reaches $0.424$ Acc@5 there,
+the model alone $0.725$, and \sys{} $0.816$. It is also where \sys{}
+gains most over everything else, $+0.099$ Acc@5 and $+0.275$ Acc@1 over
+the best non-agent combination.
+
+Two things recover files that no log line mentions. Incident memory does
+it statistically: a past fix points at code the present report never
+names. Reading the code does it causally: the agent follows a symbol
+from the trace to the function that produces the bad value. Neither is
+reasoning over control flow or data flow in the sense the challenge
+describes, and we do not claim it. The agent follows one or two hops by
+reading source, which is a shallow substitute for dependency analysis.
+The hard stratum remains where future work on this challenge should be
+judged, and at $0.816$ it is not solved.
 
 \textbf{Noisy and incomplete log evidence.} Here our benchmark is kinder
 than industrial reality, and we say so. Its logs are the excerpts that
@@ -36,56 +42,91 @@ matching. Evaluating on true unfiltered runtime
 bundles is the clearest next step, and our architecture makes no
 assumption that prevents it: every signal consumes plain text.
 
-\textbf{Evidence-to-code semantic retrieval.} Our lexical instantiation
-is deliberately simple: BM25 over paths, over file contents within a
-per-instance pool, and over past incident reports. It is cheap,
-deterministic, and leak-free, and it was enough to beat the strongest
-baseline everywhere. Nothing in the fusion design depends on the signals
-being lexical, and \cref{sec:results:dense} measures the swap with a
-small embedder: dense retrieval already upgrades the incident-memory
-slot, while in the code slot full-text BM25 remains ahead. A code-trained
-dense retriever with full-file coverage, or an LLM reranker over the
-fused top candidates, drops into the same slot and inherits the same
-firewall; the memory-side result suggests the semantics are there to be
-captured.
+\textbf{Evidence-to-code semantic retrieval.} The challenge asks for a
+method that understands log semantics and code semantics together. Our
+results say something specific about where that understanding has to
+sit.
+
+Retrieval alone does not supply it. The lexical layer is cheap,
+deterministic and leak-free, and it is the weakest system in
+\cref{tab:study} apart from the classical methods. Swapping its lexical
+parts for a small embedder does not fix this either
+(\cref{sec:results:dense}): dense retrieval helps in the
+incident-memory slot, where the task is comparing one report with
+another, and loses to full-text BM25 in the code slot by up to $0.205$.
+
+What supplies it in our system is a model that can read the code
+directly, paired with tools that fetch the right code to read. That is
+the difference between the model prompted with a file tree, which sees
+only path names and reaches $0.832$, and the same model able to resolve
+a symbol and read the function behind it, which reaches $0.903$. The
+semantics are in the source, not in the file names, and a method has to
+open the file to use them.
 
 \subsection{What the explanation output is}
 \label{sec:discussion:explanation}
 
 The challenge asks for an explanation linking symptoms, log events, and
-candidate regions. Our explanation is provenance, not generated text. For
-each ranked file the system reports which signals ranked it, the explicit
-mentions or matching terms behind the log-to-code signals, and for the
-memory signal the keys of the past incidents that voted for it. An
-engineer can open the cited prior issues and their fix commits directly.
-We prefer this form because every element of it is checkable; a fluent
-narrative written by a language model can be added on top, but the
-citations are the part an on-call engineer can trust at 3 a.m. Coverage
-is complete on the evaluation split: every gold file ranked in the top
-five carries at least one checkable element, always including the
-matched terms, with an explicit mention for 52\% to 86\% of hits and
-past-incident voter keys for 63\% to 80\%. Whether these citations
-actually speed engineers up is a user-study question this paper does not
-answer.
+candidate regions. Both of our systems produce one, and they differ in
+kind.
+
+The retrieval layer produces provenance rather than prose. For each
+ranked file it reports which signals ranked it, the mentions or matching
+terms behind the log-to-code signals, and for the memory signal the keys
+of the past incidents that voted for it. An engineer can open the cited
+prior issues and their fix commits. Coverage is complete on the
+evaluation split: every gold file ranked in the top five carries at
+least one checkable element, always the matched terms, with an explicit
+mention for 52\% to 86\% of hits and past-incident voter keys for 63\%
+to 80\%.
+
+\sys{} produces an argument instead. Evidence is a required field of its
+submission, so every ranked file arrives with a statement of what was
+seen: the symbol that resolved there, the line that was read, the past
+incident that pointed at it. On KAFKA-7693 it reports that the negative
+sequence number is produced by the sequence arithmetic in
+\texttt{TransactionManager}, in the method that adjusts sequences after
+a failed batch, which names the mechanism and not only the file.
+
+The two forms have different weaknesses. Provenance is mechanically
+checkable but says only which signal fired. The agent's evidence
+explains the fault but is written by a model and can be wrong even when
+the ranking is right, so it is a lead to verify and not a finding.
+Neither has been shown to speed engineers up; that is a user study this
+paper does not run.
 
 \subsection{Deployment notes}
 \label{sec:discussion:deployment}
 
-Three properties matter for industrial adoption. First, cost: the whole
-pipeline is lexical, needs no GPU and no training, and we measured it on
-one laptop CPU core with warm caches. The median end-to-end time per
-issue, signals plus fusion, is 0.07\,s on Kafka, 0.22\,s on Qt, and
-0.41\,s on MariaDB and MongoDB; the 95th percentile stays below 0.7\,s
-everywhere, and building the incident-memory index takes at most 0.1\,s
-even for the largest pool. Second,
-freshness: the memory pool is append-only, and every newly resolved issue
-with a linked fix commit widens the searchable history at no retraining
-cost. Consistent with this, memory was weakest in the earliest part of
-the evaluation period in three of four projects
-(\cref{sec:results:rq3}). Third, failure mode: with
-an empty or sparse memory pool the system degrades to its log-to-code
-signals, which already match the strongest baseline; memory is an
-additive signal behind a firewall, never a dependency.
+This paper leaves a team with two systems and a choice between them, so
+the deployment question is which one fits.
+
+\textbf{Cost decides it in most cases.} The retrieval layer needs no
+GPU, no training and no network. Measured on one laptop CPU core with
+warm caches, the median time per issue is 0.07\,s on Kafka, 0.22\,s on
+Qt, and 0.41\,s on MariaDB and MongoDB, with the 95th percentile below
+0.7\,s and the incident-memory index taking at most 0.1\,s to build.
+\sys{} costs 12.2 model calls and 90k prompt tokens per issue. An
+organization that can host a 27B model should pay that for $+0.222$
+Acc@5. One that cannot, or that may not send source code and production
+logs to an external service, still has a system that reaches $0.681$.
+
+\textbf{Freshness favours both.} The memory pool is append-only, so
+every newly resolved issue with a linked fix commit widens the
+searchable history at no retraining cost. Memory was weakest in the
+earliest part of the evaluation period in three of four projects
+(\cref{sec:results:rq3}), which is the expected shape: a young project
+has little history to recall.
+
+\textbf{Failure modes differ and should be planned for.} The retrieval
+layer degrades gracefully: with an empty memory pool it falls back to
+its log-to-code signals, and memory is additive rather than a
+dependency. \sys{} has the failure modes of any agent. It can return a
+path that does not exist, run out of turns, or be unavailable because
+the model is. We handle the first two inside the harness and the third
+is an operational matter, but a team adopting it should keep the
+retrieval layer as the fallback rather than as a decommissioned
+predecessor.
 
 \subsection{Threats to validity}
 \label{sec:discussion:threats}
@@ -116,3 +157,17 @@ industrial settings. Projects without disciplined issue--commit linkage
 cannot use our mining recipe directly, although organizations with any
 form of change tracking can substitute their own linkage. Logs in the
 benchmark are reporter-curated, as discussed above.
+
+\textbf{Specific to the agent.} Four limits are worth stating. We
+evaluate one model, so the result shows what this architecture achieves
+with a 27B open-weights model and not how it scales to others. The agent
+is not deterministic, and although every tool is a pure function of the
+snapshot and every run is recorded in full, repeated runs can differ;
+we report a single seed per arm rather than a distribution over seeds.
+The agent ran on 790 instances rather than all \nInstances{}, for cost,
+which is why every baseline it is compared against was rescored on those
+same instances. Finally, the model is prompted with report text and
+source code from public projects, so contamination is a live concern; we
+measured it directly (\cref{sec:results:validity}) and found none, but
+that result is specific to this model and these projects and should be
+re-measured for others.

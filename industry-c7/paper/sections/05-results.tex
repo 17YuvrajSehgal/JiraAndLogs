@@ -1,21 +1,64 @@
 \section{Results}
 \label{sec:results}
 
-We answer three questions. RQ1: does \sys{} beat the strongest baseline
-on the challenge's metrics? RQ2: what does the memory signal contribute,
-and where? RQ3: under what conditions does memory matter? All numbers
-come from the evaluation split (476, 1{,}179, 2{,}533, and 320 instances
-for Kafka, MariaDB, MongoDB, and Qt). Significance always means
-$q < 0.05$ after Benjamini--Hochberg correction within the test family
-(\cref{sec:setup:stats}).
+This section reports three things: what each family of method achieves
+on the same instances, what \sys{} adds on top of them, and the checks
+that decide whether those numbers can be believed.
+
+Two populations appear, and we never mix them. The \emph{evaluation
+split} is the later 70\% of every project by fix time: 476, 1{,}179,
+2{,}533, and 320 instances for Kafka, MariaDB, MongoDB, and Qt. It
+carries the measurements that describe the benchmark as a whole. The
+\emph{study population} is a seeded sample of 200 instances per project,
+minus ten whose only ground-truth files are test files, leaving 790
+instances of which 375 are hard. Running an agent on every instance is
+expensive, so the agent, the dense-retrieval experiment, and the noise
+experiment all use this sample, and every system they are compared
+against is rescored on exactly those 790 instances. This matters: the
+sample is easier than the full split, and quoting a baseline measured on
+the other population would overstate the agent by several points
+(\cref{sec:results:validity}).
+
+Significance always means $q < 0.05$ after Benjamini--Hochberg
+correction within the test family (\cref{sec:setup:stats}).
 
 \begin{table}[t]
-\caption{File-level results on the evaluation split: Acc@5\,/\,MRR.
+\caption{The comparative study, and \sys{}. All systems scored on the
+same 790 study instances (375 of them hard, meaning the report names no
+faulty file). The classic methods use the firewalled SimiScore of
+\cref{sec:setup:systems}; ``fusion'' is reciprocal-rank fusion of the
+retrieval layer with the model used alone. \sys{} and the two model rows
+use the same 27B model.}
+\label{tab:study}
+\centering
+\footnotesize
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{@{}lcccc@{}}
+\toprule
+ & Acc@1 & Acc@5 & MRR & Acc@5 (hard) \\
+\midrule
+rVSM                        & .071 & .180 & .143 & .165 \\
+BugLocator                  & .098 & .251 & .183 & .232 \\
+BRTracer-style              & .301 & .481 & .395 & .171 \\
+\midrule
+retrieval + memory          & .399 & .681 & .522 & .424 \\
+model as re-ranker          & .604 & .780 & .678 & .576 \\
+model alone                 & .594 & .832 & .692 & .725 \\
+fusion (best non-agent)     & .538 & .839 & .667 & .717 \\
+\midrule
+\sys{}                      & \textbf{.723} & \textbf{.903} & \textbf{.799} & \textbf{.816} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{table}[t]
+\caption{File-level results on the full evaluation split: Acc@5\,/\,MRR.
 S1--S4 are the standalone signals of \cref{sec:approach}; rVSM,
 BugLocator, and BRTracer-style are the classic IRBL baselines of
 \cref{sec:setup:systems} (firewalled SimiScore); ``fused'' is unweighted
-fusion; ``cond.'' is regime-conditioned weighted fusion. Bold marks the
-best system per project.}
+fusion; ``cond.'' is regime-conditioned weighted fusion. These rows
+describe the retrieval layer across the whole benchmark; the agent
+comparison is \cref{tab:study}.}
 \label{tab:files}
 \centering
 \footnotesize
@@ -36,39 +79,183 @@ BRTracer-style    & .599\,/\,.479 & .516\,/\,.382 & .456\,/\,.380 & .316\,/\,.28
 fused, no memory  & .767\,/\,.611 & .443\,/\,.342 & .530\,/\,.420 & .353\,/\,.292 \\
 fused, +memory    & .790\,/\,.600 & .562\,/\,.408 & .629\,/\,.499 & .463\,/\,.351 \\
 cond., no memory  & .792\,/\,.625 & .642\,/\,.479 & .693\,/\,.566 & .456\,/\,.350 \\
-\sys{} (cond., +memory) & \textbf{.794}\,/\,.625 & \textbf{.658}\,/\,.479 & \textbf{.700}\,/\,.552 & \textbf{.541}\,/\,.408 \\
+retrieval layer & \textbf{.794}\,/\,.625 & \textbf{.658}\,/\,.479 & \textbf{.700}\,/\,.552 & \textbf{.541}\,/\,.408 \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-\subsection{RQ1: Against the strongest baseline}
-\label{sec:results:rq1}
+\subsection{What each family achieves, and where they differ}
+\label{sec:results:study}
 
-\Cref{tab:files} gives the file-level results. The strongest baseline
-differs by project: content retrieval (S3) on Kafka, MongoDB, and Qt,
-and BRTracer-style on MariaDB, where the trace boost tops S3. \sys{}
-beats the per-project strongest baseline on all four: Acc@5 improves by
-$+0.086$ $[+0.055, +0.118]$ on Kafka, $+0.142$ $[+0.119, +0.167]$ on
-MariaDB, $+0.057$ $[+0.046, +0.067]$ on MongoDB, and $+0.084$
-$[+0.053, +0.119]$ on Qt, with MRR gains of $+0.058$ to $+0.097$, every
-test significant. Against S3 alone the MariaDB margin is larger still
-($+0.187$ Acc@5). Recall@5 follows the same ordering: \sys{} retrieves
-45\% to 61\% of each instance's gold files in the top five, against
-35\% to 54\% for S3; the gap to Acc@5 reflects the minority of
-instances whose fixes span several files. \Cref{tab:files} also shows
-unweighted fusion below S3 on MariaDB and MongoDB. The cause is
-dilution: equal weights give trace stem-matches, path votes, and the
-sparse first memory variant the same say as content retrieval. The
-conditioned weights recover exactly by zeroing those signals in the
-regimes where they hurt.
-Against the grep-style baseline S1, the margins grow further, from
-$+0.137$ to $+0.347$ Acc@5 overall, and on hard instances S1 scores zero
-by construction while \sys{} reaches $0.361$ to $0.544$. The classic
-IRBL baselines sit lower on every project. The strongest of them,
-BRTracer-style, trails \sys{} by $+0.142$ to $+0.245$ Acc@5, all four
-significant. Its entire margin over BugLocator comes from the stack-trace
-boost, which is the same evidence as our S1, so on hard instances the gap
-to \sys{} widens further ($+0.133$ to $+0.371$, all significant).
+\Cref{tab:study} gives the comparative study. Accuracy in the top five
+rises from $0.180$ for rVSM to $0.839$ for the best non-agent
+combination. Three things in that ordering are worth stating plainly.
+
+First, the classic methods are far behind on this data. rVSM and
+BugLocator reach $0.180$ and $0.251$. BRTracer-style reaches $0.481$,
+and nearly all of its advantage comes from the stack-trace boost: on
+hard reports, which carry no usable file name in the trace, it falls to
+$0.171$, below BugLocator. A trace boost helps exactly when the trace
+already names the answer.
+
+Second, a general-purpose model prompted with the report and the file
+tree reaches $0.832$, above the retrieval layer at $0.681$. The model
+has never seen this repository's history and uses no retrieval, yet it
+is the stronger single system. On hard reports the gap is wider still,
+$0.725$ against $0.424$.
+
+Third, and most useful for what follows, neither of those two is
+redundant. On the study population they both succeed on 62.0\% of
+instances and both fail on 10.8\%. The retrieval layer is the only one
+of the two to succeed on 6.1\% of instances, and the model alone on
+21.1\%. Taking the union of their top-five lists would reach $0.892$.
+They are reading different evidence: retrieval knows what this project
+has had to fix before, and the model can read the report as prose.
+Fusing them with reciprocal-rank fusion captures part of that, reaching
+$0.839$, but fusion can only reorder files the two already found.
+
+\subsection{\sys{}}
+\label{sec:results:agent}
+
+\sys{} reaches Acc@5 $0.903$ and Acc@1 $0.723$ on the same instances. It
+improves on every family in \cref{tab:study}, and every comparison is
+significant. Against the model used alone it gains $+0.071$ Acc@5
+$[+0.046, +0.095]$ and $+0.129$ Acc@1. Against the best non-agent
+combination it gains $+0.063$ Acc@5 $[+0.042, +0.085]$ and $+0.185$
+Acc@1 $[+0.149, +0.222]$. Against the retrieval layer it gains $+0.222$
+Acc@5. Because \sys{} runs on the same 27B model as those two model
+rows, the difference is the architecture rather than the model.
+
+The shape of the gain is as informative as its size. The Acc@1 margin is
+roughly three times the Acc@5 margin in every comparison. \sys{} is not
+mainly finding files that the other systems miss; it is deciding which
+of the candidates is actually at fault. That is the behaviour the tools
+were built for, because the plain model, which sees only path names,
+loses most of its instances by choosing wrongly from a list that
+contains the answer.
+
+It also passes the ceiling that fusion cannot. A perfect selector
+choosing among the ten files in the two systems' top-five lists would
+reach $0.892$; \sys{} reaches $0.903$ using five. It finds files that
+appear in neither system's shortlist, which is what having tools rather
+than a fixed candidate set buys.
+
+The margins are widest where the challenge locates the difficulty. On
+the 375 hard reports, \sys{} reaches $0.816$ Acc@5 and $0.608$ Acc@1,
+against $0.717$ and $0.333$ for the best non-agent combination
+($+0.099$ and $+0.275$) and $0.725$ and $0.427$ for the model alone
+($+0.091$ and $+0.181$). The retrieval layer reaches $0.424$ there. On
+105 of those 375 instances \sys{} ranks the faulty file first when
+retrieval does not place it in the top five at all.
+
+\subsection{What the result costs}
+\label{sec:results:cost}
+
+Accuracy without cost is not an industrial result. \sys{} spends a mean
+of $12.2$ model calls and $90$k prompt tokens per issue, and makes
+$16.1$ tool calls. On a shared H100 a single issue takes $232$ seconds
+of wall time at the concurrency we ran. The retrieval layer, by
+contrast, answers from one CPU core with no model at all, in a median
+of $0.07$ to $0.41$ seconds per issue depending on the project, with the
+95th percentile under $0.7$ seconds.
+
+The gap is four orders of magnitude in compute for $+0.222$ Acc@5. Which
+side of that trade is right depends on the deployment. A team that can
+host a 27B model, or send reports and source to an external one, should
+prefer the agent. A team that cannot, because source code and production
+logs may not leave the building, still gets $0.681$ Acc@5 from a
+pipeline that needs no GPU, no training, and no network.
+
+\subsection{Three checks on the result}
+\label{sec:results:validity}
+
+An LLM result on public repositories invites three specific objections.
+We tested all three, and report them whether or not they were kind to
+us.
+
+\textbf{The model does not remember these fixes.} These are public
+projects, and the model may simply have memorised their histories. We
+asked it directly: given only an issue key such as KAFKA-6624 and no
+report text, which files did that fix touch? Over the 4{,}508
+evaluation instances it claimed to recall nothing and scored $0.000$
+Acc@5. Given the issue title as well, it claimed recall for $0.5\%$ of
+instances and scored $0.003$. For comparison, naming each project's most
+frequently fixed files without reading anything scores $0.034$ to
+$0.181$. The model performs an order of magnitude \emph{below} that
+prior, so it is not reciting these fixes; what it contributes is
+inference from the report and the code.
+
+\textbf{The agent does not simply echo the retrieval.} \sys{} is handed
+the retrieval layer's ranked candidates, so its accuracy could be an
+artifact of that ordering. Prior work found the initial ordering given
+to an LLM localizer can move Top-1 accuracy by up to 22
+points~\cite{rafi2024multiagent}. We re-ran 200 instances with the seed
+order randomised. Nothing moved: Acc@1 $+0.015$ ($p = 0.59$), Acc@5
+$-0.005$ ($p = 0.87$), and on hard instances Acc@5 was identical. The
+agent's own answers did change: the overlap between its top five and the
+seed top five fell from $59.8\%$ to $20.5\%$. It selected different
+files and reached equally good answers, which is what using the tools
+rather than the list looks like.
+
+\textbf{Every system is scored on the same instances.} The study
+population is easier than the full evaluation split, and by a margin
+large enough to matter. Reciprocal-rank fusion scores $0.839$ here and
+$0.804$ on the full split; the model alone scores $0.832$ here and
+$0.775$ there. Had we compared the agent against baselines measured on
+the full split, it would have appeared roughly three points better than
+it is. Every number in \cref{tab:study} is recomputed on the 790
+instances the agent ran.
+
+\subsection{Which design decisions earned the result}
+\label{sec:results:ablation}
+
+An earlier version of the agent had the same tools but left three things
+to the model's discretion: consulting incident memory, walking back to a
+symbol's callers, and recording the evidence for a candidate. Measured
+over 168 instances, all three were skipped at scale. Incident memory was
+consulted in $0.4$ calls per run, the caller tool was used once in 105
+runs, and $37\%$ of runs recorded no evidence at all. Runs that recorded
+nothing were also the ones that failed, averaging $0.8$ recorded
+candidates against $2.3$ for runs that found the fault.
+
+The current version makes those three structural rather than
+instructed. Incident memory is retrieved before the loop and handed over
+as evidence, callers are returned inside the symbol lookup, and evidence
+is a required field of the submission, so a ranking cannot be submitted
+without it. Paired on the same 168 instances, this is worth $+0.077$
+Acc@1 ($q = 0.042$) and $+0.062$ MRR ($q = 0.010$) overall, and $+0.140$
+Acc@1 ($q = 0.010$) and $+0.121$ MRR on hard instances. Acc@5 moves
+$+0.030$ overall and $+0.070$ on hard instances, neither significant.
+The behavioural change is unambiguous: runs recording no evidence fell
+from $37\%$ to zero, and recorded evidence per run rose from $1.99$ to
+$5.77$, at an unchanged $16$ tool calls and $12$ model calls. The agent
+is not working harder. It is being given the memory it would otherwise
+skip, and made to justify what it ranks.
+
+\subsection{The retrieval layer across the whole benchmark}
+\label{sec:results:retrieval}
+
+\sys{} uses the retrieval layer as one of its tools, so how that layer
+behaves on its own, across all \nInstances{} instances rather than the
+sample, is worth reporting. \Cref{tab:files} gives it.
+
+The conditioned retrieval layer beats the per-project strongest
+classical baseline on all four projects: Acc@5 improves by $+0.086$
+$[+0.055, +0.118]$ on Kafka, $+0.142$ $[+0.119, +0.167]$ on MariaDB,
+$+0.057$ $[+0.046, +0.067]$ on MongoDB, and $+0.084$ $[+0.053, +0.119]$
+on Qt, every test significant. Incident memory is what carries it on the
+hard stratum: adding memory to unweighted fusion lifts hard-stratum
+Acc@5 by $+0.209$ on MariaDB, $+0.165$ on MongoDB, and $+0.153$ on Qt,
+and on MariaDB's hard instances memory alone ($0.442$) beats every other
+standalone signal including content retrieval ($0.406$). A project's
+resolved history can be a better guide to an unnamed faulty file than
+the content of the files themselves.
+
+\Cref{tab:files} also shows unweighted fusion below S3 on MariaDB and
+MongoDB. The cause is dilution: equal weights give trace stem-matches,
+path votes, and the sparse first memory variant the same say as content
+retrieval. The conditioned weights recover by zeroing those signals in
+the regimes where they hurt.
 
 \begin{table}[t]
 \caption{Module-level results on the evaluation split (challenge output
@@ -88,11 +275,11 @@ modules (median) & 8 & 79 & 36 & 116 \\
 random, Acc@1       & .129 & .015 & .032 & .037 \\
 frequency, Acc@1    & .361 & .612 & .756 & .334 \\
 S3 content, Acc@1   & .830 & .771 & .808 & .613 \\
-\sys{}, Acc@1       & \textbf{.861} & \textbf{.843} & \textbf{.841} & \textbf{.669} \\
+\retr{}, Acc@1 & \textbf{.861} & \textbf{.843} & \textbf{.841} & \textbf{.669} \\
 \midrule
 random, Acc@5       & .610 & .076 & .153 & .099 \\
 frequency, Acc@5    & .763 & .905 & .894 & .809 \\
-\sys{}, Acc@5       & \textbf{.998} & \textbf{.983} & \textbf{.979} & \textbf{.925} \\
+\retr{}, Acc@5 & \textbf{.998} & \textbf{.983} & \textbf{.979} & \textbf{.925} \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -102,9 +289,9 @@ spaces are small and defects concentrate in few modules
 (\cref{tab:modules}). Ranking modules by their past defect frequency
 alone reaches 0.76 to 0.91 Acc@5, and Kafka's eight-module space makes
 even a random top five succeed 61\% of the time. The informative number
-is therefore Acc@1: \sys{} places a correct module first for 67\% to 86\%
+is therefore Acc@1: \retr{} places a correct module first for 67\% to 86\%
 of instances, beating the frequency baseline by $+0.08$ (MongoDB) to
-$+0.50$ (Kafka). At $K = 5$ \sys{} still clears the frequency baseline on
+$+0.50$ (Kafka). At $K = 5$ \retr{} still clears the frequency baseline on
 every project, but the margin there partly reflects concentration rather
 than localization.
 
@@ -197,7 +384,7 @@ exact we use only fix commits whose parent is the snapshot; later
 commits of multi-commit fixes are skipped and counted. This derivation
 yields at least one gold function for 87\% to 95\% of instances per
 project. The stage itself is deliberately simple: every function in
-\sys{}'s top ten files becomes a candidate, and BM25 ranks the function
+the retrieval layer's top ten files becomes a candidate, and BM25 ranks the function
 bodies against the report text. Nothing is tuned.
 
 \begin{table}[t]
@@ -325,7 +512,7 @@ S3 content, dense  & .485 & .350 & .460 & .425 \\
 S4 memory, BM25    & .460 & .455 & .410 & .305 \\
 S4 memory, dense   & .530 & .515 & .425 & .290 \\
 \midrule
-\sys{} (sample)    & .790 & .630 & .715 & .555 \\
+\retr{} (sample) & .790 & .630 & .715 & .555 \\
 cond.\,+\,dense S4 & .795 & .675 & .720 & .555 \\
 \bottomrule
 \end{tabular}
@@ -352,7 +539,7 @@ Three results go against us, and we report them. First, in
 MongoDB ($0.552$ versus $0.566$) while raising Acc@5: memory pulls extra
 gold files into the top five but sometimes above-ranks a wrong file, a
 reminder that its increment at full tuning is small outside Qt. Second,
-on Kafka's hard stratum, \sys{} is significantly below standalone
+on Kafka's hard stratum, \retr{} is significantly below standalone
 content retrieval
 ($-0.065$ $[-0.113, -0.024]$): fusion still pays a price for mixing in
 signals that are weak on that stratum, and on the other three projects

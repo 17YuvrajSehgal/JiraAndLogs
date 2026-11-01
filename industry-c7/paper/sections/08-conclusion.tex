@@ -1,32 +1,50 @@
 \section{Conclusion}
 \label{sec:conclusion}
 
-This paper answered the challenge with one idea and the evidence to judge
-it. The idea is that a project's resolved history is a localization
-signal: past incidents whose reports resemble a new one vote for the
-files their fixes touched, behind a firewall that admits only what an
-engineer could have searched at report time. To measure it, we mined the
-first public benchmark that pairs issue reports, logs, code snapshots,
-and ground-truth faulty files: \nInstances{} real incidents from four
-organizations, stratified by whether the report names any faulty file.
+This paper answered the challenge by measuring what different methods
+can do with a production issue report, and then building the method that
+did it best.
 
-On this benchmark, fusing incident memory with log-to-code retrieval
-beats the strongest baseline on all four projects on the challenge's
-metrics, ranks a correct module first for 67\% to 86\% of instances
-(well above random and defect-frequency baselines), and delivers its
-largest gains exactly where the challenge
-locates the core difficulty: reports that never name the faulty file. The
-firewall is not only hygiene: without it, the classic similar-report
-signal overstates its accuracy by 9\% to 43\% relative, almost entirely
-through reports resolved after the query existed. We
-reported with equal prominence what does not work yet. On one project,
-fusion still trails a single signal on that hardest stratum, and
-per-regime tuning is fragile when development data is scarce.
+We first mined a benchmark that did not exist: \nInstances{} real
+incidents from four organizations, each pairing an issue report and its
+logs with the code as it stood at the time and the files the fix later
+changed, stratified by whether the report names any faulty file. On it
+we compared four families of method under one protocol and one temporal
+firewall. Accuracy in the top five rises from $0.180$ for classic
+information-retrieval localization to $0.839$ for the best combination
+of a retrieval pipeline and a general-purpose model. The more useful
+finding is that the retrieval and the model fail on different instances.
+Each solves cases the other misses, and the union of their shortlists
+reaches $0.892$, which no reordering of their output can claim.
 
-For practice, the result reads simply. A team that keeps an issue tracker
-and links fixes to issues already owns the data this method needs. The
-pipeline runs on a CPU in under a second per issue, needs no training,
-and every ranked file comes with citations an engineer can check: the
-mentions that matched, and the past incidents whose fixes pointed there.
-The benchmark, the pipeline, and a script that traces every reported
-number to its result file are released with this paper.
+\sys{} claims it by investigating instead of ranking. It keeps the
+retrieval and the firewalled incident memory as tools, and adds tools
+that read code, resolve a symbol from a stack trace to the file that
+defines it, and consult past incidents. On the same instances and the
+same 27B model it reaches Acc@5 $0.903$ and Acc@1 $0.723$, improving on
+every family in the study, with its widest margins on the reports that
+name no faulty file: $+0.099$ Acc@5 and $+0.275$ Acc@1 over the best
+non-agent combination. The gain is concentrated in ranking rather than
+recall, which is what an engineer who opens files in order actually
+needs.
+
+Three results survive independently of which system a reader prefers.
+Removing the temporal firewall inflates the classic similar-report
+signal by 9\% to 43\%, so an evaluation that ignores report-time
+admissibility overstates what a deployed system will see. The model
+cannot recall these public fixes from an issue key, scoring below a
+defect-frequency prior, so its contribution is inference and not memory.
+And an agent skips what it is merely asked to do: making incident
+recall, caller lookup and evidence recording structural rather than
+instructed was worth $+0.140$ Acc@1 on hard instances, and raised the
+share of runs recording any evidence from 63\% to all of them.
+
+For practice the paper leaves two systems and a clear basis for choosing
+between them. A team that can host a 27B model should, and gains
+$+0.222$ Acc@5 for 12.2 model calls per issue. A team that cannot, or
+whose source and logs may not leave the building, still has a pipeline
+that answers from one CPU core in under a second and whose every ranked
+file carries a citation an engineer can check. Both need only what a
+team with an issue tracker and linked fix commits already has. The
+benchmark, both systems, the recorded agent runs, and a script that
+traces every number in this paper to its result file are released.
