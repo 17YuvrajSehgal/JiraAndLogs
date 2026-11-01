@@ -225,16 +225,25 @@ def _args_of(tc: dict) -> dict:
             return {}
 
 
-def fuse(agent_list: list[str], lexical: list[str],
-         w_agent: float = 1.0, w_lex: float = 0.6) -> list[str]:
-    """Safety net. The agent leads; the lexical ranking still votes, so an
-    empty or degenerate agent answer falls back to a known-good list."""
-    s: dict[str, float] = defaultdict(float)
-    for i, f in enumerate(agent_list):
-        s[f] += w_agent / (RRF_K + i + 1)
-    for i, f in enumerate(lexical):
-        s[f] += w_lex / (RRF_K + i + 1)
-    return [f for f, _ in sorted(s.items(), key=lambda x: (-x[1], x[0]))]
+def fuse(agent_list: list[str], lexical: list[str]) -> list[str]:
+    """Safety net: BACKFILL, not blending.
+
+    The first design RRF-blended the agent's ranking with the lexical one
+    at weight 0.6. Measured on v1 that was a net loss: agent-only scored
+    >= fused on every checkpoint, and on KAFKA-4131 blending pushed a gold
+    file the agent had ranked 2nd out of the top five entirely. The
+    lexical votes were displacing correct answers to insure against a
+    failure that never occurred (zero empty agent rankings in 150+ runs).
+
+    So the agent's order is preserved exactly, and the lexical ranking is
+    appended only to fill remaining slots. That keeps the protection
+    against an empty or short agent answer while removing the demotion.
+    """
+    out = list(dict.fromkeys(agent_list))
+    for f in lexical:
+        if f not in out:
+            out.append(f)
+    return out
 
 
 def run_instance(ws: T.Workspace, seed: int = 42,
