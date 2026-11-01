@@ -50,13 +50,26 @@ MAX_TURNS = 14
 MAX_TOOL_CHARS = 9000
 LIST_LEN = 10
 
+# Evidence is a REQUIRED field of the submission rather than a separate
+# optional note_candidate call. Measured on v1: 37% of runs recorded no
+# evidence at all, and those runs averaged 0.8 notes against 2.3 for runs
+# that found the fault. Making evidence structural removes the model's
+# option to skip it.
 SUBMIT = {"type": "function", "function": {
     "name": "submit_ranking",
-    "description": "Commit the final ranked list of suspect files, most "
-                   "likely first. Call this exactly once, at the end.",
+    "description": "Commit the final ranked list, most likely first. Call "
+                   "this exactly once, at the end. Every file must carry "
+                   "the evidence that put it on the list.",
     "parameters": {"type": "object", "properties": {
-        "files": {"type": "array", "maxItems": 10,
-                  "items": {"type": "string"}},
+        "files": {"type": "array", "maxItems": 10, "items": {
+            "type": "object", "properties": {
+                "path": {"type": "string"},
+                "evidence": {"type": "string",
+                             "description": "what you SAW that implicates "
+                                            "this file: the symbol, the line, "
+                                            "the past incident, the call"},
+                "confidence": {"type": "number"}},
+            "required": ["path", "evidence"]}},
         "rationale": {"type": "string",
                       "description": "one or two sentences on what decided "
                                      "the top choice"}},
@@ -239,10 +252,14 @@ def run_instance(ws: T.Workspace, seed: int = 42,
     syms = ws.symbols_in_snapshot(
         list(dict.fromkeys(list(rf.get("identifiers") or [])
                            + T.raw_report_symbols(ws.query_text))))
-    # a content search for the described behaviour, run BEFORE the loop so it
-    # happens unconditionally rather than only when the model thinks of it
+    # Two searches run BEFORE the loop so they happen unconditionally rather
+    # than only when the model thinks of them. v1 measured recall_incidents
+    # at 0.4 calls/run: the project's own resolved history, which is the one
+    # signal a plain LLM cannot replicate, was being consulted in well under
+    # half of runs. Handing it over as evidence removes that dependence.
     pre = ws.search_text(behaviour, k=8).get("hits", [])
-    ws.calls.clear()  # the pre-search is harness setup, not an agent action
+    past = ws.recall_incidents(behaviour, k=5).get("admissible_matches", [])
+    ws.calls.clear()  # pre-searches are harness setup, not agent actions
     user = (
         f"Project: {ws.project}\n\n=== ISSUE REPORT (with logs) ===\n"
         f"{ws.query_text[:18000]}\n\n"
@@ -258,8 +275,19 @@ def run_instance(ws: T.Workspace, seed: int = 42,
         + "\n".join("  - {}  (best match in {}, terms: {})".format(
             h["file"], h["best_region"], ", ".join(h["matched_terms"]))
             for h in pre[:8])
+        + ("\n\npast incidents in this project that read like this one, and "
+           "the files their fixes touched (only incidents resolved before "
+           "this report existed):\n"
+           + "\n".join("  - {} (weight {}, that fix touched {} file(s)): {}"
+                       .format(m["incident"], m["weight"],
+                               m["n_files_in_that_fix"],
+                               ", ".join(m["fixed_files"][:4]))
+                       for m in past[:5])
+           if past else "\n\npast incidents: none admissible for this report.")
         + "\n\nInvestigate, then submit a ranked list of up to 10 files "
-          "that may contain the ROOT CAUSE.")
+          "that may contain the ROOT CAUSE. A file that a similar past "
+          "incident was fixed in is strong evidence, especially when the "
+          "report names no file.")
     messages = [{"role": "system", "content": SYSTEM},
                 {"role": "user", "content": user}]
     events = [{"type": "system", "content": SYSTEM},
@@ -318,8 +346,19 @@ def run_instance(ws: T.Workspace, seed: int = 42,
             name = (tc.get("function") or {}).get("name") or ""
             args = _args_of(tc)
             if name == "submit_ranking":
-                submitted = [f for f in (args.get("files") or [])
-                             if isinstance(f, str)]
+                # accept both shapes: [{path, evidence}] (current schema) and
+                # a bare list of strings (older schema / degraded output)
+                submitted, evidence = [], []
+                for f in (args.get("files") or []):
+                    if isinstance(f, dict) and f.get("path"):
+                        submitted.append(str(f["path"]))
+                        evidence.append({"file": str(f["path"]),
+                                         "reason": str(f.get("evidence") or "")[:400],
+                                         "confidence": float(f.get("confidence") or 0.5),
+                                         "in_snapshot": str(f["path"]) in ws.snap.blob_of})
+                    elif isinstance(f, str):
+                        submitted.append(f)
+                ws.notes.extend(evidence)
                 rationale = str(args.get("rationale") or "")[:600]
                 stop, done = "submitted", True
                 result = {"accepted": len(submitted)}

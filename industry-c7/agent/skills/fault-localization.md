@@ -38,15 +38,21 @@ the error is usually the victim, not the cause.
    created the bad state, then read that code. One or two hops is
    usually enough; do not wander further.
 
-5. **Ask the project's history.** `recall_incidents` with a short
-   description. If a past incident that reads like this one was fixed
-   in some file, that file is a strong candidate. The history only
-   contains incidents resolved before this report existed.
+5. **Use the project's history, early.** Similar past incidents and the
+   files their fixes touched are handed to you up front. Weigh them
+   before you start exploring, not after: when the report names no file,
+   a file that a similar incident was fixed in is often the single
+   strongest piece of evidence available. A past fix that touched ONE
+   file is much stronger evidence than one that touched forty. Call
+   `recall_incidents` again with a sharper query if what you were given
+   does not fit. The history holds only incidents resolved before this
+   report existed.
 
 6. **Record as you go.** Call `note_candidate` for every file you
    seriously consider, with the evidence and your confidence, including
-   files you rule out and why. A file you considered but never recorded
-   cannot be ranked.
+   files you rule out and why. Every file in your final answer must
+   carry the evidence that put it there, so capture it while you are
+   looking at it rather than reconstructing it at the end.
 
 ## Resolution template
 

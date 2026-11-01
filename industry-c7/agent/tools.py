@@ -16,10 +16,12 @@ evidence behind each):
 
   * symbol resolution over the WHOLE snapshot via `git grep` rather than
     a path-name heuristic. A stack frame names a symbol, not a file.
-  * max-over-segments BM25 instead of whole-file BM25, so a short, tightly
-    matching function is not buried by a long file that mentions the terms
-    once each (Pathidea TSE 2022 segmentation; BLAZE TSE 2025 shows
-    boundary-aware chunking beats fixed windows).
+  * whole-file BM25 for `search_text`. Per-segment max scoring (Pathidea
+    TSE 2022; BLAZE TSE 2025) was implemented and A/B tested here and was
+    WORSE on 3 of 4 projects, so it was rejected: segmentation corrects
+    rVSM's length bias, and BM25 already normalises length. Segments are
+    still computed, but only to label which region matched. See
+    ARCHITECTURE.md §3.1.
   * `callers_of`: one hop of reverse call structure. SBEST reports 78.3%
     of buggy methods sit within an average 0.34 calls of the trace.
   * incident votes divided by fix size (BugLocator's sim/n_b), so a
@@ -334,8 +336,18 @@ class Workspace:
             (defs if (is_def or first_decl) else uses).append(entry)
         defs.sort(key=lambda e: (e["file"] not in declared_files, -e["n_matches"]))
         uses.sort(key=lambda e: -e["n_matches"])
+        # Callers are returned inline rather than behind a separate tool.
+        # v1 measured the standalone callers_of at 1 call in 105 runs: the
+        # model never chose to walk backwards. search_symbol is called 3.8
+        # times per run, so the reverse hop now arrives whether or not the
+        # model thinks to ask for it. [R4]: 78.3% of buggy methods sit within
+        # an average 0.34 calls of the trace.
+        callers = self.callers_of(name).get("callers", [])
         return {"symbol": name, "total_matches": len(hits),
-                "defined_in": defs[:MAX_HITS], "used_in": uses[:MAX_HITS]}
+                "defined_in": defs[:MAX_HITS], "used_in": uses[:MAX_HITS],
+                "called_from": callers[:12],
+                "hint": ("the fault is often in a CALLER that created the bad "
+                         "state, not in the file that reported it")}
 
     def callers_of(self, symbol: str) -> dict:
         """Which functions call or reference this symbol. One hop of reverse
