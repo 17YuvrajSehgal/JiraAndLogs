@@ -1,20 +1,29 @@
-\section{Approach: Log-to-Code Retrieval Plus Incident Memory}
+\section{The Retrieval Layer: Log-to-Code Matching Plus Incident Memory}
 \label{sec:approach}
 
-Our approach, \sys{}, follows one observation: software failures recur.
-When a new issue arrives, some past issue in the same project has often
-failed in a similar way, and its fix commit names the code that was at
-fault. \sys{} therefore combines two kinds of evidence. The first is
+This section describes the retrieval layer. It is one of the systems in
+the comparative study of \cref{sec:results:study}, and it is also the
+component \sys{} uses as a tool, so its construction matters twice.
+
+It follows one observation: software failures recur. When a new issue
+arrives, some past issue in the same project has often failed in a
+similar way, and its fix commit names the code that was at fault. The
+layer therefore combines two kinds of evidence. The first is
 \emph{log-to-code retrieval}: matching the report's text and logs against
 the snapshot's files. The second is \emph{incident memory}: retrieving
 similar resolved incidents and letting their fix commits vote for files.
-This section describes both, the firewall that keeps the memory honest,
-and the fusion that produces the final ranking.
+Below we describe both, the firewall that keeps the memory honest, and
+the fusion that produces a ranking.
+
+Everything here is lexical and deterministic. No model is involved, and
+nothing is trained. That is what allows the layer to run on one CPU core
+in under a second per issue, and it is why it remains useful even where
+the agent cannot be deployed.
 
 \begin{figure*}[t]
 \centering
 \includegraphics[width=0.96\textwidth]{figures/architecture.pdf}
-\caption{\sys{} overview. An issue report with its logs and the snapshot
+\caption{The retrieval layer. An issue report with its logs and the snapshot
 feed four ranked signals (1); the project's incident memory feeds the
 memory vote through the temporal firewall (2); regime-conditioned
 weighted reciprocal rank fusion merges the four lists (3) into ranked
@@ -119,7 +128,7 @@ require rebuilding the index for every query.
 \textbf{Weighted fusion.} The four lists are merged by reciprocal rank
 fusion: file $f$ receives $\sum_i w_i / (60 + \mathrm{rank}_i(f))$, where
 $\mathrm{rank}_i(f)$ is $f$'s position in signal $i$'s list. The weights
-$w_i$ are the only tuned parameters in \sys{}.
+$w_i$ are the only tuned parameters in the retrieval layer.
 
 \textbf{Conditioning on an observable regime.} The right weights depend
 on the report. When the text names files explicitly, S1 is nearly always

@@ -2,13 +2,22 @@
 \label{sec:benchmark}
 
 The challenge asks for evaluation on a benchmark that contains issue
-descriptions, logs, source code, and ground-truth faulty code regions. To
-our knowledge, no public dataset provides all four together. Fault
-localization benchmarks such as Defects4J~\cite{just2014defects4j} supply
-failing tests, which is exactly the execution evidence that is missing
-when an issue is first reported. Datasets of issue reports supply text but no verified link to
-the code that was at fault. We therefore built this benchmark first, and
-we release it with the paper. This section describes how each instance is
+descriptions, logs, source code, and ground-truth faulty code regions.
+Existing resources supply some of these but not the combination we need.
+Fault localization benchmarks such as Defects4J~\cite{just2014defects4j}
+supply failing tests, which is exactly the execution evidence that is
+missing when an issue is first reported. Bench4BL pairs reports with
+code and gold files at scale but does not select for reports that carry
+logs~\cite{lee2018bench4bl}, and benchmarks built from pull
+requests~\cite{aleithan2024swebenchplus} inherit solution text in the
+issue thread. Pathidea assembled the closest resource, a log-bearing
+set of Java issues~\cite{chen2022pathidea}.
+
+What we add is a set selected for log-bearing reports, spanning four
+languages rather than one, stratified by whether the report names any
+faulty file, and shipped with a per-project pool of past incidents and
+their fix commits so that history-based methods can be evaluated under a
+stated temporal firewall. This section describes how each instance is
 constructed and what quality controls we applied.
 
 \subsection{Data sources}
