@@ -89,7 +89,7 @@ Phase 4  SAFETY NET                   RRF(agent list, lexical list)   [R7]
 
 ## 3. Why each component, and where it comes from
 
-### Phase 0: seed from retrieval instead of a blank repo
+### Phase 0b: seed from retrieval instead of a blank repo
 
 **Why.** §1.1: our pipeline uniquely solves 8.9% of instances. Starting
 the agent cold would throw that away.
@@ -107,7 +107,7 @@ retrieval loses to full-text BM25 in the code slot (−0.205 at worst).
 names a symbol, not a file; giving the model the symbol list saves it a
 turn and makes the first tool call useful.
 
-### The seven tools
+### The eight tools
 
 | tool | why it exists | source |
 |---|---|---|
