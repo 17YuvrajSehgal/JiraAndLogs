@@ -119,6 +119,57 @@ def call_llm(messages: list, tools: list, seed: int = 42,
     return {"error": last}
 
 
+REFORMULATE = {"type": "function", "function": {
+    "name": "describe_fault",
+    "description": "Summarise what the report says, as retrieval terms.",
+    "parameters": {"type": "object", "properties": {
+        "behaviour": {"type": "string",
+                      "description": "One sentence describing the faulty "
+                                     "BEHAVIOUR in the vocabulary the source "
+                                     "code would use, not the error text. "
+                                     "E.g. 'partition assignment returns null "
+                                     "for a regex subscription'."},
+        "identifiers": {"type": "array", "maxItems": 10,
+                        "items": {"type": "string"},
+                        "description": "Class, function, field or config "
+                                       "names named in the report."},
+        "error_messages": {"type": "array", "maxItems": 5,
+                           "items": {"type": "string"}}},
+        "required": ["behaviour"]}}}
+
+
+def reformulate(query_text: str, seed: int = 42) -> dict:
+    """One call that turns a raw report into retrieval terms.
+
+    Caumartin & Melo (BoatSE 2026) report up to +36% MAP@1 from querying
+    with LLM-extracted structured fields instead of the raw description,
+    and their summary field is what carries the query when the report
+    names no file. That is exactly our hard stratum, so this runs for
+    every instance rather than only when the model thinks to do it.
+    """
+    msgs = [{"role": "system",
+             "content": "You turn bug reports into search terms for finding "
+                        "the faulty source file. The report describes a "
+                        "SYMPTOM; express the underlying behaviour in the "
+                        "words the code itself would use."},
+            {"role": "user", "content": query_text[:12000]
+             + "\n\nCall describe_fault."}]
+    r = call_llm(msgs, [REFORMULATE], seed=seed, max_tokens=500)
+    if "error" in r:
+        return {"error": r["error"]}
+    msg = (r.get("choices") or [{}])[0].get("message", {}) or {}
+    for tc in (msg.get("tool_calls") or []):
+        a = _args_of(tc)
+        if a.get("behaviour"):
+            return {"behaviour": str(a["behaviour"])[:300],
+                    "identifiers": [str(x) for x in (a.get("identifiers") or [])
+                                    if isinstance(x, str)][:10],
+                    "error_messages": [str(x) for x in
+                                       (a.get("error_messages") or [])][:5],
+                    "usage": r.get("usage")}
+    return {"error": "no describe_fault call"}
+
+
 def _tool_calls_of(msg: dict) -> list:
     return msg.get("tool_calls") or []
 
@@ -150,17 +201,39 @@ def fuse(agent_list: list[str], lexical: list[str],
 
 
 def run_instance(ws: T.Workspace, seed: int = 42,
-                 max_turns: int = MAX_TURNS) -> dict:
+                 max_turns: int = MAX_TURNS,
+                 behaviour_query: str | None = None) -> dict:
     """Investigate one instance. Returns the ranking plus a transcript."""
-    syms = T.report_symbols(ws.query_text)
+    # Phase 0a: one call turns the report into retrieval terms. The raw
+    # report is symptom-shaped; searching code with it finds the detection
+    # site. Falls back to the report's own words if the call fails.
+    rf = {} if behaviour_query else reformulate(ws.query_text, seed=seed)
+    behaviour = (behaviour_query or rf.get("behaviour")
+                 or " ".join(ws.query_text.split()[:60]))
+    # symbols, filtered to what actually exists in THIS snapshot, so turns
+    # are not spent resolving library names like NullPointerException
+    syms = ws.symbols_in_snapshot(
+        list(dict.fromkeys(list(rf.get("identifiers") or [])
+                           + T.raw_report_symbols(ws.query_text))))
+    # a content search for the described behaviour, run BEFORE the loop so it
+    # happens unconditionally rather than only when the model thinks of it
+    pre = ws.search_text(behaviour, k=8).get("hits", [])
+    ws.calls.clear()  # the pre-search is harness setup, not an agent action
     user = (
         f"Project: {ws.project}\n\n=== ISSUE REPORT (with logs) ===\n"
         f"{ws.query_text[:18000]}\n\n"
-        f"=== STARTING POINTS (from a lexical retriever; unverified) ===\n"
-        f"symbols parsed from the report: {', '.join(syms[:14]) or 'none'}\n"
-        f"candidate files already retrieved:\n"
+        f"=== STARTING POINTS (unverified; verify before trusting) ===\n"
+        + (f"behaviour, restated in code vocabulary: {behaviour}\n\n"
+           if behaviour else "")
+        + f"symbols from the report that exist in this snapshot: "
+          f"{', '.join(syms) or 'none'}\n\n"
+        f"files a lexical retriever ranked highest:\n"
         + "\n".join(f"  {i + 1}. {f}" for i, f in
                     enumerate(ws.seed_candidates[:12]))
+        + "\n\nfiles whose CODE matches the described behaviour:\n"
+        + "\n".join("  - {}  (best match in {}, terms: {})".format(
+            h["file"], h["best_region"], ", ".join(h["matched_terms"]))
+            for h in pre[:8])
         + "\n\nInvestigate, then submit a ranked list of up to 10 files "
           "that may contain the ROOT CAUSE.")
     messages = [{"role": "system", "content": SYSTEM},

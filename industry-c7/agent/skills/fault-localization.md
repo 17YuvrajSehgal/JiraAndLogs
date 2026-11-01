@@ -32,9 +32,11 @@ the error is usually the victim, not the cause.
    vocabulary of the bug.
 
 4. **Walk from detection to cause.** Read the detection site with
-   `read_code`. Ask: where does this bad value come from? Who calls
-   this? Who sets this field, closes this handle, assigns this
-   partition? Then `search_symbol` on THAT name and read it too.
+   `read_code`. Ask: where does this bad value come from? Who sets this
+   field, closes this handle, assigns this partition? Use `callers_of`
+   on the failing symbol to step one hop back towards the code that
+   created the bad state, then read that code. One or two hops is
+   usually enough; do not wander further.
 
 5. **Ask the project's history.** `recall_incidents` with a short
    description. If a past incident that reads like this one was fixed
