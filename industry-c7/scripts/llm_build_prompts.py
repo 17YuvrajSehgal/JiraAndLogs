@@ -50,7 +50,10 @@ P = ("kafka", "mariadb", "mongodb", "qt")
 LLM = Path(__file__).resolve().parents[1] / "data/llm"
 SEED, SAMPLE = 42, 200
 MAX_DIRS_SHOWN = 900
-MAX_FILES_SHOWN = 500
+# 500 truncated the candidate list for ~10% of instances and cost ~4 points
+# of stage-2 oracle, biased alphabetically (files are listed sorted). 1500
+# keeps the prompt near 18k tokens at worst, far inside the 131k window.
+MAX_FILES_SHOWN = 1500
 MAX_REPORT_CHARS = 24_000
 PICK_DIRS, TOP_N, RERANK_N = 15, 10, 20
 KEY_RE = re.compile(r"\b[A-Z][A-Z0-9]{1,15}-\d{1,6}\b")
