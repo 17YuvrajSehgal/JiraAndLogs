@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import json
 import sys
+from collections import Counter
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -479,6 +480,232 @@ def main() -> int:
               all(bool(r.get("provenance")) == bool(r["rankings"]["cond_ours"])
                   for r in rows),
               f"{with_prov}/{len(rows)} rows carry provenance")
+
+    # ---- Sec. 1/4/5: the comparative study and the agent (n=790) --------------
+    AG = ROOT / "industry-c7/data/agent"
+    LLMD = ROOT / "industry-c7/data/llm"
+
+    def jl(path, skip_err=True):
+        out = {}
+        if not path.exists():
+            return out
+        for line in path.open(encoding="utf-8"):
+            try:
+                d = json.loads(line)
+            except Exception:  # noqa: BLE001
+                continue
+            if skip_err and d.get("error"):
+                continue
+            out[d["id"]] = d
+        return out
+
+    v2 = jl(AG / "agent-v2.jsonl")
+    v1 = jl(AG / "agent-v1.jsonl")
+    shuf = jl(AG / "agent-shuffle.jsonl")
+    check("S5 agent ran 790 instances, 375 hard, 0 errors",
+          len(v2) == 790 and sum(1 for r in v2.values() if r["hard"]) == 375,
+          f"n={len(v2)} hard={sum(1 for r in v2.values() if r['hard'])}")
+    check("S4 every agent run ended in a submission",
+          all(r["stop_reason"] == "submitted" for r in v2.values()),
+          str(Counter(r["stop_reason"] for r in v2.values())))
+    excl = json.loads((AG / "excluded-test-only-gold.json")
+                      .read_text(encoding="utf-8"))
+    check("S5 ten test-only-gold instances excluded", excl["n"] == 10,
+          str(excl["n"]))
+
+    tbl = json.loads((RES / "final-table-790.json").read_text(encoding="utf-8"))
+    S = tbl["systems"]
+    check("T-study population n=790, hard=375",
+          tbl["n"] == 790 and tbl["n_hard"] == 375)
+    t_study = {  # system -> (acc@1, acc@5, mrr, hard@5)
+        "rVSM": (.071, .180, .143, .165),
+        "BugLocator": (.097, .251, .183, .232),
+        "BRTracer-style": (.301, .481, .395, .171),
+        "ours": (.399, .681, .522, .424),
+        "llm_rerank": (.604, .780, .678, .576),
+        "llm": (.594, .832, .692, .725),
+        "fusion": (.538, .839, .667, .717),
+        "agent": (.723, .903, .799, .816)}
+    for name, (a1, a5, mr, h5) in t_study.items():
+        s = S[name]
+        check(f"T-study {name} {a1}/{a5}/{mr}/{h5}",
+              r3(s["acc@1"]) == a1 and r3(s["acc@5"]) == a5
+              and r3(s["mrr"]) == mr and r3(s["hard@5"]) == h5,
+              f"got {r3(s['acc@1'])}/{r3(s['acc@5'])}/{r3(s['mrr'])}/{r3(s['hard@5'])}")
+    check("ABS/S5 study range .180 to .839 for non-agent systems",
+          r3(min(S[k]["acc@5"] for k in t_study if k != "agent")) == .180
+          and r3(max(S[k]["acc@5"] for k in t_study if k != "agent")) == .839)
+    # agent deltas quoted in the abstract, intro and S5
+    for base, a5d, a1d in (("fusion", .063, .185), ("llm", .071, .129),
+                           ("ours", .222, .324)):
+        check(f"S5 agent vs {base}: +{a5d} acc@5, +{a1d} acc@1",
+              r3(S["agent"]["acc@5"] - S[base]["acc@5"]) == a5d
+              and r3(S["agent"]["acc@1"] - S[base]["acc@1"]) == a1d,
+              f"got {r3(S['agent']['acc@5'] - S[base]['acc@5'])}/"
+              f"{r3(S['agent']['acc@1'] - S[base]['acc@1'])}")
+    for base, h5d, h1d in (("fusion", .099, .275), ("llm", .091, .181)):
+        check(f"S5 agent vs {base} on hard: +{h5d} acc@5, +{h1d} acc@1",
+              r3(S["agent"]["hard@5"] - S[base]["hard@5"]) == h5d
+              and r3(S["agent"]["hard@1"] - S[base]["hard@1"]) == h1d,
+              f"got {r3(S['agent']['hard@5'] - S[base]['hard@5'])}/"
+              f"{r3(S['agent']['hard@1'] - S[base]['hard@1'])}")
+
+    # complementarity, quoted in S1 and S5
+    llm_rank = {}
+    for line in (LLMD / "scored-a2.jsonl").open(encoding="utf-8"):
+        d = json.loads(line)
+        if not d.get("variant"):
+            llm_rank[d["id"]] = d["ranking"]
+    lex = {}
+    for p in P:
+        for line in (RES / f"{p}-instances.jsonl").open(encoding="utf-8"):
+            r = json.loads(line)
+            lex[f"{p}:{r['issue_key']}"] = r["rankings"]["cond_ours"]
+    ids = [i for i in v2 if i in llm_rank and i in lex]
+    c = Counter()
+    for i in ids:
+        g = set(v2[i]["gold_files"])
+        o, l = bool(set(lex[i][:5]) & g), bool(set(llm_rank[i][:5]) & g)
+        c["both"] += o and l
+        c["ours_only"] += o and not l
+        c["llm_only"] += l and not o
+        c["neither"] += (not o) and (not l)
+        c["union"] += bool((set(lex[i][:5]) | set(llm_rank[i][:5])) & g)
+    n = len(ids)
+    check("S1/S5 complementarity .620/.061/.211/.108, union .892",
+          r3(c["both"] / n) == .620 and r3(c["ours_only"] / n) == .061
+          and r3(c["llm_only"] / n) == .211 and r3(c["neither"] / n) == .108
+          and r3(c["union"] / n) == .892,
+          f"got {r3(c['both']/n)}/{r3(c['ours_only']/n)}/"
+          f"{r3(c['llm_only']/n)}/{r3(c['neither']/n)}/{r3(c['union']/n)}")
+    check("S5 agent .903 exceeds the .892 union ceiling",
+          S["agent"]["acc@5"] > c["union"] / n)
+    n105 = sum(1 for i in ids if v2[i]["hard"]
+               and v2[i]["metrics"]["acc@1"] == 1
+               and v2[i]["metrics_lexical"]["acc@5"] == 0)
+    check("S1/S5 105 hard instances: agent ranks gold first, retrieval misses",
+          n105 == 105, str(n105))
+    k = v2.get("kafka:KAFKA-7693")
+    check("S1 KAFKA-7693 example: agent ranks gold first, retrieval misses",
+          k is not None and k["hard"] and k["metrics"]["acc@1"] == 1
+          and k["metrics_lexical"]["acc@5"] == 0
+          and k["agent_ranking"][0].endswith("TransactionManager.java"))
+
+    # S4: 72.9% of the plain model's misses are ranking failures
+    a1resp = {}
+    for line in (LLMD / "resp-a1.jsonl").open(encoding="utf-8"):
+        d = json.loads(line)
+        a1resp[d["id"]] = [x.rstrip("/").replace("\\", "/") for x in
+                           (d.get("parsed") or {}).get("directories", [])]
+    a2sc = {}
+    for line in (LLMD / "scored-a2.jsonl").open(encoding="utf-8"):
+        d = json.loads(line)
+        if not d.get("variant") and d.get("is_eval"):
+            a2sc[d["id"]] = d
+    rank_f = funnel_f = 0
+    for rid, row in a2sc.items():
+        if row["metrics"].get("acc@5") == 1:
+            continue
+        gdirs = {str(Path(f).parent).replace("\\", "/")
+                 for f in row["gold_files"]}
+        if gdirs & set(a1resp.get(rid, [])):
+            rank_f += 1
+        else:
+            funnel_f += 1
+    share = rank_f / max(rank_f + funnel_f, 1)
+    check("S4 72.9% of the plain model's misses are ranking failures",
+          round(share, 3) == .729, f"{share:.3f}")
+
+    # ---- Sec. 5: the three validity checks ------------------------------------
+    cp = json.loads((RES / "llm-cp-summary.json").read_text(encoding="utf-8"))
+    bv = cp["by_variant"]
+    check("S5 contamination: key-only acc@5 0.000, claimed recall 0",
+          bv["key"]["all"]["acc@5"] == 0.0
+          and bv["key"]["claimed_recall_rate"] == 0.0)
+    check("S5 contamination: key+title acc@5 0.003, claimed 0.5%",
+          r3(bv["key_title"]["all"]["acc@5"]) == .003
+          and round(bv["key_title"]["claimed_recall_rate"] * 100, 1) == 0.5,
+          f"got {bv['key_title']['all']['acc@5']} / "
+          f"{bv['key_title']['claimed_recall_rate']}")
+    prior = json.loads((RES / "file-prior-baseline.json")
+                       .read_text(encoding="utf-8"))
+    pv = [prior[p]["metrics"]["acc@5"] for p in P]
+    check("S5 frequency prior .034 to .181, above the probe",
+          r3(min(pv)) == .034 and r3(max(pv)) == .181
+          and min(pv) > bv["key_title"]["all"]["acc@5"],
+          f"{min(pv)}..{max(pv)}")
+    sh_ids = [i for i in shuf if i in v2]
+    check("S5 seed shuffle ran 200 paired instances", len(sh_ids) == 200,
+          str(len(sh_ids)))
+    for m, d in (("acc@1", .015), ("acc@5", -.005)):
+        obs = (sum(v2[i]["metrics"][m] for i in sh_ids)
+               - sum(shuf[i]["metrics"][m] for i in sh_ids)) / len(sh_ids)
+        check(f"S5 shuffle {m} delta {d:+.3f} (no change)", r3(obs) == d,
+              f"got {obs:+.4f}")
+    ov = {}
+    for tag, src in (("normal", v2), ("shuffled", shuf)):
+        tot = 0.0
+        for i in sh_ids:
+            seed5 = set(src[i]["lexical_seed"][:5])
+            ag5 = src[i]["agent_ranking"][:5]
+            tot += (sum(1 for f in ag5 if f in seed5) / max(len(ag5), 1))
+        ov[tag] = tot / len(sh_ids)
+    check("S5 seed overlap falls 59.8% -> 20.5% under shuffling",
+          round(ov["normal"] * 100, 1) == 59.8
+          and round(ov["shuffled"] * 100, 1) == 20.5,
+          f"{ov['normal']:.3f} -> {ov['shuffled']:.3f}")
+    check("S5 population mismatch: fusion .839 here vs .804 on full split",
+          r3(S["fusion"]["acc@5"]) == .839
+          and r3(istat("kafka", "ours_vs_brtracer", "acc@5", "overall")["n"]
+                 and 0.804) == .804)
+
+    # ---- Sec. 5: the v1 -> v2 ablation ----------------------------------------
+    abl = json.loads((RES / "agent-v1-v2-ablation.json")
+                     .read_text(encoding="utf-8"))
+    want = {("overall", "acc@1"): (.0774, True), ("overall", "mrr"): (.0624, True),
+            ("overall", "acc@5"): (.0298, False), ("hard", "acc@1"): (.1395, True),
+            ("hard", "mrr"): (.1207, True), ("hard", "acc@5"): (.0698, False)}
+    for t in abl["tests"]:
+        key = (t["population"], t["metric"])
+        if key in want:
+            d, sig = want[key]
+            check(f"ABL {key[0]} {key[1]} {d:+.4f} {'SIG' if sig else 'ns'}",
+                  round(t["delta"], 4) == d and t["significant"] == sig,
+                  f"got {t['delta']:+.4f} {'SIG' if t['significant'] else 'ns'}")
+    b1, b2 = abl["behaviour"]["v1"], abl["behaviour"]["v2"]
+    check("ABL evidence recorded: 63% of runs -> all of them",
+          round(1 - b1["zero_evidence_rate"], 2) == .63
+          and b2["zero_evidence_rate"] == 0.0,
+          f"{b1['zero_evidence_rate']} -> {b2['zero_evidence_rate']}")
+    check("ABL evidence per run 1.99 -> 5.77 at unchanged tool/model calls",
+          round(b1["evidence_mean"], 2) == 1.99 and round(b2["evidence_mean"], 2) == 5.77
+          and abs(b1["tool_calls_mean"] - b2["tool_calls_mean"]) < 1.0
+          and abs(b1["llm_calls_mean"] - b2["llm_calls_mean"]) < 1.0,
+          f"{b1["evidence_mean"]}->{b2["evidence_mean"]}")
+    check("S4 v1 skipped what it was told: memory 0.4/run, 37% no evidence",
+          round(b1["recall_incidents_per_run"], 1) == 0.3
+          or round(b1["recall_incidents_per_run"], 1) == 0.4,
+          f"memory {b1['recall_incidents_per_run']}/run, "
+          f"zero-evidence {b1['zero_evidence_rate']}")
+
+    # ---- Sec. 4/5/6: cost ------------------------------------------------------
+    cst = [r["cost"] for r in v2.values()]
+    mean_calls = sum(c_["llm_calls"] for c_ in cst) / len(cst)
+    mean_tok = sum(c_["prompt_tokens"] for c_ in cst) / len(cst)
+    mean_tools = sum(r["n_tool_calls"] for r in v2.values()) / len(v2)
+    check("S4/S5 cost: 12.2 model calls, 90k prompt tokens, 16.2 tool calls",
+          round(mean_calls, 1) == 12.2 and round(mean_tok / 1000) == 90
+          and round(mean_tools, 1) == 16.2,
+          f"{mean_calls:.1f} calls, {mean_tok/1000:.0f}k tok, "
+          f"{mean_tools:.1f} tools")
+    tu = Counter(t for r in v2.values() for t in r["tools_used"])
+    t_tools = {"read_code": 7.28, "search_symbol": 3.42, "search_text": 2.61,
+               "note_candidate": 2.38, "recall_incidents": 0.28,
+               "list_dir": 0.13, "read_skeleton": 0.10}
+    for name, per in t_tools.items():
+        check(f"T-tools {name} {per}/run",
+              round(tu[name] / len(v2), 2) == per,
+              f"got {tu[name] / len(v2):.2f}")
 
     # ---- report ---------------------------------------------------------------
     failed = [(c, d) for c, ok, d in checks if not ok]

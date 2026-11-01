@@ -38,7 +38,7 @@ use the same 27B model.}
  & Acc@1 & Acc@5 & MRR & Acc@5 (hard) \\
 \midrule
 rVSM                        & .071 & .180 & .143 & .165 \\
-BugLocator                  & .098 & .251 & .183 & .232 \\
+BugLocator                  & .097 & .251 & .183 & .232 \\
 BRTracer-style              & .301 & .481 & .395 & .171 \\
 \midrule
 retrieval + memory          & .399 & .681 & .522 & .424 \\
@@ -153,7 +153,7 @@ retrieval does not place it in the top five at all.
 
 Accuracy without cost is not an industrial result. \sys{} spends a mean
 of $12.2$ model calls and $90$k prompt tokens per issue, and makes
-$16.1$ tool calls. On a shared H100 a single issue takes $232$ seconds
+$16.2$ tool calls. On a shared H100 a single issue takes $232$ seconds
 of wall time at the concurrency we ran. The retrieval layer, by
 contrast, answers from one CPU core with no model at all, in a median
 of $0.07$ to $0.41$ seconds per issue depending on the project, with the
