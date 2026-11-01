@@ -48,7 +48,7 @@ localization, lexical log-to-code retrieval fused with an
 \emph{incident memory} in which past resolved issues vote for the files
 their fixes touched, a general-purpose open 27B model prompted with the
 report and the file tree, and that model used as a re-ranker. Accuracy
-in the top five rises across the families from $0.180$ to $0.839$, and
+in the top five rises across the families from 18.0\% to 83.9\%, and
 no family dominates: the retrieval and the model succeed on different
 instances, and together they cover more than either alone.
 We build on that finding and present \sys{}, an agent that keeps the
@@ -56,15 +56,17 @@ retrieval and the incident memory as tools, and adds tools that read
 code, resolve a symbol from a stack trace to the file that defines it,
 and consult past incidents behind the same firewall. \sys{} uses the
 same 27B model as the study, so the gain is attributable to the
-architecture rather than to a stronger model. It reaches Acc@5 $0.903$
-and Acc@1 $0.723$. That is $+0.071$ Acc@5 and $+0.129$ Acc@1 over the
-same model prompted directly, and $+0.063$ and $+0.185$ over the best
+architecture rather than to a stronger model. It reaches Acc@5 90.3\%
+and Acc@1 72.3\%. That is $+7.1$ and $+12.9$ points of Acc@5 and
+Acc@1 over the same model prompted directly, and $+6.3$ and $+18.5$
+points over the best
 combination of non-agent systems. \sys{} improves on every family in
 the study, and every comparison is significant under a paired bootstrap
 with multiple-test correction. The margins are widest on the reports
 that name no faulty file, which the challenge identifies as the core
-difficulty: there \sys{} gains $+0.091$ Acc@5 and $+0.181$ Acc@1 over
-the same model prompted directly, and $+0.099$ and $+0.275$ over the
+difficulty: there \sys{} gains $+9.1$ and $+18.1$ points of Acc@5 and
+Acc@1 over the same model prompted directly, and $+9.9$ and $+27.5$
+points over the
 best non-agent combination.
 Three checks support these numbers. The model cannot recall these public
 fixes from the issue key alone, scoring below a defect-frequency prior.

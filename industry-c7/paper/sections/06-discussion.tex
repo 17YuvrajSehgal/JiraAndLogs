@@ -13,9 +13,10 @@ hardest part, and our data agrees in a form that can be quantified: in
 53\% of real reports, no faulty file is named anywhere in the text, and
 on those instances a method that matches the report against the code it
 mentions scores zero by construction. This is where the three approaches
-separate most sharply. The retrieval layer reaches $0.424$ Acc@5 there,
-the model alone $0.725$, and \sys{} $0.816$. It is also where \sys{}
-gains most over everything else, $+0.099$ Acc@5 and $+0.275$ Acc@1 over
+separate most sharply. The retrieval layer reaches 42.4\% Acc@5 there,
+the model alone 72.5\%, and \sys{} 81.6\%. It is also where \sys{}
+gains most over everything else, $+9.9$ points of Acc@5 and $+27.5$ of
+Acc@1 over
 the best non-agent combination.
 
 Two things recover files that no log line mentions. Incident memory does
@@ -26,7 +27,7 @@ reasoning over control flow or data flow in the sense the challenge
 describes, and we do not claim it. The agent follows one or two hops by
 reading source, which is a shallow substitute for dependency analysis.
 The hard stratum remains where future work on this challenge should be
-judged, and at $0.816$ it is not solved.
+judged, and at 81.6\% it is not solved.
 
 \textbf{Noisy and incomplete log evidence.} Here our benchmark is kinder
 than industrial reality, and we say so. Its logs are the excerpts that
@@ -53,13 +54,14 @@ deterministic and leak-free, and it is the weakest system in
 parts for a small embedder does not fix this either
 (\cref{sec:results:dense}): dense retrieval helps in the
 incident-memory slot, where the task is comparing one report with
-another, and loses to full-text BM25 in the code slot by up to $0.205$.
+another, and loses to full-text BM25 in the code slot by up to $20.5$
+points.
 
 What supplies it in our system is a model that can read the code
 directly, paired with tools that fetch the right code to read. That is
 the difference between the model prompted with a file tree, which sees
-only path names and reaches $0.832$, and the same model able to resolve
-a symbol and read the function behind it, which reaches $0.903$. The
+only path names and reaches 83.2\%, and the same model able to resolve
+a symbol and read the function behind it, which reaches 90.3\%. The
 semantics are in the source, not in the file names, and a method has to
 open the file to use them.
 
@@ -107,9 +109,10 @@ warm caches, the median time per issue is 0.07\,s on Kafka, 0.22\,s on
 Qt, and 0.41\,s on MariaDB and MongoDB, with the 95th percentile below
 0.7\,s and the incident-memory index taking at most 0.1\,s to build.
 \sys{} costs 12.2 model calls and 90k prompt tokens per issue. An
-organization that can host a 27B model should pay that for $+0.222$
-Acc@5. One that cannot, or that may not send source code and production
-logs to an external service, still has a system that reaches $0.681$.
+organization that can host a 27B model should pay that for $+22.2$
+points of Acc@5. One that cannot, or that may not send source code and
+production logs to an external service, still has a system that
+reaches 68.1\%.
 
 \textbf{Freshness favours both.} The memory pool is append-only, so
 every newly resolved issue with a linked fix commit widens the
@@ -144,7 +147,7 @@ time, which protects against tuning on the future but, as
 We tested how much this one-shot tuning costs with a rolling-origin
 variant that retunes the conditioned weights at every quarter of the
 evaluation period on all history available at that point: overall Acc@5
-moves by $-0.007$ to $+0.021$ across the four projects. Tuning once on
+moves by $-0.7$ to $+2.1$ points across the four projects. Tuning once on
 the earliest 30\% is therefore stable rather than strongly conservative,
 and a maintained deployment that retunes quarterly should expect
 essentially the reported numbers. The regime-conditioned

@@ -57,7 +57,7 @@ a naming convention the rule does not catch, so for them the gold set and
 the candidate pool are both test files, and a system scores by ranking
 tests rather than by localizing production code. We remove them from
 every system alike. The removal is not self-serving: on those ten
-instances \retr{} scores $0.900$ Acc@5 against $0.681$ on the 790 we
+instances \retr{} scores 90.0\% Acc@5 against 68.1\% on the 790 we
 keep, so dropping them lowers every reported score rather than raising
 it.
 
@@ -106,8 +106,9 @@ in four forms: unweighted fusion and regime-conditioned weighted
 fusion, each with and without the memory signal. The without-memory
 variants are tuned with the same grid and the same development split as
 the full system, so the memory ablation compares two equally tuned
-systems rather than a tuned system against a crippled one. \retr{} in
-\cref{tab:study} is the conditioned form with memory.
+systems rather than a tuned system against a crippled one. The row
+named ``retrieval + memory'' in \cref{tab:study} is the conditioned
+form with memory.
 
 \textbf{The model.} We evaluate one general-purpose open-weights model,
 Qwen3.8-27B, self-hosted on a single H100 at temperature zero with a

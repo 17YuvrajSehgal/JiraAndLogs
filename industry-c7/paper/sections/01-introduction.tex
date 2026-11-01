@@ -71,11 +71,11 @@ information-retrieval bug localization, lexical log-to-code retrieval
 fused with incident memory, a general-purpose open 27B model prompted
 with the report and the file tree, and that model used to re-rank
 retrieved candidates. Accuracy in the top five rises across the families
-from $0.180$ to $0.839$. The more useful result is that no family
+from 18.0\% to 83.9\%. The more useful result is that no family
 dominates. Retrieval alone and the model alone solve different
 instances: retrieval is the only one of the two to succeed on 6.1\% of
 instances, the model alone on 21.1\%, and the union of their top-five
-lists reaches $0.892$ where each alone reaches $0.681$ and $0.832$.
+lists reaches 89.2\% where each alone reaches 68.1\% and 83.2\%.
 
 That gap between what the parts find separately and what either finds
 alone is the opening this paper takes. We present \sys{}, an agent that
@@ -107,7 +107,7 @@ This paper makes four contributions.
   by 9\% to 43\% relative (\cref{sec:results:leakage}).
 \item \textbf{\sys{}}, an agent that turns the retrieval, the incident
   memory, and the code itself into tools (\cref{sec:agent}). It reaches
-  Acc@5 $0.903$ and Acc@1 $0.723$, improving on every family in the
+  Acc@5 90.3\% and Acc@1 72.3\%, improving on every family in the
   study and on the best combination of them, with the widest margins on
   the reports that name no faulty file. Its cost is reported next to its
   accuracy.

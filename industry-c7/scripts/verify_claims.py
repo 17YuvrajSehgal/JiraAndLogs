@@ -532,6 +532,36 @@ def main() -> int:
               r3(s["acc@1"]) == a1 and r3(s["acc@5"]) == a5
               and r3(s["mrr"]) == mr and r3(s["hard@5"]) == h5,
               f"got {r3(s['acc@1'])}/{r3(s['acc@5'])}/{r3(s['mrr'])}/{r3(s['hard@5'])}")
+    # The study table is printed as percentages. Check the rendered strings
+    # against the artifact, so the decimal-to-percent conversion is itself
+    # verified rather than trusted.
+    res_tex = (ROOT / "industry-c7/paper/sections/05-results.tex").read_text(
+        encoding="utf-8")
+    tab = res_tex.split("\\label{tab:study}")[1].split("\\end{tabular}")[0]
+    for name, row in (("rVSM", "rVSM"), ("BugLocator", "BugLocator"),
+                      ("BRTracer-style", "BRTracer-style"),
+                      ("ours", "retrieval + memory"),
+                      ("llm_rerank", "model as re-ranker"),
+                      ("llm", "model alone"),
+                      ("fusion", "fusion (best non-agent)"),
+                      ("agent", "\\sys{}")):
+        line = next((l for l in tab.split("\n")
+                     if l.strip().startswith(row)), "")
+        cells = [c.replace("\\\\", "").replace("\\textbf{", "")
+                 .replace("}", "").strip()
+                 for c in line.split("&")[1:]]
+        want = [f"{100 * S[name][k]:.1f}"
+                for k in ("acc@1", "acc@5")] + [
+            f"{100 * S[name]['hard@5']:.1f}"]
+        got = [cells[0], cells[1], cells[3]] if len(cells) >= 4 else cells
+        check(f"T-study {row} printed as percent {'/'.join(want)}",
+              got == want, f"tex shows {got}, data says {want}")
+    # MRR is a mean reciprocal rank, not a proportion, so it must NOT be
+    # rendered as a percentage anywhere.
+    check("T-study MRR column still a decimal (not a percentage)",
+          ".799" in tab and "79.9" not in tab,
+          "MRR appears to have been converted to a percentage")
+
     check("ABS/S5 study range .180 to .839 for non-agent systems",
           r3(min(S[k]["acc@5"] for k in t_study if k != "agent")) == .180
           and r3(max(S[k]["acc@5"] for k in t_study if k != "agent")) == .839)
