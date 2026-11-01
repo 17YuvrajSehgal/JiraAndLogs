@@ -378,3 +378,52 @@ the measured answer. verify_claims 182/182; 10pp 0 overfull.
 Remaining review items needing the user: LLM localizer (API key; ~<$10
 on GPT-6 Luna for 800 instances), gold validation (validation/ sheets,
 2 raters), §7 related work (user-deferred).
+
+## 12. LLM localizer baseline — PRE-REGISTRATION (written before results)
+
+Model: **Qwen3.8-27B** (Apache 2.0, Aug 2026) self-hosted on 1x H100
+(Trillium, vLLM 0.32.0, 131k ctx). temperature 0, seed 42,
+schema-constrained JSON output. Full 6,437-instance benchmark.
+
+### Conditions
+
+| id | condition | input | isolates |
+|---|---|---|---|
+| a1+a2 | Agentless-style standalone, 2 stages: dirs -> files | report+logs, snapshot tree only | LLM as an independent localizer (reviewer W1) |
+| rr | LLM rerank of our top-20 (+tree-sitter skeletons) | report+logs, our candidates | does the LLM add value ON TOP of retrieval? |
+| cp | contamination probe: issue KEY only (±title) | no report body | how much of the fix is MEMORISED from pretraining |
+| a1d+a2d | de-identified replay (issue keys scrubbed) | report with keys masked | recall-by-key vs genuine localization |
+| think | thinking-mode ON replay, 800-sample | same as a1/a2 | does disabling reasoning handicap the baseline? |
+
+Why hierarchical, not a flat repo dump: MongoDB's tree is ~150k tokens
+against a 131k context cap, so a flat Agentless prompt is impossible;
+hierarchical is both faithful to Agentless and the only feasible form.
+
+### Pre-committed analysis
+
+- Primary: Acc@5 / Acc@10 / MRR on the eval split, same `evaluate()` as
+  the lexical pipeline; paired bootstrap (2,000 resamples, shared
+  indices) vs `cond_ours` on matched instances, BH-corrected.
+- Parse failures are scored as **misses** (headline), with a
+  parsed-only view reported alongside. Neither view is suppressed.
+- Path resolution reported as exact / prefix-strip / basename / suffix /
+  dropped. Dropped paths never occupy a rank.
+- Pipeline oracles reported, not hidden: stage-1 directory recall and
+  stage-2 candidate-set recall bound what the LLM could possibly score.
+
+### Harness validation (before the full run)
+
+- 100% parse rate, 0 errors, all `finish_reason=stop` (n=1,025).
+- Stage-1 directory recall **0.936** (k .934 / m .981 / mo .934 / qt .894).
+- Stage-2 candidate cap raised 500 -> 1500 after measuring that 500
+  truncated ~10% of instances and cost ~4 points of oracle, biased
+  alphabetically. At 1500 nothing truncates (0/60).
+- Resolver has a committed self-check (`test_llm_score.py`, 10 cases).
+
+### Throughput note (for the artifact)
+
+24 concurrent workers is the measured sweet spot on this server:
+Running 23 / **Waiting 0** / KV cache 77-84% / prefill 9.7-13.1k tok/s =
+72-75 requests/min. Pushing concurrency higher drives KV past ~95% and
+vLLM begins preempting and re-prefilling the same requests; while the
+GPU was shared the effective rate collapsed to 1.4/min.
