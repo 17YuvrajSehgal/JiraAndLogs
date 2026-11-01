@@ -158,15 +158,23 @@ cannot use our mining recipe directly, although organizations with any
 form of change tracking can substitute their own linkage. Logs in the
 benchmark are reporter-curated, as discussed above.
 
-\textbf{Specific to the agent.} Four limits are worth stating. We
+\textbf{Specific to the agent.} Five limits are worth stating. The
+first is that the motivating example of \cref{sec:intro} is one \sys{}
+does not solve. On KAFKA-6624 it ranks \texttt{Log.scala} and
+\texttt{LogSegment.scala} first, both in the same package as the fix,
+and never reaches \texttt{LogManager.scala} at any depth; the retrieval
+layer misses it as well. We keep the example because it states the
+problem this paper is about, not because our system answers it, and
+because the way \sys{} fails there is the failure mode that survives at
+scale: the right subsystem, the wrong file inside it. Second, we
 evaluate one model, so the result shows what this architecture achieves
-with a 27B open-weights model and not how it scales to others. The agent
+with a 27B open-weights model and not how it scales to others. Third, the agent
 is not deterministic, and although every tool is a pure function of the
 snapshot and every run is recorded in full, repeated runs can differ;
 we report a single seed per arm rather than a distribution over seeds.
-The agent ran on 790 instances rather than all \nInstances{}, for cost,
+Fourth, the agent ran on 790 instances rather than all \nInstances{}, for cost,
 which is why every baseline it is compared against was rescored on those
-same instances. Finally, the model is prompted with report text and
+same instances. Fifth, the model is prompted with report text and
 source code from public projects, so contamination is a live concern; we
 measured it directly (\cref{sec:results:validity}) and found none, but
 that result is specific to this model and these projects and should be

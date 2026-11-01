@@ -5,20 +5,9 @@ This section reports three things: what each family of method achieves
 on the same instances, what \sys{} adds on top of them, and the checks
 that decide whether those numbers can be believed.
 
-Two populations appear, and we never mix them. The \emph{evaluation
-split} is the later 70\% of every project by fix time: 476, 1{,}179,
-2{,}533, and 320 instances for Kafka, MariaDB, MongoDB, and Qt. It
-carries the measurements that describe the benchmark as a whole. The
-\emph{study population} is a seeded sample of 200 instances per project,
-minus ten whose only ground-truth files are test files, leaving 790
-instances of which 375 are hard. Running an agent on every instance is
-expensive, so the agent, the dense-retrieval experiment, and the noise
-experiment all use this sample, and every system they are compared
-against is rescored on exactly those 790 instances. This matters: the
-sample is easier than the full split, and quoting a baseline measured on
-the other population would overstate the agent by several points
-(\cref{sec:results:validity}).
-
+Two populations carry these numbers and no comparison mixes them: the
+4{,}508-instance evaluation split and the 790-instance study population
+on which every system is rescored (\cref{sec:setup:populations}).
 Significance always means $q < 0.05$ after Benjamini--Hochberg
 correction within the test family (\cref{sec:setup:stats}).
 
@@ -118,13 +107,14 @@ $0.839$, but fusion can only reorder files the two already found.
 \label{sec:results:agent}
 
 \sys{} reaches Acc@5 $0.903$ and Acc@1 $0.723$ on the same instances. It
-improves on every family in \cref{tab:study}, and every comparison is
-significant. Against the model used alone it gains $+0.071$ Acc@5
-$[+0.046, +0.095]$ and $+0.129$ Acc@1. Against the best non-agent
-combination it gains $+0.063$ Acc@5 $[+0.042, +0.085]$ and $+0.185$
-Acc@1 $[+0.149, +0.222]$. Against the retrieval layer it gains $+0.222$
-Acc@5. Because \sys{} runs on the same 27B model as those two model
-rows, the difference is the architecture rather than the model.
+improves on every family in \cref{tab:study}, and all 42 comparisons in
+the family are significant. Against the model used alone it gains
+$+0.071$ Acc@5 $[+0.046, +0.095]$ and $+0.129$ Acc@1. Against the best
+non-agent combination it gains $+0.063$ Acc@5 $[+0.042, +0.085]$ and
+$+0.185$ Acc@1 $[+0.149, +0.223]$. Against the retrieval layer it gains
+$+0.222$ Acc@5 $[+0.194, +0.252]$. Because \sys{} runs on the same 27B
+model as those two model rows, the difference is the architecture rather
+than the model.
 
 The shape of the gain is as informative as its size. The Acc@1 margin is
 roughly three times the Acc@5 margin in every comparison. \sys{} is not

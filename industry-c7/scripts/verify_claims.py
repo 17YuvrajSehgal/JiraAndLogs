@@ -550,6 +550,57 @@ def main() -> int:
               f"got {r3(S['agent']['hard@5'] - S[base]['hard@5'])}/"
               f"{r3(S['agent']['hard@1'] - S[base]['hard@1'])}")
 
+    # S5/S4: the agent test family. The CIs and the "all significant" claim
+    # are quoted in S5 and must come from a released artifact, not from a
+    # number remembered out of a notebook.
+    st790 = json.loads((RES / "stats-study-790.json")
+                       .read_text(encoding="utf-8"))
+    sx = {(t["comparison"], t["metric"], t["population"]): t
+          for t in st790["tests"]}
+    check("S5 agent family: 42 tests on n=790, all BH-significant",
+          st790["n_tests"] == 42 and st790["n"] == 790
+          and all(t["significant"] for t in st790["tests"]),
+          f"{st790['n_tests']} tests, "
+          f"{sum(1 for t in st790['tests'] if t['significant'])} significant")
+    t_ci = {("llm", "acc@5", "overall"): (.071, .046, .095),
+            ("fusion", "acc@5", "overall"): (.063, .042, .085),
+            ("fusion", "acc@1", "overall"): (.185, .149, .223),
+            ("ours", "acc@5", "overall"): (.222, .194, .252),
+            ("fusion", "acc@5", "hard"): (.099, .056, .139),
+            ("llm", "acc@5", "hard"): (.091, .045, .136)}
+    for (base, metric, pop), (d, lo, hi) in t_ci.items():
+        t = sx[(f"agent_vs_{base}", metric, pop)]
+        check(f"S5 agent vs {base} {metric} {pop} {d:+.3f} [{lo:+.3f},{hi:+.3f}]",
+              r3(t["delta"]) == d and r3(t["ci_low"]) == lo
+              and r3(t["ci_high"]) == hi,
+              f"got {t['delta']:+.3f} [{t['ci_low']:+.3f},{t['ci_high']:+.3f}]")
+
+    # S4 setup: the ten removed instances are EASIER than the ones kept, so
+    # removing them cannot be what produced the result.
+    check("S4 excluded-10 easier than kept-790 (exclusion is conservative)",
+          r3(excl["retr_acc5_excluded"]) == .900
+          and r3(excl["retr_acc5_kept"]) == .681,
+          f"excluded {excl.get('retr_acc5_excluded')} vs "
+          f"kept {excl.get('retr_acc5_kept')}")
+
+    # S7: the motivating example of S1 is one the agent MISSES. Disclosed in
+    # the agent's limitations; pin it so the disclosure cannot go stale.
+    k6624 = next((r for r in v2.values() if r["issue_key"] == "KAFKA-6624"),
+                 None)
+    check("S7 KAFKA-6624: agent and retrieval both miss it entirely",
+          k6624 is not None and k6624["metrics"]["acc@10"] == 0.0
+          and k6624["metrics_lexical"]["acc@10"] == 0.0
+          and k6624["gold_files"] == [
+              "core/src/main/scala/kafka/log/LogManager.scala"],
+          "KAFKA-6624 absent" if k6624 is None else
+          f"agent acc@10={k6624['metrics']['acc@10']}, "
+          f"gold={k6624['gold_files']}")
+    check("S7 KAFKA-6624: agent ranks Log.scala then LogSegment.scala first",
+          k6624 is not None and k6624["ranking"][:2] == [
+              "core/src/main/scala/kafka/log/Log.scala",
+              "core/src/main/scala/kafka/log/LogSegment.scala"],
+          "" if k6624 is None else str(k6624["ranking"][:2]))
+
     # complementarity, quoted in S1 and S5
     llm_rank = {}
     for line in (LLMD / "scored-a2.jsonl").open(encoding="utf-8"):
