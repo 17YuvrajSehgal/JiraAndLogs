@@ -1,0 +1,270 @@
+"""The localization agent: a tool-using investigator over one instance.
+
+Shape of a run (one issue in, a ranked file list out):
+
+    Phase 0  deterministic seeding   no model. The lexical pipeline's
+             own candidates and the symbols parsed out of the report are
+             handed to the agent as a starting point, so the agent never
+             begins from a blank repository.
+    Phase 1  investigation           the model works with seven tools
+             (tools.py). It reads code, resolves symbols, and queries
+             firewalled incident history.
+    Phase 2  mandatory recording     every file seriously considered must
+             be written down with its evidence via note_candidate. A
+             file that was never recorded cannot be ranked.
+    Phase 3  commit                  submit_ranking closes the run.
+    Phase 4  deterministic safety net  the agent's list is fused with the
+             lexical ranking, so a bad or empty agent run degrades to a
+             known-good baseline instead of to zero.
+
+Reproducibility, which an agent does not get for free:
+  * temperature 0 and a fixed seed on every call;
+  * every tool is a pure function of the snapshot (tools.py), so a
+    transcript replays to identical tool results;
+  * the full transcript of every run is persisted: system prompt, tool
+    schemas, each raw response, each tool call and its result;
+  * the harness is restart-safe and records the git commit and model id;
+  * run-to-run variation is measured by repeating seeds, not assumed away.
+"""
+
+from __future__ import annotations
+
+import json
+import re
+import subprocess
+import sys
+import time
+from collections import defaultdict
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
+import tools as T  # noqa: E402
+from localize import RRF_K  # noqa: E402
+
+HERE = Path(__file__).resolve().parent
+SKILL = (HERE / "skills" / "fault-localization.md")
+MODEL = "qwen3.8-27b"
+NODE = "trig0051"
+MAX_TURNS = 14
+MAX_TOOL_CHARS = 9000
+LIST_LEN = 10
+
+SUBMIT = {"type": "function", "function": {
+    "name": "submit_ranking",
+    "description": "Commit the final ranked list of suspect files, most "
+                   "likely first. Call this exactly once, at the end.",
+    "parameters": {"type": "object", "properties": {
+        "files": {"type": "array", "maxItems": 10,
+                  "items": {"type": "string"}},
+        "rationale": {"type": "string",
+                      "description": "one or two sentences on what decided "
+                                     "the top choice"}},
+        "required": ["files"]}}}
+
+
+def skill_text() -> str:
+    raw = SKILL.read_text(encoding="utf-8")
+    m = re.match(r"^---\s*\n(.*?)\n---\s*\n(.*)$", raw, re.S)
+    return (m.group(2) if m else raw).strip()
+
+
+SYSTEM = (
+    "You are a senior maintainer doing root-cause fault localization on a "
+    "real production issue. You are given the issue report with its logs, "
+    "and tools to investigate the source tree exactly as it was when the "
+    "issue was filed.\n\n"
+    "The logs show where the failure was DETECTED. Your job is to find the "
+    "file that CAUSED it, which is usually a different file.\n\n"
+    "Use the tools. Do not answer from file names alone. When you have "
+    "evidence, record it with note_candidate. Finish by calling "
+    "submit_ranking exactly once.\n\n"
+    "=== INVESTIGATION METHOD ===\n" + skill_text())
+
+
+# ---- LLM transport ---------------------------------------------------------
+def call_llm(messages: list, tools: list, seed: int = 42,
+             max_tokens: int = 1500, timeout: int = 420,
+             retries: int = 3) -> dict:
+    """One chat completion through the cluster SSH channel.
+
+    The payload goes over stdin, never the command line, so nothing is
+    mangled by shell quoting.
+    """
+    body = json.dumps({"model": MODEL, "messages": messages, "tools": tools,
+                       "tool_choice": "auto", "temperature": 0, "seed": seed,
+                       "max_tokens": max_tokens,
+                       "chat_template_kwargs": {"enable_thinking": False}})
+    cmd = ["wsl", "-d", "Ubuntu", "ssh", "trillium",
+           f"ssh trig-login01 'curl -s -m {timeout - 30} "
+           f"http://{NODE}:8000/v1/chat/completions "
+           f"-H \"Content-Type: application/json\" -d @-'"]
+    last = ""
+    for attempt in range(1, retries + 1):
+        try:
+            r = subprocess.run(cmd, input=body.encode(), capture_output=True,
+                               timeout=timeout)
+            out = r.stdout.decode("utf-8", "replace").strip()
+            if not out:
+                last = f"empty stdout; stderr={r.stderr.decode()[:200]}"
+            else:
+                d = json.loads(out)
+                if "choices" in d:
+                    return d
+                last = f"no choices: {out[:200]}"
+        except Exception as e:  # noqa: BLE001
+            last = f"{type(e).__name__}: {e}"
+        if attempt < retries:
+            time.sleep(4 * attempt)
+    return {"error": last}
+
+
+def _tool_calls_of(msg: dict) -> list:
+    return msg.get("tool_calls") or []
+
+
+def _args_of(tc: dict) -> dict:
+    raw = (tc.get("function") or {}).get("arguments")
+    if isinstance(raw, dict):
+        return raw
+    try:
+        return json.loads(raw or "{}")
+    except (json.JSONDecodeError, TypeError):
+        m = re.search(r"\{.*\}", raw or "", re.S)
+        try:
+            return json.loads(m.group(0)) if m else {}
+        except Exception:  # noqa: BLE001
+            return {}
+
+
+def fuse(agent_list: list[str], lexical: list[str],
+         w_agent: float = 1.0, w_lex: float = 0.6) -> list[str]:
+    """Safety net. The agent leads; the lexical ranking still votes, so an
+    empty or degenerate agent answer falls back to a known-good list."""
+    s: dict[str, float] = defaultdict(float)
+    for i, f in enumerate(agent_list):
+        s[f] += w_agent / (RRF_K + i + 1)
+    for i, f in enumerate(lexical):
+        s[f] += w_lex / (RRF_K + i + 1)
+    return [f for f, _ in sorted(s.items(), key=lambda x: (-x[1], x[0]))]
+
+
+def run_instance(ws: T.Workspace, seed: int = 42,
+                 max_turns: int = MAX_TURNS) -> dict:
+    """Investigate one instance. Returns the ranking plus a transcript."""
+    syms = T.report_symbols(ws.query_text)
+    user = (
+        f"Project: {ws.project}\n\n=== ISSUE REPORT (with logs) ===\n"
+        f"{ws.query_text[:18000]}\n\n"
+        f"=== STARTING POINTS (from a lexical retriever; unverified) ===\n"
+        f"symbols parsed from the report: {', '.join(syms[:14]) or 'none'}\n"
+        f"candidate files already retrieved:\n"
+        + "\n".join(f"  {i + 1}. {f}" for i, f in
+                    enumerate(ws.seed_candidates[:12]))
+        + "\n\nInvestigate, then submit a ranked list of up to 10 files "
+          "that may contain the ROOT CAUSE.")
+    messages = [{"role": "system", "content": SYSTEM},
+                {"role": "user", "content": user}]
+    events = [{"type": "system", "content": SYSTEM},
+              {"type": "user", "content": user}]
+    submitted, rationale, stop = [], "", "max_turns"
+    usage = {"in": 0, "out": 0, "calls": 0}
+
+    for turn in range(max_turns):
+        resp = call_llm(messages, T.TOOL_SCHEMAS + [SUBMIT], seed=seed)
+        if "error" in resp:
+            events.append({"type": "error", "turn": turn,
+                           "error": resp["error"]})
+            stop = "llm_error"
+            break
+        usage["calls"] += 1
+        u = resp.get("usage") or {}
+        usage["in"] += u.get("prompt_tokens", 0) or 0
+        usage["out"] += u.get("completion_tokens", 0) or 0
+        msg = resp["choices"][0].get("message", {}) or {}
+        events.append({"type": "assistant", "turn": turn,
+                       "content": (msg.get("content") or "")[:1500],
+                       "tool_calls": [
+                           {"name": (tc.get("function") or {}).get("name"),
+                            "args": _args_of(tc)}
+                           for tc in _tool_calls_of(msg)]})
+        tcs = _tool_calls_of(msg)
+        if not tcs:
+            # no tool call: nudge once, then stop
+            if turn >= max_turns - 1 or stop == "nudged":
+                stop = "no_tool_call"
+                break
+            messages.append({"role": "assistant",
+                             "content": msg.get("content") or ""})
+            messages.append({"role": "user",
+                             "content": "Continue investigating with the "
+                                        "tools, or call submit_ranking now."})
+            stop = "nudged"
+            continue
+        messages.append({"role": "assistant", "content": msg.get("content") or "",
+                         "tool_calls": tcs})
+        done = False
+        for tc in tcs:
+            name = (tc.get("function") or {}).get("name") or ""
+            args = _args_of(tc)
+            if name == "submit_ranking":
+                submitted = [f for f in (args.get("files") or [])
+                             if isinstance(f, str)]
+                rationale = str(args.get("rationale") or "")[:600]
+                stop, done = "submitted", True
+                result = {"accepted": len(submitted)}
+            else:
+                result = T.dispatch(ws, name, args)
+            payload = json.dumps(result, default=str)[:MAX_TOOL_CHARS]
+            events.append({"type": "tool", "turn": turn, "name": name,
+                           "args": args, "result": payload[:2500]})
+            messages.append({"role": "tool", "tool_call_id": tc.get("id", ""),
+                             "name": name, "content": payload})
+        if done:
+            break
+
+    # resolve model paths onto real snapshot files, then apply the safety net
+    resolver_stats: dict = {}
+    resolved = []
+    for raw in submitted:
+        f = _resolve(raw, ws, resolver_stats)
+        if f and f not in resolved:
+            resolved.append(f)
+    noted = [n["file"] for n in sorted(ws.notes,
+                                       key=lambda x: -x["confidence"])
+             if n["in_snapshot"]]
+    agent_list = resolved or noted
+    final = fuse(agent_list, ws.seed_candidates)[:LIST_LEN] \
+        if agent_list else list(ws.seed_candidates[:LIST_LEN])
+    return {"ranking": final, "agent_ranking": agent_list[:LIST_LEN],
+            "lexical_seed": ws.seed_candidates[:LIST_LEN],
+            "notes": ws.notes, "tool_calls": ws.calls,
+            "stop_reason": stop, "rationale": rationale, "usage": usage,
+            "resolver": resolver_stats, "events": events, "seed": seed}
+
+
+def _resolve(raw: str, ws: T.Workspace, stats: dict) -> str | None:
+    """Map a model-written path onto a real file in this snapshot."""
+    if not isinstance(raw, str) or not raw.strip():
+        stats["dropped"] = stats.get("dropped", 0) + 1
+        return None
+    s = raw.strip().replace("\\", "/").lstrip("./").lstrip("/")
+    if s in ws.snap.blob_of:
+        stats["exact"] = stats.get("exact", 0) + 1
+        return s
+    for cut in (1, 2):
+        t = "/".join(s.split("/")[cut:])
+        if t and t in ws.snap.blob_of:
+            stats["prefix_strip"] = stats.get("prefix_strip", 0) + 1
+            return t
+    base = s.rsplit("/", 1)[-1]
+    hits = [f for f in ws.snap.files if f.rsplit("/", 1)[-1] == base]
+    if len(hits) == 1:
+        stats["basename"] = stats.get("basename", 0) + 1
+        return hits[0]
+    suf = [f for f in ws.snap.files if f.endswith(s)]
+    if len(suf) == 1:
+        stats["suffix"] = stats.get("suffix", 0) + 1
+        return suf[0]
+    stats["dropped"] = stats.get("dropped", 0) + 1
+    return None
