@@ -85,14 +85,18 @@ SYSTEM = (
 # ---- LLM transport ---------------------------------------------------------
 def call_llm(messages: list, tools: list, seed: int = 42,
              max_tokens: int = 1500, timeout: int = 420,
-             retries: int = 3) -> dict:
+             retries: int = 3, force_tool: str | None = None) -> dict:
     """One chat completion through the cluster SSH channel.
 
     The payload goes over stdin, never the command line, so nothing is
     mangled by shell quoting.
     """
+    choice = ({"type": "function", "function": {"name": force_tool}}
+              if force_tool else "auto")
+    messages = [{k: v for k, v in m.items() if not k.startswith("_")}
+                for m in messages]
     body = json.dumps({"model": MODEL, "messages": messages, "tools": tools,
-                       "tool_choice": "auto", "temperature": 0, "seed": seed,
+                       "tool_choice": choice, "temperature": 0, "seed": seed,
                        "max_tokens": max_tokens,
                        "chat_template_kwargs": {"enable_thinking": False}})
     cmd = ["wsl", "-d", "Ubuntu", "ssh", "trillium",
@@ -170,6 +174,26 @@ def reformulate(query_text: str, seed: int = 42) -> dict:
     return {"error": "no describe_fault call"}
 
 
+def trim_history(messages: list, keep_full: int = 6) -> list:
+    """Keep the newest `keep_full` tool results verbatim; replace older ones
+    with a stub naming the tool.
+
+    The whole thread is re-sent every turn, so cost grows quadratically with
+    turns. The first smoke run spent 117k-131k prompt tokens on a single
+    instance. The user's earlier agent handles this the same way (keep the
+    newest 40 KB of tool output, stub the rest) and the stub keeps the model
+    aware that the call happened.
+    """
+    idx = [i for i, m in enumerate(messages) if m.get("role") == "tool"]
+    for i in idx[:-keep_full] if len(idx) > keep_full else []:
+        m = messages[i]
+        if not m.get("_stubbed"):
+            m["content"] = (f"[result of {m.get('name', 'tool')} omitted to "
+                            f"save context; it was already used]")
+            m["_stubbed"] = True
+    return messages
+
+
 def _tool_calls_of(msg: dict) -> list:
     return msg.get("tool_calls") or []
 
@@ -244,7 +268,20 @@ def run_instance(ws: T.Workspace, seed: int = 42,
     usage = {"in": 0, "out": 0, "calls": 0}
 
     for turn in range(max_turns):
-        resp = call_llm(messages, T.TOOL_SCHEMAS + [SUBMIT], seed=seed)
+        left = max_turns - turn
+        # Turn-budget pressure. Without it the model explores until the
+        # budget runs out and never commits: the first smoke test spent
+        # 21-26 tool calls and submitted nothing on all three instances.
+        if left == 3:
+            messages.append({"role": "user", "content":
+                             "3 turns left. Record the files you are "
+                             "considering with note_candidate now, then "
+                             "call submit_ranking."})
+        # Last turn: force the commit rather than hoping for it.
+        force = left <= 1
+        tools_arg = [SUBMIT] if force else T.TOOL_SCHEMAS + [SUBMIT]
+        resp = call_llm(trim_history(messages), tools_arg, seed=seed,
+                        force_tool="submit_ranking" if force else None)
         if "error" in resp:
             events.append({"type": "error", "turn": turn,
                            "error": resp["error"]})
