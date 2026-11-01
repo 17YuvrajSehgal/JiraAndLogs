@@ -1,6 +1,19 @@
 \section{\sys{}: localization as an investigation}
 \label{sec:agent}
 
+\begin{figure*}[t]
+\centering
+\includegraphics[width=0.98\textwidth]{figures/agent.pdf}
+\caption{\sys{}. The report, the snapshot and the project's firewalled
+incident memory go in (left). One model call restates the symptom as the
+behaviour the code would use, and a deterministic step hands the agent
+its starting evidence rather than waiting to be asked for it. The agent
+then investigates with eight tools, each a pure function of the
+snapshot, for at most fourteen turns. It may only finish by submitting a
+ranked list in which every file carries the evidence that put it there.}
+\label{fig:agent}
+\end{figure*}
+
 The comparative study leaves a specific gap. The retrieval layer and the
 model alone fail on different instances, and a perfect choice between
 their shortlists would reach $0.892$ where each alone reaches $0.681$
@@ -78,6 +91,7 @@ tool & question it answers & uses \\
 \texttt{recall\_incidents} & which past fixes resemble this?       & 0.28 \\
 \texttt{list\_dir}         & what is in this directory?            & 0.13 \\
 \texttt{read\_skeleton}    & what does this file declare?          & 0.10 \\
+\texttt{callers\_of}       & who calls this symbol?                & 0.01 \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -90,10 +104,12 @@ directly. A stack frame names a symbol, not a file, and the file that
 raises an exception is usually not the file that caused it. The tool
 resolves a symbol across the whole snapshot into the places that define
 it and the places that use it, and returns the functions that call it in
-the same result. We first offered those callers as a separate tool and
-the model almost never chose it: one call in 105 runs. Returning them
-inside a tool the model already uses three times per issue delivers the
-same evidence without depending on the model to ask.
+the same result. Those callers were originally a separate tool,
+\texttt{callers\_of}, and the model almost never chose it: one call in
+168 runs. The tool is still offered, and is still almost never chosen
+(0.01 calls per issue). What changed is that the same evidence now
+arrives inside a tool the model already uses three times per issue, so
+obtaining it no longer depends on the model asking.
 
 \texttt{recall\_incidents} carries the incident memory of
 \cref{sec:approach:memory} into the agent, behind the same four firewall
@@ -112,14 +128,15 @@ path a tool will read.
 
 Three behaviours matter to the design, and in an earlier version all
 three were written in the instructions and skipped in practice
-(\cref{sec:results:ablation}). Incident memory was consulted in $0.4$
-calls per run. The caller tool was used once in 105 runs. Evidence was
+(\cref{sec:results:ablation}). Incident memory was consulted in $0.32$
+calls per run. The caller tool was used once in 168 runs. Evidence was
 recorded in under two thirds of runs.
 
 The current version does not instruct those behaviours, it builds them
 in. Incident memory is retrieved before the loop and handed to the model
-as evidence. Callers arrive inside the symbol lookup. Evidence is a
-required field of the submission schema. The principle generalises
+as evidence. Callers arrive inside the symbol lookup, whether or not the
+model thinks to ask for them. Evidence is a required field of the
+submission schema. The principle generalises
 beyond this system: if a result depends on the agent doing something,
 asking it in the prompt is not a mechanism, and the gap between asking
 and getting is large enough to measure.

@@ -682,11 +682,37 @@ def main() -> int:
           and abs(b1["tool_calls_mean"] - b2["tool_calls_mean"]) < 1.0
           and abs(b1["llm_calls_mean"] - b2["llm_calls_mean"]) < 1.0,
           f"{b1["evidence_mean"]}->{b2["evidence_mean"]}")
-    check("S4 v1 skipped what it was told: memory 0.4/run, 37% no evidence",
-          round(b1["recall_incidents_per_run"], 1) == 0.3
-          or round(b1["recall_incidents_per_run"], 1) == 0.4,
+    check("S4/S5 v1 skipped what it was told: memory 0.32/run, 37% no evidence",
+          round(b1["recall_incidents_per_run"], 2) == 0.32
+          and round(b1["zero_evidence_rate"], 2) == 0.37,
           f"memory {b1['recall_incidents_per_run']}/run, "
           f"zero-evidence {b1['zero_evidence_rate']}")
+
+    # S4/S5: the caller tool was used ONCE in the 168 v1 runs (not 105 - that
+    # number belongs to the hard-instance count in S1/S5 and must not be
+    # transcribed here).
+    v1_callers = sum(r["tools_used"].count("callers_of") for r in v1.values())
+    check("S4/S5 v1 caller tool: exactly 1 call across exactly 168 runs",
+          v1_callers == 1 and len(v1) == 168,
+          f"{v1_callers} calls in {len(v1)} runs")
+
+    # S4: callers_of is STILL offered in v2 and still almost never chosen.
+    # The paper must not imply the tool was removed.
+    v2_callers = sum(r["tools_used"].count("callers_of") for r in v2.values())
+    check("S4 callers_of still exposed in v2 and still near-unused",
+          v2_callers > 0 and round(v2_callers / len(v2), 2) == 0.01,
+          f"{v2_callers} calls in {len(v2)} runs "
+          f"= {v2_callers / len(v2):.3f}/run")
+
+    # S5: evidence recorded vs outcome, both legs under the SAME acc@5
+    # definition (an earlier draft paired an acc@5 leg with an acc@1 leg).
+    ev_hit = [r["n_notes"] for r in v1.values() if r["metrics"]["acc@5"] == 1]
+    ev_miss = [r["n_notes"] for r in v1.values() if r["metrics"]["acc@5"] == 0]
+    m_hit = sum(ev_hit) / len(ev_hit)
+    m_miss = sum(ev_miss) / len(ev_miss)
+    check("S5 v1 evidence by acc@5 outcome: 0.8 when missed, 2.2 when found",
+          round(m_miss, 1) == 0.8 and round(m_hit, 1) == 2.2,
+          f"missed {m_miss:.2f}, found {m_hit:.2f}")
 
     # ---- Sec. 4/5/6: cost ------------------------------------------------------
     cst = [r["cost"] for r in v2.values()]
@@ -701,11 +727,27 @@ def main() -> int:
     tu = Counter(t for r in v2.values() for t in r["tools_used"])
     t_tools = {"read_code": 7.28, "search_symbol": 3.42, "search_text": 2.61,
                "note_candidate": 2.38, "recall_incidents": 0.28,
-               "list_dir": 0.13, "read_skeleton": 0.10}
+               "list_dir": 0.13, "read_skeleton": 0.10, "callers_of": 0.01}
     for name, per in t_tools.items():
         check(f"T-tools {name} {per}/run",
               round(tu[name] / len(v2), 2) == per,
               f"got {tu[name] / len(v2):.2f}")
+    # The table, the figure and the code must agree on how many investigation
+    # tools exist. Every tool the model was actually offered has to appear.
+    import importlib.util as _ilu
+    _spec = _ilu.spec_from_file_location(
+        "c7tools", ROOT / "industry-c7" / "agent" / "tools.py")
+    _mod = _ilu.module_from_spec(_spec)
+    _spec.loader.exec_module(_mod)
+    offered = {t["function"]["name"] for t in _mod.TOOL_SCHEMAS}
+    check("T-tools table covers every tool the model was offered (8)",
+          offered == set(t_tools) and len(offered) == 8,
+          f"schema has {sorted(offered)}")
+    check("Figure agent.svg says EIGHT TOOLS and shows all 8 names",
+          (lambda s: "EIGHT TOOLS" in s and all(n in s for n in t_tools))(
+              (ROOT / "industry-c7" / "paper" / "figures" / "agent.svg")
+              .read_text(encoding="utf-8")),
+          "agent.svg header/rows out of sync with the tool schema")
 
     # ---- report ---------------------------------------------------------------
     failed = [(c, d) for c, ok, d in checks if not ok]

@@ -1,6 +1,19 @@
 \section{Introduction}
 \label{sec:intro}
 
+\begin{figure*}[t]
+\centering
+\includegraphics[width=0.98\textwidth]{figures/research.pdf}
+\caption{How the study is built. Two public issue datasets and four git
+histories are joined and filtered into a benchmark of \nInstances{}
+incidents, each pairing a report and its logs with the code of that day
+and the files its fix later changed. Four families of localization
+method are then compared on one population under one protocol and one
+temporal firewall, and three checks test whether the result can be
+believed.}
+\label{fig:research}
+\end{figure*}
+
 When a production issue is reported, an engineer typically receives two
 things: a natural-language description of what went wrong, and logs. There
 is no failing test, no debugger session, and often no way to reproduce the

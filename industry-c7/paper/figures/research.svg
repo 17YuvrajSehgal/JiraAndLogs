@@ -1,0 +1,183 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1780 640"
+     font-family="Helvetica, Arial, sans-serif">
+  <defs>
+    <g id="i-db"><path d="M2,7 v22 a16,6 0 0 0 32 0 v-22" fill="#7FA8D9" stroke="#3D6CA8" stroke-width="2"/><ellipse cx="18" cy="7" rx="16" ry="6" fill="#A9C6E8" stroke="#3D6CA8" stroke-width="2"/><path d="M2,15 a16,6 0 0 0 32 0 M2,22 a16,6 0 0 0 32 0" fill="none" stroke="#3D6CA8" stroke-width="1.6"/></g>
+    <g id="i-git"><circle cx="8" cy="7" r="5.5" fill="#C9B6EA" stroke="#6E4FA8" stroke-width="2"/><circle cx="8" cy="31" r="5.5" fill="#C9B6EA" stroke="#6E4FA8" stroke-width="2"/><circle cx="28" cy="19" r="5.5" fill="#C9B6EA" stroke="#6E4FA8" stroke-width="2"/><path d="M8,12.5 v13 M12,10 C22,12 24,12 27,14" fill="none" stroke="#6E4FA8" stroke-width="2"/></g>
+    <g id="i-filter"><path d="M2,3 h32 l-12,15 v15 l-8,-5 v-10 z" fill="#FDEFE6" stroke="#E8794A" stroke-width="2.2" stroke-linejoin="round"/></g>
+    <g id="i-star"><polygon points="18,1 22.5,13 35,13.5 25,21.5 28.8,34 18,26.5 7.2,34 11,21.5 1,13.5 13.5,13" fill="#F7CE46" stroke="#C99A06" stroke-width="1.6" stroke-linejoin="round"/></g>
+    <g id="i-shield"><path d="M18,1 L33,7 v12 c0,9 -7,15 -15,17 C10,34 3,28 3,19 V7 Z" fill="#FBECEC" stroke="#C25B5B" stroke-width="2.2" stroke-linejoin="round"/><path d="M11,18 l5,5 l10,-11" fill="none" stroke="#C25B5B" stroke-width="2.6" stroke-linecap="round"/></g>
+    <g id="i-scale"><path d="M18,3 v30 M6,33 h24" stroke="#4B5563" stroke-width="2.4" stroke-linecap="round" fill="none"/><path d="M4,12 h28" stroke="#4B5563" stroke-width="2.4"/><path d="M4,12 l-3,9 a7,7 0 0 0 14,0 l-3,-9" fill="#EEF1F6" stroke="#4B5563" stroke-width="2"/><path d="M32,12 l3,9 a7,7 0 0 1 -14,0 l3,-9" fill="#EEF1F6" stroke="#4B5563" stroke-width="2"/></g>
+    <g id="i-robot"><line x1="18" y1="6" x2="18" y2="1" stroke="#4B5563" stroke-width="2"/><circle cx="18" cy="1.5" r="2" fill="#F2B705"/><rect x="4" y="6" width="28" height="22" rx="6" fill="#C9D4E4" stroke="#4B5563" stroke-width="2"/><circle cx="12.5" cy="15" r="3.4" fill="#2F3A4A"/><circle cx="23.5" cy="15" r="3.4" fill="#2F3A4A"/><path d="M12,22 q6,4 12,0" fill="none" stroke="#2F3A4A" stroke-width="2" stroke-linecap="round"/><rect x="10" y="28" width="16" height="7" rx="2.5" fill="#C9D4E4" stroke="#4B5563" stroke-width="2"/></g>
+  </defs>
+
+  <!-- ================= A. SOURCES ================= -->
+  <rect x="18" y="62" width="250" height="540" rx="14" fill="#FDFDFB" stroke="#333" stroke-width="2.2" stroke-dasharray="9 6"/>
+  <rect x="52" y="46" width="182" height="32" rx="8" fill="#FFF" stroke="#333" stroke-width="2"/>
+  <text x="143" y="68" font-size="19" font-weight="bold" text-anchor="middle" fill="#222">PUBLIC SOURCES</text>
+
+  <rect x="36" y="96" width="214" height="136" rx="10" fill="#EAF2FB" stroke="#4A7FC1" stroke-width="2"/>
+  <use href="#i-db" x="52" y="108"/>
+  <text x="98" y="132" font-size="16.5" font-weight="bold" fill="#2D5A94">World of Logs v2</text>
+  <text x="52" y="168" font-size="14" fill="#555">public Jira issues, each</text>
+  <text x="52" y="188" font-size="14" fill="#555">flagged for whether its</text>
+  <text x="52" y="208" font-size="14" fill="#555">text contains log output</text>
+
+  <rect x="36" y="248" width="214" height="136" rx="10" fill="#EAF2FB" stroke="#4A7FC1" stroke-width="2"/>
+  <use href="#i-db" x="52" y="260"/>
+  <text x="98" y="284" font-size="16.5" font-weight="bold" fill="#2D5A94">Public Jira Dataset</text>
+  <text x="52" y="320" font-size="14" fill="#555">creation and resolution</text>
+  <text x="52" y="340" font-size="14" fill="#555">dates, and duplicate</text>
+  <text x="52" y="360" font-size="14" fill="#555">links between issues</text>
+
+  <rect x="36" y="400" width="214" height="186" rx="10" fill="#F2EDFA" stroke="#8E6CC8" stroke-width="2"/>
+  <use href="#i-git" x="52" y="412"/>
+  <text x="98" y="436" font-size="16.5" font-weight="bold" fill="#5A3E96">Four git histories</text>
+  <text x="52" y="472" font-size="14" fill="#555">Apache Kafka (Java)</text>
+  <text x="52" y="494" font-size="14" fill="#555">MariaDB (C / C++)</text>
+  <text x="52" y="516" font-size="14" fill="#555">MongoDB (C++)</text>
+  <text x="52" y="538" font-size="14" fill="#555">Qt (C++)</text>
+  <text x="52" y="566" font-size="13.5" font-style="italic" fill="#5A3E96">four organizations,</text>
+  <text x="52" y="582" font-size="13.5" font-style="italic" fill="#5A3E96">two tracker platforms</text>
+
+  <polygon points="272,322 288,322 288,310 306,330 288,350 288,338 272,338" fill="#FBE3C9" stroke="#E8794A" stroke-width="2" stroke-linejoin="round"/>
+
+  <!-- ================= B. MINING ================= -->
+  <rect x="304" y="62" width="330" height="540" rx="14" fill="#FDFDFB" stroke="#333" stroke-width="2.2" stroke-dasharray="9 6"/>
+  <rect x="330" y="46" width="278" height="32" rx="8" fill="#FFF" stroke="#333" stroke-width="2"/>
+  <text x="469" y="68" font-size="19" font-weight="bold" text-anchor="middle" fill="#222">MINE THE BENCHMARK</text>
+
+  <rect x="322" y="96" width="294" height="222" rx="10" fill="#FDEFE6" stroke="#E8794A" stroke-width="2"/>
+  <use href="#i-filter" x="338" y="108"/>
+  <text x="384" y="132" font-size="16.5" font-weight="bold" fill="#A54B22">Join, then filter</text>
+  <text x="338" y="166" font-size="14" fill="#555">keep fixed Bug issues whose</text>
+  <text x="338" y="186" font-size="14" fill="#555">text carries logs, link them to</text>
+  <text x="338" y="206" font-size="14" fill="#555">1-3 fix commits by issue key</text>
+  <rect x="338" y="220" width="262" height="86" rx="7" fill="#FFF" stroke="#E8794A" stroke-width="1.6"/>
+  <text x="350" y="242" font-size="14" fill="#555">eligible issues</text>
+  <text x="588" y="242" font-size="14" font-weight="bold" text-anchor="end" fill="#A54B22">17,995</text>
+  <text x="350" y="265" font-size="14" fill="#555">no linkable fix commit</text>
+  <text x="588" y="265" font-size="14" font-weight="bold" text-anchor="end" fill="#C25B5B">-9,134</text>
+  <text x="350" y="288" font-size="14" fill="#555">no source file in the fix</text>
+  <text x="588" y="288" font-size="14" font-weight="bold" text-anchor="end" fill="#C25B5B">-2,206</text>
+
+  <rect x="322" y="334" width="294" height="124" rx="10" fill="#EAF6EE" stroke="#3E9B5F" stroke-width="2"/>
+  <text x="338" y="362" font-size="16.5" font-weight="bold" fill="#246B40">Ground truth, from git</text>
+  <text x="338" y="392" font-size="14" fill="#555">the snapshot is the parent of</text>
+  <text x="338" y="412" font-size="14" fill="#555">the fix commit; the gold files</text>
+  <text x="338" y="432" font-size="14" fill="#555">are the source files it modified</text>
+  <text x="338" y="450" font-size="13.5" font-style="italic" fill="#246B40">never a file the fix only added</text>
+
+  <rect x="322" y="474" width="294" height="112" rx="10" fill="#FDEEF3" stroke="#D4537E" stroke-width="2"/>
+  <text x="338" y="502" font-size="16.5" font-weight="bold" fill="#A32C58">Incident memory pool</text>
+  <text x="338" y="532" font-size="14" fill="#555">every resolved issue with a</text>
+  <text x="338" y="552" font-size="14" fill="#555">linked fix, kept per project</text>
+  <text x="338" y="574" font-size="13.5" font-style="italic" fill="#A32C58">2,315 to 19,820 incidents</text>
+
+  <polygon points="638,322 654,322 654,310 672,330 654,350 654,338 638,338" fill="#FBE3C9" stroke="#E8794A" stroke-width="2" stroke-linejoin="round"/>
+
+  <!-- ================= C. BENCHMARK ================= -->
+  <rect x="670" y="62" width="322" height="540" rx="14" fill="#FDFDFB" stroke="#333" stroke-width="2.2" stroke-dasharray="9 6"/>
+  <rect x="690" y="46" width="282" height="32" rx="8" fill="#FFF" stroke="#333" stroke-width="2"/>
+  <text x="831" y="68" font-size="19" font-weight="bold" text-anchor="middle" fill="#222">THE BENCHMARK</text>
+
+  <rect x="688" y="96" width="286" height="140" rx="10" fill="#FFF8E4" stroke="#D9A520" stroke-width="2.4"/>
+  <text x="831" y="134" font-size="34" font-weight="bold" text-anchor="middle" fill="#8A6A10">6,437</text>
+  <text x="831" y="160" font-size="15.5" font-weight="bold" text-anchor="middle" fill="#8A6A10">real incidents</text>
+  <text x="704" y="190" font-size="14" fill="#555">each one pairs a report and its</text>
+  <text x="704" y="210" font-size="14" fill="#555">logs, the code of that day, and</text>
+  <text x="704" y="230" font-size="14" fill="#555">the files the fix later changed</text>
+
+  <rect x="688" y="252" width="286" height="96" rx="10" fill="#FBECEC" stroke="#C25B5B" stroke-width="2"/>
+  <text x="704" y="280" font-size="16.5" font-weight="bold" fill="#8F3131">Stratified by difficulty</text>
+  <text x="704" y="310" font-size="14" fill="#555">in <tspan font-weight="bold" font-size="17" fill="#8F3131">53%</tspan> of reports, no file the fix</text>
+  <text x="704" y="332" font-size="14" fill="#555">touched is named anywhere</text>
+
+  <text x="688" y="378" font-size="15.5" font-weight="bold" fill="#2F3A4A">Two evaluation populations</text>
+
+  <rect x="688" y="392" width="286" height="92" rx="10" fill="#EEF1F6" stroke="#4B5563" stroke-width="2"/>
+  <text x="704" y="418" font-size="15.5" font-weight="bold" fill="#2F3A4A">Full evaluation split</text>
+  <text x="900" y="418" font-size="17" font-weight="bold" text-anchor="end" fill="#2F3A4A">4,508</text>
+  <text x="704" y="444" font-size="13.5" fill="#555">later 70% of each project by fix</text>
+  <text x="704" y="464" font-size="13.5" fill="#555">time; benchmark-wide measurements</text>
+
+  <rect x="688" y="496" width="286" height="92" rx="10" fill="#EEF1F6" stroke="#4B5563" stroke-width="2.4"/>
+  <text x="704" y="522" font-size="15.5" font-weight="bold" fill="#2F3A4A">Study population</text>
+  <text x="900" y="522" font-size="17" font-weight="bold" text-anchor="end" fill="#2F3A4A">790</text>
+  <text x="704" y="548" font-size="13.5" fill="#555">200 per project, test-only gold</text>
+  <text x="704" y="568" font-size="13.5" fill="#555">removed; <tspan font-weight="bold">every</tspan> system rescored here</text>
+
+  <polygon points="996,322 1012,322 1012,310 1030,330 1012,350 1012,338 996,338" fill="#FBE3C9" stroke="#E8794A" stroke-width="2" stroke-linejoin="round"/>
+
+  <!-- ================= D. FAMILIES ================= -->
+  <rect x="1028" y="62" width="382" height="540" rx="14" fill="#FDFDFB" stroke="#333" stroke-width="2.2" stroke-dasharray="9 6"/>
+  <rect x="1046" y="46" width="346" height="32" rx="8" fill="#FFF" stroke="#333" stroke-width="2"/>
+  <text x="1219" y="68" font-size="19" font-weight="bold" text-anchor="middle" fill="#222">COMPARE, ON ONE POPULATION</text>
+
+  <use href="#i-scale" x="1046" y="92"/>
+  <text x="1092" y="116" font-size="15.5" font-weight="bold" fill="#2F3A4A">one protocol, one temporal firewall</text>
+  <text x="1356" y="140" font-size="13.5" font-style="italic" text-anchor="end" fill="#777">Acc@5</text>
+
+  <rect x="1046" y="150" width="346" height="60" rx="9" fill="#F4F5F7" stroke="#4B5563" stroke-width="1.8"/>
+  <text x="1062" y="174" font-size="15.5" font-weight="bold" fill="#2F3A4A">Classic IR localization</text>
+  <text x="1062" y="196" font-size="13.5" fill="#555">rVSM, BugLocator, BRTracer-style</text>
+  <text x="1376" y="186" font-size="20" font-weight="bold" text-anchor="end" fill="#4B5563">.180</text>
+
+  <rect x="1046" y="222" width="346" height="60" rx="9" fill="#FDEEF3" stroke="#D4537E" stroke-width="1.8"/>
+  <text x="1062" y="246" font-size="15.5" font-weight="bold" fill="#A32C58">Retrieval + incident memory</text>
+  <text x="1062" y="268" font-size="13.5" fill="#555">lexical, deterministic, CPU only</text>
+  <text x="1376" y="258" font-size="20" font-weight="bold" text-anchor="end" fill="#D4537E">.681</text>
+
+  <rect x="1046" y="294" width="346" height="60" rx="9" fill="#EAF2FB" stroke="#4A7FC1" stroke-width="1.8"/>
+  <text x="1062" y="318" font-size="15.5" font-weight="bold" fill="#2D5A94">A 27B model, given the file tree</text>
+  <text x="1062" y="340" font-size="13.5" fill="#555">Agentless-style; re-ranker variant .780</text>
+  <text x="1376" y="330" font-size="20" font-weight="bold" text-anchor="end" fill="#4A7FC1">.832</text>
+
+  <rect x="1046" y="366" width="346" height="60" rx="9" fill="#EAF6EE" stroke="#3E9B5F" stroke-width="1.8"/>
+  <text x="1062" y="390" font-size="15.5" font-weight="bold" fill="#246B40">Fusion of the two above</text>
+  <text x="1062" y="412" font-size="13.5" fill="#555">best system that is not an agent</text>
+  <text x="1376" y="402" font-size="20" font-weight="bold" text-anchor="end" fill="#3E9B5F">.839</text>
+
+  <rect x="1046" y="442" width="346" height="72" rx="9" fill="#FFF8E4" stroke="#D9A520" stroke-width="2.6"/>
+  <use href="#i-robot" x="1060" y="458"/>
+  <text x="1108" y="478" font-size="17" font-weight="bold" fill="#8A6A10">REMEMBER (this paper)</text>
+  <text x="1108" y="500" font-size="13.5" fill="#555">same 27B model, given tools</text>
+  <text x="1376" y="490" font-size="24" font-weight="bold" text-anchor="end" fill="#8A6A10">.903</text>
+
+  <rect x="1046" y="528" width="346" height="58" rx="9" fill="#FFF" stroke="#D9A520" stroke-width="1.8"/>
+  <text x="1062" y="550" font-size="14" fill="#555">No family dominates. Retrieval and the</text>
+  <text x="1062" y="570" font-size="14" fill="#555">model solve <tspan font-weight="bold" fill="#8A6A10">different</tspan> instances; union .892</text>
+
+  <polygon points="1414,322 1430,322 1430,310 1448,330 1430,350 1430,338 1414,338" fill="#FBE3C9" stroke="#E8794A" stroke-width="2" stroke-linejoin="round"/>
+
+  <!-- ================= E. VALIDITY ================= -->
+  <rect x="1446" y="62" width="316" height="540" rx="14" fill="#FDFDFB" stroke="#333" stroke-width="2.2" stroke-dasharray="9 6"/>
+  <rect x="1470" y="46" width="268" height="32" rx="8" fill="#FFF" stroke="#333" stroke-width="2"/>
+  <text x="1604" y="68" font-size="19" font-weight="bold" text-anchor="middle" fill="#222">CHECK THE RESULT</text>
+
+  <rect x="1464" y="96" width="280" height="118" rx="10" fill="#FBECEC" stroke="#C25B5B" stroke-width="2"/>
+  <use href="#i-shield" x="1480" y="108"/>
+  <text x="1526" y="132" font-size="16" font-weight="bold" fill="#8F3131">Did it memorise?</text>
+  <text x="1480" y="164" font-size="13.5" fill="#555">asked for each fix from the</text>
+  <text x="1480" y="184" font-size="13.5" fill="#555">issue key alone, the model</text>
+  <text x="1480" y="204" font-size="13.5" fill="#555">scores <tspan font-weight="bold" fill="#8F3131">below</tspan> a frequency prior</text>
+
+  <rect x="1464" y="228" width="280" height="118" rx="10" fill="#FBECEC" stroke="#C25B5B" stroke-width="2"/>
+  <use href="#i-shield" x="1480" y="240"/>
+  <text x="1526" y="264" font-size="16" font-weight="bold" fill="#8F3131">Is it echoing retrieval?</text>
+  <text x="1480" y="296" font-size="13.5" fill="#555">shuffling the candidate order</text>
+  <text x="1480" y="316" font-size="13.5" fill="#555">changes <tspan font-weight="bold" fill="#8F3131">no</tspan> result, while its own</text>
+  <text x="1480" y="336" font-size="13.5" fill="#555">picks overlap drops 60% to 21%</text>
+
+  <rect x="1464" y="360" width="280" height="118" rx="10" fill="#FBECEC" stroke="#C25B5B" stroke-width="2"/>
+  <use href="#i-shield" x="1480" y="372"/>
+  <text x="1526" y="396" font-size="16" font-weight="bold" fill="#8F3131">Is the memory honest?</text>
+  <text x="1480" y="428" font-size="13.5" fill="#555">dropping the temporal firewall</text>
+  <text x="1480" y="448" font-size="13.5" fill="#555">inflates the classic similar-report</text>
+  <text x="1480" y="468" font-size="13.5" fill="#555">signal by <tspan font-weight="bold" fill="#8F3131">9% to 43%</tspan></text>
+
+  <rect x="1464" y="492" width="280" height="94" rx="10" fill="#FFF8E4" stroke="#D9A520" stroke-width="2.4"/>
+  <use href="#i-star" x="1480" y="504"/>
+  <text x="1526" y="528" font-size="16.5" font-weight="bold" fill="#8A6A10">Every number</text>
+  <text x="1480" y="556" font-size="13.5" fill="#555">traces to a result file through</text>
+  <text x="1480" y="576" font-size="13.5" fill="#555">a released script: 230 checks</text>
+</svg>

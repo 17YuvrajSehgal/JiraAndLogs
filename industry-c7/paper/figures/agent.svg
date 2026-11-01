@@ -1,0 +1,198 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1780 690"
+     font-family="Helvetica, Arial, sans-serif">
+  <defs>
+    <g id="i-doc"><path d="M4,0 h20 l8,8 v28 h-28 z" fill="#FFFFFF" stroke="#3E9B5F" stroke-width="2"/><path d="M24,0 v8 h8" fill="none" stroke="#3E9B5F" stroke-width="2"/><text x="17" y="26" font-size="13" font-weight="bold" fill="#3E9B5F" text-anchor="middle" font-family="monospace">&lt;/&gt;</text></g>
+    <g id="i-git"><circle cx="8" cy="7" r="5.5" fill="#C9B6EA" stroke="#6E4FA8" stroke-width="2"/><circle cx="8" cy="31" r="5.5" fill="#C9B6EA" stroke="#6E4FA8" stroke-width="2"/><circle cx="28" cy="19" r="5.5" fill="#C9B6EA" stroke="#6E4FA8" stroke-width="2"/><path d="M8,12.5 v13 M12,10 C22,12 24,12 27,14" fill="none" stroke="#6E4FA8" stroke-width="2"/></g>
+    <g id="i-brain"><path d="M16,2 C8,2 4,8 5,13 C1,15 1,22 5,25 C4,31 10,35 16,33 L16,2 Z" fill="#F3B8CD" stroke="#B04A74" stroke-width="2" stroke-linejoin="round"/><path d="M20,2 C28,2 32,8 31,13 C35,15 35,22 31,25 C32,31 26,35 20,33 L20,2 Z" fill="#F3B8CD" stroke="#B04A74" stroke-width="2" stroke-linejoin="round"/><path d="M10,10 c3,2 3,5 0,7 M26,10 c-3,2 -3,5 0,7 M11,24 c2,2 3,2 5,1 M25,24 c-2,2 -3,2 -5,1" fill="none" stroke="#B04A74" stroke-width="1.6"/></g>
+    <g id="i-robot"><line x1="18" y1="6" x2="18" y2="1" stroke="#4B5563" stroke-width="2"/><circle cx="18" cy="1.5" r="2" fill="#F2B705"/><rect x="4" y="6" width="28" height="22" rx="6" fill="#C9D4E4" stroke="#4B5563" stroke-width="2"/><circle cx="12.5" cy="15" r="3.4" fill="#2F3A4A"/><circle cx="23.5" cy="15" r="3.4" fill="#2F3A4A"/><path d="M12,22 q6,4 12,0" fill="none" stroke="#2F3A4A" stroke-width="2" stroke-linecap="round"/><rect x="10" y="28" width="16" height="7" rx="2.5" fill="#C9D4E4" stroke="#4B5563" stroke-width="2"/></g>
+    <g id="i-star"><polygon points="18,1 22.5,13 35,13.5 25,21.5 28.8,34 18,26.5 7.2,34 11,21.5 1,13.5 13.5,13" fill="#F7CE46" stroke="#C99A06" stroke-width="1.6" stroke-linejoin="round"/></g>
+    <g id="i-shield"><path d="M18,1 L33,7 v12 c0,9 -7,15 -15,17 C10,34 3,28 3,19 V7 Z" fill="#FBECEC" stroke="#C25B5B" stroke-width="2.2" stroke-linejoin="round"/><path d="M11,18 l5,5 l10,-11" fill="none" stroke="#C25B5B" stroke-width="2.6" stroke-linecap="round"/></g>
+    <g id="i-magnify"><circle cx="15" cy="15" r="11" fill="#EAF2FB" stroke="#2D5A94" stroke-width="2.4"/><line x1="23" y1="23" x2="34" y2="34" stroke="#2D5A94" stroke-width="3.4" stroke-linecap="round"/></g>
+    <g id="i-check"><circle cx="18" cy="18" r="16" fill="#FDEFE6" stroke="#E8794A" stroke-width="2.2"/><path d="M10,18 l6,6 l12,-13" fill="none" stroke="#E8794A" stroke-width="3" stroke-linecap="round"/></g>
+    <marker id="m-orange" viewBox="0 0 10 10" refX="7" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#E8794A"/></marker>
+    <marker id="m-pink" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#D4537E"/></marker>
+    <marker id="m-gray" viewBox="0 0 10 10" refX="7" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#4B5563"/></marker>
+  </defs>
+
+  <!-- ================= INPUT ================= -->
+  <rect x="18" y="72" width="252" height="566" rx="14" fill="#FDFDFB" stroke="#333" stroke-width="2.2" stroke-dasharray="9 6"/>
+  <rect x="48" y="56" width="192" height="32" rx="8" fill="#FFF" stroke="#333" stroke-width="2"/>
+  <text x="144" y="78" font-size="19" font-weight="bold" text-anchor="middle" fill="#222">WHAT IT IS GIVEN</text>
+
+  <rect x="36" y="104" width="216" height="118" rx="10" fill="#EAF6EE" stroke="#3E9B5F" stroke-width="2"/>
+  <use href="#i-doc" x="52" y="116"/>
+  <text x="98" y="140" font-size="17" font-weight="bold" fill="#246B40">Issue report</text>
+  <text x="52" y="176" font-size="14.5" fill="#555">prose, stack traces and</text>
+  <text x="52" y="197" font-size="14.5" fill="#555">the logs a human pasted</text>
+
+  <rect x="36" y="236" width="216" height="118" rx="10" fill="#F2EDFA" stroke="#8E6CC8" stroke-width="2"/>
+  <use href="#i-git" x="52" y="248"/>
+  <text x="98" y="272" font-size="17" font-weight="bold" fill="#5A3E96">Code snapshot</text>
+  <text x="52" y="308" font-size="14.5" fill="#555">the repository exactly as</text>
+  <text x="52" y="329" font-size="14.5" fill="#555">it stood on that day</text>
+
+  <rect x="36" y="368" width="216" height="150" rx="10" fill="#FDEEF3" stroke="#D4537E" stroke-width="2"/>
+  <use href="#i-brain" x="52" y="380"/>
+  <text x="98" y="404" font-size="17" font-weight="bold" fill="#A32C58">Incident memory</text>
+  <text x="52" y="440" font-size="14.5" fill="#555">past resolved issues and</text>
+  <text x="52" y="461" font-size="14.5" fill="#555">the files their fixes</text>
+  <text x="52" y="482" font-size="14.5" fill="#555">touched</text>
+  <text x="52" y="505" font-size="13.5" font-style="italic" fill="#A32C58">4,033 to 19,820 per project</text>
+
+  <rect x="36" y="532" width="216" height="88" rx="10" fill="#FBECEC" stroke="#C25B5B" stroke-width="2.2"/>
+  <use href="#i-shield" x="52" y="544"/>
+  <text x="98" y="568" font-size="16.5" font-weight="bold" fill="#8F3131">Temporal firewall</text>
+  <text x="52" y="596" font-size="14" fill="#555">only incidents resolved</text>
+  <text x="52" y="614" font-size="14" fill="#555">BEFORE this report existed</text>
+
+  <!-- firewall guards the memory path -->
+  <line x1="144" y1="518" x2="144" y2="530" stroke="#C25B5B" stroke-width="2.6" marker-end="url(#m-pink)"/>
+
+  <polygon points="274,322 290,322 290,310 308,330 290,350 290,338 274,338" fill="#FBE3C9" stroke="#E8794A" stroke-width="2" stroke-linejoin="round"/>
+
+  <!-- ================= PHASE 0 ================= -->
+  <rect x="306" y="72" width="396" height="566" rx="14" fill="#FDFDFB" stroke="#333" stroke-width="2.2" stroke-dasharray="9 6"/>
+  <rect x="330" y="56" width="348" height="32" rx="8" fill="#FFF" stroke="#333" stroke-width="2"/>
+  <text x="504" y="78" font-size="19" font-weight="bold" text-anchor="middle" fill="#222">PHASE 0 · PREPARE THE CASE</text>
+
+  <circle cx="342" cy="122" r="13" fill="#8E6CC8"/>
+  <text x="342" y="127.5" font-size="15" font-weight="bold" fill="#FFF" text-anchor="middle">1</text>
+  <rect x="324" y="146" width="360" height="146" rx="10" fill="#F2EDFA" stroke="#8E6CC8" stroke-width="2"/>
+  <text x="342" y="174" font-size="17" font-weight="bold" fill="#5A3E96">Restate the problem</text>
+  <text x="342" y="202" font-size="14.5" fill="#555">one model call rewrites the report as</text>
+  <text x="342" y="223" font-size="14.5" fill="#555">the faulty BEHAVIOUR, in the words</text>
+  <text x="342" y="244" font-size="14.5" fill="#555">the code itself would use</text>
+  <rect x="342" y="256" width="324" height="26" rx="6" fill="#FFF" stroke="#8E6CC8" stroke-width="1.6"/>
+  <text x="352" y="274" font-size="13" font-family="monospace" fill="#5A3E96">"partition assignment returns null"</text>
+  <text x="366" y="122" font-size="15.5" font-weight="bold" fill="#5A3E96">a symptom is not a search query</text>
+
+  <circle cx="342" cy="322" r="13" fill="#4A7FC1"/>
+  <text x="342" y="327.5" font-size="15" font-weight="bold" fill="#FFF" text-anchor="middle">2</text>
+  <text x="366" y="322" font-size="15.5" font-weight="bold" fill="#2D5A94">hand over evidence, do not ask for it</text>
+  <rect x="324" y="346" width="360" height="274" rx="10" fill="#EAF2FB" stroke="#4A7FC1" stroke-width="2"/>
+  <text x="342" y="374" font-size="17" font-weight="bold" fill="#2D5A94">Seed the investigation</text>
+  <text x="342" y="400" font-size="13.5" font-style="italic" fill="#2D5A94">deterministic, no model involved</text>
+
+  <rect x="342" y="414" width="324" height="44" rx="7" fill="#FFF" stroke="#4A7FC1" stroke-width="1.6"/>
+  <text x="354" y="433" font-size="14.5" font-weight="bold" fill="#2D5A94">top-20 retrieved candidates</text>
+  <text x="354" y="451" font-size="13.5" fill="#555">from the lexical retrieval layer</text>
+
+  <rect x="342" y="466" width="324" height="44" rx="7" fill="#FFF" stroke="#4A7FC1" stroke-width="1.6"/>
+  <text x="354" y="485" font-size="14.5" font-weight="bold" fill="#2D5A94">symbols that exist here</text>
+  <text x="354" y="503" font-size="13.5" fill="#555">trace frames, library names dropped</text>
+
+  <rect x="342" y="518" width="324" height="44" rx="7" fill="#FFF" stroke="#4A7FC1" stroke-width="1.6"/>
+  <text x="354" y="537" font-size="14.5" font-weight="bold" fill="#2D5A94">code matching the behaviour</text>
+  <text x="354" y="555" font-size="13.5" fill="#555">content search, run unconditionally</text>
+
+  <rect x="342" y="570" width="324" height="44" rx="7" fill="#FFF" stroke="#D4537E" stroke-width="1.8"/>
+  <text x="354" y="589" font-size="14.5" font-weight="bold" fill="#A32C58">similar past incidents</text>
+  <text x="354" y="607" font-size="13.5" fill="#555">firewalled; vote weighted by fix size</text>
+
+  <polygon points="706,322 722,322 722,310 740,330 722,350 722,338 706,338" fill="#FBE3C9" stroke="#E8794A" stroke-width="2" stroke-linejoin="round"/>
+
+  <!-- ================= PHASE 1 ================= -->
+  <rect x="738" y="72" width="604" height="566" rx="14" fill="#FDFDFB" stroke="#333" stroke-width="2.2" stroke-dasharray="9 6"/>
+  <rect x="770" y="56" width="540" height="32" rx="8" fill="#FFF" stroke="#333" stroke-width="2"/>
+  <text x="1040" y="78" font-size="19" font-weight="bold" text-anchor="middle" fill="#222">PHASE 1 · INVESTIGATE  (at most 14 turns)</text>
+
+  <rect x="756" y="106" width="568" height="92" rx="10" fill="#EEF1F6" stroke="#4B5563" stroke-width="2"/>
+  <use href="#i-robot" x="774" y="118"/>
+  <text x="822" y="142" font-size="18" font-weight="bold" fill="#2F3A4A">Qwen3.8-27B, open weights, one GPU</text>
+  <text x="774" y="178" font-size="14.5" fill="#555">temperature 0, fixed seed · 12.2 model calls and 16.2 tool calls per issue</text>
+
+  <text x="790" y="228" font-size="15.5" font-weight="bold" fill="#2F3A4A">EIGHT TOOLS, each a pure function of the snapshot</text>
+  <text x="1324" y="228" font-size="13.5" font-style="italic" text-anchor="end" fill="#777">calls per issue</text>
+
+  <rect x="790" y="240" width="534" height="46" rx="8" fill="#EAF2FB" stroke="#4A7FC1" stroke-width="1.8"/>
+  <use href="#i-magnify" x="802" y="245"/>
+  <text x="846" y="261" font-size="15" font-weight="bold" font-family="monospace" fill="#2D5A94">read_code</text>
+  <text x="846" y="279" font-size="13.5" fill="#555">what does this code actually do?</text>
+  <rect x="1238" y="252" width="72" height="24" rx="12" fill="#4A7FC1"/>
+  <text x="1274" y="269" font-size="14" font-weight="bold" fill="#FFF" text-anchor="middle">7.28</text>
+
+  <rect x="790" y="294" width="534" height="46" rx="8" fill="#EAF2FB" stroke="#4A7FC1" stroke-width="1.8"/>
+  <text x="846" y="315" font-size="15" font-weight="bold" font-family="monospace" fill="#2D5A94">search_symbol</text>
+  <text x="846" y="333" font-size="13.5" fill="#555">where is it defined, used, and called from?</text>
+  <rect x="1238" y="306" width="72" height="24" rx="12" fill="#4A7FC1"/>
+  <text x="1274" y="323" font-size="14" font-weight="bold" fill="#FFF" text-anchor="middle">3.42</text>
+  <rect x="802" y="304" width="34" height="26" rx="6" fill="#FFF8E4" stroke="#D9A520" stroke-width="1.6"/>
+  <text x="819" y="322" font-size="12.5" font-weight="bold" fill="#8A6A10" text-anchor="middle">KEY</text>
+
+  <rect x="790" y="348" width="534" height="46" rx="8" fill="#EAF2FB" stroke="#4A7FC1" stroke-width="1.8"/>
+  <text x="846" y="369" font-size="15" font-weight="bold" font-family="monospace" fill="#2D5A94">search_text</text>
+  <text x="846" y="387" font-size="13.5" fill="#555">which file's content matches this behaviour?</text>
+  <rect x="1238" y="360" width="72" height="24" rx="12" fill="#4A7FC1"/>
+  <text x="1274" y="377" font-size="14" font-weight="bold" fill="#FFF" text-anchor="middle">2.61</text>
+
+  <rect x="790" y="402" width="534" height="46" rx="8" fill="#FDEFE6" stroke="#E8794A" stroke-width="1.8"/>
+  <text x="846" y="423" font-size="15" font-weight="bold" font-family="monospace" fill="#A54B22">note_candidate</text>
+  <text x="846" y="441" font-size="13.5" fill="#555">record a suspect file and the evidence for it</text>
+  <rect x="1238" y="414" width="72" height="24" rx="12" fill="#E8794A"/>
+  <text x="1274" y="431" font-size="14" font-weight="bold" fill="#FFF" text-anchor="middle">2.38</text>
+
+  <rect x="790" y="456" width="534" height="46" rx="8" fill="#FDEEF3" stroke="#D4537E" stroke-width="1.8"/>
+  <text x="846" y="477" font-size="15" font-weight="bold" font-family="monospace" fill="#A32C58">recall_incidents</text>
+  <text x="846" y="495" font-size="13.5" fill="#555">which past fixes resemble this? (also pre-run)</text>
+  <rect x="1238" y="468" width="72" height="24" rx="12" fill="#D4537E"/>
+  <text x="1274" y="485" font-size="14" font-weight="bold" fill="#FFF" text-anchor="middle">0.28</text>
+
+  <rect x="790" y="510" width="170" height="46" rx="8" fill="#F4F5F7" stroke="#4B5563" stroke-width="1.6"/>
+  <text x="801" y="530" font-size="12" font-weight="bold" font-family="monospace" fill="#2F3A4A">list_dir</text>
+  <text x="801" y="547" font-size="12" fill="#555">the file tree</text>
+  <rect x="903" y="518" width="46" height="21" rx="10.5" fill="#4B5563"/>
+  <text x="926" y="533" font-size="12" font-weight="bold" fill="#FFF" text-anchor="middle">0.13</text>
+
+  <rect x="972" y="510" width="170" height="46" rx="8" fill="#F4F5F7" stroke="#4B5563" stroke-width="1.6"/>
+  <text x="983" y="530" font-size="12" font-weight="bold" font-family="monospace" fill="#2F3A4A">read_skeleton</text>
+  <text x="983" y="547" font-size="12" fill="#555">declarations</text>
+  <rect x="1085" y="518" width="46" height="21" rx="10.5" fill="#4B5563"/>
+  <text x="1108" y="533" font-size="12" font-weight="bold" fill="#FFF" text-anchor="middle">0.10</text>
+
+  <rect x="1154" y="510" width="170" height="46" rx="8" fill="#F4F5F7" stroke="#4B5563" stroke-width="1.6"/>
+  <text x="1165" y="530" font-size="12" font-weight="bold" font-family="monospace" fill="#2F3A4A">callers_of</text>
+  <text x="1165" y="547" font-size="12" fill="#555">one hop back</text>
+  <rect x="1267" y="518" width="46" height="21" rx="10.5" fill="#4B5563"/>
+  <text x="1290" y="533" font-size="12" font-weight="bold" fill="#FFF" text-anchor="middle">0.01</text>
+
+  <rect x="790" y="568" width="534" height="52" rx="8" fill="#FFF8E4" stroke="#D9A520" stroke-width="2"/>
+  <text x="802" y="590" font-size="14.5" font-weight="bold" fill="#8A6A10">KEY: the file a trace names is rarely the file at fault.</text>
+  <text x="802" y="610" font-size="14" fill="#555">73% of a plain model's misses are choosing wrongly, not searching wrongly.</text>
+
+  <!-- the loop -->
+  <path d="M786,556 C758,556 758,252 786,252" fill="none" stroke="#4B5563" stroke-width="2.6" stroke-dasharray="9 6" marker-end="url(#m-gray)"/>
+  <text x="762" y="404" font-size="13" font-weight="bold" fill="#2F3A4A" text-anchor="middle" transform="rotate(-90 762 404)">read result, choose next tool</text>
+
+  <polygon points="1346,322 1362,322 1362,310 1380,330 1362,350 1362,338 1346,338" fill="#FBE3C9" stroke="#E8794A" stroke-width="2" stroke-linejoin="round"/>
+
+  <!-- ================= PHASE 2-4 ================= -->
+  <rect x="1378" y="72" width="384" height="566" rx="14" fill="#FDFDFB" stroke="#333" stroke-width="2.2" stroke-dasharray="9 6"/>
+  <rect x="1396" y="56" width="348" height="32" rx="8" fill="#FFF" stroke="#333" stroke-width="2"/>
+  <text x="1570" y="78" font-size="19" font-weight="bold" text-anchor="middle" fill="#222">PHASE 2-4 · COMMIT</text>
+
+  <circle cx="1414" cy="122" r="13" fill="#E8794A"/>
+  <text x="1414" y="127.5" font-size="15" font-weight="bold" fill="#FFF" text-anchor="middle">3</text>
+  <text x="1438" y="122" font-size="15.5" font-weight="bold" fill="#A54B22">evidence is not optional</text>
+
+  <rect x="1396" y="146" width="348" height="168" rx="10" fill="#FDEFE6" stroke="#E8794A" stroke-width="2"/>
+  <use href="#i-check" x="1412" y="158"/>
+  <text x="1458" y="182" font-size="17" font-weight="bold" fill="#A54B22">submit_ranking</text>
+  <text x="1412" y="218" font-size="14.5" fill="#555">every file must carry what was</text>
+  <text x="1412" y="239" font-size="14.5" fill="#555">SEEN: the symbol, the line, the</text>
+  <text x="1412" y="260" font-size="14.5" fill="#555">past incident. The schema</text>
+  <text x="1412" y="281" font-size="14.5" fill="#555">rejects a list without it.</text>
+  <text x="1412" y="303" font-size="13.5" font-style="italic" fill="#A54B22">790 of 790 runs submitted</text>
+
+  <rect x="1396" y="330" width="348" height="94" rx="10" fill="#F4F5F7" stroke="#4B5563" stroke-width="2"/>
+  <text x="1412" y="356" font-size="16.5" font-weight="bold" fill="#2F3A4A">Backfill, never reorder</text>
+  <text x="1412" y="382" font-size="14" fill="#555">short answers are padded from the</text>
+  <text x="1412" y="402" font-size="14" fill="#555">retrieval layer; agent order is kept</text>
+
+  <rect x="1396" y="440" width="348" height="180" rx="10" fill="#FFF8E4" stroke="#D9A520" stroke-width="2.4"/>
+  <use href="#i-star" x="1412" y="452"/>
+  <text x="1458" y="476" font-size="18" font-weight="bold" fill="#8A6A10">Ranked files + evidence</text>
+  <text x="1412" y="512" font-size="16" fill="#444">Acc@5 <tspan font-weight="bold" font-size="19" fill="#8A6A10">0.903</tspan>   Acc@1 <tspan font-weight="bold" font-size="19" fill="#8A6A10">0.723</tspan></text>
+  <text x="1412" y="544" font-size="15" fill="#444">on reports naming no faulty file:</text>
+  <text x="1412" y="568" font-size="16" fill="#444">Acc@5 <tspan font-weight="bold" font-size="19" fill="#8A6A10">0.816</tspan>   Acc@1 <tspan font-weight="bold" font-size="19" fill="#8A6A10">0.608</tspan></text>
+  <text x="1412" y="598" font-size="13.5" font-style="italic" fill="#8A6A10">best non-agent system: 0.839 / 0.538</text>
+</svg>

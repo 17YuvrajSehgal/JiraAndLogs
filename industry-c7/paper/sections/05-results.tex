@@ -213,10 +213,11 @@ An earlier version of the agent had the same tools but left three things
 to the model's discretion: consulting incident memory, walking back to a
 symbol's callers, and recording the evidence for a candidate. Measured
 over 168 instances, all three were skipped at scale. Incident memory was
-consulted in $0.4$ calls per run, the caller tool was used once in 105
+consulted in $0.32$ calls per run, the caller tool was used once in 168
 runs, and $37\%$ of runs recorded no evidence at all. Runs that recorded
-nothing were also the ones that failed, averaging $0.8$ recorded
-candidates against $2.3$ for runs that found the fault.
+nothing were also the ones that failed: runs that missed the fault
+entirely recorded $0.8$ candidates on average, against $2.2$ for runs
+that placed it in the top five.
 
 The current version makes those three structural rather than
 instructed. Incident memory is retrieved before the loop and handed over
