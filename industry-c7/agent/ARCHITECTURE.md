@@ -65,19 +65,24 @@ ranking.
 ## 2. The architecture
 
 ```
-Phase 0  DETERMINISTIC SEEDING        (no model)
-         our 5 lexical signals -> top-20 candidates + provenance
-         report -> symbols (stack frames, CamelCase, snake_case, files)
+Phase 0a QUERY REFORMULATION          (1 model call)        [R5]
+         report -> behaviour sentence in code vocabulary
+                 + identifiers + error strings
                  |
-Phase 1  INVESTIGATION                (model + 7 tools, <=14 turns)
-         search_symbol | search_text | list_dir
-         read_skeleton | read_code | recall_incidents
+Phase 0b DETERMINISTIC SEEDING        (no model)
+         our 5 lexical signals -> top-20 candidates
+         report symbols, filtered to this snapshot          [R3]
+         content search for the BEHAVIOUR, run unconditionally
+                 |
+Phase 1  INVESTIGATION                (model + 8 tools, <=14 turns)
+         search_symbol | callers_of | search_text | list_dir
+         read_skeleton | read_code  | recall_incidents
                  |
 Phase 2  MANDATORY RECORDING          note_candidate(file, reason, conf)
                  |
 Phase 3  COMMIT                       submit_ranking(files[10], rationale)
                  |
-Phase 4  SAFETY NET                   RRF(agent list, lexical list)
+Phase 4  SAFETY NET                   RRF(agent list, lexical list)   [R7]
 ```
 
 ---
@@ -89,7 +94,7 @@ Phase 4  SAFETY NET                   RRF(agent list, lexical list)
 **Why.** §1.1: our pipeline uniquely solves 8.9% of instances. Starting
 the agent cold would throw that away.
 
-**Source.** GenLoc (arXiv 2508.00253) builds exactly this shape —
+**Source.** GenLoc [R19] builds exactly this shape —
 semantic retrieval seeds, then LLM-driven exploration — and motivates it
 against the two failure modes we would otherwise hit: *fixed candidate
 sets are too narrow* and *repository-wide dumps are too noisy*. Seeding
@@ -104,19 +109,56 @@ turn and makes the first tool call useful.
 
 ### The seven tools
 
-| tool | why it exists |
-|---|---|
-| `search_symbol` | **The central tool.** A trace frame names a class or function; the faulty file is often not the one named. This resolves a symbol to where it is *defined* and where it is *mentioned*, which is the step from detection site to cause. Mirrors LocAgent's `SearchEntity` over its entity index. |
-| `search_text` | BM25 over file **content**. This is precisely what the plain LLM lacks (§1.2). Verified on KAFKA-4131: searching the *behaviour* ("regex topic partition assignment null") returns the gold file at rank 2, while the report's own stack trace points at an innocent file. |
-| `list_dir` | Cheap navigation. Deliberately not the main route: LocAgent's ablation found directory structure alone does **not** carry the signal; multi-hop entity structure does. |
-| `read_skeleton` | What a file declares, cheaply, before paying for full code. |
-| `read_code` | Real source lines around a symbol. Without this the agent is back to guessing from names. |
-| `recall_incidents` | The project's resolved history, behind the paper's four firewall rules. This is our contribution carried into the agent, and §1.1 says it is the part the LLM cannot replicate. |
-| `note_candidate` | Mandatory evidence recording. See below. |
+| tool | why it exists | source |
+|---|---|---|
+| `search_symbol` | **The central tool.** A trace frame names a class or function; the faulty file is often not the one named. Resolves a symbol to where it is *defined* and where it is *used* — the step from detection site to cause. Implemented with `git grep` over the whole snapshot (0.4–0.9 s). | [R1] `SearchEntity` over an entity index |
+| `callers_of` | One hop of reverse structure: the code that CREATES a bad state usually sits one call above the code that reports it. | [R4] measured 78.3% of buggy methods within an average **0.34 calls** of the trace |
+| `search_text` | BM25 over file **content** — exactly what the plain LLM lacks (§1.2). Verified on KAFKA-4131: a behaviour query returns the gold file at rank 2 while the report's own trace points at an innocent file. | [R2] whole-file; see §3.1 for the segmentation we rejected |
+| `list_dir` | Cheap navigation, deliberately not the main route. | [R1] ablation: directory structure alone does **not** carry the signal; multi-hop entity structure does |
+| `read_skeleton` | What a file declares, before paying for full code. | — |
+| `read_code` | Real source lines. Without this the agent is back to guessing from names. | — |
+| `recall_incidents` | The project's resolved history behind the paper's four firewall rules. §1.1 says this is the part the LLM cannot replicate. Votes are divided by the size of that past fix and decayed by age. | [R6] `sim/n_b` vote weighting; [R8] K=5 neighbours + recency |
+| `note_candidate` | Mandatory evidence recording. | [R10] the user's own agent post-mortem |
 
-Tool count is 7. LocAgent reaches SOTA with 3; CoSIL warns that LLM
-localizers fail on *breadth/depth balance* and *direction control*. We
-keep the set small and each tool single-purpose for that reason.
+Tool count is 8. LocAgent [R1] reaches SOTA with 3; CoSIL [R9] warns that
+LLM localizers fail on *breadth/depth balance* and *direction control*.
+We keep the set small and each tool single-purpose for that reason.
+
+**Turn-budget protections**, both from documented failure modes rather
+than invention: unresolvable paths return `did_you_mean` suggestions
+instead of a dead turn, and a repeated identical call returns the cached
+result with a note. [R9] and [R3] both identify malformed tool arguments
+and hallucinated file keys as a primary engineering failure mode of LLM
+localizers; [R3] repairs them with a reflection loop, we prevent them at
+the tool boundary.
+
+**Symbol filtering.** Report symbols are kept only if they exist in this
+snapshot, ordered most-specific first, with a stoplist for language and
+library names. Source: [R2] drops stack frames that are not in the
+repository. Effect measured here: MariaDB symbol extraction 13.0 s → 5.9 s,
+and the surfaced symbols changed from `NullPointerException` to
+`handle_fatal_signal` / `my_print_stacktrace`.
+
+### Phase 0a: query reformulation
+
+**Why.** The raw report is symptom-shaped. Searching code with it finds
+the detection site, which is the wrong file in 53% of our instances. One
+model call restates the fault as a behaviour sentence in the vocabulary
+the *code* would use, plus identifiers and error strings; the behaviour
+sentence drives an unconditional content search before the agent loop
+starts.
+
+**Source.** [R5] reports up to **+36% MAP@1** from querying with
+LLM-extracted structured fields instead of the raw description, and their
+summary field is what carries the query *when the report contains no file
+or identifier hints* — precisely our hard stratum. [R11] conditions the
+query strategy on report type; we pass the observable mention-regime flag
+for the same purpose.
+
+**Measured locally:** on KAFKA-4131 a behaviour-style query ("regex topic
+partition assignment returns null") ranks the gold file 2nd, while the
+first 40 words of the raw report do not surface it at all. This is why
+the step is unconditional rather than left to the model's discretion.
 
 ### Phase 2: recording is mandatory, not optional
 
@@ -161,6 +203,52 @@ trace is a weak candidate on its own* — which is our 53%-of-reports
 statistic turned into an instruction. CoSIL reached the same conclusion
 independently ("issue description usually describes the symptoms rather
 than the essence of the problem").
+
+---
+
+## 3.1 One published technique we implemented and then rejected
+
+**File segmentation** (score a file by its best-matching segment rather
+than as one document) is well established: [R2] measures the useful range
+at 400–800 tokens, and [R12] reports boundary-aware chunking beating
+fixed windows by 5.5–16%. We implemented it — function-boundary segments
+merged to a ~500-token target, with import and licence blocks dropped —
+and A/B tested it against whole-file BM25 on 60 instances, 15 per project.
+
+| project | whole-file Hit@8 | segmented Hit@8 | whole MRR | seg MRR |
+|---|---|---|---|---|
+| Kafka | 0.667 | **0.733** | 0.391 | **0.416** |
+| MariaDB | **0.867** | 0.600 | **0.369** | 0.337 |
+| MongoDB | 0.733 | 0.733 | **0.497** | 0.406 |
+| Qt | **0.467** | 0.333 | **0.239** | 0.147 |
+
+Whole-file wins on three of four projects, badly on MariaDB and Qt. The
+explanation is principled rather than a tuning accident: segmentation
+exists to correct the length bias of **rVSM/VSM**, which [R2] and [R6]
+build on. BM25's `b` parameter already performs length normalisation, so
+on our stack the correction is redundant and only the dilution remains —
+a diffuse match spread over several segments scores lower than a tight
+match in one small unrelated function.
+
+**Kept anyway, but not for ranking:** the best-matching region is still
+computed and reported per hit, because naming the function is useful
+context for the agent. It no longer influences the score.
+
+This is recorded because it is a result in its own right: a technique
+that transfers from VSM-based IRBL to BM25-based IRBL *negatively*.
+
+### Other techniques considered and not adopted
+
+| technique | source | why not |
+|---|---|---|
+| Fine-tuned dense retriever (contrastive, hard negatives) | [R12] | Needs GPU fine-tuning; our own dense experiment already lost to BM25 by up to −0.205 in the code slot |
+| Learned meta-ranker (decision tree / random forest over signals) | [R13] | [R13]'s composer study found trees and random forests *consistently worst*, below a single component score; linear/fixed-weight combination won. We keep weighted RRF |
+| SBFL / coverage / failing-test signals | [R14] | Requires test execution. [R4] measured that only 2 of 60 crash bugs had a fault-triggering test at report time |
+| Priority scheduling + distance-aware pruning | [R15] | Uses tracebacks from *reproduction tests*, so not a no-execution method; no isolated ablation of the scheduler |
+| Full call-graph BFS path reconstruction | [R2] | Java-only machinery (JavaParser, fully-qualified logger names); the paper's own limitations call the C++ port a research task. Three of our four projects are C/C++. `callers_of` is the bounded substitute |
+| Duplicate-report text concatenation | [R16] | Our firewall deliberately excludes duplicate clusters; adding them back is the leakage [R17] documents |
+| Method-level repository transformation | [R18] | *Decreases* Acc@K by making documents sparser; improves only the effort story |
+| Trajectory fine-tuning on agent traces | [R1] | Training, and contamination recurses into the fine-tune data |
 
 ---
 
@@ -210,3 +298,45 @@ exceed it, because it can find files that appear in no baseline's list.
 sample as the dense and noise experiments, scored by the same
 `evaluate()`, tested with the same paired bootstrap and BH correction.
 If the agent does not beat 0.804, that is the result we report.
+
+**Required validity check — seed-order shuffle.** [R14] found that the
+initial ordering handed to an agent moves Top-1 by up to **22%**, even
+though the agent eventually visits every candidate. We feed our lexical
+top-12 in rank order. So before crediting the agent with any gain we
+re-run one arm with the seed order shuffled. If accuracy barely moves,
+the agent is reasoning; if it collapses, the agent is echoing our
+retrieval and we would be measuring the lexical pipeline with extra
+steps. That is failure mode 1 above, and this is the measurement that
+detects it.
+
+---
+
+## 6. References
+
+Full summaries of every item live in `industry-c7/papers/summaries/`.
+
+| tag | work | file |
+|---|---|---|
+| [R1] | Chen et al., *LocAgent: Graph-Guided LLM Agents for Code Localization*, ACL 2025 (arXiv 2503.09089) | `locagent-acl2025.md` |
+| [R2] | *Pathidea*: log-aware bug localization, TSE 2022 | `pathidea-tse2022.md` |
+| [R3] | Wang et al., *RCAgent*, CIKM 2024 | `rcagent-cikm2024.md` |
+| [R4] | *SBEST*: stack-trace-based localization, 2024 | `sbest-2024.md` |
+| [R5] | Caumartin & Melo, *Reformulate, Retrieve, Localize*, BoatSE 2026 | `rafi-reformulate-2025.md` |
+| [R6] | Zhou, Zhang & Lo, *BugLocator*, ICSE 2012 | `buglocator-icse2012.md` |
+| [R7] | Cormack, Clarke & Büttcher, *Reciprocal Rank Fusion*, SIGIR 2009 | `rrf-sigir2009.md` |
+| [R8] | Chen et al., *RCACopilot*, EuroSys 2024 | `rcacopilot-eurosys2024.md` |
+| [R9] | Jiang et al., *CoSIL*, arXiv 2503.22424 (2025) | `cosil-2025.md` |
+| [R10] | *Agent v2 architecture*, this project's earlier agent | `microservice-trace-dataset/Blueprint/agent/AGENT-V2-ARCHITECTURE.md` |
+| [R11] | Shao & Yu, *LLmiRQ / LLmiRQ+*, 2024 | `irfl-llm-2024.md` |
+| [R12] | *BLAZE*: dynamic chunking + hard-example learning, TSE 2025 | `blaze-tse2025.md` |
+| [R13] | *ABLoTS replication*, 2026 | `ablots-replication-2026.md` |
+| [R14] | Rafi et al., *multi-agent fault localization*, 2024 (challenge ref [1]) | `rafi-multiagent-fl-2024.md` |
+| [R15] | Yu et al., *OrcaLoca*, ICML 2025 | `orcaloca-2025.md` |
+| [R16] | *Bench4BL*, ISSTA 2018 | `bench4bl-issta2018.md` |
+| [R17] | *Leakage in link prediction*, 2022 | `leakage-linkpred-2022.md` |
+| [R18] | *FinerBench4BL*, 2023 | `finerbench4bl-2023.md` |
+| [R19] | *GenLoc: Towards Explorative IRBL*, arXiv 2508.00253 (2026) | `genloc-2025.md` |
+
+Phase 0b seeding follows [R19]; the two failure modes it names (fixed
+candidate sets too narrow, repository-wide dumps too noisy) are the ones
+seeding-plus-exploration is designed to avoid.
