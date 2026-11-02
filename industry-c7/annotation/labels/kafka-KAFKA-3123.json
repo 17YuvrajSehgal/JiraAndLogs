@@ -1,0 +1,28 @@
+{
+  "id": "kafka:KAFKA-3123",
+  "project": "kafka",
+  "issue_key": "KAFKA-3123",
+  "annotator": "claude-opus-5",
+  "pass": 1,
+  "file_roles": [
+    {
+      "path": "core/src/main/scala/kafka/log/LogManager.scala",
+      "role": "causal",
+      "evidence": "truncateTo paused the cleaner and resumed it only on the success path, 'cleaner.abortAndPauseCleaning(topicPartition)' then 'log.truncateTo(truncateOffset)' then 'cleaner.resumeCleaning(topicPartition)' in sequence. The fix wraps the middle in 'try { ... } finally { if (needToStopCleaner) cleaner.resumeCleaning(topicPartition) }'. If truncateTo threw, the partition stayed paused forever, and the commit says exactly that: 'Ensure cleaning is resumed if truncateTo throws'."
+    }
+  ],
+  "symptom_location": {
+    "file": "core/src/main/scala/kafka/log/LogCleanerManager.scala",
+    "function": "abortAndPauseCleaning",
+    "determinable": true
+  },
+  "log_location": {
+    "file": "core/src/main/scala/kafka/server/ReplicaFetcherThread.scala",
+    "function": null,
+    "determinable": true
+  },
+  "relation": "state-producer",
+  "rationale": "The throw is 'IllegalStateException: Compaction for partition [EXO_EventLogs4,1] cannot be aborted and paused since it is in LogCleaningPaused state' at 'LogCleanerManager.abortAndPauseCleaning(LogCleanerManager.scala:140)', which is not in the gold set. The partition was left in that state by an earlier truncateTo that threw before resuming, so the failing abort is the consumer of state the gold file produced. The repeated ERROR line is tagged '(kafka.server.ReplicaFetcherThread)', so the logger sits in a third file, also outside the gold set.",
+  "confidence": "high",
+  "notes": "The trace does name the gold file, but at 'LogManager.truncateFullyAndStartAt(LogManager.scala:304)', and the fix is in truncateTo further down the same file. Right file, wrong method, and for a reason the trace cannot show, since the damage was done on an earlier call that already returned. The reporter also proposes a fix and points at the wrong file: 'I deleted the action for \"case s =>\" in the LogCleanerManager.scala's abortAndPauseCleaning()'. That file is not in the gold set and was not changed, so a system that trusted the reporter's own diagnosis would be led away from the answer. Worth counting beside REPORT-NAMES-FIX as its opposite."
+}

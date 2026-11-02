@@ -1,0 +1,33 @@
+{
+  "id": "kafka:KAFKA-5140",
+  "project": "kafka",
+  "issue_key": "KAFKA-5140",
+  "annotator": "claude-opus-5",
+  "pass": 1,
+  "file_roles": [
+    {
+      "path": "streams/src/main/java/org/apache/kafka/streams/processor/internals/InternalTopicManager.java",
+      "role": "refactor",
+      "evidence": "A static logger becomes an instance one, 'private static final Logger log = LoggerFactory.getLogger(InternalTopicManager.class)' giving way to 'private final Logger log' assigned from 'logContext.logger(getClass())' in the constructor. The rest is a constructor reformatted onto separate lines and WINDOW_CHANGE_LOG_ADDITIONAL_RETENTION_DEFAULT losing 'public'. No condition, retry count or topic operation changes."
+    },
+    {
+      "path": "streams/src/main/java/org/apache/kafka/streams/processor/internals/StreamPartitionAssignor.java",
+      "role": "refactor",
+      "evidence": "The log prefix is derived once from the client id, 'logPrefix = String.format(\"stream-thread [%s] \", configs.get(CommonClientConfigs.CLIENT_ID_CONFIG))', and the later block that rebuilt the logger from threadDataProvider.name() is deleted. The two other hunks drop a duplicated '{}' prefix argument from a debug call and add a full stop to a message. Logging only."
+    }
+  ],
+  "symptom_location": {
+    "file": null,
+    "function": null,
+    "determinable": false
+  },
+  "log_location": {
+    "file": null,
+    "function": null,
+    "determinable": false
+  },
+  "relation": "unrelated",
+  "rationale": "The only evidence is a hamcrest comparison of two long KeyValue lists at 'ResetIntegrationTest.testReprocessingFromScratchAfterResetWithIntermediateUserTopic(ResetIntegrationTest.java:190)', which is a test file and therefore excluded from gold. The commit names both root causes and both are test-side: 'The MockTime was incorrectly used across multiple test methods within the class, as a class rule', and the delete-check-recreate pattern that should 'read from zk path directly instead'. Neither gold file is involved in either.",
+  "confidence": "high",
+  "notes": "Sixth instance where the gold set holds no file that fixes anything. Eight files changed, six are tests, and the two that survive the filter contain logger wiring and message punctuation. Running list: GEODE-352, GEODE-440, KAFKA-12851, KAFKA-4558, KAFKA-5173, KAFKA-5140. Four of the six are flaky-test tickets, which suggests the pattern concentrates in a recognisable kind of issue rather than being spread evenly."
+}

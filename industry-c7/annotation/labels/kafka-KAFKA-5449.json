@@ -1,0 +1,48 @@
+{
+  "id": "kafka:KAFKA-5449",
+  "project": "kafka",
+  "issue_key": "KAFKA-5449",
+  "annotator": "claude-opus-5",
+  "pass": 1,
+  "file_roles": [
+    {
+      "path": "clients/src/main/java/org/apache/kafka/clients/producer/internals/TransactionManager.java",
+      "role": "causal",
+      "evidence": "The dequeue stops being unconditional. 'TxnRequestHandler nextRequestHandler = pendingRequests.poll()' becomes 'pendingRequests.peek()' followed by the guard the commit is named for, 'if (nextRequestHandler.isEndTxn() && hasIncompleteBatches) return null;', and only then 'pendingRequests.poll()'. Deciding and removing now happen inside one synchronized method."
+    },
+    {
+      "path": "clients/src/main/java/org/apache/kafka/clients/producer/internals/Sender.java",
+      "role": "causal",
+      "evidence": "The deferral that used to sit outside that lock is deleted: 'if (accumulator.hasUnflushedBatches()) return false;' under the comment 'Do not send the EndTxn until all pending batches have been completed' is removed, and the state is passed in instead, 'transactionManager.nextRequestHandler(accumulator.hasIncomplete())'. Checking here and dequeuing there is the non-atomic sequence that raced."
+    },
+    {
+      "path": "clients/src/main/java/org/apache/kafka/clients/producer/internals/RecordAccumulator.java",
+      "role": "refactor",
+      "evidence": "Renames and a code move: hasUnsent to hasUndrained, abortOpenBatches to abortUndrainedBatches, incomplete.all() to incomplete.copyAll(), the private IncompleteBatches class lifted out, and javadoc corrected from 'Pids' to 'producer IDs'. hasUnflushedBatches becomes 'hasIncomplete() { return !this.incomplete.isEmpty(); }', dropping a redundant walk over the per-partition deques."
+    },
+    {
+      "path": "clients/src/main/java/org/apache/kafka/clients/producer/KafkaProducer.java",
+      "role": "refactor",
+      "evidence": "Two call sites renamed, 'transactionManager.beginCommittingTransaction()' to 'beginCommit()' and 'beginAbortingTransaction()' to 'beginAbort()'. Nothing else."
+    },
+    {
+      "path": "clients/src/main/java/org/apache/kafka/clients/producer/internals/ProducerBatch.java",
+      "role": "refactor",
+      "evidence": "The entire change is a stray semicolon, 'private enum FinalState { ABORTED, FAILED, SUCCEEDED };' becoming '... }'."
+    }
+  ],
+  "symptom_location": {
+    "file": null,
+    "function": null,
+    "determinable": false
+  },
+  "log_location": {
+    "file": null,
+    "function": null,
+    "determinable": false
+  },
+  "relation": "concurrency",
+  "rationale": "The only evidence is a test assertion, 'Consumed 6 records until timeout instead of the expected 8 records', whose four frames are all in TestUtils and TransactionsTest, both excluded from gold. The defect is a race between the thread appending batches and the sender dequeuing the EndTxn request, which the commit names directly: 'Fix race condition on producer dequeuing of EndTxn request'. Two files held the two halves of that non-atomic sequence; the other three carry renames, a code move and a semicolon.",
+  "confidence": "medium",
+  "notes": "Five gold files, and the connection from any of them to the reported record count comes from the commit title rather than from the report. ProducerBatch.java is the cleanest example so far of a gold file that is pure noise: its whole diff removes one semicolon, yet a system that ranked it first would score as correct against fix-gold. Labelling both TransactionManager and Sender causal is a judgement call, since the essential repair is the guard inside the synchronized method and Sender's change could be read as the call-site adaptation that follows it; worth putting in the agreement check."
+}

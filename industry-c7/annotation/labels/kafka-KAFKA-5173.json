@@ -1,0 +1,28 @@
+{
+  "id": "kafka:KAFKA-5173",
+  "project": "kafka",
+  "issue_key": "KAFKA-5173",
+  "annotator": "claude-opus-5",
+  "pass": 1,
+  "file_roles": [
+    {
+      "path": "core/src/main/scala/kafka/cluster/Broker.scala",
+      "role": "refactor",
+      "evidence": "The whole change is two message rewordings in BrokerEndPointNotAvailableException, 'End point with protocol label $listenerName' and 'End point with security protocol $listenerName' both becoming 'End point with listener name ${listenerName.value}'. The conditions, the lookups and the returns are untouched, and neither message appears anywhere in the report."
+    }
+  ],
+  "symptom_location": {
+    "file": "clients/src/main/java/org/apache/kafka/common/security/JaasContext.java",
+    "function": "defaultContext",
+    "determinable": true
+  },
+  "log_location": {
+    "file": "clients/src/main/java/org/apache/kafka/common/security/JaasContext.java",
+    "function": "defaultContext",
+    "determinable": true
+  },
+  "relation": "unrelated",
+  "rationale": "The failure is raised at 'JaasContext.defaultContext(JaasContext.java:131)' with 'Could not find a KafkaServer or sasl_plaintext.KafkaServer entry in the JAAS configuration', and the rest of the trace runs through SocketServer, KafkaServer.startup and the test harness. None of that touches broker endpoint lookup, which is all the single gold file changes. The commit confirms the work was elsewhere, listing test-side items such as 'Call closeSasl in MultipleListenersWithSameSecurityProtocolBaseTest' and 'Remove SaslTestHarness'.",
+  "confidence": "high",
+  "notes": "36 files changed and 35 of them are tests, leaving one non-test gold file whose only change is unrelated error-message wording. This is the fifth instance where the gold set cannot contain a correct answer, after GEODE-352, GEODE-440, KAFKA-12851 and KAFKA-4558. The symptom path is derived from the package in the trace, org.apache.kafka.common.security, which lives under clients/src/main/java; the packet does not show the tree. The commit also closes two tickets at once, KAFKA-5184 and KAFKA-5173, which is the same key-absorbs-commits problem seen in IGNITE-5204."
+}

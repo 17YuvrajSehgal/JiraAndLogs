@@ -1,0 +1,28 @@
+{
+  "id": "kafka:KAFKA-12851",
+  "project": "kafka",
+  "issue_key": "KAFKA-12851",
+  "annotator": "claude-opus-5",
+  "pass": 1,
+  "file_roles": [
+    {
+      "path": "raft/src/main/java/org/apache/kafka/raft/LeaderState.java",
+      "role": "refactor",
+      "evidence": "The entire change to this file is two added statements, 'log.trace(\"High watermark updated to {} based on indexOfHw {} and voters {}\", ...)' and 'log.trace(\"High watermark set to {} ...\")'. Every condition, assignment and return is untouched, and trace logging cannot alter behaviour. It is investigative output added while the real fix was being written."
+    }
+  ],
+  "symptom_location": {
+    "file": null,
+    "function": null,
+    "determinable": false
+  },
+  "log_location": {
+    "file": null,
+    "function": null,
+    "determinable": false
+  },
+  "relation": "unclear",
+  "rationale": "The commit states where the defect was and it is not in this file: 'the test should wait for the high-watermark to reach an offset greater than the largest log end offset at the time of the partition', so the wrong expectation lived in RaftEventSimulationTest, which the benchmark filters out as a test. The reported trace supports that, ending at 'RaftEventSimulationTest.canMakeProgressIfMajorityIsReachable(RaftEventSimulationTest.java:263)' with 'expected: <true> but was: <false>' and no production frame. With no causal file present, the symptom site cannot be related to one.",
+  "confidence": "high",
+  "notes": "The gold set for this instance contains no file that fixes anything. The one entry gains only trace logging, and the correction is in an excluded test file, so no localizer can be right here for the right reason. This is the third such instance seen, after GEODE-352 and GEODE-440, and they should be counted as a group: instances where the answer key cannot contain the answer. 'symptom-handling' is the defensible alternative label, since the rubric lists adding a diagnostic under that role; it is called refactor because nothing was detected or reported here, the production code was correct and the test's expectation was not."
+}

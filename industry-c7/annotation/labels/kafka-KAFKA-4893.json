@@ -1,0 +1,33 @@
+{
+  "id": "kafka:KAFKA-4893",
+  "project": "kafka",
+  "issue_key": "KAFKA-4893",
+  "annotator": "claude-opus-5",
+  "pass": 1,
+  "file_roles": [
+    {
+      "path": "core/src/main/scala/kafka/log/Log.scala",
+      "role": "causal",
+      "evidence": "logDeleteDirName delegated to a helper that simply concatenated, and now bounds the result: 'val prefixLength = Math.min(topicPartition.topic().size, 255 - suffix.size)' then 's\"${topicPartition.topic().substring(0, prefixLength)}${suffix}\"'. Building a directory name that can exceed the filesystem limit is the defect, and this is where the name is built."
+    },
+    {
+      "path": "core/src/main/scala/kafka/server/ReplicaManager.scala",
+      "role": "preventive",
+      "evidence": "alterReplicaLogDirs gains a refusal, 'if (Log.logFutureDirName(topicPartition).size > 255) throw new InvalidTopicException(\"The topic name is too long.\")', with InvalidTopicException added to the catch. Its own comment says the operation is not being fixed, only blocked: 'we can't support altering the log directory. See KAFKA-4893 for details. TODO: fix this by implementing topic IDs'. The report is about deletion, not altering log directories."
+    }
+  ],
+  "symptom_location": {
+    "file": "core/src/main/scala/kafka/log/LogManager.scala",
+    "function": "asyncDelete",
+    "determinable": true
+  },
+  "log_location": {
+    "file": "core/src/main/scala/kafka/log/LogManager.scala",
+    "function": "asyncDelete",
+    "determinable": true
+  },
+  "relation": "caller-callee",
+  "rationale": "The failure is raised at 'kafka.log.LogManager.asyncDelete(LogManager.scala:439)' with 'KafkaStorageException: Failed to rename log directory from ... to ...', and the two paths in that message differ only by the appended '.797bba3fb2464729840f87769243edbb-delete'. asyncDelete is the caller; the name it tries to rename to is produced by logDeleteDirName in the gold file. The reporter also explains the arithmetic, that maxNameLength is 249 to leave room for a dash and a partition id, and that 'the unique id and \"-delete\" suffix end up hogging some of the characters'.",
+  "confidence": "high",
+  "notes": "LogManager.scala, the only file named in the trace and the only one the reporter quotes, is not in the gold set. The code the reporter pastes from LogManager.asyncDelete is the same string building, but by the time of the fix it had moved into Log.logDeleteDirName, so following either the trace or the reporter's quote leads to a file that is not part of the answer. The reporter closes with 'I don't believe linkedin has any topic name this long but I'm making the ticket in case anyone runs into this problem', so this is a speculative report with a reproduction rather than a production incident."
+}
