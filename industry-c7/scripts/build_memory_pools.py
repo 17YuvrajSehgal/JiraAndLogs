@@ -83,7 +83,12 @@ def build(project: str) -> dict:
         if f.get("created"):
             created_map[key] = f["created"]
         for l in (f.get("issuelinks") or []):
-            if ((l.get("type") or {}).get("name") or "").lower() == "duplicate":
+            # Trackers name this link type differently: Apache and Red Hat
+            # use "Duplicate", Sakai uses "3 - Duplicate". An exact match
+            # silently finds zero duplicates on Sakai's 43,351 issues and
+            # quietly disables firewall rule 2 for that project, so match on
+            # the word rather than the whole label.
+            if "duplicate" in (((l.get("type") or {}).get("name")) or "").lower():
                 other = ((l.get("outwardIssue") or l.get("inwardIssue") or {})
                          .get("key"))
                 if other:
