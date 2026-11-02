@@ -1,0 +1,28 @@
+{
+  "id": "qt:QTBUG-88966",
+  "project": "qt",
+  "issue_key": "QTBUG-88966",
+  "annotator": "claude-opus-5",
+  "pass": 1,
+  "file_roles": [
+    {
+      "path": "src/corelib/itemmodels/qabstractitemmodel.h",
+      "role": "causal",
+      "evidence": "QPersistentModelIndex had only a hash friend, 'friend size_t qHash(const QPersistentModelIndex &, size_t seed) noexcept;', and left equality to QPMI::operator==, which compares model and position rather than identity. The fix adds the matching predicate with a body in the same class, 'friend bool qHashEquals(const QPersistentModelIndex &a, const QPersistentModelIndex &b) noexcept { return a.d == b.d; }'. QPersistentModelIndex owns the hash/equality contract its own qHash declares, and the commit states the contract was broken, 'The hash and equality operators used need to be consistent with each other.'"
+    }
+  ],
+  "symptom_location": {
+    "file": "src/corelib/tools/qhash.h",
+    "function": "QHashPrivate::Data::rehash",
+    "determinable": true
+  },
+  "log_location": {
+    "file": "src/corelib/tools/qhash.h",
+    "function": "QHashPrivate::Data::rehash",
+    "determinable": true
+  },
+  "relation": "caller-callee",
+  "rationale": "The abort is a QHash internal invariant check, 'ASSERT: \"it.isUnused()\" in file ../../include/QtCore/../../../../qt-dev/qtbase/src/corelib/tools/qhash.h, line 519', reached from QHashPrivate::Data<QHashPrivate::Node<QPersistentModelIndex, QHashDummyValue> >::rehash while QTreeViewPrivate::storeExpanded inserted into a QSet<QPersistentModelIndex>. The table is intact; the key type is not, because two QPMIs could compare equal while hashing differently, so rehash found an occupied slot where the hash said there should be none. The fix pins equality to the shared data pointer, 'return a.d == b.d', in the key type itself, so the container is the caller and the key's predicate is the callee that was wrong.",
+  "confidence": "high",
+  "notes": "The gold file does not appear in the trace at all. The 26 frames name qlogging.cpp, qglobal.cpp, qhash.h, qset.h, qtreeview_p.h, qtreeview.cpp, tst_qtreeview.cpp, qmetaobject.cpp and qtestcase.cpp; qabstractitemmodel.h is in none of them, because an inline friend of the key type is never a frame. The reporter also points at the wrong file in good faith, 'this leaves QTreeViewPrivate::expandedIndexes dirty with corrupted items', which is where the bad keys are stored but not where the bug is. The assertion message names file and line but not function, so the function is taken from frame #5 of the trace. The instance is a self-contained header change of five lines against a 5,844-file snapshot."
+}

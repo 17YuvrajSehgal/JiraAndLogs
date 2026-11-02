@@ -1,0 +1,38 @@
+{
+  "id": "qt:QTBUG-83207",
+  "project": "qt",
+  "issue_key": "QTBUG-83207",
+  "annotator": "claude-opus-5",
+  "pass": 1,
+  "file_roles": [
+    {
+      "path": "src/corelib/plugin/qlibrary.cpp",
+      "role": "causal",
+      "evidence": "QLibraryPrivate::load held the object's own mutex across the entire platform load, 'mutex.lock(); bool ret = load_sys(); mutex.unlock();'. The fix deletes both lines, leaving 'bool ret = load_sys();'. Holding that non-recursive mutex while dlopen runs the module's initialisation code is the deadlock the commit describes, 'Commit ae6f73e8566fa76470937aca737141183929a5ec inserted a mutex around the entire load_sys()'."
+    },
+    {
+      "path": "src/corelib/plugin/qlibrary_unix.cpp",
+      "role": "causal",
+      "evidence": "load_sys now owns the locking and drops it around the dlopen loop: 'QMutexLocker locker(&mutex);' at the top, 'locker.unlock();' immediately before 'bool retry = true; Handle hnd = nullptr;', and 'locker.relock();' after the loop before 'if (!hnd) { errorString = QLibrary::tr(\"Cannot load library %1: %2\")'. This is the exercised path: the backtrace shows '#26 QLibraryPrivate::load_sys' calling '#25 dlopen () from /usr/lib/libdl.so.2'."
+    },
+    {
+      "path": "src/corelib/plugin/qlibrary_win.cpp",
+      "role": "preventive",
+      "evidence": "The identical narrowing is applied to the Windows path, 'QMutexLocker locker(&mutex);' before the attempts are built, 'locker.unlock();' before the 'for (const QString &attempt : qAsConst(attempts))' LoadLibrary loop, and 'locker.relock();' before the errorString assignment. The report is a Linux dlopen deadlock in Krita, so this path is never exercised by it."
+    }
+  ],
+  "symptom_location": {
+    "file": "src/corelib/plugin/qlibrary.cpp",
+    "function": "QLibraryPrivate::updatePluginState",
+    "determinable": true
+  },
+  "log_location": {
+    "file": null,
+    "function": null,
+    "determinable": false
+  },
+  "relation": "concurrency",
+  "rationale": "The backtrace shows one thread blocked on its own lock: '#7 QLibraryPrivate::updatePluginState (this=0x5555573d02f0) at plugin/qlibrary.cpp:753' waiting in QMutexLocker, reached from a QPluginLoader constructed inside Krita's static initialisation, which itself runs under '#26 QLibraryPrivate::load_sys' and '#27 QLibraryPrivate::load (this=0x5555573d02f0) at plugin/qlibrary.cpp:580' on the same QLibraryPrivate object. The lock taken in load spans the dlopen that re-enters the object, which the commit confirms, 'we had forgotten that dlopen()/LoadLibrary() executes initialization code from the module being loaded, which could cause a recursion back into the same QPluginLoader or QLibrary object'. The fix is a lock-scope change spread over the caller and both platform implementations.",
+  "confidence": "medium",
+  "notes": "The report names culprit commits rather than a location, quoting three bisected qtbase commits in full and noting they 'cannot be bisected any further because they don't compile independently'. The two platform files never appear in the backtrace by name: frame #26 attributes load_sys to '../../include/QtCore/../../src/corelib/tools/qarraydata.h:208', an inlining artefact, so the only gold file the evidence names is qlibrary.cpp. Half the frames (#10-#14, #31-#36) belong to Krita, another project. The evidence is a gdb backtrace, not a log, so log_location.determinable = false. Medium confidence because the split of roles across the three files rests on a judgement the packet cannot settle: a second rater could reasonably call qlibrary_unix.cpp preventive, since before the fix it contained no locking at all and the wrong logic was the caller's lock, or call qlibrary_win.cpp causal, since the same wrong lock scope existed there too. It is labelled this way because the unlock/relock pair around dlopen is where 'do not hold the mutex across dlopen' is now encoded, and the Windows path is the sibling path the report never exercises. Worth putting in the agreement check. The fix ships with no regression test: 3 files changed, all 3 non-test source."
+}

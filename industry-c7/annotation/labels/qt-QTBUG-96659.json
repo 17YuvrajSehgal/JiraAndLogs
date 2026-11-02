@@ -1,0 +1,28 @@
+{
+  "id": "qt:QTBUG-96659",
+  "project": "qt",
+  "issue_key": "QTBUG-96659",
+  "annotator": "claude-opus-5",
+  "pass": 1,
+  "file_roles": [
+    {
+      "path": "src/corelib/kernel/qproperty_p.h",
+      "role": "causal",
+      "evidence": "The rejected construct is in this file and is what the diff replaces, 'if constexpr (Signal != nullptr)' becoming 'if constexpr (!std::is_null_pointer_v<decltype(Signal)>)'. The error quotes that exact line, 'qproperty_p.h:554:30: error: ‘(QItemSelectionModelPrivate::modelChanged != 0)’ is not a constant expression', and testing the type of the template parameter instead of comparing the pointer value removes the comparison GCC 10 would not fold."
+    }
+  ],
+  "symptom_location": {
+    "file": "src/corelib/kernel/qproperty_p.h",
+    "function": null,
+    "determinable": true
+  },
+  "log_location": {
+    "file": null,
+    "function": null,
+    "determinable": false
+  },
+  "relation": "same-location",
+  "rationale": "This is a build failure, and the compiler names the defect precisely: file, line, column and the offending expression, 'qproperty_p.h:554:30: error: ‘(QItemSelectionModelPrivate::modelChanged != 0)’ is not a constant expression / if constexpr (Signal != nullptr)'. The fix changes that one line in that one file. Symptom and cause are the same line, so there is nothing to relate across sites.",
+  "confidence": "high",
+  "notes": "REPORT-NAMES-FIX: the report quotes the exact source line that the diff edits, with its file, line and column, and the commit message pastes the same three lines back. The instance has no runtime failure; nothing ran, and the report is environment-specific, 'gcc (SUSE Linux) 10.2.1 20200825'. The compiler emitted the message, not Qt, so log_location.determinable = false, consistent with the recorded treatment of harness assertions and SHOW output. The enclosing function is not visible in the hunk, so it is left null. A second rater could argue this is a workaround for a compiler defect rather than a Qt defect, since the commit itself is tentative, 'attempt to fix compilation with GCC 10 / Somehow it's not expanding properly in constexpr time'; it is labelled causal because the reported failure is produced by this file's code and the diff corrects that code. This is the easiest instance in the share, and worth reporting beside QTBUG-96464, where the report names a file that is not in gold at all."
+}

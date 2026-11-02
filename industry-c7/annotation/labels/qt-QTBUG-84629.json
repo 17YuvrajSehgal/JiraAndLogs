@@ -1,0 +1,28 @@
+{
+  "id": "qt:QTBUG-84629",
+  "project": "qt",
+  "issue_key": "QTBUG-84629",
+  "annotator": "claude-opus-5",
+  "pass": 1,
+  "file_roles": [
+    {
+      "path": "src/platformsupport/fontdatabases/windows/qwindowsfontenginedirectwrite.cpp",
+      "role": "causal",
+      "evidence": "QWindowsFontEngineDirectWrite::alphaMapBoundingBox returned a box built purely from the margin for a glyph with no extent, 'return glyph_metrics_t(rect.left, rect.top, rect.right - rect.left + margin * 2, rect.bottom - rect.top + margin * 2, bbox.xoff, bbox.yoff);'. The fix returns an empty metric first, 'if (rect.left == rect.right || rect.top == rect.bottom) return glyph_metrics_t();', matching what alphaMapForGlyph in the same engine already did after bb67c3b68b00."
+    }
+  ],
+  "symptom_location": {
+    "file": "src/gui/painting/qpainter.cpp",
+    "function": "QPainter::begin",
+    "determinable": true
+  },
+  "log_location": {
+    "file": "src/gui/painting/qpainter.cpp",
+    "function": "QPainter::begin",
+    "determinable": true
+  },
+  "relation": "state-producer",
+  "rationale": "The reported warnings 'QPainter::begin: Paint device returned engine == 0, type: 3' and the two that follow are emitted when a painter is opened on the invalid image the font engine now returns for an empty glyph. The commit states the chain, 'since we did not account for this in alphaMapBoundingBox(), the texture glyph cache did not detect this case and would request the empty image and try to add it to the cache', and the diff makes the bounding box agree with the image. The bad state is produced in the font engine at measurement time and consumed later in painting.",
+  "confidence": "medium",
+  "notes": "Medium because the chain from alphaMapBoundingBox through the texture glyph cache to QPainter is taken from the commit message, not shown in the diff; the role of the one gold file is plain either way. The gold file does not appear in the reported evidence at all: the three warnings name only QPainter. The symptom and log paths are inferred from the Qt source layout, since the packet does not show the tree, but the warning texts are QPainter's own. The report names a culprit commit, 'After bb67c3b68b00fb2075a971f4f0d58e1867ef7128', and diagnoses the mechanism without naming the fix site. The fix ships with no regression test: one changed file, no test file."
+}

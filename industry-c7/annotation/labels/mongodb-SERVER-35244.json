@@ -1,0 +1,28 @@
+{
+  "id": "mongodb:SERVER-35244",
+  "project": "mongodb",
+  "issue_key": "SERVER-35244",
+  "annotator": "claude-opus-5",
+  "pass": 1,
+  "file_roles": [
+    {
+      "path": "src/mongo/db/session_catalog.cpp",
+      "role": "causal",
+      "evidence": "invalidateSessions refused the write for every deployment, 'uassert(40528, str::stream() << \"Direct writes against \" << NamespaceString::kSessionTransactionsTableNamespace.ns() << \" cannot be performed using a transaction or on a session.\", !opCtx->getLogicalSessionId());'. The fix narrows the rule to the deployments it was meant for, 'auto replCoord = repl::ReplicationCoordinator::get(opCtx); bool isReplSet = replCoord->getReplicationMode() == repl::ReplicationCoordinator::modeReplSet; if (isReplSet) { uassert(40528, ... ) }'. The invalidation work below, 'const auto invalidateSessionFn = [&](WithLock, SessionRuntimeInfoMap::iterator it)', is untouched."
+    }
+  ],
+  "symptom_location": {
+    "file": "src/mongo/db/session_catalog.cpp",
+    "function": "SessionCatalog::invalidateSessions",
+    "determinable": true
+  },
+  "log_location": {
+    "file": "src/mongo/db/session_catalog.cpp",
+    "function": "SessionCatalog::invalidateSessions",
+    "determinable": true
+  },
+  "relation": "same-location",
+  "rationale": "The reported failure is the uassert itself, 'Command failed with error 40528: \\'Direct writes against config.transactions cannot be performed using a transaction or on a session.\\'', and both the code number and the message text are literals in the only changed hunk. The condition was not guarding anything that could go wrong outside a replica set, so the over-broad check is the defect rather than a correct report of a bad state produced elsewhere. Nothing else was changed, and the regression is confined to this one condition, which matches the report's framing that the same drop worked in 3.7.9.",
+  "confidence": "high",
+  "notes": "The pasted log belongs to another project: all twenty-four stack frames are Java driver classes, 'com.mongodb.connection.ProtocolHelper.getCommandFailureException(ProtocolHelper.java:164)' down to 'com.mongodb.DB.dropDatabase(DB.java:227)', and not one server frame appears, so the trace locates the client call that failed and says nothing about where in the server to look. What rescues the instance is the message text, which is assembled in the gold file, so a literal string match on 'Direct writes against' lands on the answer while the trace leads away from it. That split is worth reporting. The role is causal rather than symptom-handling because the uassert was not correctly reporting a bad state created elsewhere; the condition itself was wrong, and scoping it to 'modeReplSet' is the whole repair. The report does not say the deployment was a standalone, but the fix only changes behaviour for non-replica-set nodes, so that is implied rather than shown. The fix changed 1 file and it is the single gold file, so no regression test ships with the packet's view of the commit."
+}

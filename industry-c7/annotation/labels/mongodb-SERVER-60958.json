@@ -1,0 +1,28 @@
+{
+  "id": "mongodb:SERVER-60958",
+  "project": "mongodb",
+  "issue_key": "SERVER-60958",
+  "annotator": "claude-opus-5",
+  "pass": 1,
+  "file_roles": [
+    {
+      "path": "src/mongo/db/s/migration_chunk_cloner_source_legacy.cpp",
+      "role": "causal",
+      "evidence": "_checkRecipientCloningStatus called into the session catalog source while holding the cloner latch, 'stdx::lock_guard<Latch> sl(_mutex);' followed by 'if (res[\"state\"].String() == \"steady\" && _sessionCatalogSource->inCatchupPhase() && _sessionCatalogSource->untransferredCatchUpDataSize() == 0)'. The fix hoists both calls above the lock, 'const auto sessionCatalogSourceInCatchupPhase = _sessionCatalogSource->inCatchupPhase(); const auto estimateUntransferredSessionsSize = sessionCatalogSourceInCatchupPhase ? _sessionCatalogSource->untransferredCatchUpDataSize() : std::numeric_limits<int64_t>::max();' placed before 'stdx::lock_guard<Latch> sl(_mutex);', and the later use of the local, 'int64_t estimateUntransferredSessionsSize = _sessionCatalogSource->untransferredCatchUpDataSize();', is deleted."
+    }
+  ],
+  "symptom_location": {
+    "file": "src/mongo/db/s/migration_chunk_cloner_source_legacy.cpp",
+    "function": "MigrationChunkClonerSourceLegacy::_checkRecipientCloningStatus",
+    "determinable": true
+  },
+  "log_location": {
+    "file": null,
+    "function": null,
+    "determinable": false
+  },
+  "relation": "concurrency",
+  "rationale": "The report is a one-line title, 'Avoid server hang in chunk migration when step-down event occurs', and the commit message names the mechanism, 'Access info on SessionCatalogMigrationSource outside of the Cloner protected section'. The diff matches it exactly: the two _sessionCatalogSource queries are moved out from under 'stdx::lock_guard<Latch> sl(_mutex)' into locals computed before the latch is taken. The hang is an ordering between the cloner latch and whatever the session catalog source blocks on during a step-down, and the only file changed is the one that held the latch across the call.",
+  "confidence": "medium",
+  "notes": "The report carries no log, trace or reproducer, only a title, so the step-down mechanism is taken from the commit message rather than shown, which is why confidence is medium. The other side of the ordering, inside SessionCatalogMigrationSource, is not in the packet and not in the gold set, so the symptom is recorded at the site that holds the latch; a second rater could reasonably set symptom_location.determinable = false on the ground that no symptom evidence exists at all. The condition's value also changes slightly, since estimateUntransferredSessionsSize is now std::numeric_limits<int64_t>::max() when not in the catch-up phase, but that is a consequence of the hoist, not a separate fix."
+}

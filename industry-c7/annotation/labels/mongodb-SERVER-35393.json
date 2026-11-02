@@ -1,0 +1,28 @@
+{
+  "id": "mongodb:SERVER-35393",
+  "project": "mongodb",
+  "issue_key": "SERVER-35393",
+  "annotator": "claude-opus-5",
+  "pass": 1,
+  "file_roles": [
+    {
+      "path": "src/mongo/util/net/ssl/detail/io.hpp",
+      "role": "causal",
+      "evidence": "Both engine states assumed one call drained the buffer, 'core.output_ = core.engine_.get_output(core.output_buffer_); core.output_ += asio::write(next_layer, core.output_, ec);' under 'case engine::want_output_and_retry:' and again under 'case engine::want_output:', the second immediately returning, 'core.engine_.map_error_code(ec); return bytes_transferred;'. The fix writes until the buffer is empty in both places, 'while (!ec && core.output_.size()) { core.output_ += asio::write(next_layer, core.output_, ec); }'."
+    }
+  ],
+  "symptom_location": {
+    "file": null,
+    "function": null,
+    "determinable": false
+  },
+  "log_location": {
+    "file": null,
+    "function": null,
+    "determinable": false
+  },
+  "relation": "state-producer",
+  "rationale": "The reporter sees a truncated TLS stream from the far side during a large batch insert, 'Code:9001, Message:\"Write results unavailable from localhost:27026 :: caused by :: asio.ssl stream truncated\"', which is the signature of encrypted bytes that were produced but never put on the wire. The diff shows exactly that: the engine's output buffer was written once per state and whatever remained was dropped, and the commit says so, 'Flush output buffer before attempting new writes'. The unsent bytes are created in this loop and the failure is observed later and in another process, so the relation is state-producer rather than same-location.",
+  "confidence": "medium",
+  "notes": "The pasted log belongs to another project: the evidence is a Go driver struct dump from the driver's own unit test, 'mongo.BulkWriteError{WriteErrors:mongo.WriteErrors{...}}', produced by 'TestCollection_InsertMany_Batches', so log_location.determinable = false and symptom_location is not determinable either, since the text 'asio.ssl stream truncated' is formatted by a part of the networking layer the packet never shows. The gold file appears nowhere in the reported evidence. Confidence is medium for three reasons stated in the packet itself: two commits are listed, 'Flush output buffer before attempting new writes' and 'Flush asio output and limit SecureTransport out buffer', but only one diff block is shown and it is marked '--- from commit 573ebb251784 ---', so what the first commit contributed to this file is not visible; the second commit message names a change, limiting the SecureTransport out buffer, that no shown hunk contains; and nothing in the diff explains the report's 'This only occurs on macOS'. A second rater could call this preventive rather than causal, since wrapping a write in 'while (!ec && core.output_.size())' reads like the rubric's retry example; it is labelled causal because the old code treated a partial write as complete, which is wrong logic in this file and not a defence against someone else's. Worth putting in the agreement check. The fix changed 3 files and only 1 is a non-test source file, so 2 test files were filtered as intended."
+}

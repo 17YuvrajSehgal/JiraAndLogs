@@ -1,0 +1,28 @@
+{
+  "id": "qt:QTBUG-80945",
+  "project": "qt",
+  "issue_key": "QTBUG-80945",
+  "annotator": "claude-opus-5",
+  "pass": 1,
+  "file_roles": [
+    {
+      "path": "src/printsupport/dialogs/qprintdialog_unix.cpp",
+      "role": "causal",
+      "evidence": "Both halves of the use-after-free are in this file and both are corrected. QPrintDialogPrivate::init destroyed the widgets without clearing the pointers, 'for (int i = options.pagesLayout->count() - 1; i >= 0; --i) delete options.pagesLayout->itemAt(i)->widget();', replaced by 'delete options.pagesRadioButton; delete options.pagesLineEdit; options.pagesRadioButton = nullptr; options.pagesLineEdit = nullptr;'. QPrintDialogPrivate::selectPrinter then dereferenced one of them, 'options.pagesRadioButton->setEnabled(outputFormat != QPrinter::PdfFormat);', and the fix brings that line inside the cups guard by moving '#if QT_CONFIG(cups)' above it."
+    }
+  ],
+  "symptom_location": {
+    "file": "src/widgets/kernel/qwidget.cpp",
+    "function": "QWidget::setEnabled",
+    "determinable": true
+  },
+  "log_location": {
+    "file": null,
+    "function": null,
+    "determinable": false
+  },
+  "relation": "state-producer",
+  "rationale": "The sanitizer report reads freed memory at 'QWidget::setEnabled(bool) kernel/qwidget.cpp:3221', called from 'QPrintDialogPrivate::selectPrinter(QPrinter::OutputFormat) dialogs/qprintdialog_unix.cpp:733', and names the free site in the same dialog, 'QRadioButton::~QRadioButton() widgets/qradiobutton.cpp:145' from 'QPrintDialogPrivate::init() dialogs/qprintdialog_unix.cpp:641'. The object was allocated by the generated 'Ui_QPrintSettingsOutput::setupUi(QWidget*) .uic/ui_qprintsettingsoutput.h:149'. The commit message agrees and the diff fixes both ends, 'ui.pagesRadioButton is destroyed in QPrintDialogPrivate::init() but was accessed later on. Fix it by moving the cups check one line above.'",
+  "confidence": "high",
+  "notes": "The AddressSanitizer output is tooling output, not a line any project code emits, so log_location.determinable = false, by the same reasoning CONVENTIONS applies to test-harness assertions; the assertion-message exception does not apply because no project-authored message exists here. The symptom frame's path, src/widgets/kernel/qwidget.cpp, is inferred from the build-relative 'kernel/qwidget.cpp:3221' in the trace, and the three frames above it are the inlined QScopedPointer and qGetPtrHelper helpers at the same PC, which place no site of their own. Unusually for this sample, the single gold file appears in the trace at exactly the two functions the fix changes, init and selectPrinter. The failure only occurs in a build without cups, '#else' of '#if QT_CONFIG(cups)', so a second rater could call the relation 'config-build'; it is 'state-producer' here because the dangling pointer is created in init and dereferenced later in selectPrinter. The reproducer is a third-party application, the qwt bode example, but every frame below it is Qt's own."
+}

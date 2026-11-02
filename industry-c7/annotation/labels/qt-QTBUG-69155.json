@@ -1,0 +1,33 @@
+{
+  "id": "qt:QTBUG-69155",
+  "project": "qt",
+  "issue_key": "QTBUG-69155",
+  "annotator": "claude-opus-5",
+  "pass": 1,
+  "file_roles": [
+    {
+      "path": "src/plugins/platforms/android/qandroidplatformopenglwindow.cpp",
+      "role": "causal",
+      "evidence": "setGeometry only reported an exposure the first time the window got a size. The fix deletes that restriction, 'if (m_oldGeometry.width() == 0 && m_oldGeometry.height() == 0 && rect.width() > 0' becoming 'if (rect.width() > 0', so 'QWindowSystemInterface::handleExposeEvent(window(), QRect(QPoint(0, 0), rect.size()));' now runs on every resize with a valid geometry."
+    },
+    {
+      "path": "src/plugins/platforms/android/qandroidplatformvulkanwindow.cpp",
+      "role": "causal",
+      "evidence": "A byte-identical copy of the same defect and the same correction in QAndroidPlatformVulkanWindow::setGeometry: the guard 'm_oldGeometry.width() == 0 && m_oldGeometry.height() == 0 &&' is removed from the condition that precedes 'QWindowSystemInterface::handleExposeEvent(window(), QRect(QPoint(0, 0), rect.size()));'."
+    }
+  ],
+  "symptom_location": {
+    "file": "tests/auto/gui/kernel/qwindow/tst_qwindow.cpp",
+    "function": "tst_QWindow::exposeEventOnShrink_QTBUG54040",
+    "determinable": true
+  },
+  "log_location": {
+    "file": null,
+    "function": null,
+    "determinable": false
+  },
+  "relation": "state-producer",
+  "rationale": "The report is a failing autotest, 'FAIL! : tst_QWindow::exposeEventOnShrink_QTBUG54040() '(window.received(QEvent::Expose) > exposeCount)' returned FALSE', located at 'tst_qwindow.cpp(415)'. The commit message states the mechanism, 'Expose event would not be sent when window was resized', and the diff shows the guard that suppressed it, the m_oldGeometry zero-size test, being removed in both Android window backends. The expose event that the assertion counts is never produced in setGeometry, so the missing state is created in the platform window and observed in the test.",
+  "confidence": "medium",
+  "notes": "The symptom site is a test-harness assertion, so it is not a log: log_location.determinable = false per CONVENTIONS. The test path is reconstructed from the Windows build path in the failure message, 'Loc: [D:\\projects\\qt\\clean-dev\\src\\qtbase\\tests\\auto\\gui\\kernel\\qwindow\\tst_qwindow.cpp(415)]', and the packet does not show the tree. The two gold files are duplicated copies of the same function with the same guard, and the packet cannot say which backend the failing test actually instantiated, so both are labelled causal under the CONVENTIONS duplicate-copy rule; a second rater could call the Vulkan copy preventive on the ground that a plain QWindow autotest is unlikely to create a Vulkan surface, which would make that file an extension of the fix to a path the report never exercised. That ambiguity is why confidence is medium."
+}

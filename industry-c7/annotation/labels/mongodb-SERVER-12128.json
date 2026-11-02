@@ -1,0 +1,28 @@
+{
+  "id": "mongodb:SERVER-12128",
+  "project": "mongodb",
+  "issue_key": "SERVER-12128",
+  "annotator": "claude-opus-5",
+  "pass": 1,
+  "file_roles": [
+    {
+      "path": "src/mongo/db/geo/geoconstants.h",
+      "role": "refactor",
+      "evidence": "The whole change to the only gold file is a comment: '// Thanks, Wikipedia.' becomes '// Equatorial radius of earth.' plus '// Source: http://nssdc.gsfc.nasa.gov/planetary/factsheet/earthfact.html'. The constant itself is untouched on both sides of the diff, 'const double kRadiusOfEarthInMeters = (6378.1 * 1000);'."
+    }
+  ],
+  "symptom_location": {
+    "file": null,
+    "function": null,
+    "determinable": false
+  },
+  "log_location": {
+    "file": null,
+    "function": null,
+    "determinable": false
+  },
+  "relation": "unrelated",
+  "rationale": "There is no failure. The report is a consistency complaint about tests and documentation, 'MongoDB tests and documentation utilize mean Earth radius (6371km) rather than equatorial radius (6378.1km)', and it states that the source is already right, 'The constant within MongoDB source code is 6378.1 km (equatorial).' The fix agrees: the value in the one gold file is unchanged and only its comment is rewritten, so nothing in the gold set is where the reported inconsistency lived.",
+  "confidence": "high",
+  "notes": "The gold set contains a file whose whole change is cosmetic: a two-line comment rewording with the value left alone. The instance has no failure at all; it is a documentation and test-constant complaint, so symptom_location, log_location and relation are not determinable from any site. The fix changed 3 files and 2 were filtered as tests, which is where the actual 6371 values lived, leaving a gold set whose single member the report explicitly exonerates. No causal file here, which rubric rule 3 allows. Not REPORT-NAMES-FIX: the report points at the gold file's constant only to say it is correct."
+}

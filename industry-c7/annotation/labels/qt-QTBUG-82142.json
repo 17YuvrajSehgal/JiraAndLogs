@@ -1,0 +1,28 @@
+{
+  "id": "qt:QTBUG-82142",
+  "project": "qt",
+  "issue_key": "QTBUG-82142",
+  "annotator": "claude-opus-5",
+  "pass": 1,
+  "file_roles": [
+    {
+      "path": "src/testlib/qtestlog.cpp",
+      "role": "causal",
+      "evidence": "The generated moc translation unit was included while the Qt namespace was still open, '#include \"moc_qtestlog_p.cpp\"' followed by 'QT_END_NAMESPACE'. The fix swaps them, 'QT_END_NAMESPACE' then '#include \"moc_qtestlog_p.cpp\"', so the system headers that file pulls in are no longer declared inside namespace RTA."
+    }
+  ],
+  "symptom_location": {
+    "file": "src/testlib/qtestlog.cpp",
+    "function": null,
+    "determinable": true
+  },
+  "log_location": {
+    "file": "src/testlib/qtestlog.cpp",
+    "function": null,
+    "determinable": true
+  },
+  "relation": "same-location",
+  "rationale": "Every error is a standard-library declaration that landed in the wrong namespace, \"error: 'move' is not a member of 'RTA::std'\" and \"class 'RTA::std::__shared_ptr<_Tp, _Lp>' does not have any field named '_M_ptr'\", with RTA being the reporter's '-qtnamespace RTA'. The include chain names the responsible line, 'from .moc/moc_qtestlog_p.cpp:9, from qtestlog.cpp:600', and line 600 is the include the diff moves. The wrong placement and the failing compile are the same line of the same file.",
+  "confidence": "high",
+  "notes": "The whole fix is moving one '#include' two lines down, the sort of change that is usually incidental; it is causal here because the placement is what put the standard library inside the Qt namespace, and nothing else was changed. A second rater could call it refactor on the strength of the rubric listing 'move' and 'imports' under refactor, so it is worth putting in the agreement check. The errors themselves are raised inside MinGW's own headers, shared_ptr_atomic.h and auto_ptr.h, so the gold file appears in the evidence only as an entry in the include chain; the conventions direct recording the deepest project-owned frame, which is qtestlog.cpp:600, at file scope with no enclosing function. The instance has no runtime failure, it only breaks under '-qtnamespace', and the fix ships with no regression test: one changed file, no test file."
+}

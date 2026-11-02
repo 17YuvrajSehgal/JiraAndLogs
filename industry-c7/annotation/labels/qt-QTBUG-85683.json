@@ -1,0 +1,28 @@
+{
+  "id": "qt:QTBUG-85683",
+  "project": "qt",
+  "issue_key": "QTBUG-85683",
+  "annotator": "claude-opus-5",
+  "pass": 1,
+  "file_roles": [
+    {
+      "path": "src/gui/text/windows/qwindowsfontdatabase.cpp",
+      "role": "symptom-handling",
+      "evidence": "The entire change in QWindowsFontDatabase::populateFamily is the severity of one diagnostic plus a comment: 'qCWarning(lcQpaFonts) << \"Unable to enumerate family '\" << familyName << '\\'';' becomes 'qCDebug(lcQpaFonts) << ...', with '// Field length of LOGFONT::lfFaceName' added to the unchanged guard 'if (familyName.size() >= LF_FACESIZE)'. The guard and the 'return;' behave exactly as before."
+    }
+  ],
+  "symptom_location": {
+    "file": "src/gui/text/windows/qwindowsfontdatabase.cpp",
+    "function": "QWindowsFontDatabase::populateFamily",
+    "determinable": true
+  },
+  "log_location": {
+    "file": "src/gui/text/windows/qwindowsfontdatabase.cpp",
+    "function": "QWindowsFontDatabase::populateFamily",
+    "determinable": true
+  },
+  "relation": "same-location",
+  "rationale": "The reported line 'qt.qpa.fonts: Unable to enumerate family \" Droid Sans Mono Dotted for Powerline \"' is the literal text of the qCWarning in populateFamily, and its category tag places it there. Nothing the function does was corrected: the LF_FACESIZE guard and the early return are untouched, and only the logging level drops to qCDebug, which is why the commit says 'Turn the warning into a qCDebug() statement and add explanatory comment'. Under the convention that symptom-handling covers a change that only reports, where the production code was right and nothing it does was corrected, this is symptom-handling and the instance has no causal file.",
+  "confidence": "high",
+  "notes": "The instance has no failure: a font family name longer than LF_FACESIZE cannot be enumerated through LOGFONT, which is a platform limit rather than a bug, and the complaint is log noise. A second rater would reasonably disagree and call this causal, since the warning is itself the reported problem and the only changed line is that warning; it is labelled symptom-handling because the rubric reserves causal for logic that was wrong and the diff corrects no behaviour. Worth putting in the agreement check. The fix ships with no regression test."
+}

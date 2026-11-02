@@ -1,0 +1,28 @@
+{
+  "id": "qt:QTBUG-82611",
+  "project": "qt",
+  "issue_key": "QTBUG-82611",
+  "annotator": "claude-opus-5",
+  "pass": 1,
+  "file_roles": [
+    {
+      "path": "src/corelib/tools/qarraydata.h",
+      "role": "causal",
+      "evidence": "QTypedArrayData still carried the QT_STRICT_ITERATORS class-based iterators, whose only conversion from iterator to const_iterator is explicit, 'inline explicit const_iterator(const iterator &o): i(o.i) {}'. That is exactly what MSVC rejects, 'No user-defined-conversion operator available that can perform this conversion'. The fix deletes the whole '#ifdef QT_STRICT_ITERATORS' block and keeps only 'typedef T* iterator; typedef const T* const_iterator;', for which the conversion is implicit."
+    }
+  ],
+  "symptom_location": {
+    "file": "src/corelib/tools/qvector.h",
+    "function": "QVector::removeAll",
+    "determinable": true
+  },
+  "log_location": {
+    "file": "src/corelib/tools/qvector.h",
+    "function": "QVector::removeAll",
+    "determinable": true
+  },
+  "relation": "config-build",
+  "rationale": "The compiler stops at 'qtbase/src/corelib/tools/qvector.h(331): error C2664 ... cannot convert argument 1 from const QTypedArrayData<T>::iterator to QTypedArrayData<T>::const_iterator', 'while compiling class template member function int QVector<QItemSelectionRange>::removeAll(const T &)'. The types it cannot convert are defined in qarraydata.h, and the error text proves the class-based branch was in effect, since plain 'T*' to 'const T*' needs no user-defined conversion. The fix removes that leftover branch, which the commit calls 'Get rid of some QT_STRICT_ITERATORS leftover'.",
+  "confidence": "high",
+  "notes": "The gold file does not appear in the pasted evidence at all: the compiler names qvector.h twice, qitemselectionmodel.h once and cl.EXE, never qarraydata.h. The report names a culprit commit rather than a location, 'After c946b07d9c2023c56ec3cae3ef8a425d12f8d7df, Qt no longer compiles on MSVC2019'. The instance has no runtime failure; it is a build break under a configuration that still defined QT_STRICT_ITERATORS, which is why relation is config-build. The packet says the fix changed 6 files of which only 1 is non-test source, so five sixths of the real change is outside the gold set. A header is causal here under the conventions because it holds logic, whole inline class bodies, not declarations."
+}

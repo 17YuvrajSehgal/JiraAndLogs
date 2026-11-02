@@ -1,0 +1,38 @@
+{
+  "id": "mongodb:SERVER-45007",
+  "project": "mongodb",
+  "issue_key": "SERVER-45007",
+  "annotator": "claude-opus-5",
+  "pass": 1,
+  "file_roles": [
+    {
+      "path": "src/mongo/db/concurrency/d_concurrency.cpp",
+      "role": "causal",
+      "evidence": "The GlobalLock constructor dropped the deadline it was given, '_pbwm.lock(opCtx, MODE_IS);', and the fix passes it, '_pbwm.lock(opCtx, MODE_IS, deadline);'. The same file carries the acquisition that now honours it, 'void Lock::ResourceLock::lock(OperationContext* opCtx, LockMode mode, Date_t deadline)' with '_locker->lock(opCtx, _rid, mode, deadline);' replacing '_locker->lock(opCtx, _rid, mode);'."
+    },
+    {
+      "path": "src/mongo/db/concurrency/d_concurrency.h",
+      "role": "refactor",
+      "evidence": "Declaration and call-site adaptation only: 'void lock(LockMode mode);                           // Uninterruptible' and 'void lock(OperationContext* opCtx, LockMode mode);  // Interruptible' collapse into 'void lock(OperationContext* opCtx, LockMode mode, Date_t deadline = Date_t::max());', and the two inline bodies are updated to the surviving overload, 'lock(mode);' becoming 'lock(nullptr, mode);' in the ResourceLock constructor and 'lock(MODE_X);' becoming 'lock(nullptr, MODE_X);' in ExclusiveLock::lock(). The deadline is threaded through in the .cpp, not here."
+    },
+    {
+      "path": "src/mongo/db/commands/sleep_command.cpp",
+      "role": "refactor",
+      "evidence": "The whole change is adapting one call to the removed uninterruptible overload: 'pbwm.lock(MODE_X);' becomes 'pbwm.lock(nullptr, MODE_X);' inside _sleepInPBWM. The sleep command has nothing to do with GlobalLock honouring a deadline."
+    }
+  ],
+  "symptom_location": {
+    "file": "src/mongo/db/curop.cpp",
+    "function": null,
+    "determinable": true
+  },
+  "log_location": {
+    "file": null,
+    "function": null,
+    "determinable": false
+  },
+  "relation": "caller-callee",
+  "rationale": "The report names the defect and its consequence separately: 'This PBWM lock acquisition ignores the passed in deadline' points at d_concurrency.cpp L153, and 'A consequence is that this GlobalLock construction can hang waiting for the PBWM lock' points at curop.cpp L444-L447. The diff corrects exactly that line, '_pbwm.lock(opCtx, MODE_IS);' becoming '_pbwm.lock(opCtx, MODE_IS, deadline);', so the caller in curop.cpp hangs because the callee silently discarded the deadline it supplied. The other two gold files only follow the signature change.",
+  "confidence": "high",
+  "notes": "REPORT-NAMES-FIX: the report links the exact source line that is wrong and prescribes the adopted fix. The symptom site, src/mongo/db/curop.cpp, is outside the gold set, and its function name is not visible in the packet, so function is null; the file path comes from the report's link rather than from a trace. Two of the three gold files are pure signature adaptation spread over two preparatory commits. A second rater could call the relation 'same-location', since the hang itself occurs inside the gold file's GlobalLock constructor, and could call d_concurrency.h 'causal' because the deadline parameter is introduced in its declaration; it is 'refactor' here under the CONVENTIONS rule that a declaration-only header change, including a new defaulted parameter, matches the fil0fil.h precedent."
+}

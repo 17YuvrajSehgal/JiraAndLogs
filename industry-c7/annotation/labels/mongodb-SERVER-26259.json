@@ -1,0 +1,28 @@
+{
+  "id": "mongodb:SERVER-26259",
+  "project": "mongodb",
+  "issue_key": "SERVER-26259",
+  "annotator": "claude-opus-5",
+  "pass": 1,
+  "file_roles": [
+    {
+      "path": "src/mongo/db/server_options_helpers.cpp",
+      "role": "causal",
+      "evidence": "addGeneralServerOptions, the function that registers the options both server binaries share, did not offer the switch at all; the fix adds it between the existing timeStampFormat and pidfilepath entries, 'options->addOptionChaining(\"security.redactClientLogData\", \"redactClientLogData\", moe::Switch, \"Redact client data written to the diagnostics log\");' guarded by '#if MONGO_ENTERPRISE_VERSION'."
+    }
+  ],
+  "symptom_location": {
+    "file": "src/mongo/db/server_options_helpers.cpp",
+    "function": "addGeneralServerOptions",
+    "determinable": true
+  },
+  "log_location": {
+    "file": null,
+    "function": null,
+    "determinable": false
+  },
+  "relation": "same-location",
+  "rationale": "The request is that mongos accept a switch it did not have, 'Add --redactClientLogData to mongos, so that database contents passing through mongos will experience the same log preprocessing they will receive on the underlying mongod.' The single changed file is the shared option table, and the commit says the option was moved into it from elsewhere, 'Import redactClientLogData from enterprise module'. The absence and the repair are in the same function, and no consuming code was touched.",
+  "confidence": "medium",
+  "notes": "The instance has no failure: nothing crashed, nothing was logged, and the report is a one-sentence feature request, so log_location.determinable = false. The role is a judgement call and a second rater could reasonably differ. It is labelled causal under the convention that an unhandled or unoffered input is the defect when the changed file owns that feature and nothing elsewhere was treated as broken (HIVE-2334, KAFKA-6250 group), the shared option table being exactly where the switch was missing for mongos. A second rater could call it preventive, reading the addition of a redaction switch as the rubric's 'configuration tightening', or unclear, on the ground that the rubric defines causal in terms of a reported failure and there is no failure here. Worth putting in the agreement check. The option is added under '#if MONGO_ENTERPRISE_VERSION', so a community build sees no behaviour change from this diff at all."
+}

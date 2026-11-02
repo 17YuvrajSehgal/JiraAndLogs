@@ -1,0 +1,28 @@
+{
+  "id": "qt:QTBUG-85529",
+  "project": "qt",
+  "issue_key": "QTBUG-85529",
+  "annotator": "claude-opus-5",
+  "pass": 1,
+  "file_roles": [
+    {
+      "path": "src/plugins/platforminputcontexts/compose/qcomposeplatforminputcontext.cpp",
+      "role": "causal",
+      "evidence": "QComposeInputContext::ensureInitialized picked the locale with 'const char *locale = setlocale(LC_CTYPE, \"\"); if (!locale) locale = setlocale(LC_CTYPE, nullptr);' and handed it straight to 'xkb_compose_table_new_from_locale(m_XkbContext, locale, XKB_COMPOSE_COMPILE_NO_FLAGS)'. The fix reads the environment itself, 'locale = getenv(\"LC_ALL\") ... getenv(\"LC_CTYPE\") ... getenv(\"LANG\") ... locale = \"C\"', which is the locale rule xkbcommon documents. The compose table this file builds is what decides which sequences exist."
+    }
+  ],
+  "symptom_location": {
+    "file": "src/plugins/platforminputcontexts/compose/qcomposeplatforminputcontext.cpp",
+    "function": null,
+    "determinable": true
+  },
+  "log_location": {
+    "file": null,
+    "function": null,
+    "determinable": false
+  },
+  "relation": "state-producer",
+  "rationale": "The report is that only one diacritic order composes, 'I can only do this by typing the acute, then the smooth breathing, then the alpha', while other toolkits accept both, which is a compose table with fewer sequences than the user's locale provides. The whole diff is the locale passed to xkb_compose_table_new_from_locale, and the commit gives the reason, 'The setlocale call will only give useful results if the program had previously set the current locale using setlocale'. The wrong table is built at initialisation and consumed later when keys are fed to the compose state.",
+  "confidence": "medium",
+  "notes": "Medium because the step from a wrong locale to the missing reverse-order Greek sequences is an inference: neither the diff nor the commit message shows which table was loaded or what it contained. The role is causal on any reading, since the locale selection is the only logic changed. The key-handling function where the symptom surfaces is not visible in the hunk, so symptom_location records the file with a null function per the conventions. The report pastes no log and the instance has no stack trace; there is a qCDebug 'detected locale' line in the file but the reporter did not run with it. The fix ships with no regression test: one changed file, no test file."
+}

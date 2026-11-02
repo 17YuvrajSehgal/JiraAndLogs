@@ -1,0 +1,38 @@
+{
+  "id": "wildfly:WFLY-11010",
+  "project": "wildfly",
+  "issue_key": "WFLY-11010",
+  "annotator": "claude-opus-5",
+  "pass": 1,
+  "file_roles": [
+    {
+      "path": "jpa/hibernate5_3/src/main/java/org/jboss/as/jpa/hibernate5/service/ServiceContributorImpl.java",
+      "role": "causal",
+      "evidence": "contribute() registered WildFly's own initiators whenever the two wildfly.jpa.* properties were not explicitly false, with no regard for what the application had already configured. The fix adds the two detections the report asks for and lets them win: 'if (serviceRegistryBuilder.getSettings().get(TRANSACTION_PLATFORM) != null) { ... } else if (jtaPlatformInitiatorEnabled == null || ...) { serviceRegistryBuilder.addInitiator(new WildFlyCustomJtaPlatformInitiator()); }', and 'if ((regionFactory instanceof String) && (((String) regionFactory)).contains(EHCACHE)) { ... } else if (regionFactoryInitiatorEnabled == null || ...) { serviceRegistryBuilder.addInitiator(new WildFlyCustomRegionFactoryInitiator()); }'. This class owns the decision of whether to contribute the WildFly services, and that decision is what changed."
+    },
+    {
+      "path": "jpa/hibernate5_3/src/main/java/org/jboss/as/jpa/hibernate5/HibernatePersistenceProviderAdaptor.java",
+      "role": "preventive",
+      "evidence": "Widens the disabled test to a mode the report never mentions, 'NONE.equals(sharedCacheMode);' becoming 'NONE.equals(sharedCacheMode) || SharedCacheMode.UNSPECIFIED.equals(pu.getSharedCacheMode()) || UNSPECIFIED.equals(sharedCacheMode);', and then pins the unit down, 'pu.setSharedCacheMode(SharedCacheMode.NONE); // ensure that Hibernate doesn't try to use the 2lc for UNSPECIFIED'. The report asks only about Ehcache and about hibernate.transaction.jta.platform; UNSPECIFIED appears nowhere in it. This is a configuration tightening on a neighbouring path."
+    },
+    {
+      "path": "jpa/hibernate5_3/src/main/java/org/jboss/as/jpa/hibernate5/service/WildFlyCustomRegionFactoryInitiator.java",
+      "role": "symptom-handling",
+      "evidence": "Control flow is untouched: all three branches still do what they did, 'configurationValues.put(HIBERNATE_REGION_FACTORY_CLASS, V53_INFINISPAN_REGION_FACTORY); return super.resolveRegionFactory(configurationValues, registry);' and 'return NoCachingRegionFactory.INSTANCE;'. Everything added is diagnostic: a static import, 'import static org.jboss.as.jpa.hibernate5.JpaLogger.JPA_LOGGER;', a local read only by the messages, 'final Object regionFactory = configurationValues.get(HIBERNATE_REGION_FACTORY_CLASS);', three tracef calls such as 'JPA_LOGGER.tracef(\"WildFlyCustomRegionFactoryInitiator#resolveRegionFactory using %s for 2lc, ...\")', and one blank line. This is the site where an application's region factory was being overridden, and it learns to say so without being corrected."
+    }
+  ],
+  "symptom_location": {
+    "file": null,
+    "function": null,
+    "determinable": false
+  },
+  "log_location": {
+    "file": null,
+    "function": null,
+    "determinable": false
+  },
+  "relation": "unclear",
+  "rationale": "Nothing failed. The report is a documentation and enhancement request whose three paragraphs each describe a behaviour to add, 'Document the \"wildfly.jpa.regionfactory\" and \"wildfly.jpa.jtaplatform\" properties', 'automatically treat \"wildfly.jpa.regionfactory\" as false if ehcache is being used', 'automatically treat \"wildfly.jpa.jtaplatform\" as false if the application sets \"hibernate.transaction.jta.platform\"'. There is no stack trace, no log line, no reproduction and no error, so there is no site at which a failure surfaced and no relation between a symptom and a cause to record. ServiceContributorImpl is labelled causal because it holds the logic that overrode the application's configuration and that logic is what the diff rewrites.",
+  "confidence": "medium",
+  "notes": "The instance has no failure: an enhancement and documentation request, not a bug report. REPORT-NAMES-FIX: the report prescribes the adopted fix almost line by line, including both property names and the exact signal to look for, so a reader is handed the change before seeing any code. The implementation widens one of them deliberately, since the report says to check that the value 'starts with \"net.sf.ehcache\"' while the code tests 'contains(EHCACHE)' with EHCACHE = \"ehcache\"; worth recording as a case where the commit is not what the report asked for. The documentation half of the request landed in the fourth changed file, which is not a non-test source file and so is not in gold. Second rater would reasonably disagree twice here: HibernatePersistenceProviderAdaptor could be read as causal, since UNSPECIFIED handling is the same class of defect and this class owns shared-cache-mode handling, and WildFlyCustomRegionFactoryInitiator could be read as refactor rather than symptom-handling, since what it gains is only trace logging. It is symptom-handling because the recorded reading of that role is a change that only detects or reports while the production code is left correct, which is exactly this file. Both are worth putting in the human agreement subset."
+}

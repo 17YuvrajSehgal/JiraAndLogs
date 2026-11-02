@@ -1,0 +1,33 @@
+{
+  "id": "mongodb:SERVER-15763",
+  "project": "mongodb",
+  "issue_key": "SERVER-15763",
+  "annotator": "claude-opus-5",
+  "pass": 1,
+  "file_roles": [
+    {
+      "path": "src/mongo/db/repl/repl_coordinator_impl.cpp",
+      "role": "causal",
+      "evidence": "The isMaster reply built during drain advertised a state no client could read from, and the reply logic is corrected here: '// Report NotMaster when draining the applier. response->setIsMaster(false);' becomes '// Report that we are secondary to ismaster callers until drain completes. response->setIsMaster(false); response->setIsSecondary(true);'. This file builds the reply, so the wrong value was produced here."
+    },
+    {
+      "path": "src/mongo/db/repl/repl_coordinator_test_fixture.cpp",
+      "role": "test",
+      "evidence": "A unit-test fixture: its change is assertions only, 'IsMasterResponse imResponse; replCoord->fillIsMasterForReplSet(&imResponse); ASSERT_FALSE(imResponse.isMaster()) << imResponse.toBSON().toString(); ASSERT_TRUE(imResponse.isSecondary()) << imResponse.toBSON().toString();' around the existing 'replCoord->signalDrainComplete();', plus the '#include \"mongo/db/repl/is_master_response.h\"' those assertions need. No production behaviour is defined here."
+    }
+  ],
+  "symptom_location": {
+    "file": "src/mongo/db/repl/repl_coordinator_impl.cpp",
+    "function": "ReplicationCoordinatorImpl::fillIsMasterForReplSet",
+    "determinable": true
+  },
+  "log_location": {
+    "file": null,
+    "function": null,
+    "determinable": false
+  },
+  "relation": "same-location",
+  "rationale": "The report asks for one thing, 'Check to make sure that isMaster returns something readable ... when transitioning to primary, during draining stage esp.', and the wrong reply is built in the one production gold file, where 'if (isWaitingForApplierToDrain())' sets isMaster false and now also sets isSecondary true. The defect and the place the user sees it are the same function: the reply the client reads is assembled there. The second gold file only asserts the new reply.",
+  "confidence": "high",
+  "notes": "Benchmark defect: a test file leaked into the gold set. 'src/mongo/db/repl/repl_coordinator_test_fixture.cpp' is unit-test support whose entire change is ASSERT macros, but the filter kept it because the name ends '_test_fixture.cpp' rather than '_test.cpp'; the packet says 3 files changed and 2 are gold, so one sibling test was filtered and this one was not. The symptom is an isMaster command reply, not a log, so log_location.determinable = false, as conventions require for SHOW-style command output. symptom_location.function is not in the hunk header; it is taken from inside the packet, since the test fixture calls 'replCoord->fillIsMasterForReplSet(&imResponse)' and the function defined immediately after the hunk is 'ReplicationCoordinatorImpl::_fillIsMasterForReplSet_finish', which the hunk schedules and waits on. Not REPORT-NAMES-FIX: the reporter prescribes a different reply from the one adopted, asking for '{{ismaster:true, secondary:false }}' while the commit keeps ismaster false and sets issecondary true, 'Such nodes already report ismaster:false, so need to report issecondary:true'. The instance has no failure report in the usual sense: no log, no trace, no reproducer, only a developer-filed request."
+}

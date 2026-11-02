@@ -1,0 +1,28 @@
+{
+  "id": "qt:QTBUG-96069",
+  "project": "qt",
+  "issue_key": "QTBUG-96069",
+  "annotator": "claude-opus-5",
+  "pass": 1,
+  "file_roles": [
+    {
+      "path": "src/corelib/kernel/qjnienvironment.cpp",
+      "role": "causal",
+      "evidence": "registerNativeMethods looked a class up by instantiating it, 'QJniObject classObject(className);' then 'if (!classObject.isValid()) return false;' and 'return registerNativeMethods(classObject.objectClass(), methods, size);'. Registering native methods needs a jclass, not an instance, so the fix asks for the class directly, 'const jclass clazz = findClass(className); if (!clazz) return false; return registerNativeMethods(clazz, methods, size);'. The commit states the defect, 'In case the class doens't have a default constructor, checking for object.isValid() will give false because the object won't be created, however, the class could still be loaded and we could have a valid jclass.'"
+    }
+  ],
+  "symptom_location": {
+    "file": "src/corelib/kernel/qjnienvironment.cpp",
+    "function": "QJniEnvironment::registerNativeMethods",
+    "determinable": true
+  },
+  "log_location": {
+    "file": null,
+    "function": null,
+    "determinable": false
+  },
+  "relation": "same-location",
+  "rationale": "The first reported line is the removed statement failing, 'java.lang.NoSuchMethodError: no non-static method \"Lorg/qtproject/qt/android/multimedia/QtAndroidMediaPlayer;.<init>()V\"', which is the JVM refusing the default-constructor lookup that 'QJniObject classObject(className);' performs. The invalid object then made the function return false, and the caller treated that as registration failure, 'java.lang.UnsatisfiedLinkError: JNI_ERR returned from JNI_OnLoad in \"/data/app/org.qtproject.example.camera-1/lib/arm/libQt6Multimedia_armeabi-v7a.so\"'. The class itself loaded fine; only the needless instantiation failed, and that is the logic the diff removes.",
+  "confidence": "high",
+  "notes": "The fatal frame and the fix are in different Qt modules. The crash is raised in JNI_OnLoad inside libQt6Multimedia, while the gold file is qtbase corelib, which is the module the 5,873-file snapshot holds; the multimedia side is not in the snapshot at all and no file name for it appears in the packet. The gold file does not appear in the report at all, and neither does any C++ frame: both messages are Android runtime output, tagged 'W System.err' and 'E AndroidRuntime', emitted by the JVM rather than by Qt, so log_location.determinable = false. The report nonetheless hands over the whole mechanism in its first line, since the missing '<init>()V' is exactly what the commit says went wrong, even though it names a Java class rather than the faulty C++ function. The commit changed 3 files and only this one is a non-test source file."
+}

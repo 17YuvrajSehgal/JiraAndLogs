@@ -1,0 +1,28 @@
+{
+  "id": "qt:QTBUG-84924",
+  "project": "qt",
+  "issue_key": "QTBUG-84924",
+  "annotator": "claude-opus-5",
+  "pass": 1,
+  "file_roles": [
+    {
+      "path": "src/corelib/kernel/qmetatype.h",
+      "role": "causal",
+      "evidence": "QTypeNormalizer baked the host standard library's inline ABI namespace into the normalized name, '#ifdef _LIBCPP_VERSION appendStr(\"std::\" QT_STRINGIFY(_LIBCPP_ABI_NAMESPACE) \"::pair\"); #else appendStr(\"std::pair\"); #endif', which is the 'std::__1::pair' the compiler rejects. The fix deletes that branch so only 'appendStr(\"std::pair\")' remains, and adds the std::pair specialization of typenameHelper that builds the name itself, 'constexpr auto prefix = \"std::pair<\";' plus 'nameAsArray' for built-in types, instead of taking it from Q_FUNC_INFO."
+    }
+  ],
+  "symptom_location": {
+    "file": "src/network/access/qnetworkreplyhttpimpl_p.h",
+    "function": "replyDownloadMetaData",
+    "determinable": true
+  },
+  "log_location": {
+    "file": null,
+    "function": null,
+    "determinable": false
+  },
+  "relation": "config-build",
+  "rationale": "The build fails on generated code containing the host spelling of the type, \"error: no member named '__1' in namespace 'std'\" on the line 'case 15: _t->d_func()->replyDownloadMetaData((*reinterpret_cast< QVector<std::__1::pair<QByteArray,QByteArray>>(*)>(_a[1])), ...'. The only code that can produce that spelling is the _LIBCPP_VERSION branch the diff removes, and the commit says so, 'the full name of pair on libc++ was std::__1::pair'. The name is fixed on the macOS host and consumed by the Android target compile, which is why the failure is a cross-build one.",
+  "confidence": "medium",
+  "notes": "Medium because one load-bearing link is an inference the packet cannot settle: that the type name in the generated moc output comes from this QTypeNormalizer code rather than from a separate copy inside moc. The role is causal on either reading, since this is where the libc++ namespace spelling is produced and removed. The gold file does not appear in the error output at all: it names only the generated '.moc/x86_64/moc_qnetworkreplyhttpimpl_p.cpp' and a 'class QByteArray;' forward declaration in qnetworkaccessmanager.h. log_location.determinable = false because the only file the compiler names for the errors is generated, which the conventions exclude; symptom_location is the project-owned header that moc processed, inferred from the moc file name, since the packet does not show the tree. The instance has no runtime failure. The packet says 2 files changed of which 1 is non-test source, so a test did ship."
+}

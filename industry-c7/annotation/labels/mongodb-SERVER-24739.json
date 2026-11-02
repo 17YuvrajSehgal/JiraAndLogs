@@ -1,0 +1,38 @@
+{
+  "id": "mongodb:SERVER-24739",
+  "project": "mongodb",
+  "issue_key": "SERVER-24739",
+  "annotator": "claude-opus-5",
+  "pass": 1,
+  "file_roles": [
+    {
+      "path": "src/mongo/db/mongod_options.cpp",
+      "role": "causal",
+      "evidence": "storeMongodOptions stored the startup value with no range test, 'storageGlobalParams.syncdelay = params[\"storage.syncPeriodSecs\"].as<double>();'. The fix adds the missing test in the same block, 'if (storageGlobalParams.syncdelay < 0 || storageGlobalParams.syncdelay > StorageGlobalParams::kMaxSyncdelaySecs) { return Status(ErrorCodes::BadValue, str::stream() << \"syncdelay out of allowed range (0-\" ...'."
+    },
+    {
+      "path": "src/mongo/db/storage/storage_options.cpp",
+      "role": "causal",
+      "evidence": "The runtime setParameter path accepted anything because the parameter was a bare export, 'ExportedServerParameter<double, ServerParameterType::kStartupAndRuntime> SyncdelaySetting(ServerParameterSet::getGlobal(), \"syncdelay\", &storageGlobalParams.syncdelay);'. The fix subclasses it and supplies the missing validator, 'virtual Status validate(const double& potentialNewValue) { if (potentialNewValue < 0.0 || potentialNewValue > StorageGlobalParams::kMaxSyncdelaySecs) { return Status(ErrorCodes::BadValue, ...'. The same file also defines the bound, 'const double StorageGlobalParams::kMaxSyncdelaySecs = 9.0 * 1000.0 * 1000.0;'."
+    },
+    {
+      "path": "src/mongo/db/storage/storage_options.h",
+      "role": "refactor",
+      "evidence": "The whole change is one declaration added beside the existing member, 'static const double kMaxSyncdelaySecs;' above 'AtomicDouble syncdelay{60.0};  // seconds between fsyncs'. No logic, no inline body."
+    }
+  ],
+  "symptom_location": {
+    "file": null,
+    "function": "DataFileSync::run",
+    "determinable": false
+  },
+  "log_location": {
+    "file": null,
+    "function": null,
+    "determinable": false
+  },
+  "relation": "state-producer",
+  "rationale": "The crash is a conversion overflow raised while the background job consumed the setting, 'backgroundjob DataFileSync exception: Overflow casting from a lower-precision duration to a higher-precision duration', ending in 'terminate() called. An exception is active'. Nothing in the consuming code was changed; the entire fix adds the range test at the two places that accept a syncdelay value, the startup option in mongod_options.cpp and the runtime setParameter in storage_options.cpp. The out-of-range value is therefore stored at one time and converted at another, which is a state-producer relation and not a local one.",
+  "confidence": "medium",
+  "notes": "Convention applied: adding a check for a legal-but-unhandled input is causal when the changed file owns that feature and nothing elsewhere was treated as broken (HIVE-2334, KAFKA-6250 group). Both validators are labelled causal under the duplicated-copies convention: the report says only 'if an invalid syncdelay value is specified' and never says whether the value arrived at startup or through setParameter, so either entry point could have produced it and the packet cannot say which; the commit message covers both, 'Validate syncdelay at startup and on setParameter'. That ambiguity is why confidence is medium rather than high. The gold file does not appear in the trace at all: the pasted output names only the DataFileSync background job and the duration_cast message, and none of the three changed files is mentioned, because the thread that accepted the bad value had long since returned. symptom_location.file is null because the report names the function in its title, 'Unhandled duration_cast exception in DataFileSync::run', but the packet never shows that file's path. log_location is not determinable: the bracketed [DataFileSync] is a thread context, and the code that formats 'backgroundjob ... exception' is not in the packet. The fix changed 5 files and only 3 are non-test source, so 2 test files were filtered as intended."
+}

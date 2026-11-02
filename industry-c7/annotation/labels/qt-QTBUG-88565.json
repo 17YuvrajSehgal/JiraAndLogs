@@ -1,0 +1,28 @@
+{
+  "id": "qt:QTBUG-88565",
+  "project": "qt",
+  "issue_key": "QTBUG-88565",
+  "annotator": "claude-opus-5",
+  "pass": 1,
+  "file_roles": [
+    {
+      "path": "src/plugins/platforms/wayland/qwaylandwindow.cpp",
+      "role": "refactor",
+      "evidence": "The whole change is one call site spelling out a conversion that used to be implicit, 'QFileInfo fi = QCoreApplication::instance()->applicationFilePath();' becoming 'QFileInfo fi = QFileInfo(QCoreApplication::instance()->applicationFilePath());'. Semantics are identical; the commit says why it was needed, 'The QFileInfo constructors were made explicit in 784a290c4b08e84d895a62dada5420a3b47dde48, breaking compilation where the implicit construction was used.' This is an API adaptation forced by a change elsewhere."
+    }
+  ],
+  "symptom_location": {
+    "file": "src/plugins/platforms/wayland/qwaylandwindow.cpp",
+    "function": "QWaylandWindow::initWindow",
+    "determinable": true
+  },
+  "log_location": {
+    "file": "src/plugins/platforms/wayland/qwaylandwindow.cpp",
+    "function": "QWaylandWindow::initWindow",
+    "determinable": true
+  },
+  "relation": "config-build",
+  "rationale": "The failure is a compile error, 'error: conversion from QString to non-scalar type QFileInfo requested' at 'qwaylandwindow.cpp:165:81', and the line it names is the line the diff rewrites. Nothing about the behaviour was wrong: the implicit construction was legal until QFileInfo's constructors were made explicit in another module, so the diff corrects no logic and only restores compilation. Under the rubric this is an API adaptation forced by a change elsewhere, which leaves this instance with no causal file.",
+  "confidence": "high",
+  "notes": "No causal file, which rubric rule 3 allows. A second rater would reasonably disagree and call this causal, since the gold file holds the exact line that failed and is the only thing changed; it is refactor here because the diff alters no logic and the change that broke it, 784a290c4b08, is outside the gold set and outside this snapshot. Worth putting in the agreement check. Two further observations: the compiler names the file as 'src/client/qwaylandwindow.cpp' while the gold path is 'src/plugins/platforms/wayland/qwaylandwindow.cpp', so the only path in the evidence does not match the path a localizer must produce; and the GCC diagnostic naming file, line and function is treated as placing the site, by analogy with the libc assertion convention. The instance has no runtime failure, and the fix ships with no regression test."
+}

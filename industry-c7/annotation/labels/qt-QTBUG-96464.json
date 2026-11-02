@@ -1,0 +1,28 @@
+{
+  "id": "qt:QTBUG-96464",
+  "project": "qt",
+  "issue_key": "QTBUG-96464",
+  "annotator": "claude-opus-5",
+  "pass": 1,
+  "file_roles": [
+    {
+      "path": "src/plugins/platforms/wayland/qwaylandwindow.cpp",
+      "role": "causal",
+      "evidence": "QWaylandWindow::reset() cleared the frame-callback state but not the configure state, 'mFrameCallbackElapsedTimer.invalidate(); mWaitingForFrameCallback = false; mFrameCallbackTimedOut = false;', and the fix adds the missing line beside them, '+ mWaitingToApplyConfigure = false;'. reset() is what tears the wl_surface down, so this file owns the job of leaving no state behind for the next surface, and the commit says exactly that, 'This change makes sure we always reset mWaitingToApplyConfigure before a new wl_surface is created.'"
+    }
+  ],
+  "symptom_location": {
+    "file": "src/plugins/shellintegration/xdg-shell/qwaylandxdgshell.cpp",
+    "function": "QWaylandXdgSurface::applyConfigure",
+    "determinable": true
+  },
+  "log_location": {
+    "file": "src/plugins/shellintegration/xdg-shell/qwaylandxdgshell.cpp",
+    "function": "QWaylandXdgSurface::applyConfigure",
+    "determinable": true
+  },
+  "relation": "state-producer",
+  "rationale": "The abort is in a different file from the fix, 'ASSERT: \"m_pendingConfigureSerial != 0\" in file qtwayland/src/plugins/shellintegration/xdg-shell/qwaylandxdgshell.cpp, line 351', and the reporter describes the ordering that reaches it, 'xdg_surface_configure() may be called again before QWaylandXdgSurface::applyConfigure()'. The serial that the assert finds at zero was consumed with the old surface; the flag that still says a configure is pending was left set by QWaylandWindow::reset(), and that stale flag is the whole of the fix. The commit confirms the late event is harmless once the flag is clear, 'The superfluous applyConfigure invocation will then be safely ignored.'",
+  "confidence": "high",
+  "notes": "The gold file does not appear in the report at all, and the file the report does name, qwaylandxdgshell.cpp, is not in the gold set. The report hands a reader a file, a line number and an assertion expression, all of which point at the consumer rather than the producer, so a localizer that trusts the report is scored wrong. The assert text places file and line but not function; applyConfigure is taken from the reporter's own sentence naming it. Paths are rewritten to the repository-relative form the gold list uses, since the assert text carries a 'qtwayland/' prefix and the packet does not show the tree. The snapshot here holds only 130 non-test source files, far smaller than the ~5,880 of the other qt instances in this share, so this instance's retrieval difficulty is not comparable with them. One line changed, one file, no regression test."
+}

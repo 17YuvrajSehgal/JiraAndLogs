@@ -1,0 +1,28 @@
+{
+  "id": "mongodb:SERVER-42061",
+  "project": "mongodb",
+  "issue_key": "SERVER-42061",
+  "annotator": "claude-opus-5",
+  "pass": 1,
+  "file_roles": [
+    {
+      "path": "src/mongo/crypto/aead_encryption.cpp",
+      "role": "causal",
+      "evidence": "_aesDecrypt returned 'Status::OK()' for any payload whose length check passed. The fix inserts the missing validation before that return, 'if (*resultLen >= dataSize) { return {ErrorCodes::BadValue, \"Decrypt error, plaintext is as large or larger than the ciphertext. This usually indicates an invalid key.\"}; }', with the added comment stating why the old code was wrong: 'If resultLen is the same as the payload len, that means no padding was removed' and 'macOS CommonCrypto will return such payloads when either the key or ciphertext are corrupted and its unable to find any expected padding.  It fails open by returning whatever it can.' This file owns AEAD decryption and is the only non-test file changed."
+    }
+  ],
+  "symptom_location": {
+    "file": null,
+    "function": null,
+    "determinable": false
+  },
+  "log_location": {
+    "file": null,
+    "function": null,
+    "determinable": false
+  },
+  "relation": "unclear",
+  "rationale": "The report is a one-line title, 'Validate decrypted payload in ESE', with no failure, log, trace or reproducer, so there is no symptom site to locate. The diff shows the wrong logic plainly: _aesDecrypt accepted a result whose plaintext was not shorter than the ciphertext, which the added comment says happens 'when either the key or ciphertext are corrupted', and the fix rejects it with ErrorCodes::BadValue. Because aead_encryption.cpp owns the decrypt path and nothing else was treated as broken, the unguarded return is the defect rather than a downstream guard.",
+  "confidence": "medium",
+  "notes": "The instance has no failure: the report is a bare title with no log, trace or reproducer, so symptom_location and log_location are both undeterminable and the relation is 'unclear'. REPORT-NAMES-FIX: the title prescribes the adopted fix ('Validate decrypted payload') and the commit message repeats it ('Validate decrypted payload in AEAD decrypt'). A second rater could reasonably call this 'preventive' instead of 'causal', because the code that misbehaves is the platform library (macOS CommonCrypto 'fails open'), not MongoDB, which makes the added check a defensive validation of an external result. It is labelled causal under the CONVENTIONS rule that a check for a legal-but-unhandled input is causal when the changed file owns the feature and no other file was treated as broken. Worth putting in the agreement check."
+}

@@ -1,0 +1,28 @@
+{
+  "id": "qt:QTBUG-85734",
+  "project": "qt",
+  "issue_key": "QTBUG-85734",
+  "annotator": "claude-opus-5",
+  "pass": 1,
+  "file_roles": [
+    {
+      "path": "src/plugins/platforms/windows/qwindowsscreen.cpp",
+      "role": "causal",
+      "evidence": "QWindowsScreenManager::handleScreenChanges dereferenced the theme singleton unconditionally, 'if (primaryScreenChanged) QWindowsTheme::instance()->refreshFonts();'. The fix tests it first, 'if (primaryScreenChanged) { if (auto theme = QWindowsTheme::instance()) // QTBUG-85734/Wine / theme->refreshFonts(); }'. That unchecked dereference is the crash and no other file was changed."
+    }
+  ],
+  "symptom_location": {
+    "file": "src/plugins/platforms/windows/qwindowsscreen.cpp",
+    "function": "QWindowsScreenManager::handleScreenChanges",
+    "determinable": true
+  },
+  "log_location": {
+    "file": null,
+    "function": null,
+    "determinable": false
+  },
+  "relation": "same-location",
+  "rationale": "The reporter states the mechanism and the line, 'QWindowTheme::instance() is null when refreshFonts() is called. Looks like here [.../qwindowsscreen.cpp#L572]', and the diff changes exactly that statement. Under the convention that a check added for a legal-but-unhandled input is causal when the changed file owns the feature and nothing elsewhere was treated as broken, the unguarded dereference is the defect. The null itself comes from QWindowsTheme's own lifecycle, which the packet does not show and which was not changed.",
+  "confidence": "high",
+  "notes": "REPORT-NAMES-FIX: the report names the faulty code and links the exact line, 'Looks like here [https://github.com/qt/qtbase/blob/dev/src/plugins/platforms/windows/qwindowsscreen.cpp#L572]', and the adopted fix is the null check it implies. No stack trace or log was pasted, only 'Qt crashes in qwindows.dll', so log_location.determinable = false. The fix ships with no regression test, and the commit hedges on reproduction, 'Potential crash fix for Wine'. A second rater could call this preventive on the strength of that word; it is causal here because the dereference without a check is the wrong logic and the report reproduces it."
+}

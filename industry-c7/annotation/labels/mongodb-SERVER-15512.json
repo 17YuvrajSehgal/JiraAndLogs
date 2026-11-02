@@ -1,0 +1,28 @@
+{
+  "id": "mongodb:SERVER-15512",
+  "project": "mongodb",
+  "issue_key": "SERVER-15512",
+  "annotator": "claude-opus-5",
+  "pass": 1,
+  "file_roles": [
+    {
+      "path": "src/mongo/db/repl/rs_sync.cpp",
+      "role": "causal",
+      "evidence": "The only hunk takes the replset lock around a mutation that previously ran unsynchronised: 'void ReplSetImpl::clearVetoes() { _veto.clear(); }' becomes 'void ReplSetImpl::clearVetoes() { lock lk(this); _veto.clear(); }'. The file owns both sides of the race, since 'void ReplSetImpl::syncThread()' is the function immediately below in the same hunk's context."
+    }
+  ],
+  "symptom_location": {
+    "file": null,
+    "function": null,
+    "determinable": false
+  },
+  "log_location": {
+    "file": null,
+    "function": null,
+    "determinable": false
+  },
+  "relation": "concurrency",
+  "rationale": "The reported failure is a secondary that never builds an oplog, 'm31001| ... I REPLSETS [rsSync] no valid sync sources found in current replset to do an initial sync', repeated until the harness gives up. The fix is a lock and nothing else, 'lock lk(this);' added to ReplSetImpl::clearVetoes, so the defect is an unsynchronised clear of the sync-source veto map, which this file owns. Two threads and an ordering, with no logic corrected anywhere else.",
+  "confidence": "medium",
+  "notes": "The commit message and the diff do not describe the same thing: the message says 'add lock to protect legacy initial sync flag access' while the only hunk locks '_veto.clear()', a sync-source veto map, not a flag. Rubric rule 4 applies, so the role follows the diff. The mechanism from an unlocked _veto.clear() to 'no valid sync sources found' is not shown anywhere in the packet, which is why confidence is medium. symptom_location and log_location are left undeterminable rather than guessed: every frame in the pasted trace belongs to the shell harness, 'doassert (src/mongo/shell/assert.js:11:14)', 'Function.assert.soon (src/mongo/shell/assert.js:181:51)', 'ReplSetTest.awaitReplication (src/mongo/shell/replsettest.js:507:12)' and 'jstests/replsets/resync.js:55:10', and conventions say a test-harness assertion is not a log. The one real server log line is placed only by a thread tag, '[rsSync]', and the packet never shows which file emits that text; the gold file does contain 'ReplSetImpl::syncThread()', the body of that thread, but a thread tag places the thread, not the emitting file, so claiming the gold file as the symptom site would inflate the coincidence this annotation is measuring. The fix ships with no regression test: the packet records one changed file and it is the gold file."
+}
