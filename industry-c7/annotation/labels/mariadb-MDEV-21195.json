@@ -1,0 +1,38 @@
+{
+  "id": "mariadb:MDEV-21195",
+  "project": "mariadb",
+  "issue_key": "MDEV-21195",
+  "annotator": "claude-opus-5",
+  "pass": 1,
+  "file_roles": [
+    {
+      "path": "sql/sql_partition.cc",
+      "role": "causal",
+      "evidence": "part_val_int took the integer value of any expression, '*result= item_expr->val_int();', which rounds a decimal half up so 9.9 arrives as 10. It becomes a switch on cmp_type where DECIMAL_RESULT goes through 'my_decimal2int(E_DEC_FATAL_ERROR, val, item_expr->unsigned_flag, result, FLOOR)'. Choosing the partition from a rounded value is the defect and it is decided here."
+    },
+    {
+      "path": "sql/my_decimal.cc",
+      "role": "refactor",
+      "evidence": "my_decimal2int gains a parameter instead of a fixed mode, 'decimal_round(d, &rounded, 0, HALF_UP)' becoming 'decimal_round(d, &rounded, 0, round_type)'. Existing callers keep the old behaviour through the default, so this only makes FLOOR expressible."
+    },
+    {
+      "path": "sql/my_decimal.h",
+      "role": "refactor",
+      "evidence": "The matching declaration, 'longlong *l, decimal_round_mode round_type= HALF_UP'. Declaration only."
+    }
+  ],
+  "symptom_location": {
+    "file": "sql/sql_partition.cc",
+    "function": "part_val_int",
+    "determinable": true
+  },
+  "log_location": {
+    "file": null,
+    "function": null,
+    "determinable": false
+  },
+  "relation": "same-location",
+  "rationale": "Nothing crashes and nothing is logged. The evidence is behaviour shown twice: a row inserted as 9.9 is absent from p1 and present in p2, and with only p1 defined the same insert gives 'ERROR 1526 (HY000): Table has no partition for value 10'. That error text carries the rounded value and is the clearest sign of the defect, and the rounding happens in the function the fix rewrites.",
+  "confidence": "high",
+  "notes": "The report names the culprit commit, quoting c3f35ea55a71 and MDEV-18501 in full, and states the mechanism, 'Obviously, it temporarily rounds the value before finding a partition'. That is the second instance after MDEV-21063 where the reporter supplies a bisected commit rather than a file or a log, which is decisive evidence that a log-guided approach does not model. Note too that the most useful artefact here is a value inside an error message, the 10 in 'no partition for value 10', rather than the message text itself; matching the message would reach the error catalogue, not the arithmetic."
+}

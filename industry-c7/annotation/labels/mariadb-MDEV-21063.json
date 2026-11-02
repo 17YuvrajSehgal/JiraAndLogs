@@ -1,0 +1,28 @@
+{
+  "id": "mariadb:MDEV-21063",
+  "project": "mariadb",
+  "issue_key": "MDEV-21063",
+  "annotator": "claude-opus-5",
+  "pass": 1,
+  "file_roles": [
+    {
+      "path": "sql/log_event_server.cc",
+      "role": "causal",
+      "evidence": "save_field_metadata copied the raw bytes of an integer, 'memcpy(&m_field_metadata[index], (uchar *)&info->m_metadata, info->m_metadata_size)', which takes the low bytes on a little-endian machine and the high bytes on a big-endian one. It becomes 'int2store(&m_field_metadata[index], info->m_metadata)'. The commit states the rule, 'Memcpy is endian dependent, So instead of memcpy we will use int2store.'"
+    }
+  ],
+  "symptom_location": {
+    "file": null,
+    "function": null,
+    "determinable": false
+  },
+  "log_location": {
+    "file": null,
+    "function": null,
+    "determinable": false
+  },
+  "relation": "state-producer",
+  "rationale": "There is no trace, no error text and no application log. The evidence is a test harness summary, 'Too many failed: Failed 8/80 tests, 90.00% were successful', plus the names of five binlog_encryption tests. The wrong bytes are written into table map metadata on one side and only misread when the event is replayed, so nothing at the point of failure identifies where they were produced.",
+  "confidence": "high",
+  "notes": "The report carries a pointer that is neither a log nor a file path and is nevertheless decisive: 'The culprit seems to be MDEV-20477 Merge binlog extended metadata support from the upstream', with a link to the exact commit, established by comparing a passing build with the first failing one. A system with access to git history could narrow to that commit's files immediately, which is a real signal in bug reports that log-guided localization does not model. MDEV-12609 carried a weaker version of the same thing. Worth counting separately from REPORT-NAMES-FIX, since the reporter names a commit rather than a location."
+}

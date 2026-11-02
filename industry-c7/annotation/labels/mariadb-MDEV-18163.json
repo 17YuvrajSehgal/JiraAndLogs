@@ -1,0 +1,28 @@
+{
+  "id": "mariadb:MDEV-18163",
+  "project": "mariadb",
+  "issue_key": "MDEV-18163",
+  "annotator": "claude-opus-5",
+  "pass": 1,
+  "file_roles": [
+    {
+      "path": "sql/sql_yacc.yy",
+      "role": "causal",
+      "evidence": "The grammar action for 'ALTER opt_column field_ident SET DEFAULT column_default_expr' built the Alter_column directly. It gains the validation the CREATE path already performs, 'if (check_expression($6, $3.str, VCOL_DEFAULT)) MYSQL_YYABORT;'. The commit says exactly that: 'Add the same check for altering DEFAULT used as for CREATE TABLE.'"
+    }
+  ],
+  "symptom_location": {
+    "file": "sql/handler.cc",
+    "function": "handler::ha_rnd_next",
+    "determinable": true
+  },
+  "log_location": {
+    "file": "sql/handler.cc",
+    "function": "handler::ha_rnd_next",
+    "determinable": true
+  },
+  "relation": "state-producer",
+  "rationale": "The assertion names its own site, 'sql/handler.cc:2576 ... int handler::ha_rnd_next(uchar*): Assertion `table_share->tmp_table != NO_TMP_TABLE || m_lock_type != 2' failed'. The subquery was accepted as a column default at parse time and only executed much later, when the new frm image is built, which the stack shows running from make_empty_rec through Item::save_in_field into subquery execution. Accepting the expression and executing it are separated by the whole ALTER.",
+  "confidence": "high",
+  "notes": "The gold file cannot appear in a stack trace at all. sql_yacc.yy is a grammar source compiled into generated C, so no frame will ever name it, and indeed none of the thirty-four frames does; they run through handler.cc, sql_select.cc, item_subselect.cc, item.cc, unireg.cc, sql_table.cc, sql_alter.cc, sql_parse.cc and sql_connect.cc. This is a third instance after KAFKA-6624 and MDEV-17354 where a complete trace cannot reach the answer, and the first where the reason is the file type rather than the timing. Gold sets contain file kinds that are structurally absent from runtime evidence, grammars being the clearest, and that is worth measuring across the benchmark."
+}

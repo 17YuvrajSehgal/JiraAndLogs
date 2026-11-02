@@ -1,0 +1,28 @@
+{
+  "id": "mariadb:MDEV-8638",
+  "project": "mariadb",
+  "issue_key": "MDEV-8638",
+  "annotator": "claude-opus-5",
+  "pass": 1,
+  "file_roles": [
+    {
+      "path": "sql/log_event.cc",
+      "role": "causal",
+      "evidence": "The Query_log_event constructor only initialised the strings when they were non-empty, 'if (user.length > 0) copy_str_and_move(...)' and the same for host, leaving str pointing at whatever followed when the length was zero. Both gain an else branch that writes a terminator, 'user.str= (char *) start++; user.str[0]= '\u0000';'. The commit spells out the contract that was broken: callers expect 'the str member be a NULL terminated string and length have appropriate size'."
+    }
+  ],
+  "symptom_location": {
+    "file": null,
+    "function": null,
+    "determinable": false
+  },
+  "log_location": {
+    "file": null,
+    "function": null,
+    "determinable": false
+  },
+  "relation": "state-producer",
+  "rationale": "The only artefact is two fields of SHOW SLAVE STATUS, 'Last_SQL_Errno 1269' and the accompanying text. The uninitialised pointers are written while the event is parsed and are read much later by the privilege code that raises that error, which is in a file the packet does not show, so neither end can be placed from the report.",
+  "confidence": "high",
+  "notes": "The error text is not merely unhelpful but actively plausible and wrong: 'Can't revoke all privileges for one or more of the requested users' reads as a permissions problem, and the defect is an uninitialised string pointer in binlog event parsing. A reader following the message goes to the ACL code, which is not in the gold set. That is a different failure from a log that points nowhere, and distinct too from MDEV-13333, where the misleading pointer came from another project; here MariaDB's own message misdescribes its own bug."
+}

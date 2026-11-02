@@ -1,0 +1,28 @@
+{
+  "id": "mariadb:MDEV-18859",
+  "project": "mariadb",
+  "issue_key": "MDEV-18859",
+  "annotator": "claude-opus-5",
+  "pass": 1,
+  "file_roles": [
+    {
+      "path": "sql/sql_delete.cc",
+      "role": "causal",
+      "evidence": "The period branch took a shortcut that skipped the initialisation the normal branch gets. 'if (table_list->has_period()) table->use_all_columns();' becomes a block that also sets 'table->rpl_write_set= table->write_set;'. The commit explains what was being skipped: 'rpl_write_set is initialized in TABLE::mark_columns_per_binlog_row_image. Since we just call use_all_columns for PORTION OF case ... initialize table->rpl_write_set in place.'"
+    }
+  ],
+  "symptom_location": {
+    "file": "mysys/my_bitmap.c",
+    "function": "bitmap_bits_set",
+    "determinable": true
+  },
+  "log_location": {
+    "file": null,
+    "function": null,
+    "determinable": false
+  },
+  "relation": "caller-callee",
+  "rationale": "The crash is a null dereference, 'bitmap_bits_set (map=0x0) at mysys/my_bitmap.c:603', reached from 'pack_row (table=..., cols=0x0, ...)' where the null is already visible as an argument. The chain runs up through binlog_write_row, ha_write_row and period_make_insert to 'mysql_delete ... sql/sql_delete.cc:849'. The uninitialised member was left that way earlier in that same function.",
+  "confidence": "high",
+  "notes": "One of the clearest positive instances in the sample. The trace names the gold file and the gold function, mysql_delete, and the fix is roughly a hundred and thirty lines above the frame's line within that same function, so matching on file and function succeeds where matching on file and line would not. The argument values carry the diagnosis on their own: 'cols=0x0' in the pack_row frame is the uninitialised rpl_write_set, visible two frames before the crash."
+}

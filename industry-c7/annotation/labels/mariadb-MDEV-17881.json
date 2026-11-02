@@ -1,0 +1,28 @@
+{
+  "id": "mariadb:MDEV-17881",
+  "project": "mariadb",
+  "issue_key": "MDEV-17881",
+  "annotator": "claude-opus-5",
+  "pass": 1,
+  "file_roles": [
+    {
+      "path": "storage/innobase/rem/rem0cmp.cc",
+      "role": "causal",
+      "evidence": "cmp_dtuple_rec_with_match_bytes asserted that the flag could never appear on the record, 'ut_ad(!(REC_INFO_MIN_REC_FLAG & rec_get_info_bits(rec, rec_offs_comp(offsets))))'. That assertion is deleted and the case is handled instead, checking the record really is the first on a leftmost page and a metadata record, then 'return 1, because by definition, anything is greater than the minimum record'. The commit confirms this was not merely an over-strict assertion: 'In a release build, we might wrongly qualify the hidden metadata record and thus return garbage results.'"
+    }
+  ],
+  "symptom_location": {
+    "file": "storage/innobase/rem/rem0cmp.cc",
+    "function": "cmp_dtuple_rec_with_match_bytes",
+    "determinable": true
+  },
+  "log_location": {
+    "file": "storage/innobase/rem/rem0cmp.cc",
+    "function": "cmp_dtuple_rec_with_match_bytes",
+    "determinable": true
+  },
+  "relation": "same-location",
+  "rationale": "The assertion text names file, line and function exactly, 'rem0cmp.cc:799: int cmp_dtuple_rec_with_match_bytes(...): Assertion `!(0x10UL & rec_get_info_bits(rec, rec_offs_comp(offsets)))' failed', and that is the assertion the fix removes. The invariant it encoded stopped being true when instant ADD COLUMN repurposed REC_INFO_MIN_REC_FLAG for a hidden metadata record on the leftmost leaf page, which the report explains in its first three paragraphs.",
+  "confidence": "high",
+  "notes": "REPORT-NAMES-FIX, and the most complete example in the sample: the reporter gives the flag, both tickets that changed its meaning, the function, and the exact condition, before any fix exists. The report is written by someone who already knows the answer. Note also that the gold diff contains a fix to the fix: the second commit changes 'rec_is_metadata(rec, *index)' to 'rec_is_metadata(rec, index)' because, in the author's words, 'I ported this patch from 10.4 to 10.3, and then only ran a release build, not debug build.' The reporter also records that no deterministic test could be built, 'Due to the highly nondeterministic nature of the adaptive hash index'."
+}

@@ -1,0 +1,28 @@
+{
+  "id": "mariadb:MDEV-22734",
+  "project": "mariadb",
+  "issue_key": "MDEV-22734",
+  "annotator": "claude-opus-5",
+  "pass": 1,
+  "file_roles": [
+    {
+      "path": "sql/field.cc",
+      "role": "causal",
+      "evidence": "The constant was converted with comparison options that tolerate a zero month or day, 'Datetime dt(thd, const_item, Datetime::Options_cmp(thd));'. It becomes conditional on the field type, using 'Timestamp::DatetimeOptions(thd)' when the field is MYSQL_TYPE_TIMESTAMP. The commit gives the rule: for 'WHERE timestamp_column=2010-00-01 00:00:00', do not replace the constant 'if the constant it has zeros (in the month or in the day)'."
+    }
+  ],
+  "symptom_location": {
+    "file": "sql/tztime.cc",
+    "function": "sec_since_epoch",
+    "determinable": true
+  },
+  "log_location": {
+    "file": "sql/tztime.cc",
+    "function": "sec_since_epoch",
+    "determinable": true
+  },
+  "relation": "state-producer",
+  "rationale": "The assertion names its site precisely, 'sql/tztime.cc:801: my_time_t sec_since_epoch(int, int, int, int, int, int): Assertion `mon > 0 && mon < 13' failed', and the frame below it shows the offending value, 'sec_since_epoch (year=2010, mon=0, mday=1, ...)'. That zero month came from a literal accepted during constant replacement much earlier in optimization, so the assertion is correct and the conversion that produced its argument is not on the stack.",
+  "confidence": "high",
+  "notes": "The gold file does not appear in any of the thirty-seven frames. The stack runs through tztime.cc, sql_time.cc, sql_type.cc, item.h, item_cmpfunc.cc, sql_select.cc, sql_parse.cc, sql_connect.cc and pfs.cc, and field.cc is in none of them. That is the fourth instance in the sample where a complete and fully resolved trace cannot reach the answer, after KAFKA-6624, MDEV-17354 and MDEV-18163, and the mechanisms differ: two by timing, one by file type, this one by timing again. The reporter also judges severity carefully without naming any location, 'While the current testcase is debug-only, this issue may be able to affect opt builds also.'"
+}

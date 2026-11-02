@@ -1,0 +1,58 @@
+{
+  "id": "mariadb:MDEV-17849",
+  "project": "mariadb",
+  "issue_key": "MDEV-17849",
+  "annotator": "claude-opus-5",
+  "pass": 1,
+  "file_roles": [
+    {
+      "path": "storage/innobase/srv/srv0start.cc",
+      "role": "causal",
+      "evidence": "The report names this site and the commit confirms it: 'srv_undo_tablespace_open(): Set the file handle for the opened undo tablespace. This should ensure that ut_ad(file->is_open()) no longer fails in recv_add_trim().' Opening a file and discarding its handle is the defect."
+    },
+    {
+      "path": "storage/innobase/fil/fil0fil.cc",
+      "role": "causal",
+      "evidence": "Carries the mechanism that makes keeping the handle possible. 'fil_space_t::add(): Replaces fil_node_create(), fil_node_create_low(). Let the caller pass fil_node_t::handle, to avoid having to close and re-open files', with read_page0 split out of fil_node_open_file and the latter changed to 'Open the file only once'. Three hundred and thirty changed lines of real restructuring, not plumbing."
+    },
+    {
+      "path": "storage/innobase/include/fil0fil.h",
+      "role": "refactor",
+      "evidence": "Declarations for the new fil_space_t::add and fil_node_t::read_page0 replacing the fil_node_create prototypes."
+    },
+    {
+      "path": "storage/innobase/fsp/fsp0space.cc",
+      "role": "refactor",
+      "evidence": "A call site moved from fil_node_create to the new fil_space_t::add, twelve lines."
+    },
+    {
+      "path": "storage/innobase/fsp/fsp0sysspace.cc",
+      "role": "refactor",
+      "evidence": "The same call-site move, thirteen lines."
+    },
+    {
+      "path": "extra/mariabackup/xtrabackup.cc",
+      "role": "refactor",
+      "evidence": "Listed in the commit as 'xtrabackup_backup_func(): Remove some dead code.'"
+    },
+    {
+      "path": "extra/mariabackup/fil_cur.cc",
+      "role": "refactor",
+      "evidence": "'xb_fil_cur_open(): Open files only if needed. Undo tablespaces should already have been opened.' A six-line adaptation in the backup tool to the invariant the fix establishes."
+    }
+  ],
+  "symptom_location": {
+    "file": "storage/innobase/log/log0recv.cc",
+    "function": "recv_addr_trim",
+    "determinable": true
+  },
+  "log_location": {
+    "file": "storage/innobase/log/log0recv.cc",
+    "function": "recv_addr_trim",
+    "determinable": true
+  },
+  "relation": "state-producer",
+  "rationale": "The assertion names its site, 'log0recv.cc:258: void recv_addr_trim(ulint, unsigned int, lsn_t): Assertion `file->is_open()' failed', and log0recv.cc is not in the gold set. The handle was discarded much earlier, when the undo tablespace was opened at startup, and the absence is only noticed during crash recovery. The reporter sets out the whole chain, including what happens without assertions: 'the impact of this would be calling ftruncate() or SetFilePointerEx() on OS_FILE_CLOSED, and thus failing to shrink the file'.",
+  "confidence": "high",
+  "notes": "REPORT-NAMES-FIX, and about as complete as these get: the report gives the failing assertion, quotes the offending code block, explains the release-build consequence, and names the function at fault, 'srv_undo_tablespace_open() is opening and immediately closing the file, without assigning fil_node_t::handle.' The file that crashed is not in the gold set, and two of the seven gold files are in a separate tool, mariabackup, which has nothing to do with the reported recovery failure and is changed only because the API around it moved."
+}

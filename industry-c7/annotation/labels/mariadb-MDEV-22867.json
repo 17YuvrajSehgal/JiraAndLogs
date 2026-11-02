@@ -1,0 +1,43 @@
+{
+  "id": "mariadb:MDEV-22867",
+  "project": "mariadb",
+  "issue_key": "MDEV-22867",
+  "annotator": "claude-opus-5",
+  "pass": 1,
+  "file_roles": [
+    {
+      "path": "storage/innobase/include/dict0mem.h",
+      "role": "causal",
+      "evidence": "Defines the rule that was missing, as an inline body rather than a declaration: 'bool must_avoid_clear_instant_add() const' returns true when the index is instant and any following index is marked to_be_dropped. The comment states the new invariant, 'whether it is forbidden to invoke clear_instant_add()'."
+    },
+    {
+      "path": "storage/innobase/btr/btr0btr.cc",
+      "role": "causal",
+      "evidence": "Applies that rule where the metadata was being discarded, 'if (index->table->instant)' becoming 'if (index->table->instant || index->must_avoid_clear_instant_add())', and corrects the metadata-record test from a single 'if (rec_is_alter_metadata(r, *index))' to a branch that first checks '!rec_is_metadata(r, *index)'."
+    },
+    {
+      "path": "storage/innobase/btr/btr0cur.cc",
+      "role": "causal",
+      "evidence": "The same guard added to two more conditions that decide whether instant metadata may be cleared, each gaining '&& !cursor->index->must_avoid_clear_instant_add()' or the index-qualified form."
+    },
+    {
+      "path": "storage/innobase/btr/btr0pcur.cc",
+      "role": "refactor",
+      "evidence": "An assertion is weakened and the reason recorded in a disabled comment, '#if 0 /* MDEV-22867 had to relax this */ ... #endif' leaving 'ut_ad(index->is_instant());'. The check had to give way once the metadata is legitimately preserved; it detects nothing about the reported failure."
+    }
+  ],
+  "symptom_location": {
+    "file": "storage/innobase/handler/handler0alter.cc",
+    "function": "dict_index_t::instant_add_field",
+    "determinable": true
+  },
+  "log_location": {
+    "file": "storage/innobase/handler/handler0alter.cc",
+    "function": "dict_index_t::instant_add_field",
+    "determinable": true
+  },
+  "relation": "concurrency",
+  "rationale": "The assertion names its site, 'handler0alter.cc:422: void dict_index_t::instant_add_field(const dict_index_t&): Assertion `instant.n_core_fields == n_core_fields' failed', and the test case needs two connections, an ALTER TABLE DROP running against a DELETE that empties the table. The field counts diverge because the instant-ADD metadata was cleared by the emptying path while a NOCOPY drop was still in flight, so the two ends are an ordering between sessions rather than a fault at one site.",
+  "confidence": "medium",
+  "notes": "None of the four gold files appears in the stack. Every frame shown is in handler0alter.cc, which is not in the gold set, while the fix is spread across btr0btr.cc, btr0cur.cc, btr0pcur.cc and dict0mem.h. That is the fifth instance in the sample where a resolved trace cannot reach the answer. Which clearing path the test actually took is not determinable from the packet, which is why confidence is medium; seeing the guarded call sites in context would settle it. The reporter again flags that there is no deterministic test, 'The test case has an obvious race condition, run with --repeat=N.'"
+}
