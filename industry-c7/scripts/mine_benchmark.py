@@ -433,6 +433,24 @@ def universe_size(git_dir: Path, snapshot_sha: str,
                if p.lower().endswith(src_ext) and not TEST_PATH.search(p))
 
 
+def universe_sizes(git_dir: Path, shas: list[str],
+                   src_ext: tuple[str, ...]) -> dict[str, int]:
+    """universe_size for many snapshots at once.
+
+    Each call is ~35 ms, almost all of it process spawn, and the calls are
+    independent and local (blob:none clones keep trees). Serially this cost
+    3 minutes on hive alone; threaded it is seconds.
+    """
+    from concurrent.futures import ThreadPoolExecutor
+    uniq = list(dict.fromkeys(shas))
+    out: dict[str, int] = {}
+    with ThreadPoolExecutor(max_workers=12) as ex:
+        for sha, n in zip(uniq, ex.map(
+                lambda s: universe_size(git_dir, s, src_ext), uniq)):
+            out[sha] = n
+    return out
+
+
 def fetch_file_lists(git_dir: Path, shas: list[str], cache_path: Path) -> dict[str, list]:
     """sha -> [[status, path], ...] via batched `git show`, cached on disk."""
     cache: dict[str, list] = {}
@@ -496,6 +514,10 @@ def mine_project(name: str) -> dict:
 
     all_shas = [c["sha"] for commits in candidates.values() for c in commits]
     file_cache = fetch_file_lists(cfg["git_dir"], all_shas, REPOS / f"cache-{name}.json")
+    uni_cache = universe_sizes(
+        cfg["git_dir"],
+        [c[0]["parent"] for c in candidates.values() if c and c[0]["parent"]],
+        cfg["src_ext"])
 
     rows, strata = [], Counter()
     for key, commits in sorted(candidates.items()):
@@ -540,8 +562,7 @@ def mine_project(name: str) -> dict:
             "gold_files": sorted(gold),
             "gold_modules": sorted({f.split("/")[0] for f in gold}),
             "n_all_changed_files": len(all_changed),
-            "n_universe": universe_size(cfg["git_dir"], first["parent"],
-                                        cfg["src_ext"]),
+            "n_universe": uni_cache.get(first["parent"], 0),
             "has_stack_trace": has_trace,
             "gold_named_in_text": named,
         })
