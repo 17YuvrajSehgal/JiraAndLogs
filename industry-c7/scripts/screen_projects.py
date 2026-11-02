@@ -120,7 +120,9 @@ def clone(name: str, repo: str) -> Path:
         return gd
     print(f"  cloning {repo} -> {gd.name} ...", flush=True)
     t0 = time.time()
-    sh("git", "clone", "--bare", "--filter=blob:none",
+    # --template= skips git's hook/description template copy, which fails
+    # intermittently on Windows and killed 3 of 9 clones in wave 2.
+    sh("git", "clone", "--bare", "--filter=blob:none", "--template=",
        f"https://github.com/{repo}.git", str(gd), timeout=5400)
     print(f"    done in {time.time() - t0:.0f}s", flush=True)
     return gd

@@ -1,0 +1,660 @@
+[
+ {
+  "name": "pdfbox",
+  "repo": "apache/pdfbox",
+  "keys": [
+   "PDFBOX"
+  ],
+  "wave": 2,
+  "ext": [
+   ".java"
+  ],
+  "repo_mb": 31,
+  "eligible": 890,
+  "linked": 739,
+  "le_cap": 735,
+  "link_rate": 0.826,
+  "over_cap": 4,
+  "src_rate": 0.925,
+  "src_sampled": 120,
+  "projected": 679,
+  "link": "subject",
+  "status": "KEEP"
+ },
+ {
+  "name": "hive",
+  "repo": "apache/hive",
+  "keys": [
+   "HIVE"
+  ],
+  "wave": 1,
+  "ext": [
+   ".java"
+  ],
+  "repo_mb": 163,
+  "eligible": 5910,
+  "linked": 5614,
+  "le_cap": 5614,
+  "link_rate": 0.95,
+  "over_cap": 0,
+  "src_rate": 0.825,
+  "src_sampled": 120,
+  "projected": 4631,
+  "link": "subject",
+  "status": "KEEP"
+ },
+ {
+  "name": "hbase",
+  "repo": "apache/hbase",
+  "keys": [
+   "HBASE"
+  ],
+  "wave": 1,
+  "ext": [
+   ".java"
+  ],
+  "repo_mb": 65,
+  "eligible": 5215,
+  "linked": 4527,
+  "le_cap": 4527,
+  "link_rate": 0.868,
+  "over_cap": 0,
+  "src_rate": 0.708,
+  "src_sampled": 120,
+  "projected": 3206,
+  "link": "subject",
+  "status": "KEEP"
+ },
+ {
+  "name": "hadoop",
+  "repo": "apache/hadoop",
+  "keys": [
+   "HADOOP",
+   "HDFS",
+   "YARN",
+   "MAPREDUCE"
+  ],
+  "wave": 1,
+  "ext": [
+   ".java"
+  ],
+  "repo_mb": 182,
+  "eligible": 7848,
+  "linked": 6197,
+  "le_cap": 6196,
+  "link_rate": 0.79,
+  "over_cap": 1,
+  "src_rate": 0.742,
+  "src_sampled": 120,
+  "projected": 4595,
+  "link": "subject",
+  "status": "KEEP"
+ },
+ {
+  "name": "spark",
+  "repo": "apache/spark",
+  "keys": [
+   "SPARK"
+  ],
+  "wave": 1,
+  "ext": [
+   ".scala",
+   ".java"
+  ],
+  "repo_mb": 218,
+  "eligible": 2314,
+  "linked": 1986,
+  "le_cap": 1986,
+  "link_rate": 0.858,
+  "over_cap": 0,
+  "src_rate": 0.683,
+  "src_sampled": 120,
+  "projected": 1357,
+  "link": "subject",
+  "status": "KEEP"
+ },
+ {
+  "name": "cassandra",
+  "repo": "apache/cassandra",
+  "keys": [
+   "CASSANDRA"
+  ],
+  "wave": 1,
+  "ext": [
+   ".java"
+  ],
+  "repo_mb": 59,
+  "eligible": 2116,
+  "linked": 702,
+  "le_cap": 701,
+  "link_rate": 0.331,
+  "over_cap": 1,
+  "src_rate": 0.825,
+  "src_sampled": 120,
+  "projected": 578,
+  "link": "subject",
+  "status": "REVIEW"
+ },
+ {
+  "name": "flink",
+  "repo": "apache/flink",
+  "keys": [
+   "FLINK"
+  ],
+  "wave": 1,
+  "ext": [
+   ".java",
+   ".scala"
+  ],
+  "repo_mb": 163,
+  "eligible": 2076,
+  "linked": 1720,
+  "le_cap": 1719,
+  "link_rate": 0.828,
+  "over_cap": 1,
+  "src_rate": 0.575,
+  "src_sampled": 120,
+  "projected": 988,
+  "link": "subject",
+  "status": "KEEP"
+ },
+ {
+  "name": "ambari",
+  "repo": "apache/ambari",
+  "keys": [
+   "AMBARI"
+  ],
+  "wave": 1,
+  "ext": [
+   ".java",
+   ".py"
+  ],
+  "repo_mb": 83,
+  "eligible": 5995,
+  "linked": 5657,
+  "le_cap": 5655,
+  "link_rate": 0.943,
+  "over_cap": 2,
+  "src_rate": 0.533,
+  "src_sampled": 120,
+  "projected": 3016,
+  "link": "subject",
+  "status": "KEEP"
+ },
+ {
+  "name": "impala",
+  "repo": "apache/impala",
+  "keys": [
+   "IMPALA"
+  ],
+  "wave": 1,
+  "ext": [
+   ".cc",
+   ".h",
+   ".java"
+  ],
+  "repo_mb": 25,
+  "eligible": 1492,
+  "linked": 1201,
+  "le_cap": 1201,
+  "link_rate": 0.805,
+  "over_cap": 0,
+  "src_rate": 0.683,
+  "src_sampled": 120,
+  "projected": 820,
+  "link": "subject",
+  "status": "KEEP"
+ },
+ {
+  "name": "geode",
+  "repo": "apache/geode",
+  "keys": [
+   "GEODE"
+  ],
+  "wave": 1,
+  "ext": [
+   ".java"
+  ],
+  "repo_mb": 51,
+  "eligible": 1378,
+  "linked": 1098,
+  "le_cap": 1096,
+  "link_rate": 0.795,
+  "over_cap": 2,
+  "src_rate": 0.5,
+  "src_sampled": 120,
+  "projected": 548,
+  "link": "subject",
+  "status": "KEEP"
+ },
+ {
+  "name": "ignite",
+  "repo": "apache/ignite",
+  "keys": [
+   "IGNITE"
+  ],
+  "wave": 1,
+  "ext": [
+   ".java"
+  ],
+  "repo_mb": 114,
+  "eligible": 1244,
+  "linked": 1064,
+  "le_cap": 1060,
+  "link_rate": 0.852,
+  "over_cap": 4,
+  "src_rate": 0.758,
+  "src_sampled": 120,
+  "projected": 803,
+  "link": "subject",
+  "status": "KEEP"
+ },
+ {
+  "name": "camel",
+  "repo": "apache/camel",
+  "keys": [
+   "CAMEL"
+  ],
+  "wave": 2,
+  "ext": [
+   ".java"
+  ],
+  "repo_mb": 434,
+  "eligible": 1201,
+  "linked": 1035,
+  "le_cap": 1032,
+  "link_rate": 0.859,
+  "over_cap": 3,
+  "src_rate": 0.825,
+  "src_sampled": 120,
+  "projected": 851,
+  "link": "subject",
+  "status": "KEEP"
+ },
+ {
+  "name": "phoenix",
+  "repo": "apache/phoenix",
+  "keys": [
+   "PHOENIX"
+  ],
+  "wave": 2,
+  "ext": [
+   ".java"
+  ],
+  "repo_mb": 33,
+  "eligible": 1059,
+  "linked": 932,
+  "le_cap": 932,
+  "link_rate": 0.88,
+  "over_cap": 0,
+  "src_rate": 0.892,
+  "src_sampled": 120,
+  "projected": 831,
+  "link": "subject",
+  "status": "KEEP"
+ },
+ {
+  "name": "beam",
+  "repo": "apache/beam",
+  "keys": [
+   "BEAM"
+  ],
+  "wave": 2,
+  "ext": [
+   ".java",
+   ".go",
+   ".py"
+  ],
+  "repo_mb": 171,
+  "eligible": 923,
+  "linked": 512,
+  "le_cap": 512,
+  "link_rate": 0.555,
+  "over_cap": 0,
+  "src_rate": 0.6,
+  "src_sampled": 120,
+  "projected": 307,
+  "link": "subject",
+  "status": "KEEP"
+ },
+ {
+  "name": "pig",
+  "repo": "apache/pig",
+  "keys": [
+   "PIG"
+  ],
+  "wave": 2,
+  "ext": [
+   ".java"
+  ],
+  "repo_mb": 9,
+  "eligible": 868,
+  "linked": 746,
+  "le_cap": 746,
+  "link_rate": 0.859,
+  "over_cap": 0,
+  "src_rate": 0.767,
+  "src_sampled": 120,
+  "projected": 571,
+  "link": "subject",
+  "status": "KEEP"
+ },
+ {
+  "name": "groovy",
+  "repo": "apache/groovy",
+  "keys": [
+   "GROOVY"
+  ],
+  "wave": 2,
+  "ext": [
+   ".java",
+   ".groovy"
+  ],
+  "repo_mb": 54,
+  "eligible": 1604,
+  "linked": 1130,
+  "le_cap": 1130,
+  "link_rate": 0.704,
+  "over_cap": 0,
+  "src_rate": 0.858,
+  "src_sampled": 120,
+  "projected": 969,
+  "link": "subject",
+  "status": "KEEP"
+ },
+ {
+  "name": "sakai",
+  "repo": "sakaiproject/sakai",
+  "keys": [
+   "SAK"
+  ],
+  "wave": 3,
+  "ext": [
+   ".java"
+  ],
+  "repo_mb": 128,
+  "eligible": 3420,
+  "linked": 2072,
+  "le_cap": 2058,
+  "link_rate": 0.602,
+  "over_cap": 14,
+  "src_rate": 0.683,
+  "src_sampled": 120,
+  "projected": 1406,
+  "link": "subject",
+  "status": "KEEP"
+ },
+ {
+  "name": "wildfly",
+  "repo": "wildfly/wildfly",
+  "keys": [
+   "WFLY"
+  ],
+  "wave": 3,
+  "ext": [
+   ".java"
+  ],
+  "repo_mb": 106,
+  "eligible": 1604,
+  "linked": 1062,
+  "le_cap": 1062,
+  "link_rate": 0.662,
+  "over_cap": 0,
+  "src_rate": 0.683,
+  "src_sampled": 120,
+  "projected": 725,
+  "link": "subject",
+  "status": "KEEP"
+ },
+ {
+  "name": "infinispan",
+  "repo": "infinispan/infinispan",
+  "keys": [
+   "ISPN"
+  ],
+  "wave": 3,
+  "ext": [
+   ".java"
+  ],
+  "repo_mb": 72,
+  "eligible": 1546,
+  "linked": 1315,
+  "le_cap": 1315,
+  "link_rate": 0.851,
+  "over_cap": 0,
+  "src_rate": 0.617,
+  "src_sampled": 120,
+  "projected": 810,
+  "link": "subject",
+  "status": "KEEP"
+ },
+ {
+  "name": "keycloak",
+  "repo": "keycloak/keycloak",
+  "keys": [
+   "KEYCLOAK"
+  ],
+  "wave": 3,
+  "ext": [
+   ".java"
+  ],
+  "repo_mb": 112,
+  "eligible": 940,
+  "linked": 648,
+  "le_cap": 648,
+  "link_rate": 0.689,
+  "over_cap": 0,
+  "src_rate": 0.667,
+  "src_sampled": 120,
+  "projected": 432,
+  "link": "subject",
+  "status": "KEEP"
+ },
+ {
+  "name": "qtdeclarative",
+  "repo": "qt/qtdeclarative",
+  "keys": [
+   "QTBUG"
+  ],
+  "wave": 3,
+  "ext": [
+   ".cpp",
+   ".h",
+   ".qml"
+  ],
+  "repo_mb": 77,
+  "eligible": 7412,
+  "linked": 340,
+  "le_cap": 340,
+  "link_rate": 0.046,
+  "over_cap": 0,
+  "src_rate": 0.683,
+  "src_sampled": 120,
+  "projected": 232,
+  "link": "fixes_trailer",
+  "status": "REVIEW"
+ },
+ {
+  "name": "qttools",
+  "repo": "qt/qttools",
+  "keys": [
+   "QTBUG"
+  ],
+  "wave": 3,
+  "ext": [
+   ".cpp",
+   ".h"
+  ],
+  "repo_mb": 14,
+  "eligible": 7412,
+  "linked": 55,
+  "le_cap": 55,
+  "link_rate": 0.007,
+  "over_cap": 0,
+  "src_rate": 0.727,
+  "src_sampled": 55,
+  "projected": 40,
+  "link": "fixes_trailer",
+  "status": "REVIEW"
+ },
+ {
+  "name": "qtmultimedia",
+  "repo": "qt/qtmultimedia",
+  "keys": [
+   "QTBUG"
+  ],
+  "wave": 3,
+  "ext": [
+   ".cpp",
+   ".h",
+   ".mm"
+  ],
+  "repo_mb": 22,
+  "eligible": 7412,
+  "linked": 49,
+  "le_cap": 49,
+  "link_rate": 0.007,
+  "over_cap": 0,
+  "src_rate": 0.755,
+  "src_sampled": 49,
+  "projected": 37,
+  "link": "fixes_trailer",
+  "status": "REVIEW"
+ },
+ {
+  "name": "qtwebengine",
+  "repo": "qt/qtwebengine",
+  "keys": [
+   "QTBUG"
+  ],
+  "wave": 3,
+  "ext": [
+   ".cpp",
+   ".h"
+  ],
+  "repo_mb": 14,
+  "eligible": 7412,
+  "linked": 91,
+  "le_cap": 91,
+  "link_rate": 0.012,
+  "over_cap": 0,
+  "src_rate": 0.495,
+  "src_sampled": 91,
+  "projected": 45,
+  "link": "fixes_trailer",
+  "status": "REVIEW"
+ },
+ {
+  "name": "qtquickcontrols2",
+  "repo": "qt/qtquickcontrols2",
+  "keys": [
+   "QTBUG"
+  ],
+  "wave": 3,
+  "ext": [
+   ".cpp",
+   ".h",
+   ".qml"
+  ],
+  "repo_mb": 7,
+  "eligible": 7412,
+  "linked": 62,
+  "le_cap": 62,
+  "link_rate": 0.008,
+  "over_cap": 0,
+  "src_rate": 0.645,
+  "src_sampled": 62,
+  "projected": 40,
+  "link": "fixes_trailer",
+  "status": "REVIEW"
+ },
+ {
+  "name": "qtbase_extra",
+  "repo": "qt-creator/qt-creator",
+  "keys": [
+   "QTCREATORBUG"
+  ],
+  "wave": 3,
+  "ext": [
+   ".cpp",
+   ".h"
+  ],
+  "repo_mb": 130,
+  "eligible": 1508,
+  "linked": 231,
+  "le_cap": 231,
+  "link_rate": 0.153,
+  "over_cap": 0,
+  "src_rate": 0.825,
+  "src_sampled": 120,
+  "projected": 190,
+  "link": "fixes_trailer",
+  "status": "REVIEW"
+ },
+ {
+  "name": "derby",
+  "repo": "apache/derby",
+  "keys": [
+   "DERBY"
+  ],
+  "wave": 2,
+  "ext": [
+   ".java"
+  ],
+  "repo_mb": 15,
+  "eligible": 1192,
+  "linked": 1044,
+  "le_cap": 1037,
+  "link_rate": 0.87,
+  "over_cap": 7,
+  "src_rate": 0.65,
+  "src_sampled": 120,
+  "projected": 674,
+  "link": "subject",
+  "status": "KEEP"
+ },
+ {
+  "name": "solr",
+  "repo": "apache/solr",
+  "keys": [
+   "SOLR"
+  ],
+  "wave": 2,
+  "ext": [
+   ".java"
+  ],
+  "repo_mb": 131,
+  "eligible": 1123,
+  "linked": 973,
+  "le_cap": 970,
+  "link_rate": 0.864,
+  "over_cap": 3,
+  "src_rate": 0.642,
+  "src_sampled": 120,
+  "projected": 622,
+  "link": "subject",
+  "status": "KEEP"
+ },
+ {
+  "name": "drill",
+  "repo": "apache/drill",
+  "keys": [
+   "DRILL"
+  ],
+  "wave": 2,
+  "ext": [
+   ".java"
+  ],
+  "repo_mb": 17,
+  "eligible": 1046,
+  "linked": 673,
+  "le_cap": 673,
+  "link_rate": 0.643,
+  "over_cap": 0,
+  "src_rate": 0.792,
+  "src_sampled": 120,
+  "projected": 532,
+  "link": "subject",
+  "status": "KEEP"
+ }
+]

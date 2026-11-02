@@ -195,3 +195,104 @@ Do both, in parallel, with a fallback.
 
 This way breadth is additive rather than a bet on finishing a full re-run
 before the deadline.
+
+
+---
+
+# Screening results (measured 2026-11-02, all 29 candidates)
+
+Every row below is measured: treeless clone, linkage against the miner's own
+eligibility rule, and a 120-commit sample for the non-test-source rate.
+
+## KEEP — 22 projects, 29,373 projected instances
+
+| project | eligible | linked | link rate | src rate | projected |
+|---|---|---|---|---|---|
+| hive | 5,910 | 5,614 | 95.0% | 82.5% | 4,631 |
+| hadoop | 7,848 | 6,196 | 79.0% | 74.2% | 4,595 |
+| hbase | 5,215 | 4,527 | 86.8% | 70.8% | 3,206 |
+| ambari | 5,995 | 5,655 | 94.3% | 53.3% | 3,016 |
+| sakai | 3,420 | 2,058 | 60.2% | 68.3% | 1,406 |
+| spark | 2,314 | 1,986 | 85.8% | 68.3% | 1,357 |
+| flink | 2,076 | 1,719 | 82.8% | 57.5% | 988 |
+| groovy | 1,604 | 1,130 | 70.4% | 85.8% | 969 |
+| camel | 1,201 | 1,032 | 85.9% | 82.5% | 851 |
+| phoenix | 1,059 | 932 | 88.0% | 89.2% | 831 |
+| impala | 1,492 | 1,201 | 80.5% | 68.3% | 820 |
+| infinispan | 1,546 | 1,315 | 85.1% | 61.7% | 810 |
+| ignite | 1,244 | 1,060 | 85.2% | 75.8% | 803 |
+| wildfly | 1,604 | 1,062 | 66.2% | 68.3% | 725 |
+| pdfbox | 890 | 735 | 82.6% | 92.5% | 679 |
+| derby | 1,192 | 1,037 | 87.0% | 65.0% | 674 |
+| solr | 1,123 | 970 | 86.4% | 64.2% | 622 |
+| pig | 868 | 746 | 85.9% | 76.7% | 571 |
+| geode | 1,378 | 1,096 | 79.5% | 50.0% | 548 |
+| drill | 1,046 | 673 | 64.3% | 79.2% | 532 |
+| keycloak | 940 | 648 | 68.9% | 66.7% | 432 |
+| beam | 923 | 512 | 55.5% | 60.0% | 307 |
+
+**29,373 projected new instances** against a current benchmark of 6,437.
+Total disk for all clones is about 2.6 GB.
+
+Linkage of 79–95% on most Apache projects is *higher* than our four mined
+projects managed (66.9–79.5%). That is the commit cap moving from 3 to 10:
+those are multi-commit fixes the old cap discarded.
+
+## REVIEW — 7 projects
+
+| project | eligible | linked | link rate | src rate | projected |
+|---|---|---|---|---|---|
+| cassandra | 2,116 | 701 | 33.1% | 82.5% | 578 |
+| qtdeclarative | 7,412 | 340 | 4.6% | 68.3% | 232 |
+| qtbase_extra | 1,508 | 231 | 15.3% | 82.5% | 190 |
+| qtwebengine | 7,412 | 91 | 1.2% | 49.5% | 45 |
+| qttools | 7,412 | 55 | 0.7% | 72.7% | 40 |
+| qtquickcontrols2 | 7,412 | 62 | 0.8% | 64.5% | 40 |
+| qtmultimedia | 7,412 | 49 | 0.7% | 75.5% | 37 |
+
+### Cassandra is probably a false negative
+33.1% linkage is far outside the band every other Apache project sits in,
+while its source rate (82.5%) is healthy. Cassandra's convention puts the
+issue key in the commit **body** (``patch by X; reviewed by Y for
+CASSANDRA-1234``), not the subject, and the screener only reads subjects.
+Worth adding a ``subject_or_body`` link mode and re-screening before
+excluding a 2,116-issue project.
+
+### The Qt modules: I was wrong earlier
+
+I said adding Qt modules would recover "most" of the 6,699 unlinked Qt
+issues. The measurement says otherwise:
+
+| | linked QTBUG issues |
+|---|---|
+| qtbase (already mined) | 713 |
+| + qtdeclarative | 340 |
+| + qtwebengine | 91 |
+| + qtquickcontrols2 | 62 |
+| + qttools | 55 |
+| + qtmultimedia | 49 |
+| **union, upper bound** | **1,310 of 7,412 (17.7%)** |
+
+The five new modules recover **597 issues, 8.9% of the 6,699**, not most of
+them. Each module's individual link rate (0.7–4.6%) looks catastrophic only
+because every module is scored against the whole QTBUG pool; the union is
+the honest number.
+
+Qt spans roughly 40 repositories and we would now cover 6. Fixing Qt
+properly means cloning most of the framework, which is a larger job than it
+first appeared. The alternative is to state the limitation: the Qt tracker
+is framework-wide while our mining is per-repository.
+
+qtbase_extra is Qt Creator (QTCREATORBUG, its own 1,508-issue pool); 15.3%
+is its real rate, not a pool artifact.
+
+## What this changes
+
+Current: 4 projects, 4 organizations, 2 language families, 6,437 instances.
+
+With the 22 KEEP projects: **27 projects across 9+ organizations**
+(Apache, Sakai, Red Hat/WildFly, Infinispan, Keycloak, MariaDB, MongoDB, Qt)
+and roughly **35,800 instances**, with Go and Python entering through Beam.
+
+External validity stops being a soft spot. The cost is that every number in
+the paper re-runs, which is the trade recorded in §5 above.
