@@ -1,0 +1,73 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Causal role annotation for one benchmark instance",
+  "description": "Produced per RUBRIC.md. One file per instance at annotation/labels/<project>-<key>.json.",
+  "type": "object",
+  "required": ["id", "project", "issue_key", "annotator", "pass",
+               "file_roles", "symptom_location", "log_location", "relation",
+               "rationale", "confidence"],
+  "additionalProperties": false,
+  "properties": {
+    "id": {"type": "string", "description": "project:ISSUE-KEY"},
+    "project": {"type": "string"},
+    "issue_key": {"type": "string"},
+    "annotator": {
+      "type": "string",
+      "description": "Who produced this label. 'claude-opus-5' for the model pass, 'author-1' for the human verification pass. Never blank: the paper reports model and human agreement separately."
+    },
+    "pass": {
+      "type": "integer", "minimum": 1,
+      "description": "1 = first model pass. 2 = blind re-annotation for self-consistency (NOT inter-rater reliability)."
+    },
+    "file_roles": {
+      "type": "array",
+      "description": "Exactly one entry per gold file shown in the packet.",
+      "items": {
+        "type": "object",
+        "required": ["path", "role", "evidence"],
+        "additionalProperties": false,
+        "properties": {
+          "path": {"type": "string"},
+          "role": {
+            "enum": ["causal", "symptom-handling", "preventive", "refactor",
+                     "test", "unclear"]
+          },
+          "evidence": {
+            "type": "string",
+            "description": "The specific diff hunk, log line or report sentence supporting this role. A label without citable evidence is not auditable and must be 'unclear'."
+          }
+        }
+      }
+    },
+    "symptom_location": {
+      "type": "object",
+      "required": ["file", "determinable"],
+      "additionalProperties": false,
+      "properties": {
+        "file": {"type": ["string", "null"], "description": "May lie outside the gold set; that is the point of the measurement."},
+        "function": {"type": ["string", "null"]},
+        "determinable": {"type": "boolean"}
+      }
+    },
+    "log_location": {
+      "type": "object",
+      "required": ["file", "determinable"],
+      "additionalProperties": false,
+      "properties": {
+        "file": {"type": ["string", "null"]},
+        "function": {"type": ["string", "null"]},
+        "determinable": {"type": "boolean"}
+      }
+    },
+    "relation": {
+      "enum": ["same-location", "caller-callee", "state-producer",
+               "config-build", "concurrency", "unrelated", "unclear"]
+    },
+    "rationale": {
+      "type": "string", "minLength": 20,
+      "description": "Two or three sentences citing concrete evidence."
+    },
+    "confidence": {"enum": ["high", "medium", "low"]},
+    "notes": {"type": "string"}
+  }
+}
