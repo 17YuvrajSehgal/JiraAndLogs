@@ -102,12 +102,20 @@ def render(rec: dict, inst: dict) -> str:
     L += ["## The fix diff", ""]
     shown = 0
     for f in inst["gold_files"][:MAX_FILES_SHOWN]:
-        d = git(gd, "show", "--format=", "--unified=5", inst["fix_sha"], "--", f)
-        if not d.strip():
-            for sha in inst["fix_shas"][1:]:
-                d = git(gd, "show", "--format=", "--unified=5", sha, "--", f)
-                if d.strip():
-                    break
+        # Gold is the UNION of the files these commits touched, and a single
+        # file is often changed by more than one of them. Showing only the
+        # first commit's diff hid the change that actually mattered: on
+        # BEAM-4798 the first commit fixes a test and the second fixes the
+        # reported IndexOutOfBoundsException. Show every commit that touched
+        # the file, labelled, so the annotator sees the whole fix.
+        parts = []
+        for sha in inst["fix_shas"]:
+            d = git(gd, "show", "--format=", "--unified=5", sha, "--", f)
+            if d.strip():
+                if len(inst["fix_shas"]) > 1:
+                    parts.append(f"--- from commit {sha[:12]} ---")
+                parts.append(d.rstrip())
+        d = "\n".join(parts)
         lines = d.splitlines()
         if len(lines) > MAX_DIFF_LINES_PER_FILE:
             lines = lines[:MAX_DIFF_LINES_PER_FILE] + [
