@@ -415,6 +415,24 @@ def load_wolv2_issues(cfg: dict) -> dict[str, dict]:
     return issues
 
 
+def universe_size(git_dir: Path, snapshot_sha: str,
+                  src_ext: tuple[str, ...]) -> int:
+    """Non-test source files in the snapshot: the candidate pool a localizer
+    must rank, and the denominator for 'how hard is this instance'.
+
+    Without it, gold-set size cannot be read: 46 gold files is most of early
+    Kafka (213 source files) but a needle in modern MongoDB (11,095). The
+    clones keep trees (--filter=blob:none drops blobs only), so this is a
+    local call, about 35 ms.
+    """
+    try:
+        out = run_git(git_dir, "ls-tree", "-r", "--name-only", snapshot_sha)
+    except Exception:  # noqa: BLE001
+        return 0
+    return sum(1 for p in out.splitlines()
+               if p.lower().endswith(src_ext) and not TEST_PATH.search(p))
+
+
 def fetch_file_lists(git_dir: Path, shas: list[str], cache_path: Path) -> dict[str, list]:
     """sha -> [[status, path], ...] via batched `git show`, cached on disk."""
     cache: dict[str, list] = {}
@@ -522,6 +540,8 @@ def mine_project(name: str) -> dict:
             "gold_files": sorted(gold),
             "gold_modules": sorted({f.split("/")[0] for f in gold}),
             "n_all_changed_files": len(all_changed),
+            "n_universe": universe_size(cfg["git_dir"], first["parent"],
+                                        cfg["src_ext"]),
             "has_stack_trace": has_trace,
             "gold_named_in_text": named,
         })
