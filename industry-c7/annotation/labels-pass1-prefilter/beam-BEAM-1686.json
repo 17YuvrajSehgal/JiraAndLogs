@@ -1,0 +1,27 @@
+{
+  "id": "beam:BEAM-1686",
+  "project": "beam",
+  "issue_key": "BEAM-1686",
+  "annotator": "claude-opus-5",
+  "pass": 1,
+  "file_roles": [
+    {
+      "path": "sdks/java/io/mqtt/src/main/java/org/apache/beam/sdk/io/mqtt/MqttIO.java",
+      "role": "causal",
+      "evidence": "The 'if (getClientId() != null)' branch had no else, so when no client id was configured none was ever set. The fix adds 'else { String clientId = UUID.randomUUID().toString(); ... client.setClientId(clientId); }', which is exactly the documented behaviour the report says was missing."
+    }
+  ],
+  "symptom_location": {
+    "file": "sdks/java/io/mqtt/src/main/java/org/apache/beam/sdk/io/mqtt/MqttIO.java",
+    "function": "createClient",
+    "determinable": true
+  },
+  "log_location": {
+    "file": null,
+    "function": null,
+    "determinable": false
+  },
+  "relation": "same-location",
+  "rationale": "The report says 'documentation says random client id is assigned it actually is not which results in NPE' and names the method itself as problematic, and the diff supplies the missing assignment in that same file. No stack trace or log line is given, so the log site cannot be placed. This file owns the invariant that a client id is always set, which makes it causal rather than a guard site.",
+  "confidence": "high"
+}

@@ -36,8 +36,12 @@ SAMPLE = ROOT / "industry-c7/annotation/sample.json"
 PACKETS = ROOT / "industry-c7/annotation/packets"
 REPOS = ROOT / "data/c7-repos"
 
-MAX_REPORT_CHARS = 12_000       # keep logs; drop the long tail
-MAX_DIFF_LINES_PER_FILE = 120
+# Both caps were set by guesswork and both bit: 16 of 151 packets lost part
+# of the fix diff (up to 467 lines) and 3 lost part of the report. An
+# annotator cannot assign a role to a file whose change it cannot see, so
+# these are sized to the measured worst case in the sample, not to taste.
+MAX_REPORT_CHARS = 40_000       # longest sampled report is 13,066 chars
+MAX_DIFF_LINES_PER_FILE = 600   # largest sampled single-file diff is 587
 MAX_FILES_SHOWN = 25
 
 # Terms that would mean a system's answer leaked into a packet.

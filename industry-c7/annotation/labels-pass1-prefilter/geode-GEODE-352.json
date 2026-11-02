@@ -1,0 +1,33 @@
+{
+  "id": "geode:GEODE-352",
+  "project": "geode",
+  "issue_key": "GEODE-352",
+  "annotator": "claude-opus-5",
+  "pass": 1,
+  "file_roles": [
+    {
+      "path": "gemfire-core/src/main/java/com/gemstone/gemfire/cache/client/internal/ConnectionFactoryImpl.java",
+      "role": "refactor",
+      "evidence": "The field and constructor parameter change type only, 'private DistributedSystem ds' to 'private InternalDistributedSystem ds', with the PoolCancelledException and PoolManagerImpl imports dropped. This is the type tightening ConnectionImpl needs in order to call ds.getConfig()."
+    },
+    {
+      "path": "gemfire-core/src/main/java/com/gemstone/gemfire/cache/client/internal/ConnectionImpl.java",
+      "role": "preventive",
+      "evidence": "connect() stops using the static lookup: 'DistributionConfig config = InternalDistributedSystem.getConnectedInstance().getConfig()' becomes 'DistributionConfig config = ds.getConfig()'. The second commit explains why, 'code that was added to the client server handshake was looking up connected distributed system when one might be in the process of being closed', which is a different failure from the one reported."
+    }
+  ],
+  "symptom_location": {
+    "file": null,
+    "function": null,
+    "determinable": false
+  },
+  "log_location": {
+    "file": null,
+    "function": null,
+    "determinable": false
+  },
+  "relation": "unclear",
+  "rationale": "The reported failure is an assertion about log contents, 'Found suspect string in log4j at line 2039 ... java.net.SocketTimeoutException: Read timed out', with no source file or frame, so neither symptom nor log site can be placed. Neither gold file addresses that timeout: the first commit, which handles it by ignoring the exception during dunit teardown, changed only test files and they were filtered out. Both surviving gold files come from the second commit and repair NPEs during handshake instead.",
+  "confidence": "low",
+  "notes": "An instance where the gold set and the reported failure come apart entirely. The fix for the reported symptom lives in test files that TEST_PATH removed, leaving only a different defect's fix as ground truth. No localizer could be right here for the right reason."
+}

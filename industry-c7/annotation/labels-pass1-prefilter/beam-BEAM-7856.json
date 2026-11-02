@@ -1,0 +1,28 @@
+{
+  "id": "beam:BEAM-7856",
+  "project": "beam",
+  "issue_key": "BEAM-7856",
+  "annotator": "claude-opus-5",
+  "pass": 1,
+  "file_roles": [
+    {
+      "path": "sdks/python/apache_beam/io/gcp/bigquery_tools.py",
+      "role": "causal",
+      "evidence": "get_or_create_table called self._create_table with no error handling. The fix wraps it, 'except HttpError as exn: if exn.status_code == 409: ... created_table = self.get_table(...)', and the second commit adds 'else: raise'. A method named get_or_create_table owns the invariant that creating an existing table must succeed, and it did not."
+    }
+  ],
+  "symptom_location": {
+    "file": "sdks/python/apache_beam/io/gcp/bigquery_tools.py",
+    "function": "_create_table",
+    "determinable": true
+  },
+  "log_location": {
+    "file": "sdks/python/apache_beam/io/gcp/bigquery_tools.py",
+    "function": "_create_table",
+    "determinable": true
+  },
+  "relation": "same-location",
+  "rationale": "The deepest frame inside this repository is 'bigquery_tools.py, line 444, in _create_table response = self.client.tables.Insert(request)', and the fix changes its caller in the same file, so cause and symptom share a location. The 409 itself comes from BigQuery, not from a defect in another file: the race between workers is inherent, and the defect is that the get-or-create path did not tolerate it. The reporter notes the effect is confined to logs, 'This is non-fatal issue and just prints error in the logs'.",
+  "confidence": "medium",
+  "notes": "Genuinely borderline between causal and symptom-handling. The change is pure exception handling at the detection site, which reads as symptom-handling, but the enclosing method's contract is idempotent creation, which makes it the owner of the violated invariant. Worth watching in the agreement analysis: this is the shape of case two raters would most likely split on."
+}

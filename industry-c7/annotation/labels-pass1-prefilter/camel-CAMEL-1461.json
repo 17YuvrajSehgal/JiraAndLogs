@@ -1,0 +1,38 @@
+{
+  "id": "camel:CAMEL-1461",
+  "project": "camel",
+  "issue_key": "CAMEL-1461",
+  "annotator": "claude-opus-5",
+  "pass": 1,
+  "file_roles": [
+    {
+      "path": "components/camel-jms/src/main/java/org/apache/camel/component/jms/EndpointMessageListener.java",
+      "role": "symptom-handling",
+      "evidence": "Two guards are added at the reply site: '} else {' becomes '} else if (exchange.getOut(false) != null) {', and the send condition gains 'rce == null &&'. The commit message says 'Fixed a NPE'; these stop a reply being sent after an exception and stop a null out being dereferenced, which is error handling where the failure surfaced."
+    },
+    {
+      "path": "components/camel-jms/src/main/java/org/apache/camel/component/jms/JmsBinding.java",
+      "role": "causal",
+      "evidence": "JMSReplyTo was copied onto the outgoing message unconditionally; the fix wraps it in 'if (exchange.getPattern().isOutCapable())' and otherwise logs 'Exchange is not out capable, Ignoring JMSReplyTo'. This file owns the header-mapping invariant that the reporter says was violated."
+    },
+    {
+      "path": "components/camel-jms/src/main/java/org/apache/camel/component/jms/JmsProducer.java",
+      "role": "causal",
+      "evidence": "The not-out-capable branch now strips the inherited headers: 'exchange.getIn().setHeader(\"JMSReplyTo\", null)' and the same for JMSCorrelationID, guarded by '!endpoint.isPreserveMessageQos() && !endpoint.isExplicitQosEnabled()'. The reporter named this file's process(Exchange) as 'the root of the bug'."
+    }
+  ],
+  "symptom_location": {
+    "file": "components/camel-jms/src/main/java/org/apache/camel/component/jms/JmsProducer.java",
+    "function": "process",
+    "determinable": true
+  },
+  "log_location": {
+    "file": null,
+    "function": null,
+    "determinable": false
+  },
+  "relation": "same-location",
+  "rationale": "The reported symptom is a 20 second request timeout, 'The OUT message was not received within: 20000 millis on the exchange', which fires in the producer's request/reply wait, the same method the reporter identifies as the root. The report quotes no log line with a file or line, so the log site cannot be placed. Two files correct the JMSReplyTo handling itself; the consumer-side listener only gains guards against replying after an exception and against a null out.",
+  "confidence": "medium",
+  "notes": "Five fix commits span months and the final patch does not change the 'if (exchange.getPattern().isOutCapable())' line the reporter pointed at; it strips the headers instead. The gold set is therefore the union of several rounds of fixing, which weakens single-commit attribution."
+}

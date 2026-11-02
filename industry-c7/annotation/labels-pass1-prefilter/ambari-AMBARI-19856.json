@@ -1,0 +1,48 @@
+{
+  "id": "ambari:AMBARI-19856",
+  "project": "ambari",
+  "issue_key": "AMBARI-19856",
+  "annotator": "claude-opus-5",
+  "pass": 1,
+  "file_roles": [
+    {
+      "path": "ambari-server/src/main/java/org/apache/ambari/server/controller/AmbariManagementControllerImpl.java",
+      "role": "causal",
+      "evidence": "'Map<String, DesiredConfig> desiredConfigs = cluster.getDesiredConfigs();' is deleted from inside createHostAction and hoisted to the caller as 'clusterDesiredConfigs', now passed in as a parameter; findConfigurationTagsWithOverrides(cluster, host.getHostName()) is replaced by configHelper.getEffectiveDesiredTags(cluster, hostName, clusterDesiredConfigs). Recomputing the cluster's desired configs once per host is the wrong logic being corrected."
+    },
+    {
+      "path": "ambari-server/src/main/java/org/apache/ambari/server/state/ConfigHelper.java",
+      "role": "causal",
+      "evidence": "isStaleConfigs and calculateIsStaleConfigs gain overloads taking HostComponentDesiredStateEntity, so the entity is fetched once by the caller instead of each call doing 'sch.getDesiredStateEntity()'. The old single-argument forms now delegate, which shows the repeated per-call entity lookup was the problem."
+    },
+    {
+      "path": "ambari-server/src/main/java/org/apache/ambari/server/state/ServiceComponentHost.java",
+      "role": "refactor",
+      "evidence": "The diff is two interface declarations only: 'boolean isRestartRequired(HostComponentDesiredStateEntity ...)' and 'HostComponentDesiredStateEntity getDesiredStateEntity()', plus the import they need. No behaviour lives here; it is the API adaptation the real change forces."
+    },
+    {
+      "path": "ambari-server/src/main/java/org/apache/ambari/server/state/svccomphost/ServiceComponentHostImpl.java",
+      "role": "causal",
+      "evidence": "In convertToResponse, 'String publicHostName = getPublicHostName()' becomes 'hostEntity.getPublicHostName()' and 'getComponentAdminState()' becomes getComponentAdminStateFromDesiredStateEntity(hostComponentDesiredStateEntity), both reusing entities already loaded instead of re-fetching. getDesiredStateEntity() is 'hostComponentDesiredStateDAO.findById(desiredStateEntityId)', so each avoided call is a database round trip."
+    },
+    {
+      "path": "contrib/utils/perf/deploy-gce-perf-cluster.py",
+      "role": "preventive",
+      "evidence": "The diff only tunes the test cluster: innodb_buffer_pool_size=16G, key_buffer_size=16G, 'agent.threadpool.size.max=25' to 100, 'client.threadpool.size.max=25' to 65, and alerts.cache.enabled=true. The rubric counts configuration tightening as preventive; none of the defect lives here."
+    }
+  ],
+  "symptom_location": {
+    "file": "ambari-server/src/main/java/org/apache/ambari/server/controller/AmbariManagementControllerImpl.java",
+    "function": "createHostAction",
+    "determinable": true
+  },
+  "log_location": {
+    "file": null,
+    "function": null,
+    "determinable": false
+  },
+  "relation": "same-location",
+  "rationale": "The report is a bare performance complaint with no stack trace and no log line, so the log location cannot be determined. The slowness surfaces in the same start/stop action-creation path that the fix optimises, which is why the relation is same-location rather than a separate producer site. Three of the five gold files remove repeated per-host database lookups; the interface file only declares the new methods, and the gce script only tunes the test cluster.",
+  "confidence": "medium",
+  "notes": "contrib/utils/perf/deploy-gce-perf-cluster.py is perf test-harness tooling, not product code, and TEST_PATH did not filter it. Worth flagging as a benchmark defect: a localizer cannot reasonably be asked to rank a deploy script as a fix target."
+}

@@ -1,0 +1,32 @@
+{
+  "id": "beam:BEAM-5848",
+  "project": "beam",
+  "issue_key": "BEAM-5848",
+  "annotator": "claude-opus-5",
+  "pass": 1,
+  "file_roles": [
+    {
+      "path": "runners/flink/src/main/java/org/apache/beam/runners/flink/FlinkStreamingPortablePipelineTranslator.java",
+      "role": "causal",
+      "evidence": "translateStreamingImpulse attached no type information to the source; the fix builds one, 'new CoderTypeInformation<>(WindowedValue.getFullCoder(ByteArrayCoder.of(), GlobalWindow.Coder.INSTANCE))', and applies it with '.returns(typeInfo)'. The commit message is 'Fix coder for streaming impulse source', and a wrong inferred serializer only bites once elements actually cross a network boundary, which is what disabling chaining causes."
+    },
+    {
+      "path": "runners/flink/src/main/java/org/apache/beam/runners/flink/translation/wrappers/streaming/io/StreamingImpulseSource.java",
+      "role": "refactor",
+      "evidence": "The only change is guarding the sleep, 'Thread.sleep(intervalMillis)' becoming 'if (intervalMillis > 0) { Thread.sleep(intervalMillis); }'. This avoids a pointless zero sleep and has nothing to do with the coder."
+    }
+  ],
+  "symptom_location": {
+    "file": null,
+    "function": null,
+    "determinable": false
+  },
+  "log_location": {
+    "file": null,
+    "function": null,
+    "determinable": false
+  },
+  "relation": "state-producer",
+  "rationale": "The report gives no exception and no log line, only 'cause the job to fail after a few seconds', so neither the symptom file nor the log file can be named. The wrong type information is attached when the pipeline is translated and only fails later, when the empty byte arrays are serialised across the forward stream, which is a produced-state relation. One gold file carries that fix; the other adds an unrelated sleep guard.",
+  "confidence": "medium"
+}

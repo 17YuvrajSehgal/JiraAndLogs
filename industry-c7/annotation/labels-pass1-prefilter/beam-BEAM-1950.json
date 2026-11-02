@@ -1,0 +1,28 @@
+{
+  "id": "beam:BEAM-1950",
+  "project": "beam",
+  "issue_key": "BEAM-1950",
+  "annotator": "claude-opus-5",
+  "pass": 1,
+  "file_roles": [
+    {
+      "path": "runners/spark/src/main/java/org/apache/beam/runners/spark/io/MicrobatchSource.java",
+      "role": "causal",
+      "evidence": "'private synchronized void initReaderCache' becomes 'private static synchronized void initReaderCache'. The report states 'readerCache is static' and that access to it 'shouldn't be protected by lock on non-static MicrobatchSource.this', so the lock was guarding the wrong monitor."
+    }
+  ],
+  "symptom_location": {
+    "file": "runners/spark/src/main/java/org/apache/beam/runners/spark/io/MicrobatchSource.java",
+    "function": "initReaderCache",
+    "determinable": true
+  },
+  "log_location": {
+    "file": null,
+    "function": null,
+    "determinable": false
+  },
+  "relation": "same-location",
+  "rationale": "The defect and the place it would surface are the same method: a static field guarded by an instance monitor, so two instances could race into the 'if (readerCache == null)' block. The report is a static-analysis style finding with no runtime failure, so there is no log line to locate. One keyword is added and nothing else changes, which makes the attribution unambiguous.",
+  "confidence": "high",
+  "notes": "The defect is a locking error, but it lives at a single site rather than spanning two, so the relation is same-location rather than concurrency."
+}

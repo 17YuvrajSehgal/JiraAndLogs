@@ -1,0 +1,63 @@
+{
+  "id": "drill:DRILL-6080",
+  "project": "drill",
+  "issue_key": "DRILL-6080",
+  "annotator": "claude-opus-5",
+  "pass": 1,
+  "file_roles": [
+    {
+      "path": "exec/java-exec/src/main/java/org/apache/drill/exec/physical/impl/sort/SortRecordBatchBuilder.java",
+      "role": "causal",
+      "evidence": "'sv4 = new SelectionVector4(svBuffer, recordCount, Character.MAX_VALUE)' becomes '... ValueVector.MAX_ROW_COUNT'. This is precisely the substitution the report asks for: 'The sort code incorrectly uses Character.MAX_VALUE as the maximum row count ... The fix is to instead use the correct constant ValueVector.MAX_ROW_COUNT.'"
+    },
+    {
+      "path": "exec/java-exec/src/main/java/org/apache/drill/exec/physical/impl/xsort/MSortTemplate.java",
+      "role": "causal",
+      "evidence": "The default batch size changes from 'desiredRecordBatchCount = Character.MAX_VALUE' to 'desiredRecordBatchCount = ValueVector.MAX_ROW_COUNT', the second site of the same wrong constant. The file also drops a Stopwatch and a 'compares' counter, which is unrelated debug removal."
+    },
+    {
+      "path": "exec/java-exec/src/main/java/org/apache/drill/exec/record/selection/SelectionVector4.java",
+      "role": "refactor",
+      "evidence": "The only change is spacing: 'start = start+length' becomes 'start = start + length' and 'Math.min(start+length, recordCount)' gains spaces. No behaviour changes."
+    },
+    {
+      "path": "exec/memory/base/src/main/java/io/netty/buffer/DrillBuf.java",
+      "role": "refactor",
+      "evidence": "Deletes setBytesBounded and the whole unsafePutInt/unsafePutLong/unsafePutShort/unsafePutByte/unsafeCopyMemory family. This is the commit message's 'Replace \"unsafe\" methods with \"set\" methods' cleanup, not the row-count defect."
+    },
+    {
+      "path": "exec/vector/src/main/codegen/templates/ColumnAccessors.java",
+      "role": "refactor",
+      "evidence": "Mechanical call-site renames throughout the template, 'drillBuf.unsafePutInt(...)' to 'drillBuf.setInt(...)' and 'drillBuf.unsafeCopyMemory(value, 0, offset, len)' to 'drillBuf.setBytes(offset, value, 0, len)', forced by the DrillBuf deletions."
+    },
+    {
+      "path": "exec/vector/src/main/java/org/apache/drill/exec/vector/accessor/writer/AbstractFixedWidthWriter.java",
+      "role": "refactor",
+      "evidence": "A single call-site rename, 'drillBuf.unsafeCopyMemory(ZERO_BUF, 0, dest * width, length * width)' to 'drillBuf.setBytes(dest * width, ZERO_BUF, 0, length * width)'."
+    },
+    {
+      "path": "exec/vector/src/main/java/org/apache/drill/exec/vector/accessor/writer/NullableScalarWriter.java",
+      "role": "refactor",
+      "evidence": "Adds a ChildIndex class and a 'writerIndex.nextElement()' call to every setter so the index is not advanced twice. This is the commit message's separate item, 'Also fixes an indexing issue with nullable writers', and has nothing to do with the 64K batch limit."
+    },
+    {
+      "path": "exec/vector/src/main/java/org/apache/drill/exec/vector/accessor/writer/OffsetVectorWriter.java",
+      "role": "refactor",
+      "evidence": "Reworks writeIndex/prepareWrite/fillEmpties around the value index and replaces endWrite with setValueCount. This is the commit message's 'Fix for overflow in offset vector in row set writer', again a different defect carried in the same commit."
+    }
+  ],
+  "symptom_location": {
+    "file": "exec/java-exec/src/main/java/org/apache/drill/exec/physical/impl/sort/SortRecordBatchBuilder.java",
+    "function": null,
+    "determinable": true
+  },
+  "log_location": {
+    "file": null,
+    "function": null,
+    "determinable": false
+  },
+  "relation": "same-location",
+  "rationale": "The reported defect is a single wrong constant, and only two of the eight gold files change it. The commit message itself lists the rest as separate work: code cleanup, an offset-vector overflow fix, a performance tool update, an unsafe-to-set method replacement, a nullable-writer indexing fix and debug removal. The report describes unnecessary batch splitting rather than an observed exception, so there is no log site.",
+  "confidence": "high",
+  "notes": "The strongest tangled-commit example so far: 6 of 8 gold files are unrelated to the reported issue, two of them fixing different defects. Any localizer that ranks only the two sort files is scored as 75% wrong against fix-gold while being completely right."
+}

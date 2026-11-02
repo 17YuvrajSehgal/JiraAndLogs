@@ -1,0 +1,27 @@
+{
+  "id": "flink:FLINK-17570",
+  "project": "flink",
+  "issue_key": "FLINK-17570",
+  "annotator": "claude-opus-5",
+  "pass": 1,
+  "file_roles": [
+    {
+      "path": "flink-table/flink-table-planner/src/main/scala/org/apache/flink/table/api/internal/TableEnvImpl.scala",
+      "role": "causal",
+      "evidence": "'fromValues(exprs)' becomes 'fromValues(exprs: _*)' in both overloads. Without the splat the Array is passed as one Object, so the JIterable overload calls itself through the varargs entry point forever, which is the alternating recursion in the trace."
+    }
+  ],
+  "symptom_location": {
+    "file": "flink-table/flink-table-planner/src/main/scala/org/apache/flink/table/api/internal/TableEnvImpl.scala",
+    "function": "fromValues",
+    "determinable": true
+  },
+  "log_location": {
+    "file": "flink-table/flink-table-planner/src/main/scala/org/apache/flink/table/api/internal/TableEnvImpl.scala",
+    "function": "fromValues",
+    "determinable": true
+  },
+  "relation": "same-location",
+  "rationale": "The StackOverflowError trace repeats two frames, 'TableEnvImpl.fromValues(TableEnvImpl.scala:1032)' and 'TableEnvironment.fromValues(TableEnvironment.java:163)', and the fix changes the first of those. The defect, the recursion and the thrown error are all at the same site. The second changed file in the commit is a test and was filtered out of the gold set.",
+  "confidence": "high"
+}

@@ -1,0 +1,28 @@
+{
+  "id": "cassandra:CASSANDRA-4574",
+  "project": "cassandra",
+  "issue_key": "CASSANDRA-4574",
+  "annotator": "claude-opus-5",
+  "pass": 1,
+  "file_roles": [
+    {
+      "path": "src/java/org/apache/cassandra/service/AntiEntropyService.java",
+      "role": "causal",
+      "evidence": "The log call passed a format string to logger.info without formatting it: 'logger.info(\"[repair #%s] No neighbors to repair with on range %s: session completed\", getName(), range)' becomes the same call wrapped in String.format(...). The report shows the literal '%s' reaching the log, which is exactly this."
+    }
+  ],
+  "symptom_location": {
+    "file": "src/java/org/apache/cassandra/service/AntiEntropyService.java",
+    "function": null,
+    "determinable": true
+  },
+  "log_location": {
+    "file": "src/java/org/apache/cassandra/service/AntiEntropyService.java",
+    "function": null,
+    "determinable": true
+  },
+  "relation": "same-location",
+  "rationale": "Here the defect is the log statement itself, so the causal site, the symptom site and the log site are one line. The report pins it exactly, 'A String.format() is missing in AntiEntropyService.java (line 625 in 1.2)', and the diff changes that line. The rest of the diff is trailing-whitespace cleanup in the same file and carries no behaviour.",
+  "confidence": "high",
+  "notes": "An easy instance by construction: the report names the file, the line and the fix. Useful as a contrast case when reporting how much of the benchmark is solvable from the report text alone."
+}

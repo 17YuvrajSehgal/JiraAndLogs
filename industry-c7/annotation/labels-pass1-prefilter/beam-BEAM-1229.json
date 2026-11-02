@@ -1,0 +1,28 @@
+{
+  "id": "beam:BEAM-1229",
+  "project": "beam",
+  "issue_key": "BEAM-1229",
+  "annotator": "claude-opus-5",
+  "pass": 1,
+  "file_roles": [
+    {
+      "path": "runners/flink/examples/src/main/java/org/apache/beam/runners/flink/examples/streaming/KafkaIOExamples.java",
+      "role": "causal",
+      "evidence": "The read had no coder attached: '.apply(Read.from(UnboundedFlinkSource.of(kafkaConsumer)))' becomes '....setCoder(StringUtf8Coder.of())', and the Avro variant gains '.setCoder(AvroCoder.of(MyType.class))'. Without a coder, TypedPValue.getCoder hits 'Preconditions.checkState' and throws IllegalStateException, which is the reported trace."
+    }
+  ],
+  "symptom_location": {
+    "file": "sdks/java/core/src/main/java/org/apache/beam/sdk/values/TypedPValue.java",
+    "function": "getCoder",
+    "determinable": true
+  },
+  "log_location": {
+    "file": "sdks/java/core/src/main/java/org/apache/beam/sdk/values/TypedPValue.java",
+    "function": "getCoder",
+    "determinable": true
+  },
+  "relation": "caller-callee",
+  "rationale": "The stack trace throws at 'TypedPValue.getCoder(TypedPValue.java:51)' via Preconditions.checkState, which is a different file from the one the fix changes. The example is the caller that failed to specify a coder, and getCoder is the callee that discovers it is missing, so the symptom site and the causal site are one call apart.",
+  "confidence": "high",
+  "notes": "A clear case where the file in the stack trace is not the file that gets fixed. The reporter's own trace frame names their copy of the example, 'KafkaIOExamples.java:83', which matches the gold file by name."
+}

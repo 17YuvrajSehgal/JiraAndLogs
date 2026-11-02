@@ -1,0 +1,27 @@
+{
+  "id": "cassandra:CASSANDRA-6571",
+  "project": "cassandra",
+  "issue_key": "CASSANDRA-6571",
+  "annotator": "claude-opus-5",
+  "pass": 1,
+  "file_roles": [
+    {
+      "path": "src/java/org/apache/cassandra/gms/Gossiper.java",
+      "role": "causal",
+      "evidence": "A single line is added before the echo is sent, 'localState.markDead();'. The report's step 6 names the defect precisely: 'X gossips to Y again, but because the endpoint isAlive() returns true, it never calls markAlive() to properly set Y as alive.' Leaving the state alive while the echo is outstanding is the wrong logic, and marking it dead first restores the retry."
+    }
+  ],
+  "symptom_location": {
+    "file": "src/java/org/apache/cassandra/gms/Gossiper.java",
+    "function": "markAlive",
+    "determinable": true
+  },
+  "log_location": {
+    "file": null,
+    "function": null,
+    "determinable": false
+  },
+  "relation": "same-location",
+  "rationale": "The stuck state and the missing transition are both in Gossiper's alive-marking path, so cause and symptom share a location. The reporter observed the failure through 'nodetool status' output rather than a log line or stack trace, so no emitting source file can be identified. The reporter also records a rejected fix, defaulting isAlive=false in the EndpointState constructor, which is evidence that the real invariant belongs to the echo handshake in Gossiper.",
+  "confidence": "high"
+}

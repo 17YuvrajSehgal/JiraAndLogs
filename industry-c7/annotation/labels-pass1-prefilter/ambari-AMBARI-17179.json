@@ -1,0 +1,33 @@
+{
+  "id": "ambari:AMBARI-17179",
+  "project": "ambari",
+  "issue_key": "AMBARI-17179",
+  "annotator": "claude-opus-5",
+  "pass": 1,
+  "file_roles": [
+    {
+      "path": "ambari-server/src/main/resources/stacks/HDP/2.0.6/services/stack_advisor.py",
+      "role": "causal",
+      "evidence": "getAllYarnLeafQueues kept only the last path segment, 'queueName = queue.split(\".\")[-1]; leafQueueNames.add(queueName)', and now keeps the whole path, 'leafQueueNames.add(queue)', with a comment showing 'a1.b1.c1.d1'. Collapsing a nested queue to its bare name is the logic that confined the calculation to a queue literally named llap."
+    },
+    {
+      "path": "ambari-server/src/main/resources/stacks/HDP/2.5/services/stack_advisor.py",
+      "role": "causal",
+      "evidence": "setLlapDaemonQueueNamePropAttributes is replaced by setLlapDaemonQueuePropAttributesAndCapSliderVisibility, and the selected queue is now read from 'hive.llap.daemon.queue.name' rather than assumed. This is the site that performed the LLAP sizing against the fixed queue."
+    }
+  ],
+  "symptom_location": {
+    "file": null,
+    "function": null,
+    "determinable": false
+  },
+  "log_location": {
+    "file": null,
+    "function": null,
+    "determinable": false
+  },
+  "relation": "unclear",
+  "rationale": "The report is a single sentence describing a restriction rather than a failure, so there is no exception, no log line and no symptom site to place. Both gold files hold the logic that enforced the restriction, which makes them causal under the reading that the restriction is the wrong behaviour. The 2.5 advisor also gains a wholly new validator, validateHiveInteractiveSiteConfigurations, which is additional work carried in the same commit.",
+  "confidence": "medium",
+  "notes": "Borderline between an enhancement and a defect. Labelled causal because the report names behaviour that was wrong, not a capability that was absent, but a reader could reasonably call this a feature request."
+}

@@ -1,0 +1,163 @@
+{
+  "id": "ambari:AMBARI-4487",
+  "project": "ambari",
+  "issue_key": "AMBARI-4487",
+  "annotator": "claude-opus-5",
+  "pass": 1,
+  "file_roles": [
+    {
+      "path": "ambari-agent/src/main/python/resource_management/core/__init__.py",
+      "role": "refactor",
+      "evidence": "One added import line, 'from resource_management.core.logger import *'."
+    },
+    {
+      "path": "ambari-agent/src/main/python/resource_management/core/base.py",
+      "role": "refactor",
+      "evidence": "Drops 'log = logging.getLogger(\"resource_management.resource\")' and rewrites the call as 'Logger.debug(\"New resource %s: %s\" % ...)'. A facade swap; the message content is unchanged."
+    },
+    {
+      "path": "ambari-agent/src/main/python/resource_management/core/environment.py",
+      "role": "causal",
+      "evidence": "Deletes _get_resource_repr, which built 'arguments_str' from every resource argument and was passed straight to self.log.info, and replaces the call with 'Logger.info_resource(resource)'. That method is where a resource's password arguments were rendered into the log."
+    },
+    {
+      "path": "ambari-agent/src/main/python/resource_management/core/providers/__init__.py",
+      "role": "refactor",
+      "evidence": "Removes 'self.log = logging.getLogger(\"resource_management.provider\")' and the logging import. No message changes."
+    },
+    {
+      "path": "ambari-agent/src/main/python/resource_management/core/providers/accounts.py",
+      "role": "refactor",
+      "evidence": "Six mechanical rewrites of the form 'self.log.info(\"Adding user %s\" % self.resource)' to 'Logger.info(...)', plus the Logger import."
+    },
+    {
+      "path": "ambari-agent/src/main/python/resource_management/core/providers/mount.py",
+      "role": "refactor",
+      "evidence": "Seven self.log.info/self.log.debug calls become Logger.info/Logger.debug with identical text, plus the Logger import."
+    },
+    {
+      "path": "ambari-agent/src/main/python/resource_management/core/providers/package/yumrpm.py",
+      "role": "refactor",
+      "evidence": "'self.log.info(\"Installing package %s (\\'%s\\')\", name, cmd)' becomes 'Logger.info(... % (name, cmd))'. Facade swap and argument-style change only."
+    },
+    {
+      "path": "ambari-agent/src/main/python/resource_management/core/providers/package/zypper.py",
+      "role": "refactor",
+      "evidence": "The same two call sites as yumrpm.py rewritten to Logger.info, plus the Logger import."
+    },
+    {
+      "path": "ambari-agent/src/main/python/resource_management/core/providers/service.py",
+      "role": "refactor",
+      "evidence": "_exec_cmd's two logging calls become Logger.info and Logger.debug with unchanged text, plus the Logger import."
+    },
+    {
+      "path": "ambari-agent/src/main/python/resource_management/core/providers/system.py",
+      "role": "refactor",
+      "evidence": "_ensure_metadata loses its 'log=None' parameter and its 'log and log.info(...)' guards become plain Logger.info calls; FileProvider's write message likewise. Plumbing, not masking."
+    },
+    {
+      "path": "ambari-agent/src/main/python/resource_management/core/shell.py",
+      "role": "refactor",
+      "evidence": "'log = logging.getLogger(\"resource_management.provider\")' is removed and 'log.info(out)' becomes 'Logger.info(out)'. The failure message 'Execution of ... returned ...' is left untouched in this commit."
+    },
+    {
+      "path": "ambari-agent/src/main/python/resource_management/libraries/functions/check_process_status.py",
+      "role": "refactor",
+      "evidence": "Two log.debug calls about stale pid files become Logger.debug, plus import changes. No sensitive data involved."
+    },
+    {
+      "path": "ambari-agent/src/main/python/resource_management/libraries/functions/default.py",
+      "role": "refactor",
+      "evidence": "A single 'log.debug(\"Cannot find configuration: ...\")' becomes Logger.debug, plus the import swap."
+    },
+    {
+      "path": "ambari-agent/src/main/python/resource_management/libraries/functions/format.py",
+      "role": "causal",
+      "evidence": "This is where masking is implemented. ConfigurationFormatter now formats twice and adds convert_field_protected, which returns '[PROTECTED]' when conversion == 'p', registering the pair via 'Logger.sensitive_strings[result_unprotected] = result_protected'. Before this, every formatted command string carried the password verbatim."
+    },
+    {
+      "path": "ambari-agent/src/main/python/resource_management/libraries/providers/properties_file.py",
+      "role": "refactor",
+      "evidence": "One line: 'self.log.debug(format(\"Generating properties file: {filepath}\"))' becomes 'Logger.info(...)'. Level change and facade swap."
+    },
+    {
+      "path": "ambari-agent/src/main/python/resource_management/libraries/providers/xml_config.py",
+      "role": "refactor",
+      "evidence": "One line: 'self.log.info(format(\"Generating config: {conf_dir}/{filename}\"))' becomes 'Logger.info(...)'."
+    },
+    {
+      "path": "ambari-server/src/main/resources/stacks/HDP/1.3.2/services/HIVE/package/scripts/hive_service.py",
+      "role": "causal",
+      "evidence": "The DBConnectionVerification command gains the flag: '{hive_metastore_user_name} {hive_metastore_user_passwd!p} {hive_jdbc_driver}'. Before the '!p', this command string placed the Hive metastore password into the log."
+    },
+    {
+      "path": "ambari-server/src/main/resources/stacks/HDP/1.3.2/services/HIVE/package/scripts/mysql_server.py",
+      "role": "causal",
+      "evidence": "'cmd = format(\"bash -x {mysql_adduser_path} {daemon_name} {hive_metastore_user_name} {hive_metastore_user_passwd!p} {mysql_host[0]}\")'. This is the exact line the reporter quotes as the example to fix."
+    },
+    {
+      "path": "ambari-server/src/main/resources/stacks/HDP/1.3.2/services/HIVE/package/scripts/params.py",
+      "role": "refactor",
+      "evidence": "Adds only 'daemon_name = status_params.daemon_name'. This supports the mysql_server command's {daemon_name} placeholder and carries no masking."
+    },
+    {
+      "path": "ambari-server/src/main/resources/stacks/HDP/1.3.2/services/HIVE/package/scripts/status_params.py",
+      "role": "refactor",
+      "evidence": "Adds an os-family branch setting daemon_name to 'mysql' or 'mysqld'. Unrelated to logging sensitive values."
+    },
+    {
+      "path": "ambari-server/src/main/resources/stacks/HDP/1.3.2/services/NAGIOS/package/scripts/nagios.py",
+      "role": "causal",
+      "evidence": "'{nagios_web_login} {nagios_web_password}' becomes '{nagios_web_login} {nagios_web_password!p}' in the htpasswd command. The report names Nagios as one of the three passwords to protect."
+    },
+    {
+      "path": "ambari-server/src/main/resources/stacks/HDP/1.3.2/services/OOZIE/package/scripts/oozie_service.py",
+      "role": "causal",
+      "evidence": "The db_connection_check_command gains '{oozie_metastore_user_passwd!p}'. The report names Oozie as one of the three passwords to protect."
+    },
+    {
+      "path": "ambari-server/src/main/resources/stacks/HDP/2.0.6/services/HIVE/package/scripts/hive_service.py",
+      "role": "causal",
+      "evidence": "The 2.0.6 copy of the same DBConnectionVerification command gains '{hive_metastore_user_passwd!p}'."
+    },
+    {
+      "path": "ambari-server/src/main/resources/stacks/HDP/2.0.6/services/HIVE/package/scripts/mysql_server.py",
+      "role": "causal",
+      "evidence": "The 2.0.6 copy of the mysql_adduser command gains '{hive_metastore_user_passwd!p}'."
+    },
+    {
+      "path": "ambari-server/src/main/resources/stacks/HDP/2.0.6/services/HIVE/package/scripts/params.py",
+      "role": "refactor",
+      "evidence": "Adds only 'daemon_name = status_params.daemon_name', the same plumbing as the 1.3.2 copy."
+    },
+    {
+      "path": "ambari-server/src/main/resources/stacks/HDP/2.0.6/services/HIVE/package/scripts/status_params.py",
+      "role": "refactor",
+      "evidence": "Adds the same os-family daemon_name branch as the 1.3.2 copy."
+    },
+    {
+      "path": "ambari-server/src/main/resources/stacks/HDP/2.0.6/services/NAGIOS/package/scripts/nagios.py",
+      "role": "causal",
+      "evidence": "The 2.0.6 copy of the htpasswd command changes '{nagios_web_password}' to '{nagios_web_password!p}'."
+    },
+    {
+      "path": "ambari-server/src/main/resources/stacks/HDP/2.0.6/services/OOZIE/package/scripts/oozie_service.py",
+      "role": "causal",
+      "evidence": "The 2.0.6 copy of the db_connection_check_command gains the '!p' flag on the Oozie metastore password."
+    }
+  ],
+  "symptom_location": {
+    "file": null,
+    "function": null,
+    "determinable": false
+  },
+  "log_location": {
+    "file": null,
+    "function": null,
+    "determinable": false
+  },
+  "relation": "state-producer",
+  "rationale": "The unmasked string is built at the format() call site and only becomes visible later when something logs it, which is a produced-state relation; the report names no particular log line, so neither the symptom nor the log site can be pinned to a file. Ten gold files are causal: format.py implements the [PROTECTED] substitution, environment.py stops dumping every resource argument, and eight stack scripts add the '!p' flag to the specific commands that carried the Hive, Nagios and Oozie passwords. The remaining eighteen are mechanical swaps from self.log to Logger, or daemon_name plumbing that has nothing to do with masking.",
+  "confidence": "medium",
+  "notes": "The new Logger class, which holds sensitive_strings and does the actual masking, is NOT in the gold set, because gold is files the commit MODIFIED and that file was added. A system that correctly names the file where masking lives would be scored as wrong. Worth counting how often added files carry the real fix."
+}

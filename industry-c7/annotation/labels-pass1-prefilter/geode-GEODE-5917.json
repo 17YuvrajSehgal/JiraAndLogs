@@ -1,0 +1,33 @@
+{
+  "id": "geode:GEODE-5917",
+  "project": "geode",
+  "issue_key": "GEODE-5917",
+  "annotator": "claude-opus-5",
+  "pass": 1,
+  "file_roles": [
+    {
+      "path": "geode-core/src/distributedTest/java/org/apache/geode/cache/query/dunit/PDXQueryTestBase.java",
+      "role": "test",
+      "evidence": "The path is geode-core/src/distributedTest/java/... and the class is a JUnit4CacheTestCase base. The change repairs a test helper that ignored its own arguments, 'configAndStartBridgeServer(false, false, false, null)' becoming 'configAndStartBridgeServer(isPr, isAccessor, false, null)'."
+    },
+    {
+      "path": "geode-core/src/main/java/org/apache/geode/cache/query/internal/utils/PDXUtils.java",
+      "role": "causal",
+      "evidence": "'if (getDeserializedObject && obj instanceof VMCachedDeserializable)' becomes 'instanceof CachedDeserializable', with the cast changed to match. The reporter supplies this exact change and says 'Changing the instanceof check to check for CachedDeserializable instead fixes the issue', because remote results arrive as PreferBytesCachedDeserializable, which is not a VMCachedDeserializable."
+    }
+  ],
+  "symptom_location": {
+    "file": "geode-core/src/main/java/org/apache/geode/cache/query/internal/utils/PDXUtils.java",
+    "function": "convertPDX",
+    "determinable": true
+  },
+  "log_location": {
+    "file": "geode-core/src/main/java/org/apache/geode/cache/query/internal/utils/PDXUtils.java",
+    "function": "convertPDX",
+    "determinable": true
+  },
+  "relation": "same-location",
+  "rationale": "The reporter's stack dump puts the conversion at 'PDXUtils.convertPDX(PDXUtils.java:83)', which is the same method and file the fix changes, so cause and symptom coincide. The narrow instanceof test silently skipped remote results rather than failing, which is why the output mixes the two representations. The second gold file is a distributed test base class and carries no product behaviour.",
+  "confidence": "high",
+  "notes": "BENCHMARK DEFECT: PDXQueryTestBase.java is a test file that TEST_PATH did not filter. Its directory is 'src/distributedTest/java', which the pattern evidently does not cover. Worth checking how many other instances carry gold from src/distributedTest, src/integrationTest or similar source sets, because each one puts an unreachable target in the gold set."
+}

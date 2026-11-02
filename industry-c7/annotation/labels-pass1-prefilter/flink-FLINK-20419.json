@@ -1,0 +1,28 @@
+{
+  "id": "flink:FLINK-20419",
+  "project": "flink",
+  "issue_key": "FLINK-20419",
+  "annotator": "claude-opus-5",
+  "pass": 1,
+  "file_roles": [
+    {
+      "path": "flink-table/flink-table-planner-blink/src/main/scala/org/apache/flink/table/planner/plan/rules/physical/batch/BatchExecSinkRule.scala",
+      "role": "causal",
+      "evidence": "The rule added a partition-grouping collation unconditionally. The fix guards it: 'val relCollation = requiredTraitSet.getTrait(RelCollationTraitDef.INSTANCE); if (relCollation == null || relCollation.getFieldCollations.isEmpty) { ... } else { partitionSink.requiresPartitionGrouping(false) }', with the comment 'we shouldn't do partition grouping if the input already defines collation'. The reproducer's 'order by x' supplies exactly that collation."
+    }
+  ],
+  "symptom_location": {
+    "file": null,
+    "function": null,
+    "determinable": false
+  },
+  "log_location": {
+    "file": null,
+    "function": null,
+    "determinable": false
+  },
+  "relation": "unclear",
+  "rationale": "The report gives a reproducer and the sentence 'Insert fails due to failure to generate execution plan', with no exception text and no log line. Planning failure surfaces inside Calcite's planner, which is a third-party dependency and not a file in this repository, so no symptom file can be named. The single gold file is where the conflicting collation trait is added, and the commit message names that behaviour directly.",
+  "confidence": "medium",
+  "notes": "The causal attribution is clear from the diff and commit message; what cannot be established from the report is where the failure actually surfaced."
+}
