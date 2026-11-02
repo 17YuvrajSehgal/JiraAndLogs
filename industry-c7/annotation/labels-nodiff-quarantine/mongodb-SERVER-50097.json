@@ -1,0 +1,28 @@
+{
+  "id": "mongodb:SERVER-50097",
+  "project": "mongodb",
+  "issue_key": "SERVER-50097",
+  "annotator": "claude-opus-5",
+  "pass": 1,
+  "file_roles": [
+    {
+      "path": "src/mongo/s/commands/strategy.cpp",
+      "role": "causal",
+      "evidence": "The report names this file by link and states the wrong logic in it: 'On mongos, however, we only look at the command name passed into the [request|https://github.com/mongodb/mongo/blob/f8be36eca7f5d17b0cbea557e8825046352eea19/src/mongo/s/commands/strategy.cpp#L1029]. This means that we will incorrectly mark inExhaustIsMaster as false if we send \"ismaster\" instead of \"isMaster\" to mongos.' It also prescribes the adopted fix: 'Mongos should look up the request's command name in the command registry so that any aliases to the isMaster command are correctly covered.'"
+    }
+  ],
+  "symptom_location": {
+    "file": "src/mongo/transport/ismaster_metrics.cpp",
+    "function": null,
+    "determinable": true
+  },
+  "log_location": {
+    "file": null,
+    "function": null,
+    "determinable": false
+  },
+  "relation": "state-producer",
+  "rationale": "The wrong decision is made in mongos, where the raw request command name is used instead of the registry lookup mongod performs, so 'we will incorrectly mark inExhaustIsMaster as false'. The wrong value is then held and observed in the exhaust isMaster metrics, which the report links at src/mongo/transport/ismaster_metrics.cpp#L87-L94 as where the tracking happens, so the bad state is created at one site and read at another. The single gold file is the site that creates it.",
+  "confidence": "medium",
+  "notes": "NO-DIFF PACKET: every gold file in this packet shows '(no diff retrieved)' and the fix commit message is '(empty)', so the issue report is the only evidence the packet carries. Decision recorded here per CONVENTIONS.md ('If a case is not covered here, follow RUBRIC.md and say in notes what was decided and why'): a role is assigned only where the report itself names the faulty code, the wrong behaviour, or the adopted fix, and every other gold file is 'unclear', per schema.json ('A label without citable evidence is not auditable and must be unclear'). Instance confidence is capped at medium because no diff was shown. REPORT-NAMES-FIX: the report names the faulty code by file and line and prescribes the adopted fix, 'Mongos should look up the request's command name in the command registry'. log_location is not determinable: the symptom is an inaccurate metric value, which CONVENTIONS.md treats like a JMX attribute value rather than a log. The symptom site, src/mongo/transport/ismaster_metrics.cpp, lies outside the gold set, as does the mongod comparison site src/mongo/db/service_entry_point_common.cpp that the report uses to show what the correct behaviour looks like. The enclosing function at strategy.cpp#L1029 is not shown, so it is not recorded."
+}

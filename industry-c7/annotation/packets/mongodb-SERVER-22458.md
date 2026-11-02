@@ -15,7 +15,7 @@ This is only a theoretical issue, as the BSON size of a key is limited to 1024 b
 `e4474b03eaa1`
 
 ```
-(empty)
+SERVER-22458: Return TypeBits size bytes values up to kMaxBytesNeeded
 ```
 
 ## Files the fix changed
@@ -29,7 +29,23 @@ Snapshot holds 8,537 non-test source files. The fix changed 1 file(s); 1 of them
 ### `src/mongo/db/storage/key_string.h`
 
 ```diff
-(no diff retrieved)
+diff --git a/src/mongo/db/storage/key_string.h b/src/mongo/db/storage/key_string.h
+index 7ef8ee0e723..02302498b0d 100644
+--- a/src/mongo/db/storage/key_string.h
++++ b/src/mongo/db/storage/key_string.h
+@@ -184,11 +184,11 @@ public:
+     private:
+         /**
+          * size only includes data bytes, not the size byte itself.
+          */
+         uint8_t getSizeByte() const {
+-            return _buf[0] & 0x3f;
++            return _buf[0] & 0x7f;
+         }
+         void setSizeByte(uint8_t size) {
+             dassert(size < kMaxBytesNeeded);
+             _buf[0] = 0x80 | size;
+         }
 ```
 
 ---

@@ -1,0 +1,33 @@
+{
+  "id": "qt:QTBUG-68636",
+  "project": "qt",
+  "issue_key": "QTBUG-68636",
+  "annotator": "claude-opus-5",
+  "pass": 1,
+  "file_roles": [
+    {
+      "path": "src/widgets/widgets/qmenu.cpp",
+      "role": "unclear",
+      "evidence": "The diff reads '(no diff retrieved)' and the commit message 493a85a9e468 is '(empty)'. The report gives only observed behaviour, 'if one menu is opened while another is being closed, it's positioned in the top-left corner instead of the expected position', plus a condition, 'The issue happens when a QMenu is created without a parent, i.e. QWidget::parentWidget() == nullptr'. It names no function, no log and no frame, so whether this file computed the wrong position (causal) or was adapted to a platform workaround or given a guard for the parentless case cannot be read from the packet."
+    },
+    {
+      "path": "src/widgets/widgets/qmenu_p.h",
+      "role": "unclear",
+      "evidence": "Also '(no diff retrieved)'. Under the recorded convention a header is causal only if it holds logic that changed and refactor if it only declares; with no hunk neither can be checked, and the report says nothing about this file. The diff would have settled it in one line."
+    }
+  ],
+  "symptom_location": {
+    "file": null,
+    "function": null,
+    "determinable": false
+  },
+  "log_location": {
+    "file": null,
+    "function": null,
+    "determinable": false
+  },
+  "relation": "unclear",
+  "rationale": "No diff was retrieved for either gold file and the commit message is empty, so nothing shows what was corrected. The report is a visual misplacement with no log, no trace and no named code, 'it's positioned in the top-left corner instead of the expected position', and it is environment-specific, 'There are no such issues on weston or kwin. As far as I know, it only happens on gnome-shell.'. Neither the roles nor a symptom or log site can be derived from that.",
+  "confidence": "low",
+  "notes": "The instance has no log and no trace: the symptom is seen on screen, so symptom_location and log_location are not determinable. The reporter cannot reduce it either, 'This issue does not occur with the mainwindow or menus examples, but happens with qtcreator', so the reproducer is a third-party application, and the triggering environment (the gnome-shell compositor) is outside the project. The fix changed 3 files and 2 are gold; the third is not shown. Decision recorded for consistency across the diff-less packets in this batch: with no hunk, a role is assigned only when the report itself localises the failure mechanism to the changed file (as in QTBUG-80945, where a sanitizer names the freeing and the using line in it, and QTBUG-81604, where the single changed file owns the operation that failed); otherwise the file is 'unclear' per rubric rule 1 and the instruction to use 'unclear' rather than guess."
+}

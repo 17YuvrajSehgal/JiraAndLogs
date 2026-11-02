@@ -1,0 +1,28 @@
+{
+  "id": "mongodb:SERVER-17507",
+  "project": "mongodb",
+  "issue_key": "SERVER-17507",
+  "annotator": "claude-opus-5",
+  "pass": 1,
+  "file_roles": [
+    {
+      "path": "src/mongo/db/auth/native_sasl_authentication_session.cpp",
+      "role": "causal",
+      "evidence": "The whole report is the behaviour gap: 'The AuditLog is not logging authentication failures in 3.0 enterprise and only logging the successes. This was working fine in version 2.6 enterprise.' The fix 'changed 1 file(s); 1 of them are non-test source files' and that file is src/mongo/db/auth/native_sasl_authentication_session.cpp, the SASL authentication session that produces the outcome an audit record is written from. Nothing elsewhere was treated as broken, so under CONVENTIONS ('if no other file was changed, the unguarded code is the defect') the unreported failure path is here. The hunk is not visible: '(no diff retrieved)'."
+    }
+  ],
+  "symptom_location": {
+    "file": null,
+    "function": null,
+    "determinable": false
+  },
+  "log_location": {
+    "file": null,
+    "function": null,
+    "determinable": false
+  },
+  "relation": "unclear",
+  "rationale": "The reported failure is the absence of audit records for failed authentication, a regression from 2.6 to 3.0. The single production file the fix changed is the native SASL authentication session, which is where an authentication attempt's failure outcome is produced, so that is where the missing path lies. Neither the audit emission site nor any frame is shown in the packet, and the diff renders as '(no diff retrieved)'.",
+  "confidence": "medium",
+  "notes": "NO-DIFF-IN-PACKET: every gold file in this packet renders its diff as '(no diff retrieved)', so there is no diff evidence for any role here. Roles rest on the issue report and the gold file list alone, which is weaker than every previously labelled instance. The report contains no log line, no trace and no file name; it names only a behaviour and a version regression, so symptom_location and log_location are both undeterminable and `relation` is unclear. The symptom here is the absence of a record, which has no frame of its own, and the audit emission site is not in the gold set or anywhere in the packet. The main disagreement risk: a second rater could call this symptom-handling, because the entire fix is about producing a diagnostic and the rubric assigns 'adds or improves ... a log message or a diagnostic at the detection site' to that role. It is called causal because the missing audit record is itself the reported failure rather than a report of some other bad state, and the rubric's symptom-handling clause 'while the bad state originated elsewhere' does not hold. This is the clearest boundary case in the mongodb block and worth putting in the human-verified subset."
+}

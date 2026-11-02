@@ -1,0 +1,28 @@
+{
+  "id": "solr:SOLR-14247",
+  "project": "solr",
+  "issue_key": "SOLR-14247",
+  "annotator": "claude-opus-5",
+  "pass": 1,
+  "file_roles": [
+    {
+      "path": "solr/test-framework/src/java/org/apache/solr/SolrTestCase.java",
+      "role": "test",
+      "evidence": "The file is the base class of the test framework, 'public class SolrTestCase extends LuceneTestCase' under 'solr/test-framework/src/java/', documented as 'All Solr test cases should derive from this class eventually.' Its whole change is dead-code removal: 'private static final Logger log = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass());' is deleted together with 'import java.lang.invoke.MethodHandles;', 'import org.slf4j.Logger;' and 'import org.slf4j.LoggerFactory;', plus one blank line and a javadoc trailing space. No sleep is removed here and no behaviour changes."
+    }
+  ],
+  "symptom_location": {
+    "file": null,
+    "function": null,
+    "determinable": false
+  },
+  "log_location": {
+    "file": null,
+    "function": null,
+    "determinable": false
+  },
+  "relation": "unrelated",
+  "rationale": "The report is about test wall-clock time, 'the slowest reported test is always IndexSizeTriggerMixedBoundsTest coming in at around 2 minutes' and 'at least 80s of that is all sleeps', and the commit says what was done, 'Remove unneeded sleeps'. Those sleeps are in the test class, which is the second changed file and is filtered out, so the only gold file is the test base class and its entire diff deletes an unused logger and three imports. Nothing in the gold set relates to the reported symptom.",
+  "confidence": "medium",
+  "notes": "A test file leaked into the gold set, which the rubric asks to flag. The benchmark's filter counted 'solr/test-framework/src/java/org/apache/solr/SolrTestCase.java' as a non-test source file because its path says 'src/java' rather than 'src/test', but it is the base class every Solr test derives from and exists only to support tests. If the project intends test-framework code to count as product source, read this role as refactor instead: either way it is not causal, and the diff is unused-logger removal. The instance has no failure: nothing is wrong at runtime, the complaint is that a test sleeps. There is therefore no causal file in the gold set, which rubric rule 3 allows. The report names IndexSizeTriggerMixedBoundsTest as the slow class but the packet does not show its path, so symptom_location is left undeterminable rather than guessed. The gold file's whole change is cosmetic in effect, and this instance consists of nothing but that: one source file, and its contribution to the fix is deleting a logger nobody called."
+}

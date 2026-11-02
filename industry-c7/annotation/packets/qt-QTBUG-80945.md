@@ -134,7 +134,15 @@ previously allocated by thread T0 here:
 `2ad3348031d8`
 
 ```
-(empty)
+QPrintDialog: don't access dangling pointer when cups is disabled
+
+When no cups support is available, ui.pagesRadioButton is destroyed in
+QPrintDialogPrivate::init() but was accessed later on. Fix it by moving
+the cups check one line above.
+
+Fixes: QTBUG-80945
+Change-Id: Ieb062b39e1461f39665ef612dfea1d7757274b7e
+Reviewed-by: Timur Pocheptsov <timur.pocheptsov@qt.io>
 ```
 
 ## Files the fix changed
@@ -148,7 +156,44 @@ Snapshot holds 6,981 non-test source files. The fix changed 1 file(s); 1 of them
 ### `src/printsupport/dialogs/qprintdialog_unix.cpp`
 
 ```diff
-(no diff retrieved)
+diff --git a/src/printsupport/dialogs/qprintdialog_unix.cpp b/src/printsupport/dialogs/qprintdialog_unix.cpp
+index c7328d97329..7bbf1379771 100644
+--- a/src/printsupport/dialogs/qprintdialog_unix.cpp
++++ b/src/printsupport/dialogs/qprintdialog_unix.cpp
+@@ -635,12 +635,14 @@ void QPrintDialogPrivate::init()
+     // Add Page Set widget if CUPS is available
+     options.pageSetCombo->addItem(tr("All Pages"), QVariant::fromValue(QCUPSSupport::AllPages));
+     options.pageSetCombo->addItem(tr("Odd Pages"), QVariant::fromValue(QCUPSSupport::OddPages));
+     options.pageSetCombo->addItem(tr("Even Pages"), QVariant::fromValue(QCUPSSupport::EvenPages));
+ #else
+-    for (int i = options.pagesLayout->count() - 1; i >= 0; --i)
+-        delete options.pagesLayout->itemAt(i)->widget();
++    delete options.pagesRadioButton;
++    delete options.pagesLineEdit;
++    options.pagesRadioButton = nullptr;
++    options.pagesLineEdit = nullptr;
+ #endif
+ 
+     top->d->setOptionsPane(this);
+ 
+     buttons = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel, Qt::Horizontal, q);
+@@ -725,16 +727,16 @@ void QPrintDialogPrivate::selectPrinter(const QPrinter::OutputFormat outputForma
+ 
+             options.pageSetCombo->setEnabled(false);
+         else
+             options.pageSetCombo->setEnabled(true);
+ 
++#if QT_CONFIG(cups)
+         // Disable complex page ranges widget when printing to pdf
+         // It doesn't work since it relies on cups to do the heavy lifting and cups
+         // is not used when printing to PDF
+         options.pagesRadioButton->setEnabled(outputFormat != QPrinter::PdfFormat);
+ 
+-#if QT_CONFIG(cups)
+         // Disable color options on main dialog if not printing to file, it will be handled by CUPS advanced dialog
+         options.colorMode->setVisible(outputFormat == QPrinter::PdfFormat);
+ #endif
+ }
 ```
 
 ---

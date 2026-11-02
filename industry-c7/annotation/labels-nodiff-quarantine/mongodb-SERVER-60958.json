@@ -1,0 +1,28 @@
+{
+  "id": "mongodb:SERVER-60958",
+  "project": "mongodb",
+  "issue_key": "SERVER-60958",
+  "annotator": "claude-opus-5",
+  "pass": 1,
+  "file_roles": [
+    {
+      "path": "src/mongo/db/s/migration_chunk_cloner_source_legacy.cpp",
+      "role": "unclear",
+      "evidence": "The packet carries no evidence of what changed: the diff section reads '(no diff retrieved)' and the commit message dc5de6843f2e is '(empty)'. The report is a single title line, 'Avoid server hang in chunk migration when step-down event occurs', with no description, log, trace or named code. A hang repaired in one file is equally consistent with a wait that ignored interruption being corrected (causal) and with an interrupt check, timeout or cleanup added on the step-down path (preventive); nothing separates them. The diff hunk for this file, or a non-empty commit message, would have settled it."
+    }
+  ],
+  "symptom_location": {
+    "file": null,
+    "function": null,
+    "determinable": false
+  },
+  "log_location": {
+    "file": null,
+    "function": null,
+    "determinable": false
+  },
+  "relation": "unclear",
+  "rationale": "Everything in the packet except the file name is absent: '(no diff retrieved)' for the only gold file, '(empty)' for the only commit message, and a report consisting of its own title. The title names a feature area, chunk migration during a step-down, but not a mechanism, a failure site or a log line, so neither the role nor the symptom and log locations can be read from the evidence. Labelled unclear rather than guessed, per rubric rule 1 and the instruction to prefer unclear.",
+  "confidence": "low",
+  "notes": "The instance has no failure evidence at all: no log, no trace, no description, no commit message, no diff. Decision recorded for consistency across the diff-less packets in this batch: with no hunk, a role is assigned only when the report itself localises the failure mechanism to the changed file (as in QTBUG-80945, where a sanitizer names the freeing and the using line in it, and QTBUG-81604, where the single changed file owns the operation that failed); otherwise the file is 'unclear' per rubric rule 1 and the instruction to use 'unclear' rather than guess. This is a packet-completeness problem rather than a hard case, and is worth counting separately from genuinely ambiguous instances when the unclear rate is reported."
+}

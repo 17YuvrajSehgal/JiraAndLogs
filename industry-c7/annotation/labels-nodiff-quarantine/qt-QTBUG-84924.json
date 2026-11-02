@@ -1,0 +1,28 @@
+{
+  "id": "qt:QTBUG-84924",
+  "project": "qt",
+  "issue_key": "QTBUG-84924",
+  "annotator": "claude-opus-5",
+  "pass": 1,
+  "file_roles": [
+    {
+      "path": "src/corelib/kernel/qmetatype.h",
+      "role": "causal",
+      "evidence": "The generated metaobject carries a type name no compiler can parse back, \"error: no member named '__1' in namespace 'std'\" on 'QVector<std::__1::pair<QByteArray,QByteArray>>', which is libc++'s inline namespace spelled out inside a type name. The failing file is generated, '.moc/x86_64/moc_qnetworkreplyhttpimpl_p.cpp:235', and no network file was changed; the only non-test source file the fix touched is the metatype header that builds those type names, so the name-building logic there is what was wrong."
+    }
+  ],
+  "symptom_location": {
+    "file": null,
+    "function": null,
+    "determinable": false
+  },
+  "log_location": {
+    "file": null,
+    "function": null,
+    "determinable": false
+  },
+  "relation": "state-producer",
+  "rationale": "The build breaks in generated code, 'moc_qnetworkreplyhttpimpl_p.cpp:235:87: error: no member named __1 in namespace std', with follow-on errors \"'QByteArray' does not refer to a value\" and 'type-id cannot have a name' that are consequences of the same unparsable name. The only non-generated, non-test file the fix changed is src/corelib/kernel/qmetatype.h, which is where a type name is composed, so the bad string is produced in one place at compile time and consumed in another, far from the network class whose signal it describes. Nothing in the pasted output names the gold file.",
+  "confidence": "medium",
+  "notes": "The packet renders this file's diff as '(no diff retrieved)', so no hunk could be cited for any gold file in this instance. The causal call is an inference, not an observation: the packet shows an unparsable type name in generated code and a fix in the metatype header, and the link between them is the type-name machinery that the header owns. A second rater could reasonably put this at unclear, and it is worth including in the agreement check. The symptom site is a generated file, '.moc/x86_64/moc_qnetworkreplyhttpimpl_p.cpp', which CONVENTIONS excludes in favour of the deepest project-owned frame; no project-owned source file appears in the errors except 'qnetworkaccessmanager.h:59', which is quoted only as the place 'class QByteArray;' is forward declared, so no symptom site is recorded. The gold file does not appear in the output at all. This is a CI build failure on one platform combination, macOS host building for Android, and the pasted text is Clang output relayed by the CI agent, not a program log."
+}

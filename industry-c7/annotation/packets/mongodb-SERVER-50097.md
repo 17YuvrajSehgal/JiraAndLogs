@@ -21,7 +21,7 @@ Mongos should look up the request's command name in the command registry so that
 `9e4b6e5c2f9e`
 
 ```
-(empty)
+SERVER-50097 isMaster aliases should correctly populate exhaustIsMasterMetrics
 ```
 
 ## Files the fix changed
@@ -35,7 +35,88 @@ Snapshot holds 15,014 non-test source files. The fix changed 2 file(s); 1 of the
 ### `src/mongo/s/commands/strategy.cpp`
 
 ```diff
-(no diff retrieved)
+diff --git a/src/mongo/s/commands/strategy.cpp b/src/mongo/s/commands/strategy.cpp
+index 81eee3ef4bc..f90d6d1beb6 100644
+--- a/src/mongo/s/commands/strategy.cpp
++++ b/src/mongo/s/commands/strategy.cpp
+@@ -294,13 +294,14 @@ MONGO_FAIL_POINT_DEFINE(doNotRefreshShardsOnRetargettingError);
+  * Executes the command for the given request, and appends the result to replyBuilder
+  * and error labels, if any, to errorBuilder.
+  */
+ void runCommand(OperationContext* opCtx,
+                 const OpMsgRequest& request,
+-                const NetworkOp opType,
++                const Message& m,
+                 rpc::ReplyBuilderInterface* replyBuilder,
+                 BSONObjBuilder* errorBuilder) {
++    auto const opType = m.operation();
+     auto const commandName = request.getCommandName();
+     auto const command = CommandHelpers::findCommand(commandName);
+     if (!command) {
+         auto builder = replyBuilder->getBodyBuilder();
+         CommandHelpers::appendCommandStatusNoThrow(
+@@ -309,10 +310,18 @@ void runCommand(OperationContext* opCtx,
+         globalCommandRegistry()->incrementUnknownCommands();
+         appendRequiredFieldsToResponse(opCtx, &builder);
+         return;
+     }
+ 
++    opCtx->setExhaust(OpMsg::isFlagSet(m, OpMsg::kExhaustSupported));
++    const auto session = opCtx->getClient()->session();
++    if (session) {
++        if (!opCtx->isExhaust() || command->getName() != "isMaster"_sd) {
++            InExhaustIsMaster::get(session.get())->setInExhaustIsMaster(false);
++        }
++    }
++
+     CommandHelpers::uassertShouldAttemptParse(opCtx, command, request);
+ 
+     // Parse the 'maxTimeMS' command option, and use it to set a deadline for the operation on
+     // the OperationContext. Be sure to do this as soon as possible so that further processing by
+     // subsequent code has the deadline available. The 'maxTimeMS' option unfortunately has a
+@@ -1021,28 +1030,20 @@ DbResponse Strategy::clientCommand(OperationContext* opCtx, const Message& m) {
+                             "error"_attr = redact(ex));
+                 throw;
+             }
+         }();
+ 
+-        opCtx->setExhaust(OpMsg::isFlagSet(m, OpMsg::kExhaustSupported));
+-        const auto session = opCtx->getClient()->session();
+-        if (session) {
+-            if (!opCtx->isExhaust() || request.getCommandName() != "isMaster"_sd) {
+-                InExhaustIsMaster::get(session.get())->setInExhaustIsMaster(false);
+-            }
+-        }
+-
+         // Execute.
+         std::string db = request.getDatabase().toString();
+         try {
+             LOGV2_DEBUG(22770,
+                         3,
+                         "Command begin db: {db} msg id: {headerId}",
+                         "Command begin",
+                         "db"_attr = db,
+                         "headerId"_attr = m.header().getId());
+-            runCommand(opCtx, request, m.operation(), reply.get(), &errorBuilder);
++            runCommand(opCtx, request, m, reply.get(), &errorBuilder);
+             LOGV2_DEBUG(22771,
+                         3,
+                         "Command end db: {db} msg id: {headerId}",
+                         "Command end",
+                         "db"_attr = db,
+@@ -1230,11 +1231,11 @@ void Strategy::writeOp(OperationContext* opCtx, DbMessage* dbm) {
+                        }
+                        default:
+                            MONGO_UNREACHABLE;
+                    }
+                }(),
+-               msg.operation(),
++               msg,
+                &reply,
+                &errorBuilder);  // built objects are ignored
+ }
+ 
+ void Strategy::explainFind(OperationContext* opCtx,
 ```
 
 ---

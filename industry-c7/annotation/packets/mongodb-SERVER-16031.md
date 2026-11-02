@@ -45,7 +45,9 @@ CC [~eliot]
 `a29dc744d425`
 
 ```
-(empty)
+SERVER-16031 Call cleanShutdown rather than deleting KVEngines
+
+Resolves some race conditions on shutdown.
 ```
 
 ## Files the fix changed
@@ -68,61 +70,335 @@ Snapshot holds 9,099 non-test source files. The fix changed 10 file(s); 10 of th
 ### `src/mongo/db/storage/devnull/devnull_kv_engine.h`
 
 ```diff
-(no diff retrieved)
+diff --git a/src/mongo/db/storage/devnull/devnull_kv_engine.h b/src/mongo/db/storage/devnull/devnull_kv_engine.h
+index 1ec39bf5529..dd8075f447f 100644
+--- a/src/mongo/db/storage/devnull/devnull_kv_engine.h
++++ b/src/mongo/db/storage/devnull/devnull_kv_engine.h
+@@ -91,7 +91,8 @@ namespace mongo {
+         virtual Status repairIdent( OperationContext* opCtx,
+                                     const StringData& ident ) {
+             return Status::OK();
+         }
+ 
++        virtual void cleanShutdown(OperationContext* txn) {};
+     };
+ }
 ```
 
 ### `src/mongo/db/storage/heap1/heap1_engine.h`
 
 ```diff
-(no diff retrieved)
+diff --git a/src/mongo/db/storage/heap1/heap1_engine.h b/src/mongo/db/storage/heap1/heap1_engine.h
+index 4e4af4df540..2d3b782642e 100644
+--- a/src/mongo/db/storage/heap1/heap1_engine.h
++++ b/src/mongo/db/storage/heap1/heap1_engine.h
+@@ -79,10 +79,12 @@ namespace mongo {
+         virtual Status repairIdent( OperationContext* opCtx,
+                                     const StringData& ident ) {
+             return Status::OK();
+         }
+ 
++        virtual void cleanShutdown(OperationContext* txn) {};
++
+     private:
+         typedef StringMap<boost::shared_ptr<void> > DataMap;
+ 
+         mutable boost::mutex _mutex;
+         DataMap _dataMap; // All actual data is owned in here
 ```
 
 ### `src/mongo/db/storage/kv/kv_engine.h`
 
 ```diff
-(no diff retrieved)
+diff --git a/src/mongo/db/storage/kv/kv_engine.h b/src/mongo/db/storage/kv/kv_engine.h
+index 7c29aafdc1c..81c33e975eb 100644
+--- a/src/mongo/db/storage/kv/kv_engine.h
++++ b/src/mongo/db/storage/kv/kv_engine.h
+@@ -43,12 +43,10 @@ namespace mongo {
+     class SortedDataInterface;
+ 
+     class KVEngine {
+     public:
+ 
+-        virtual ~KVEngine() {}
+-
+         virtual RecoveryUnit* newRecoveryUnit() = 0;
+ 
+         // ---------
+ 
+         /**
+@@ -110,8 +108,23 @@ namespace mongo {
+                                    const StringData& ident,
+                                    const RecordStore* originalRecordStore ) const {
+             return Status::OK();
+         }
+ 
++        /**
++         * This method will be called before there is a clean shutdown.  Storage engines should
++         * override this method if they have clean-up to do that is different from unclean shutdown.
++         * MongoDB will not call into the storage subsystem after calling this function.
++         *
++         * There is intentionally no uncleanShutdown().
++         */
++        virtual void cleanShutdown(OperationContext* txn) = 0;
++
++        /**
++         * The destructor will never be called from mongod, but may be called from tests.
++         * Engines may assume that this will only be called in the case of clean shutdown, even if
++         * cleanShutdown() hasn't been called.
++         */
++        virtual ~KVEngine() {}
+     };
+ 
+ }
 ```
 
 ### `src/mongo/db/storage/kv/kv_storage_engine.cpp`
 
 ```diff
-(no diff retrieved)
+diff --git a/src/mongo/db/storage/kv/kv_storage_engine.cpp b/src/mongo/db/storage/kv/kv_storage_engine.cpp
+index d35e8be2c99..b8d3c16006f 100644
+--- a/src/mongo/db/storage/kv/kv_storage_engine.cpp
++++ b/src/mongo/db/storage/kv/kv_storage_engine.cpp
+@@ -79,11 +79,12 @@ namespace mongo {
+         _dbs.clear();
+ 
+         _catalog.reset( NULL );
+         _catalogRecordStore.reset( NULL );
+ 
+-        _engine.reset( NULL );
++        _engine->cleanShutdown(txn);
++        // intentionally not deleting _engine
+     }
+ 
+     KVStorageEngine::~KVStorageEngine() {
+     }
 ```
 
 ### `src/mongo/db/storage/kv/kv_storage_engine.h`
 
 ```diff
-(no diff retrieved)
+diff --git a/src/mongo/db/storage/kv/kv_storage_engine.h b/src/mongo/db/storage/kv/kv_storage_engine.h
+index 01e7218a5d1..916f77d4f94 100644
+--- a/src/mongo/db/storage/kv/kv_storage_engine.h
++++ b/src/mongo/db/storage/kv/kv_storage_engine.h
+@@ -89,11 +89,13 @@ namespace mongo {
+         const KVCatalog* getCatalog() const { return _catalog.get(); }
+ 
+     private:
+         class RemoveDBChange;
+ 
++        // This must be the first member so it is destroyed last.
+         boost::scoped_ptr<KVEngine> _engine;
++
+         bool _initialized;
+         const bool _supportsDocLocking;
+ 
+         boost::scoped_ptr<RecordStore> _catalogRecordStore;
+         boost::scoped_ptr<KVCatalog> _catalog;
 ```
 
 ### `src/mongo/db/storage/rocks/rocks_engine.h`
 
 ```diff
-(no diff retrieved)
+diff --git a/src/mongo/db/storage/rocks/rocks_engine.h b/src/mongo/db/storage/rocks/rocks_engine.h
+index b6a3d5184c4..79d60580f6c 100644
+--- a/src/mongo/db/storage/rocks/rocks_engine.h
++++ b/src/mongo/db/storage/rocks/rocks_engine.h
+@@ -107,10 +107,12 @@ namespace mongo {
+         virtual Status repairIdent(OperationContext* opCtx,
+                                     const StringData& ident) {
+             return Status::OK();
+         }
+ 
++        virtual void cleanShutdown(OperationContext* txn) {}
++
+         // rocks specific api
+ 
+         rocksdb::DB* getDB() { return _db.get(); }
+         const rocksdb::DB* getDB() const { return _db.get(); }
 ```
 
 ### `src/mongo/db/storage/wiredtiger/wiredtiger_kv_engine.cpp`
 
 ```diff
-(no diff retrieved)
+diff --git a/src/mongo/db/storage/wiredtiger/wiredtiger_kv_engine.cpp b/src/mongo/db/storage/wiredtiger/wiredtiger_kv_engine.cpp
+index f982103100c..52288e2c066 100644
+--- a/src/mongo/db/storage/wiredtiger/wiredtiger_kv_engine.cpp
++++ b/src/mongo/db/storage/wiredtiger/wiredtiger_kv_engine.cpp
+@@ -139,21 +139,31 @@ namespace mongo {
+         }
+     }
+ 
+ 
+     WiredTigerKVEngine::~WiredTigerKVEngine() {
+-        log() << "WiredTigerKVEngine shutting down";
+-        syncSizeInfo();
++        if (_conn) {
++            cleanShutdown(NULL); // our impl doesn't use the OperationContext
++        }
++
+         _sizeStorer.reset( NULL );
+ 
+         _sessionCache.reset( NULL );
+ 
+-        if ( _conn ) {
++    }
++
++    void WiredTigerKVEngine::cleanShutdown(OperationContext* txn) {
++        log() << "WiredTigerKVEngine shutting down";
++        syncSizeInfo();
++        if (_conn) {
++            // this must be the last thing we do before _conn->close();
++            _sessionCache->shuttingDown();
++
++            // TODO consider passing "leak_memory=true" to close() when not running a leak checker.
+             invariantWTOK( _conn->close(_conn, NULL) );
+             _conn = NULL;
+         }
+-
+     }
+ 
+     Status WiredTigerKVEngine::okToRename( OperationContext* opCtx,
+                                            const StringData& fromNS,
+                                            const StringData& toNS,
 ```
 
 ### `src/mongo/db/storage/wiredtiger/wiredtiger_kv_engine.h`
 
 ```diff
-(no diff retrieved)
+diff --git a/src/mongo/db/storage/wiredtiger/wiredtiger_kv_engine.h b/src/mongo/db/storage/wiredtiger/wiredtiger_kv_engine.h
+index b635c121e1f..4e49bf6c551 100644
+--- a/src/mongo/db/storage/wiredtiger/wiredtiger_kv_engine.h
++++ b/src/mongo/db/storage/wiredtiger/wiredtiger_kv_engine.h
+@@ -100,10 +100,12 @@ namespace mongo {
+                                       const StringData& ident );
+ 
+         virtual Status repairIdent( OperationContext* opCtx,
+                                     const StringData& ident );
+ 
++        virtual void cleanShutdown(OperationContext* txn);
++
+         // wiredtiger specific
+ 
+         WT_CONNECTION* getConnection() { return _conn; }
+         void dropAllQueued();
+         bool haveDropsQueued() const;
 ```
 
 ### `src/mongo/db/storage/wiredtiger/wiredtiger_session_cache.cpp`
 
 ```diff
-(no diff retrieved)
+diff --git a/src/mongo/db/storage/wiredtiger/wiredtiger_session_cache.cpp b/src/mongo/db/storage/wiredtiger/wiredtiger_session_cache.cpp
+index a2e861047da..9f65a49b544 100644
+--- a/src/mongo/db/storage/wiredtiger/wiredtiger_session_cache.cpp
++++ b/src/mongo/db/storage/wiredtiger/wiredtiger_session_cache.cpp
+@@ -110,23 +110,31 @@ namespace mongo {
+     }
+ 
+     // -----------------------
+ 
+     WiredTigerSessionCache::WiredTigerSessionCache( WiredTigerKVEngine* engine )
+-        : _engine( engine ), _conn( engine->getConnection() ) {
++        : _engine( engine ), _conn( engine->getConnection() ), _shuttingDown(false) {
+     }
+ 
+     WiredTigerSessionCache::WiredTigerSessionCache( WT_CONNECTION* conn )
+-        : _engine( NULL ), _conn( conn ) {
++        : _engine( NULL ), _conn( conn ), _shuttingDown(false) {
+     }
+ 
+     WiredTigerSessionCache::~WiredTigerSessionCache() {
+         _closeAll();
+     }
+ 
++    void WiredTigerSessionCache::shuttingDown() {
++        boost::mutex::scoped_lock lk( _sessionLock );
++        _shuttingDown = true;
++        _closeAll();
++    }
++
+     void WiredTigerSessionCache::closeAll() {
+         boost::mutex::scoped_lock lk( _sessionLock );
++        if (_shuttingDown)
++            return; // leak sessions
+         _closeAll();
+     }
+ 
+     void WiredTigerSessionCache::_closeAll() {
+         for ( size_t i = 0; i < _sessionPool.size(); i++ ) {
+@@ -136,10 +144,12 @@ namespace mongo {
+     }
+ 
+     WiredTigerSession* WiredTigerSessionCache::getSession() {
+         {
+             boost::mutex::scoped_lock lk( _sessionLock );
++            invariant(!_shuttingDown); // shouldn't get here after this is set.
++
+             if ( !_sessionPool.empty() ) {
+                 WiredTigerSession* s = _sessionPool.back();
+                 _sessionPool.pop_back();
+                 {
+                     WT_SESSION* ss = s->getSession();
+@@ -152,10 +162,14 @@ namespace mongo {
+         }
+         return new WiredTigerSession( _conn, _engine ? _engine->currentEpoch() : -1 );
+     }
+ 
+     void WiredTigerSessionCache::releaseSession( WiredTigerSession* session ) {
++        boost::mutex::scoped_lock lk( _sessionLock );
++        if (_shuttingDown)
++            return; // leak session to avoid race condition.
++
+         invariant( session );
+         invariant( session->cursorsOut() == 0 );
+ 
+         {
+             WT_SESSION* ss = session->getSession();
+@@ -168,11 +182,10 @@ namespace mongo {
+             delete session;
+             _engine->dropAllQueued();
+             return;
+         }
+ 
+-        boost::mutex::scoped_lock lk( _sessionLock );
+         _sessionPool.push_back( session );
+     }
+ 
+     bool WiredTigerSessionCache::_shouldBeClosed( WiredTigerSession* session ) const {
+         if ( !_engine )
 ```
 
 ### `src/mongo/db/storage/wiredtiger/wiredtiger_session_cache.h`
 
 ```diff
-(no diff retrieved)
+diff --git a/src/mongo/db/storage/wiredtiger/wiredtiger_session_cache.h b/src/mongo/db/storage/wiredtiger/wiredtiger_session_cache.h
+index 9d49311a742..898e14acd91 100644
+--- a/src/mongo/db/storage/wiredtiger/wiredtiger_session_cache.h
++++ b/src/mongo/db/storage/wiredtiger/wiredtiger_session_cache.h
+@@ -90,19 +90,22 @@ namespace mongo {
+         WiredTigerSession* getSession();
+         void releaseSession( WiredTigerSession* session );
+ 
+         void closeAll();
+ 
++        void shuttingDown();
++
+     private:
+ 
+         bool _shouldBeClosed( WiredTigerSession* session ) const;
+ 
+         void _closeAll(); // does not lock
+ 
+         WiredTigerKVEngine* _engine; // not owned, might be NULL
+         WT_CONNECTION* _conn; // not owned
+         typedef std::vector<WiredTigerSession*> SessionPool;
+         SessionPool _sessionPool; // owned
++        bool _shuttingDown;
+         mutable boost::mutex _sessionLock;
+     };
+ 
+ }
 ```
 
 ---

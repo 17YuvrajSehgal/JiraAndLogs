@@ -41,7 +41,7 @@ com.mongodb.MongoCommandException: Command failed with error 40528: 'Direct writ
 `d6e7f0c811ac`
 
 ```
-(empty)
+SERVER-35244 Dropping config db in 4.0.0-rc0 fails while it passes in 3.7.9 and earlier
 ```
 
 ## Files the fix changed
@@ -55,7 +55,34 @@ Snapshot holds 11,372 non-test source files. The fix changed 1 file(s); 1 of the
 ### `src/mongo/db/session_catalog.cpp`
 
 ```diff
-(no diff retrieved)
+diff --git a/src/mongo/db/session_catalog.cpp b/src/mongo/db/session_catalog.cpp
+index 62f01f567a1..614e2ed8144 100644
+--- a/src/mongo/db/session_catalog.cpp
++++ b/src/mongo/db/session_catalog.cpp
+@@ -156,15 +156,19 @@ ScopedSession SessionCatalog::getOrCreateSession(OperationContext* opCtx,
+     return ss;
+ }
+ 
+ void SessionCatalog::invalidateSessions(OperationContext* opCtx,
+                                         boost::optional<BSONObj> singleSessionDoc) {
+-    uassert(40528,
+-            str::stream() << "Direct writes against "
+-                          << NamespaceString::kSessionTransactionsTableNamespace.ns()
+-                          << " cannot be performed using a transaction or on a session.",
+-            !opCtx->getLogicalSessionId());
++    auto replCoord = repl::ReplicationCoordinator::get(opCtx);
++    bool isReplSet = replCoord->getReplicationMode() == repl::ReplicationCoordinator::modeReplSet;
++    if (isReplSet) {
++        uassert(40528,
++                str::stream() << "Direct writes against "
++                              << NamespaceString::kSessionTransactionsTableNamespace.ns()
++                              << " cannot be performed using a transaction or on a session.",
++                !opCtx->getLogicalSessionId());
++    }
+ 
+     const auto invalidateSessionFn = [&](WithLock, SessionRuntimeInfoMap::iterator it) {
+         auto& sri = it->second;
+         sri->txnState.invalidate();
 ```
 
 ---

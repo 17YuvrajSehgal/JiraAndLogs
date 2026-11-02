@@ -1,0 +1,33 @@
+{
+  "id": "mongodb:SERVER-62000",
+  "project": "mongodb",
+  "issue_key": "SERVER-62000",
+  "annotator": "claude-opus-5",
+  "pass": 1,
+  "file_roles": [
+    {
+      "path": "src/mongo/db/catalog/coll_mod.cpp",
+      "role": "unclear",
+      "evidence": "The diff section for this file reads '(no diff retrieved)' and all three commit messages (5e5230ee102f, a4387740aa41, 88390273fec7) are '(empty)'. The report states the behaviour, 'the primary still generates the following oplog entry that will cause oplog application on a secondary to fail: {collMod: 'mycoll', index: {name: 'myidx', unique: false}}', but never says which of the two changed files builds that entry and which consumes it, so this file could hold the no-op detection that was missing or could be adapting to it. The hunk would have settled it."
+    },
+    {
+      "path": "src/mongo/db/catalog/coll_mod_index.cpp",
+      "role": "unclear",
+      "evidence": "Also '(no diff retrieved)', with no commit message. The report prescribes the repair only by reference, 'For a no-op \"unique\" collMod request, we should apply a strategy similar to that implemented in SERVER-48047', and the referenced ticket is not in the packet, so what was actually done in this file is not shown. Nothing in the report distinguishes this file's part from coll_mod.cpp's."
+    }
+  ],
+  "symptom_location": {
+    "file": null,
+    "function": null,
+    "determinable": false
+  },
+  "log_location": {
+    "file": null,
+    "function": null,
+    "determinable": false
+  },
+  "relation": "state-producer",
+  "rationale": "No diff was retrieved for either gold file and all three commit messages are empty, so no role can be decided from what changed. The relation is still readable from the report: the primary writes an oplog entry for a collMod that does nothing, '{collMod: 'mycoll', index: {name: 'myidx', unique: false}}', and the failure happens later and elsewhere, when 'oplog application on a secondary' replays it. That is bad state created at one site and consumed at another.",
+  "confidence": "low",
+  "notes": "Two gold files, no diff for either, no commit message, no log and no trace; the failing site is a secondary applying the oplog, which is neither named nor in the gold set, so symptom_location is not determinable. The report also flags that the feature was unreleased, 'This applies to a flag-guarded feature that is still under development.', and points at two other tickets (SERVER-48047, SERVER-61980) rather than at code. Decision recorded for consistency across the diff-less packets in this batch: with no hunk, a role is assigned only when the report itself localises the failure mechanism to the changed file (as in QTBUG-80945, where a sanitizer names the freeing and the using line in it, and QTBUG-81604, where the single changed file owns the operation that failed); otherwise the file is 'unclear' per rubric rule 1 and the instruction to use 'unclear' rather than guess."
+}

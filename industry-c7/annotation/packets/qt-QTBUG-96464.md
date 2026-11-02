@@ -21,7 +21,19 @@ To reproduce: Run the example from QTBUG-87624 with the fix for that bug. Do th
 `430ab36bb48e`
 
 ```
-(empty)
+Wayland client: Don't applyConfigure for destroyed surface
+
+If a window is rapidly hidden and re-shown multiple times, the configure
+for a deleted wl_surface may be invoked after a new surface has been
+created. This change makes sure we always reset mWaitingToApplyConfigure
+before a new wl_surface is created. The superfluous applyConfigure
+invocation will then be safely ignored.
+
+Fixes: QTBUG-96464
+Pick-to: 6.2
+Change-Id: Ie2d718f77dc8de93674c6b86b5128c4f50414df1
+Reviewed-by: Vlad Zahorodnii <vlad.zahorodnii@kde.org>
+Reviewed-by: David Edmundson <davidedmundson@kde.org>
 ```
 
 ## Files the fix changed
@@ -35,7 +47,21 @@ Snapshot holds 130 non-test source files. The fix changed 1 file(s); 1 of them a
 ### `src/plugins/platforms/wayland/qwaylandwindow.cpp`
 
 ```diff
-(no diff retrieved)
+diff --git a/src/plugins/platforms/wayland/qwaylandwindow.cpp b/src/plugins/platforms/wayland/qwaylandwindow.cpp
+index 2ca45259f72..a708afcedc0 100644
+--- a/src/plugins/platforms/wayland/qwaylandwindow.cpp
++++ b/src/plugins/platforms/wayland/qwaylandwindow.cpp
+@@ -259,10 +259,11 @@ void QWaylandWindow::reset()
+     }
+ 
+     mFrameCallbackElapsedTimer.invalidate();
+     mWaitingForFrameCallback = false;
+     mFrameCallbackTimedOut = false;
++    mWaitingToApplyConfigure = false;
+ 
+     mMask = QRegion();
+     mQueuedBuffer = nullptr;
+ }
 ```
 
 ---

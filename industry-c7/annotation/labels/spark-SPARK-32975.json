@@ -1,0 +1,33 @@
+{
+  "id": "spark:SPARK-32975",
+  "project": "spark",
+  "issue_key": "SPARK-32975",
+  "annotator": "claude-opus-5",
+  "pass": 1,
+  "file_roles": [
+    {
+      "path": "resource-managers/kubernetes/core/src/main/scala/org/apache/spark/scheduler/cluster/k8s/ExecutorPodsAllocator.scala",
+      "role": "causal",
+      "evidence": "start() allocated executors immediately; it now waits first, 'Wait until the driver pod is ready before starting executors, as the headless service won't be resolvable by DNS until the driver pod is ready' around 'kubernetesClient.pods().withName(kubernetesDriverPodName.get).waitUntilReady(driverPodReadinessTimeout, TimeUnit.SECONDS)', inserted before the existing 'snapshotsStore.addSubscriber(podAllocationDelay)'. This class decides when executor pods are created, and creating them with no readiness check is what produced 'java.net.UnknownHostException: act-pipeline-app-1600187491917-driver-svc.default.svc'. The follow-up commit corrects a regression this hunk introduced, replacing 'kubernetesDriverPodName.get' with 'driverPod.foreach { pod => ... withName(pod.getMetadata.getName)'."
+    },
+    {
+      "path": "resource-managers/kubernetes/core/src/main/scala/org/apache/spark/deploy/k8s/Config.scala",
+      "role": "refactor",
+      "evidence": "The file gains only the declaration of the knob the allocator reads, 'val KUBERNETES_ALLOCATION_DRIVER_READINESS_TIMEOUT = ConfigBuilder(\"spark.kubernetes.allocation.driver.readinessTimeout\")' with '.timeConf(TimeUnit.SECONDS)', a positivity check and '.createWithDefaultString(\"1s\")'. It is a config registry entry: nothing waits, retries or decides here, and the acting line is 'conf.get(KUBERNETES_ALLOCATION_DRIVER_READINESS_TIMEOUT)' in ExecutorPodsAllocator."
+    }
+  ],
+  "symptom_location": {
+    "file": "common/network-common/src/main/java/org/apache/spark/network/client/TransportClientFactory.java",
+    "function": "createClient",
+    "determinable": true
+  },
+  "log_location": {
+    "file": "common/network-common/src/main/java/org/apache/spark/network/client/TransportClientFactory.java",
+    "function": "createClient",
+    "determinable": true
+  },
+  "relation": "concurrency",
+  "rationale": "The executor dies resolving a name that does not exist yet, 'java.io.IOException: Failed to connect to act-pipeline-app-1600187491917-driver-svc.default.svc:7078 at org.apache.spark.network.client.TransportClientFactory.createClient(TransportClientFactory.java:245)', caused by 'java.net.UnknownHostException'. The commit states the ordering, 'The driver's headless service can be resolved by DNS only after the driver pod is ready. If the executor tries to connect to the headless service before driver pod is ready, it will hit UnkownHostException ... So basically there is a race condition.' The fix inserts the missing wait on the driver side, in the class that starts executors, so symptom and cause sit in different processes connected by an ordering.",
+  "confidence": "medium",
+  "notes": "Neither gold file appears anywhere in the reported evidence. The pasted trace is entirely executor-side, naming CoarseGrainedExecutorBackend, SparkHadoopUtil, ThreadUtils, RpcTimeout, RpcEnv, NettyRpcEnv, Outbox and TransportClientFactory, while the fix is driver-side in ExecutorPodsAllocator and Config; no frame leads to either, because the thread that should have waited is in another process. The additional information is kubectl output, 'kubectl describe sparkapplications.sparkoperator.k8s.io act-pipeline-app', not Spark logs, and the reporter is running a third-party operator, 'We are using v1beta2-1.1.2-2.4.5 version of operator with spark-2.4.4'. ExecutorPodsAllocator is labelled causal on the same reading as KAFKA-6624: the class owns when executors are started and the absence of any readiness wait there is the wrong logic. A second rater could call it preventive, and with more force here than in KAFKA-6624, because the issue title asks for a config, the commit calls the result a mitigation, 'This issue can be mitigated by tweaking this config', and the wait is bounded, 'If timeout happens, executor pods will still be created'. Worth putting in the agreement check. Config.scala is refactor on the convention that a declaration carrying no decision is refactor even when the fix needs it, the same call made for declaration-only headers; a second rater could read the default '1s' as a configuration tightening and call it preventive. The symptom path is inferred from the package name org.apache.spark.network.client and Spark's build layout; the packet did not show the tree. The fix ships with no regression test and both commits say so, 'How was this patch tested? Exisiting tests.' and 'Manual.' The gold set also carries a follow-up commit that repairs a None.get regression the first commit introduced, 'java.util.NoSuchElementException: None.get at ... ExecutorPodsAllocator.$anonfun$start$1(ExecutorPodsAllocator.scala:110)', so part of this file's change answers a failure that did not exist when the issue was filed."
+}

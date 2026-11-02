@@ -17,7 +17,7 @@ It looks like the master branch tightened the acceptable types for this option c
 `d2ca3517188d`
 
 ```
-(empty)
+SERVER-23901 make write commands accept any type for bypassDocumentValidation
 ```
 
 ## Files the fix changed
@@ -31,7 +31,24 @@ Snapshot holds 10,005 non-test source files. The fix changed 2 file(s); 1 of the
 ### `src/mongo/db/ops/write_ops_parsers.cpp`
 
 ```diff
-(no diff retrieved)
+diff --git a/src/mongo/db/ops/write_ops_parsers.cpp b/src/mongo/db/ops/write_ops_parsers.cpp
+index 6a7102d4dc1..88b13f4f9fa 100644
+--- a/src/mongo/db/ops/write_ops_parsers.cpp
++++ b/src/mongo/db/ops/write_ops_parsers.cpp
+@@ -94,12 +94,11 @@ void parseWriteCommand(StringData dbName,
+             continue;
+         }
+ 
+         const StringData fieldName = field.fieldNameStringData();
+         if (fieldName == "bypassDocumentValidation") {
+-            checkType(Bool, field);
+-            op->bypassDocumentValidation = field.Bool();
++            op->bypassDocumentValidation = field.trueValue();
+         } else if (fieldName == "ordered") {
+             checkType(Bool, field);
+             op->continueOnError = !field.Bool();
+         } else if (fieldName == uniqueFieldName) {
+             haveUniqueField = true;
 ```
 
 ---

@@ -1,0 +1,33 @@
+{
+  "id": "qt:QTBUG-69155",
+  "project": "qt",
+  "issue_key": "QTBUG-69155",
+  "annotator": "claude-opus-5",
+  "pass": 1,
+  "file_roles": [
+    {
+      "path": "src/plugins/platforms/android/qandroidplatformopenglwindow.cpp",
+      "role": "unclear",
+      "evidence": "The diff reads '(no diff retrieved)' and the commit message a02ea26b469a is '(empty)'. The only reported evidence is a test assertion, 'FAIL! : tst_QWindow::exposeEventOnShrink_QTBUG54040() '(window.received(QEvent::Expose) > exposeCount)' returned FALSE.', which names tests/auto/gui/kernel/qwindow/tst_qwindow.cpp, not this file. Whether the expose handling here was wrong or was adjusted to follow a change elsewhere is not shown."
+    },
+    {
+      "path": "src/plugins/platforms/android/qandroidplatformvulkanwindow.cpp",
+      "role": "unclear",
+      "evidence": "Also '(no diff retrieved)'. By the recorded convention, extending a fix to a sibling path the report never exercises is preventive, and a Vulkan window is not what a default Android tst_QWindow run drives; but with no hunk it cannot be confirmed that the same change was applied here, or any change at all beyond a mechanical one, so the role is not decidable."
+    }
+  ],
+  "symptom_location": {
+    "file": "tests/auto/gui/kernel/qwindow/tst_qwindow.cpp",
+    "function": "tst_QWindow::exposeEventOnShrink_QTBUG54040",
+    "determinable": true
+  },
+  "log_location": {
+    "file": null,
+    "function": null,
+    "determinable": false
+  },
+  "relation": "unclear",
+  "rationale": "The failure surfaces entirely in test code: 'Loc: [D:\\projects\\qt\\clean-dev\\src\\qtbase\\tests\\auto\\gui\\kernel\\qwindow\\tst_qwindow.cpp(415)]', an assertion that the window received more expose events than before shrinking. No diff was retrieved for either gold file and the commit message is empty, so what was corrected in the two Android platform window classes, and which of them the test actually exercises, is not shown. Both files are labelled unclear rather than guessed.",
+  "confidence": "low",
+  "notes": "The gold files do not appear in the reported evidence at all; the only named file is the test, which the benchmark excludes from gold, so the symptom site lies outside the gold set. The reported output is a test-harness assertion printed by QTestLib, which the recorded convention does not count as a log, so log_location.determinable = false. Two sibling platform classes (OpenGL and Vulkan) changed together, the pattern that would normally make the unexercised sibling preventive; with no hunk neither role is checkable. Also note the title says Android while the pasted path is a Windows host build tree, 'D:\\projects\\qt\\clean-dev\\src\\qtbase\\...'. Decision recorded for consistency across the diff-less packets in this batch: with no hunk, a role is assigned only when the report itself localises the failure mechanism to the changed file (as in QTBUG-80945, where a sanitizer names the freeing and the using line in it, and QTBUG-81604, where the single changed file owns the operation that failed); otherwise the file is 'unclear' per rubric rule 1 and the instruction to use 'unclear' rather than guess."
+}

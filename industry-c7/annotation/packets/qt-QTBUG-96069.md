@@ -33,7 +33,17 @@ E AndroidRuntime: java.lang.UnsatisfiedLinkError: JNI_ERR returned from JNI_OnLo
 `dfb4b7856a82`
 
 ```
-(empty)
+Android: check if objectClass() is not null in registerNativeMethods()
+
+In case the class doens't have a default constructor, checking for
+object.isValid() will give false because the object won't be created,
+however, the class could still be loaded and we could have a valid
+jclass.
+
+Pick-to: 6.2
+Fixes: QTBUG-96069
+Change-Id: I8d59e26d9d7c0e8e363ce443937091a374a24473
+Reviewed-by: Ivan Solovev <ivan.solovev@qt.io>
 ```
 
 ## Files the fix changed
@@ -47,7 +57,30 @@ Snapshot holds 5,873 non-test source files. The fix changed 3 file(s); 1 of them
 ### `src/corelib/kernel/qjnienvironment.cpp`
 
 ```diff
-(no diff retrieved)
+diff --git a/src/corelib/kernel/qjnienvironment.cpp b/src/corelib/kernel/qjnienvironment.cpp
+index a72078d2cf5..9766ff4d3b9 100644
+--- a/src/corelib/kernel/qjnienvironment.cpp
++++ b/src/corelib/kernel/qjnienvironment.cpp
+@@ -345,15 +345,16 @@ JavaVM *QJniEnvironment::javaVM()
+     \endcode
+ */
+ bool QJniEnvironment::registerNativeMethods(const char *className, const JNINativeMethod methods[],
+                                             int size)
+ {
+-    QJniObject classObject(className);
++    const jclass clazz = findClass(className);
+ 
+-    if (!classObject.isValid())
++    if (!clazz)
+         return false;
+-    return registerNativeMethods(classObject.objectClass(), methods, size);
++
++    return registerNativeMethods(clazz, methods, size);
+ }
+ #if QT_DEPRECATED_SINCE(6, 2)
+ /*!
+     \overload
+     \deprecated [6.2] Use the overload with a const JNINativeMethod[] instead.
 ```
 
 ---

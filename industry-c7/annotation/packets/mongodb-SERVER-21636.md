@@ -27,7 +27,7 @@ Not sure why we should not be able to kill operations, which are blocked on snap
 `160de93cc00a`
 
 ```
-(empty)
+SERVER-21636 fix testing snapshots in isolation
 ```
 
 ## Files the fix changed
@@ -41,7 +41,23 @@ Snapshot holds 8,529 non-test source files. The fix changed 1 file(s); 1 of them
 ### `src/mongo/db/dbcommands.cpp`
 
 ```diff
-(no diff retrieved)
+diff --git a/src/mongo/db/dbcommands.cpp b/src/mongo/db/dbcommands.cpp
+index 9bd3abddc95..f328296e347 100644
+--- a/src/mongo/db/dbcommands.cpp
++++ b/src/mongo/db/dbcommands.cpp
+@@ -1388,11 +1388,11 @@ bool Command::run(OperationContext* txn,
+             if ((replCoord->getReplicationMode() ==
+                      repl::ReplicationCoordinator::Mode::modeReplSet ||
+                  testingSnapshotBehaviorInIsolation) &&
+                 readConcernArgs.getLevel() == repl::ReadConcernLevel::kMajorityReadConcern) {
+                 // ReadConcern Majority is not supported in ProtocolVersion 0.
+-                if (!replCoord->isV1ElectionProtocol()) {
++                if (!testingSnapshotBehaviorInIsolation && !replCoord->isV1ElectionProtocol()) {
+                     auto result = appendCommandStatus(
+                         inPlaceReplyBob,
+                         {ErrorCodes::ReadConcernMajorityNotEnabled,
+                          str::stream() << "Replica sets running protocol version 0 do not support "
+                                           "readConcern: majority"});
 ```
 
 ---

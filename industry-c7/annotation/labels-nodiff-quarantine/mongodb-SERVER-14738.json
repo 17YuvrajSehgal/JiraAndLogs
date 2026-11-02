@@ -1,0 +1,63 @@
+{
+  "id": "mongodb:SERVER-14738",
+  "project": "mongodb",
+  "issue_key": "SERVER-14738",
+  "annotator": "claude-opus-5",
+  "pass": 1,
+  "file_roles": [
+    {
+      "path": "src/mongo/db/catalog/collection_info_cache.cpp",
+      "role": "unclear",
+      "evidence": "The packet renders this file's diff as '(no diff retrieved)'. The only statement of mechanism is the release note 'RESOLUTION DETAILS Correctly determine if update with text index is in-place.', which names the wrong decision but not the file that made it. The index-key cache is a candidate producer of the wrong answer, since the report's conditions include 'the update does not modify another index', which implies an indexed-paths set that text indexes were missing from. That is a reconstruction, not a cited hunk."
+    },
+    {
+      "path": "src/mongo/db/catalog/collection_info_cache.h",
+      "role": "unclear",
+      "evidence": "The packet renders this file's diff as '(no diff retrieved)'. The only statement of mechanism is the release note 'RESOLUTION DETAILS Correctly determine if update with text index is in-place.', which names the wrong decision but not the file that made it. A header; CONVENTIONS makes it causal only if it holds logic and refactor if it only declares, and neither is visible."
+    },
+    {
+      "path": "src/mongo/db/ops/update.cpp",
+      "role": "unclear",
+      "evidence": "The packet renders this file's diff as '(no diff retrieved)'. The only statement of mechanism is the release note 'RESOLUTION DETAILS Correctly determine if update with text index is in-place.', which names the wrong decision but not the file that made it. The update entry point, where the in-place decision is consumed. Whether it holds the wrong test or only passes a new argument cannot be separated here."
+    },
+    {
+      "path": "src/mongo/db/ops/update_driver.cpp",
+      "role": "unclear",
+      "evidence": "The packet renders this file's diff as '(no diff retrieved)'. The only statement of mechanism is the release note 'RESOLUTION DETAILS Correctly determine if update with text index is in-place.', which names the wrong decision but not the file that made it. The driver that applies mods and reports what changed; it could hold the wrong in-place determination or could be adapted to a new lifecycle call. Not visible."
+    },
+    {
+      "path": "src/mongo/db/ops/update_driver.h",
+      "role": "unclear",
+      "evidence": "The packet renders this file's diff as '(no diff retrieved)'. The only statement of mechanism is the release note 'RESOLUTION DETAILS Correctly determine if update with text index is in-place.', which names the wrong decision but not the file that made it. A header, role undecidable without the hunk."
+    },
+    {
+      "path": "src/mongo/db/ops/update_lifecycle.h",
+      "role": "unclear",
+      "evidence": "The packet renders this file's diff as '(no diff retrieved)'. The only statement of mechanism is the release note 'RESOLUTION DETAILS Correctly determine if update with text index is in-place.', which names the wrong decision but not the file that made it. An interface header. A new pure-virtual added here would be the missing capability (causal under the 'missing capability plus its missing use' reading) or plumbing (refactor); the packet shows neither."
+    },
+    {
+      "path": "src/mongo/db/ops/update_lifecycle_impl.cpp",
+      "role": "unclear",
+      "evidence": "The packet renders this file's diff as '(no diff retrieved)'. The only statement of mechanism is the release note 'RESOLUTION DETAILS Correctly determine if update with text index is in-place.', which names the wrong decision but not the file that made it. The implementation behind that interface, same undecidable split."
+    },
+    {
+      "path": "src/mongo/db/ops/update_lifecycle_impl.h",
+      "role": "unclear",
+      "evidence": "The packet renders this file's diff as '(no diff retrieved)'. The only statement of mechanism is the release note 'RESOLUTION DETAILS Correctly determine if update with text index is in-place.', which names the wrong decision but not the file that made it. A header, role undecidable without the hunk."
+    }
+  ],
+  "symptom_location": {
+    "file": null,
+    "function": null,
+    "determinable": false
+  },
+  "log_location": {
+    "file": null,
+    "function": null,
+    "determinable": false
+  },
+  "relation": "state-producer",
+  "rationale": "The report is explicit that the bad state is written by one operation and read by a later one: 'An update to a text-indexed field may fail to update the text index. As a result a text search may not match the field contents', and later 'the data in the index entry no longer points to a valid document, and queries that hit the index return an error'. The relation is therefore state-producer with high support, but the eight gold files all span the update pipeline and all render '(no diff retrieved)', so which of them holds the wrong in-place test and which only plumb a new parameter cannot be decided.",
+  "confidence": "low",
+  "notes": "NO-DIFF-IN-PACKET: every gold file in this packet renders its diff as '(no diff retrieved)', so there is no diff evidence for any role here. Roles rest on the issue report and the gold file list alone, which is weaker than every previously labelled instance. The symptom has two surfaces and neither is placed in a file by the packet: first a silent wrong answer, 'db.col.find({$text:{$search:\"test\"}})' returning '{ \"_id\" : ObjectId(\"53df95d559c54fcf80f8e418\"), \"title\" : \"fail\" }' for a search on \"test\", and only later a hard error, '\"$err\" : \"BSONObj size: -286331154 (0xEEEEEEEE) is invalid. Size must be between 0 and 16793600(16MB)\"'. That '$err' text is a command error returned to the shell, not a server log line, so log_location.determinable is false, consistent with the CONVENTIONS rule that SHOW output and harness assertions are not logs. Two fix commits (1f00ffcd22e6, d7133440dc8f) both carry empty messages, so the commit message is no help either. What would settle it: the diff for update_driver.cpp and collection_info_cache.cpp, which would show whether the text-index paths were missing from the indexed-paths set (causal in the catalog) or whether the in-place test itself was wrong (causal in the driver)."
+}

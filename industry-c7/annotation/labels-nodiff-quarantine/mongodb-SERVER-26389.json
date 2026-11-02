@@ -1,0 +1,33 @@
+{
+  "id": "mongodb:SERVER-26389",
+  "project": "mongodb",
+  "issue_key": "SERVER-26389",
+  "annotator": "claude-opus-5",
+  "pass": 1,
+  "file_roles": [
+    {
+      "path": "src/mongo/scripting/deadline_monitor.cpp",
+      "role": "unclear",
+      "evidence": "No diff was retrieved and the entire report is the one-line title 'Make javascript periodic interrupts disabled by default', with no description, no failure and no log. Nothing in the packet says whether this file held the wrong default or only implements behaviour that follows from it. This file's diff would settle it."
+    },
+    {
+      "path": "src/mongo/scripting/deadline_monitor.h",
+      "role": "unclear",
+      "evidence": "No diff was retrieved. The deadline monitor is split across this header and the .cpp, and the packet gives no way to tell which one carries the changed default. CONVENTIONS.md makes a header causal only if it holds logic, and nothing in the packet shows that it does. This file's diff would settle it."
+    }
+  ],
+  "symptom_location": {
+    "file": null,
+    "function": null,
+    "determinable": false
+  },
+  "log_location": {
+    "file": null,
+    "function": null,
+    "determinable": false
+  },
+  "relation": "unclear",
+  "rationale": "The whole report is the title 'Make javascript periodic interrupts disabled by default': no description, no failure, no log, no stack trace, and the fix commit cb9e5e2f0a8e carries an empty message. Both gold files are the JavaScript deadline monitor, which is plausibly where a periodic-interrupt default lives, but with no diff for either file nothing distinguishes the file that held the wrong default from the file that only declares it. Both files are left unclear rather than guessed, per RUBRIC.md.",
+  "confidence": "low",
+  "notes": "NO-DIFF PACKET: every gold file in this packet shows '(no diff retrieved)' and the fix commit message is '(empty)', so the issue report is the only evidence the packet carries. Decision recorded here per CONVENTIONS.md ('If a case is not covered here, follow RUBRIC.md and say in notes what was decided and why'): a role is assigned only where the report itself names the faulty code, the wrong behaviour, or the adopted fix, and every other gold file is 'unclear', per schema.json ('A label without citable evidence is not auditable and must be unclear'). Instance confidence is capped at medium because no diff was shown. The instance has no failure: a one-line request to change a default. This is the weakest of the ten packets assigned and the only one where every gold file is 'unclear'. Either diff, or any description beyond the title, would settle both roles. Note the semantic gap as well: the report says 'periodic interrupts' and the files say 'deadline monitor', so even the component match is an inference."
+}

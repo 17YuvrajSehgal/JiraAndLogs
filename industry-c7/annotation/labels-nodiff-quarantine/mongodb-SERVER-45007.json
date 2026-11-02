@@ -1,0 +1,38 @@
+{
+  "id": "mongodb:SERVER-45007",
+  "project": "mongodb",
+  "issue_key": "SERVER-45007",
+  "annotator": "claude-opus-5",
+  "pass": 1,
+  "file_roles": [
+    {
+      "path": "src/mongo/db/commands/sleep_command.cpp",
+      "role": "unclear",
+      "evidence": "No diff was retrieved and the report never mentions this file or the sleep command. It is most likely a call site adapting to the changed GlobalLock signature, which CONVENTIONS.md calls refactor, or a lock-acquisition option added so the deadline behaviour can be exercised, but the packet shows neither. This file's diff would settle it."
+    },
+    {
+      "path": "src/mongo/db/concurrency/d_concurrency.cpp",
+      "role": "causal",
+      "evidence": "The report names the file, the line and the wrong logic: '[This PBWM lock acquisition|https://github.com/mongodb/mongo/blob/c4a5310c8037c075cde7a0a1a32a7f00bfc19746/src/mongo/db/concurrency/d_concurrency.cpp#L153] ignores the passed in deadline.' A deadline was passed to the GlobalLock constructor and dropped on this acquisition, which is the defect that produces the hang."
+    },
+    {
+      "path": "src/mongo/db/concurrency/d_concurrency.h",
+      "role": "unclear",
+      "evidence": "No diff was retrieved. GlobalLock is declared in this header and parts of it are conventionally inline, so the change could be a declaration carrying the deadline through, which CONVENTIONS.md calls refactor, or an inline body that was itself wrong, which it calls causal. The packet cannot separate the two."
+    }
+  ],
+  "symptom_location": {
+    "file": "src/mongo/db/curop.cpp",
+    "function": null,
+    "determinable": true
+  },
+  "log_location": {
+    "file": null,
+    "function": null,
+    "determinable": false
+  },
+  "relation": "caller-callee",
+  "rationale": "The report separates the two sites itself: the wrong logic is the PBWM acquisition at d_concurrency.cpp#L153, which 'ignores the passed in deadline', and the consequence is that '[this {{GlobalLock}} construction|...src/mongo/db/curop.cpp#L444-L447] can hang waiting for the PBWM lock'. curop.cpp is the caller that supplies a deadline and hangs anyway, and it is not in the gold set, so the site where the failure surfaces is outside the ground truth entirely. The header and the sleep command have no diff and are never named, so their roles are left unclear.",
+  "confidence": "medium",
+  "notes": "NO-DIFF PACKET: every gold file in this packet shows '(no diff retrieved)' and the fix commit message is '(empty)', so the issue report is the only evidence the packet carries. Decision recorded here per CONVENTIONS.md ('If a case is not covered here, follow RUBRIC.md and say in notes what was decided and why'): a role is assigned only where the report itself names the faulty code, the wrong behaviour, or the adopted fix, and every other gold file is 'unclear', per schema.json ('A label without citable evidence is not auditable and must be unclear'). Instance confidence is capped at medium because no diff was shown. REPORT-NAMES-FIX: the report names the faulty code by file and line and states the wrong behaviour, 'ignores the passed in deadline'. The symptom site, src/mongo/db/curop.cpp, lies outside the gold set, so a localizer that answered with the hanging file would be scored wrong on fix-gold even though it named the place the hang is observed. The function at curop.cpp#L444-L447 is not visible in the packet, so it is recorded as null rather than guessed. log_location is not determinable: the report quotes no log line or stack trace, only source links. Two of the three gold files are unclear purely because the diff is missing."
+}

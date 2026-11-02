@@ -1,0 +1,28 @@
+{
+  "id": "qt:QTBUG-80945",
+  "project": "qt",
+  "issue_key": "QTBUG-80945",
+  "annotator": "claude-opus-5",
+  "pass": 1,
+  "file_roles": [
+    {
+      "path": "src/printsupport/dialogs/qprintdialog_unix.cpp",
+      "role": "causal",
+      "evidence": "The sanitizer puts both halves of the use-after-free in this one file: the object is destroyed from it, 'freed by thread T0 here: #1 ... in QRadioButton::~QRadioButton() widgets/qradiobutton.cpp:145 #2 ... in QPrintDialogPrivate::init() dialogs/qprintdialog_unix.cpp:641', and it is read again from it, '#4 ... in QPrintDialogPrivate::selectPrinter(QPrinter::OutputFormat) dialogs/qprintdialog_unix.cpp:733', reached from '#5 ... QUnixPrintWidgetPrivate::setOptionsPane(QPrintDialogPrivate*) dialogs/qprintdialog_unix.cpp:1275' and '#6 ... QPrintDialogPrivate::init() dialogs/qprintdialog_unix.cpp:644'. Deleting a widget at line 641 and using it at line 733, both inside this class's own setup, is the wrong logic, and it is the only changed file. Note the packet shows no diff, so this role rests on the report."
+    }
+  ],
+  "symptom_location": {
+    "file": "src/widgets/kernel/qwidget.cpp",
+    "function": "QWidget::setEnabled",
+    "determinable": true
+  },
+  "log_location": {
+    "file": "src/widgets/kernel/qwidget.cpp",
+    "function": "QWidget::setEnabled",
+    "determinable": true
+  },
+  "relation": "state-producer",
+  "rationale": "The read of freed memory happens outside the gold set, '#3 ... in QWidget::setEnabled(bool) kernel/qwidget.cpp:3221', where the dangling d-pointer is dereferenced; frames #0 to #3 share the address 0x7fad8993f0d6, so QScopedPointer::operator->, qGetPtrHelper and QWidget::d_func are inlined into that one site. The dangling state was produced earlier, by the destruction at qprintdialog_unix.cpp:641 of an object allocated in generated UI code, '#1 ... in Ui_QPrintSettingsOutput::setupUi(QWidget*) .uic/ui_qprintsettingsoutput.h:149', and consumed at qprintdialog_unix.cpp:733. Produce-then-consume, three lines apart in the same constructor path.",
+  "confidence": "medium",
+  "notes": "No diff was retrieved and the commit message 2ad3348031d8 is '(empty)', so the role rests on the sanitizer report rather than on corrected logic being shown; confidence is medium for that reason and a second rater reading rubric rule 1 strictly ('label it causal because the diff shows the wrong logic being corrected there') could mark it unclear. The gold file does not contain the frame where the failure surfaced: that is QWidget::setEnabled in src/widgets/kernel/qwidget.cpp, outside the gold set, and the path is taken from a frame in the same trace, '../../include/QtWidgets/../../src/widgets/kernel/qwidget.h:132'. The allocating frame is generated UI code (.uic/ui_qprintsettingsoutput.h), which is not a source file either. The reproducer is third-party, 'The problem has been found with the bode example you find in the qwt ( qwt.sf.net ) examples from svn trunk', and the output is an AddressSanitizer report, not a project log line; it is treated as placing the site the way an assertion message does under the recorded convention. Decision recorded for consistency across the diff-less packets in this batch: with no hunk, a role is assigned only when the report itself localises the failure mechanism to the changed file (as in QTBUG-80945, where a sanitizer names the freeing and the using line in it, and QTBUG-81604, where the single changed file owns the operation that failed); otherwise the file is 'unclear' per rubric rule 1 and the instruction to use 'unclear' rather than guess."
+}

@@ -1,0 +1,28 @@
+{
+  "id": "qt:QTBUG-96659",
+  "project": "qt",
+  "issue_key": "QTBUG-96659",
+  "annotator": "claude-opus-5",
+  "pass": 1,
+  "file_roles": [
+    {
+      "path": "src/corelib/kernel/qproperty_p.h",
+      "role": "causal",
+      "evidence": "The report quotes the offending line of this file and gives its number: \"qproperty_p.h:554:30: error: '(QItemSelectionModelPrivate::modelChanged != 0)' is not a constant expression\" under \"if constexpr (Signal != nullptr) {\". Comparing a pointer-to-member-function template argument against nullptr inside 'if constexpr' is what gcc 10.2.1 refuses, the build cannot complete, and this is the only file the fix changed."
+    }
+  ],
+  "symptom_location": {
+    "file": "src/corelib/kernel/qproperty_p.h",
+    "function": null,
+    "determinable": true
+  },
+  "log_location": {
+    "file": null,
+    "function": null,
+    "determinable": false
+  },
+  "relation": "same-location",
+  "rationale": "This is a build failure, not a runtime one: 'When building Qt -6.2.0-rc I'm running into the following compiler error', with the diagnostic pointing at line 554 column 30 of the single gold file and quoting the construct, 'if constexpr (Signal != nullptr)'. The failing line and the fixed file are the same file, so symptom and cause coincide. The enclosing function is not shown by the diagnostic and no diff was rendered, so no function name is recorded.",
+  "confidence": "medium",
+  "notes": "REPORT-NAMES-FIX: the report names the file, the line, the column and the exact expression that is wrong, 'qproperty_p.h:554:30' and 'if constexpr (Signal != nullptr)'. The packet renders this file's diff as '(no diff retrieved)', so no hunk could be cited for any gold file in this instance. The role is still only medium confidence because the diff was not rendered: the location is certain, but whether the fix rewrote the condition, changed the template parameter's type, or guarded it by compiler version is not shown. The instance has no runtime failure; it is a compile error, and the trigger is toolchain-specific, 'gcc (SUSE Linux) 10.2.1'. Compiler diagnostics are not program logs, in the same way CONVENTIONS treats SHOW output and harness assertions, so log_location.determinable is false. The instantiation that triggers it, QItemSelectionModelPrivate::modelChanged, lives in another file that the fix did not change."
+}

@@ -1,0 +1,28 @@
+{
+  "id": "mongodb:SERVER-15512",
+  "project": "mongodb",
+  "issue_key": "SERVER-15512",
+  "annotator": "claude-opus-5",
+  "pass": 1,
+  "file_roles": [
+    {
+      "path": "src/mongo/db/repl/rs_sync.cpp",
+      "role": "causal",
+      "evidence": "The reported log shows the replica-set sync thread giving up rather than making progress: 'm31001| 2014-10-02T03:15:02.123+0000 I REPLSETS [rsSync] initial sync pending' followed by 'm31001| 2014-10-02T03:15:02.124+0000 I REPLSETS [rsSync] no valid sync sources found in current replset to do an initial sync', after which the harness spins on 'ReplSetTest awaitReplication: waiting for secondary #1, WIN-LPG54MQP00S:31001, to have an oplog built' until 'assert.soon failed, msg:awaiting replication'. The fix 'changed 1 file(s); 1 of them are non-test source files' and that file is src/mongo/db/repl/rs_sync.cpp, the source of the rsSync thread named in those log lines, so the logic that failed to obtain a sync source is there. The hunk is not visible: '(no diff retrieved)'."
+    }
+  ],
+  "symptom_location": {
+    "file": "src/mongo/db/repl/rs_sync.cpp",
+    "function": null,
+    "determinable": true
+  },
+  "log_location": {
+    "file": "src/mongo/db/repl/rs_sync.cpp",
+    "function": null,
+    "determinable": true
+  },
+  "relation": "same-location",
+  "rationale": "The two server log lines that describe the failure are both tagged '[rsSync]', and under CONVENTIONS a logger tag in brackets places the emitting site; the single production file the fix changed is rs_sync.cpp, the source of that thread. The surfacing site and the changed site therefore coincide, which makes this same-location. The role itself rests on the single-file gold set rather than on a hunk, because the diff renders as '(no diff retrieved)'.",
+  "confidence": "medium",
+  "notes": "NO-DIFF-IN-PACKET: every gold file in this packet renders its diff as '(no diff retrieved)', so there is no diff evidence for any role here. Roles rest on the issue report and the gold file list alone, which is weaker than every previously labelled instance. The '[rsSync]' tag is a thread name rather than a class name, so it places the thread, not necessarily the statement: the text 'no valid sync sources found in current replset to do an initial sync' could be emitted by a callee running on that thread, and the packet does not show the tree. The enclosing function is not visible, so `function` is null in both locations per CONVENTIONS. The assert.soon failure at 'at C:\\data\\mci\\shell\\src\\jstests\\replsets\\resync.js:55:10' is a test-harness assertion and is not treated as the log. This is a CI flake report with no stated mechanism; the reporter says so, 'Nothing else obviously useful from the logs yet.' A second rater could reasonably call rs_sync.cpp preventive, if the one-file change was a retry or a backoff that widens the window rather than a correction to sync-source selection; the packet cannot distinguish those two, and that is the main disagreement risk here."
+}

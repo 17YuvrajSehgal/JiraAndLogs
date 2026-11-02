@@ -1,0 +1,28 @@
+{
+  "id": "solr:SOLR-6706",
+  "project": "solr",
+  "issue_key": "SOLR-6706",
+  "annotator": "claude-opus-5",
+  "pass": 1,
+  "file_roles": [
+    {
+      "path": "solr/solrj/src/java/org/apache/solr/common/util/JsonRecordReader.java",
+      "role": "causal",
+      "evidence": "The skip list for values the reader is not interested in was missing one legal JSON event, and the fix adds it: 'if (event == STRING || event == LONG ||' gains '+ event == NUMBER ||' before 'event == BIGNUMBER || event == BOOLEAN || event == NULL) { continue; }'. Falling out of that list is what reached the throw the reporter saw, 'java.lang.RuntimeException: unexpected token 3 at org.apache.solr.common.util.JsonRecordReader$Node.handleObjectStart(JsonRecordReader.java:400)', and the file owns the parsing of records it is meant to skip."
+    }
+  ],
+  "symptom_location": {
+    "file": "solr/solrj/src/java/org/apache/solr/common/util/JsonRecordReader.java",
+    "function": "Node.handleObjectStart",
+    "determinable": true
+  },
+  "log_location": {
+    "file": "solr/solrj/src/java/org/apache/solr/common/util/JsonRecordReader.java",
+    "function": "Node.handleObjectStart",
+    "determinable": true
+  },
+  "relation": "same-location",
+  "rationale": "The top project frame of the pasted trace is the function the fix changed, 'JsonRecordReader$Node.handleObjectStart(JsonRecordReader.java:400)', and the hunk sits in that same accept-list a few lines above. The reporter also isolates the trigger exactly, 'If I change a_num to an integer or remove it entirely then the document is indexed successfully', which matches the added case, a float value in a position the reader only wanted to skip. Symptom and cause are the same function.",
+  "confidence": "high",
+  "notes": "REPORT-NAMES-FIX: the stack trace names the file, the inner class, the function and the line, and the reporter narrows the trigger to the float value in prose, 'If I change a_num to an integer or remove it entirely then the document is indexed successfully'. This is an easy instance for a reason unrelated to reasoning about causes: the first project-owned frame is the answer. Adding the missing NUMBER case is causal rather than preventive under the convention that an unhandled legal input is the defect when the changed file owns the feature and nothing elsewhere was treated as broken; the fix changed three files and only this one is source, the others being CHANGES.txt and a test, per the second commit 'SOLR-6706 missed changes.txt'. The message the reporter saw came back in the HTTP response body, '\"msg\":\"unexpected token 3\"', not from a log file, but the text is thrown by this function, so the emitting site is still placed here."
+}

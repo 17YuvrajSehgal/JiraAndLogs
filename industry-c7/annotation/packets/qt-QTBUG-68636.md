@@ -21,7 +21,18 @@ There are no such issues on weston or kwin. As far as I know, it only happens on
 `493a85a9e468`
 
 ```
-(empty)
+Widgets: setTransientParent() when a QMenu is a window
+
+On some platforms, such as X11 and Wayland with some compositors,
+QMenu could be a popup window, which should be set a transient parent
+to get relative position, which is requested by Wayland.
+
+Added transientParentWindow() for QMenuPrivate like QDialogPrivate.
+
+Fixes: QTBUG-68636
+Pick-to: 6.2
+Change-Id: I6d8880cb008ecf61a4c005898b38e3953379a13d
+Reviewed-by: Volker Hilsheimer <volker.hilsheimer@qt.io>
 ```
 
 ## Files the fix changed
@@ -36,13 +47,77 @@ Snapshot holds 5,901 non-test source files. The fix changed 3 file(s); 2 of them
 ### `src/widgets/widgets/qmenu.cpp`
 
 ```diff
-(no diff retrieved)
+diff --git a/src/widgets/widgets/qmenu.cpp b/src/widgets/widgets/qmenu.cpp
+index 5ecac2c7c6e..c6d1dd0e7ec 100644
+--- a/src/widgets/widgets/qmenu.cpp
++++ b/src/widgets/widgets/qmenu.cpp
+@@ -623,10 +623,33 @@ void QMenuPrivate::hideMenu(QMenu *menu)
+     menu->d_func()->causedPopup.action = nullptr;
+     menu->close();
+     menu->d_func()->causedPopup.widget = nullptr;
+ }
+ 
++QWindow *QMenuPrivate::transientParentWindow() const
++{
++    Q_Q(const QMenu);
++    if (const QWidget *parent = q->nativeParentWidget()) {
++        if (parent->windowHandle())
++            return parent->windowHandle();
++    }
++
++    if (const QWindow *w = q->windowHandle()) {
++        if (w->transientParent())
++            return w->transientParent();
++    }
++
++    if (causedPopup.widget) {
++        if (const QWidget *w = causedPopup.widget.data()) {
++            if (const QWidget *ww = w->window())
++                return ww->windowHandle();
++        }
++    }
++
++    return nullptr;
++}
++
+ void QMenuPrivate::popupAction(QAction *action, int delay, bool activateFirst)
+ {
+     Q_Q(QMenu);
+     if (action) {
+         if (action->isEnabled()) {
+@@ -2981,10 +3004,12 @@ bool QMenu::event(QEvent *e)
+         QMenuPrivate::mouseDown = nullptr;
+         d->updateActionRects();
+         d->sloppyState.reset();
+         if (d->currentAction)
+             d->popupAction(d->currentAction, 0, false);
++        if (isWindow() && window() && window()->windowHandle() && !window()->windowHandle()->transientParent())
++            window()->windowHandle()->setTransientParent(d->transientParentWindow());
+         break;
+ #if QT_CONFIG(tooltip)
+     case QEvent::ToolTip:
+         if (d->toolTipsVisible) {
+             const QHelpEvent *ev = static_cast<const QHelpEvent*>(e);
 ```
 
 ### `src/widgets/widgets/qmenu_p.h`
 
 ```diff
-(no diff retrieved)
+diff --git a/src/widgets/widgets/qmenu_p.h b/src/widgets/widgets/qmenu_p.h
+index ffe956d007a..bad9c294f8c 100644
+--- a/src/widgets/widgets/qmenu_p.h
++++ b/src/widgets/widgets/qmenu_p.h
+@@ -438,10 +438,11 @@ public:
+     };
+     virtual QList<QPointer<QWidget>> calcCausedStack() const;
+     QMenuCaused causedPopup;
+     void hideUpToMenuBar();
+     void hideMenu(QMenu *menu);
++    QWindow *transientParentWindow() const;
+ 
+     //index mappings
+     inline QAction *actionAt(int i) const { return q_func()->actions().at(i); }
+     inline int indexOf(QAction *act) const { return q_func()->actions().indexOf(act); }
 ```
 
 ---

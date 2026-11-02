@@ -17,7 +17,9 @@ The constant within MongoDB source code is 6378.1 km (equatorial).
 `565f050f4148`
 
 ```
-(empty)
+SERVER-12128 Inconsistent earth radius used in tests
+
+Resolves #580
 ```
 
 ## Files the fix changed
@@ -31,7 +33,22 @@ Snapshot holds 6,732 non-test source files. The fix changed 3 file(s); 1 of them
 ### `src/mongo/db/geo/geoconstants.h`
 
 ```diff
-(no diff retrieved)
+diff --git a/src/mongo/db/geo/geoconstants.h b/src/mongo/db/geo/geoconstants.h
+index d7df948150a..e97e1d3b233 100644
+--- a/src/mongo/db/geo/geoconstants.h
++++ b/src/mongo/db/geo/geoconstants.h
+@@ -28,9 +28,10 @@
+ 
+ #pragma once
+ 
+ namespace mongo {
+ 
+-    // Thanks, Wikipedia.
++    // Equatorial radius of earth.
++    // Source: http://nssdc.gsfc.nasa.gov/planetary/factsheet/earthfact.html
+     const double kRadiusOfEarthInMeters = (6378.1 * 1000);
+ 
+ }  // namespace mongo
 ```
 
 ---

@@ -1,0 +1,33 @@
+{
+  "id": "pig:PIG-1871",
+  "project": "pig",
+  "issue_key": "PIG-1871",
+  "annotator": "claude-opus-5",
+  "pass": 1,
+  "file_roles": [
+    {
+      "path": "src/org/apache/pig/newplan/PColFilterExtractor.java",
+      "role": "causal",
+      "evidence": "Every abort that the report objects to lives here and is replaced by a warning and a flag: 'throw new FrontendException(\"Unsupported query: \" + \"You have an partition column (\" + fieldName + \") inside a regexp operator in the \" + \"filter condition.\", errCode, PigException.INPUT);' becomes 'LOG.warn(\"No partition filter push down: \" ...); canPushDown = false; return;', repeated for the function, cast, null-check, bincond and and/or cases, and 'private static void throwException() throws FrontendException { ... errCode 2209 ... }' becomes 'private void logInternalErrorAndSetFlag() { LOG.warn(...); canPushDown = false; }'. The new flag then suppresses the optimisation, 'if(!canPushDown || pColConditions.size() == 0) return null;' and 'return canPushDown && filterRemovable;'."
+    },
+    {
+      "path": "src/org/apache/pig/newplan/logical/rules/PartitionFilterOptimizer.java",
+      "role": "preventive",
+      "evidence": "The rule now runs the extractor over a copy and restores it only on success: 'LogicalExpressionPlan filterExpr = loFilter.getFilterPlan(); LogicalExpressionPlan filterExprCopy = filterExpr.deepCopy();', the extractor is constructed with 'filterExprCopy' instead of 'loFilter.getFilterPlan()', and the removable branch gains 'else { loFilter.setFilterPlan(filterExprCopy); }'. Its own comment states this is protection, not the defect: 'Perform transformation on a copy of the filter plan, and replace the original filter plan only if the transformation is successful'. Nothing here was throwing the exception the report asks to remove."
+    }
+  ],
+  "symptom_location": {
+    "file": "src/org/apache/pig/newplan/PColFilterExtractor.java",
+    "function": null,
+    "determinable": true
+  },
+  "log_location": {
+    "file": null,
+    "function": null,
+    "determinable": false
+  },
+  "relation": "same-location",
+  "rationale": "The report asks for one behaviour change, 'Dont throw exception if partition filters cannot be pushed up. Instead don't try to push partition filters up and continue execution.', and the throws it refers to are all in PColFilterExtractor, which is where they are turned into 'LOG.warn(...); canPushDown = false;'. The failure, an aborted query, surfaced at those same throw sites, so cause and symptom are the same file. The optimizer rule changes only because the extractor can now stop halfway: it deep-copies the filter plan so a partially rewritten plan is never installed.",
+  "confidence": "medium",
+  "notes": "REPORT-NAMES-FIX: the two-sentence report prescribes the adopted fix, and the commit message repeats it verbatim. The instance has no failure report in the usual sense: there is no log, no trace and no reproducer, only a request to downgrade an error, so log_location.determinable = false and the enclosing function at the throw sites is not visible in the hunks, which is why symptom_location.function is null. The judgement call is PartitionFilterOptimizer: it is labelled preventive because the old in-place rewrite was not wrong while any failure threw, and the deep copy is a defensive fallback added to make bailing out safe; a second rater could call it causal as the second half of one logical change (the convention 'a missing capability plus its missing use'), or refactor as adaptation forced by the fix elsewhere. Note the new 'public boolean canPushDown()' accessor is never called in the shown diff. The fix changed 4 files, 2 of them gold, so 2 tests were filtered out."
+}

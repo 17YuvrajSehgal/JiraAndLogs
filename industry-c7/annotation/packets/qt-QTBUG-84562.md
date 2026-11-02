@@ -30,7 +30,19 @@ Any way this commit could be reverted or fixed ?
 `33e6e5fac3c8`
 
 ```
-(empty)
+QEventDispatcherWin32: retrieve PM_REMOVE value as a bit flag
+
+Windows unexpectedly passes PM_NOYIELD flag in wParam parameter to the
+hook procedure, if ::PeekMessage(..., PM_REMOVE | PM_NOYIELD) is called
+from the event loop. So, to ignore undocumented flag, we should
+interpret wParam as a bit field.
+
+Thanks to Robin Lobel for research.
+
+Pick-to: 5.15
+Fixes: QTBUG-84562
+Change-Id: Ib16d7d747aebc9a3628e4ee67478c4d3edeb96f1
+Reviewed-by: Friedemann Kleint <Friedemann.Kleint@qt.io>
 ```
 
 ## Files the fix changed
@@ -44,7 +56,29 @@ Snapshot holds 6,149 non-test source files. The fix changed 2 file(s); 1 of them
 ### `src/corelib/kernel/qeventdispatcher_win.cpp`
 
 ```diff
-(no diff retrieved)
+diff --git a/src/corelib/kernel/qeventdispatcher_win.cpp b/src/corelib/kernel/qeventdispatcher_win.cpp
+index d9b9d84e41d..43872fd0270 100644
+--- a/src/corelib/kernel/qeventdispatcher_win.cpp
++++ b/src/corelib/kernel/qeventdispatcher_win.cpp
+@@ -275,13 +275,17 @@ LRESULT QT_WIN_CALLBACK qt_GetMessageHook(int code, WPARAM wp, LPARAM lp)
+ {
+     QEventDispatcherWin32 *q = qobject_cast<QEventDispatcherWin32 *>(QAbstractEventDispatcher::instance());
+     Q_ASSERT(q != 0);
+     QEventDispatcherWin32Private *d = q->d_func();
+     MSG *msg = reinterpret_cast<MSG *>(lp);
++    // Windows unexpectedly passes PM_NOYIELD flag to the hook procedure,
++    // if ::PeekMessage(..., PM_REMOVE | PM_NOYIELD) is called from the event loop.
++    // So, retrieve 'removed' tag as a bit field.
++    const bool messageRemoved = (wp & PM_REMOVE) != 0;
+ 
+     if (msg->hwnd == d->internalHwnd && msg->message == WM_QT_SENDPOSTEDEVENTS
+-        && wp == PM_REMOVE && d->sendPostedEventsTimerId == 0) {
++        && messageRemoved && d->sendPostedEventsTimerId == 0) {
+         // Start a timer to deliver posted events when the message queue is emptied.
+         d->sendPostedEventsTimerId = SetTimer(d->internalHwnd, SendPostedEventsTimerId,
+                                               USER_TIMER_MINIMUM, NULL);
+     }
+     return d->getMessageHook ? CallNextHookEx(0, code, wp, lp) : 0;
 ```
 
 ---

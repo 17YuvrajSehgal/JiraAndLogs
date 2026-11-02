@@ -1,0 +1,28 @@
+{
+  "id": "pig:PIG-5320",
+  "project": "pig",
+  "issue_key": "PIG-5320",
+  "annotator": "claude-opus-5",
+  "pass": 1,
+  "file_roles": [
+    {
+      "path": "src/org/apache/pig/backend/hadoop/executionengine/spark/JobStatisticCollector.java",
+      "role": "causal",
+      "evidence": "waitForJobToEnd waited exactly once and told the caller nothing had finished: 'sparkListener.wait(); return false;'. It becomes a guarded loop, 'while (!finishedJobIds.contains(jobId)) { sparkListener.wait(); } finishedJobIds.remove(jobId);', and the return type drops from boolean to void. A spurious wakeup therefore let the caller continue while the job was still running, which is the reported 'java.lang.RuntimeException: Unexpected job execution status RUNNING'."
+    }
+  ],
+  "symptom_location": {
+    "file": "src/org/apache/pig/tools/pigstats/spark/SparkStatsUtil.java",
+    "function": "isJobSuccess",
+    "determinable": true
+  },
+  "log_location": {
+    "file": "src/org/apache/pig/tools/pigstats/spark/SparkStatsUtil.java",
+    "function": "isJobSuccess",
+    "determinable": true
+  },
+  "relation": "caller-callee",
+  "rationale": "The innermost cause surfaces one level above the gold file, 'java.lang.RuntimeException: Unexpected job execution status RUNNING at org.apache.pig.tools.pigstats.spark.SparkStatsUtil.isJobSuccess(SparkStatsUtil.java:138)', reached through 'SparkStatsUtil.waitForJobAddStats(SparkStatsUtil.java:59)', which is the caller of waitForJobToEnd. The defect is in the callee: it waited once without rechecking the condition, so on a spurious wakeup it returned with the job unfinished and the caller then read a RUNNING status. The reporter diagnoses exactly this, 'due to a spurious wakeup, the wait might pass without a notify getting called'.",
+  "confidence": "high",
+  "notes": "REPORT-NAMES-FIX: the reporter names the faulty code and prescribes the adopted fix, 'I think the problem is that in JobStatisticCollector#waitForJobToEnd sparkListener.wait() is not inside a loop, like suggested in wait's javadoc', quoting 'this method should always be used in a loop'. The gold file does not appear anywhere in the pasted trace: its deepest project frames are SparkStatsUtil, SparkPigStats, JobGraphBuilder, SparkOperator, SparkLauncher and PigServer, because waitForJobToEnd had already returned before the failure was noticed. The symptom path is inferred from the package name, org.apache.pig.tools.pigstats.spark; the packet does not show the source tree. The failure is a flaky test, so the top of the trace is the test harness, 'at org.apache.pig.test.TestCubeOperator.testRollupBasic(TestCubeOperator.java:124)'. A second rater could record the relation as concurrency, since the mechanism is a wait/notify race; caller-callee is used because the symptom site is the direct caller of the corrected method on the same thread."
+}

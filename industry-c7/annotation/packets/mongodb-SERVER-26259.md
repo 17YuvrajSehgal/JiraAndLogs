@@ -15,7 +15,7 @@ Add --redactClientLogData to mongos, so that database contents passing through m
 `dfb56737ec85`
 
 ```
-(empty)
+SERVER-26259: Import redactClientLogData from enterprise module
 ```
 
 ## Files the fix changed
@@ -29,7 +29,27 @@ Snapshot holds 10,291 non-test source files. The fix changed 1 file(s); 1 of the
 ### `src/mongo/db/server_options_helpers.cpp`
 
 ```diff
-(no diff retrieved)
+diff --git a/src/mongo/db/server_options_helpers.cpp b/src/mongo/db/server_options_helpers.cpp
+index e0d059fbede..25b7f41ae36 100644
+--- a/src/mongo/db/server_options_helpers.cpp
++++ b/src/mongo/db/server_options_helpers.cpp
+@@ -252,10 +252,17 @@ Status addGeneralServerOptions(moe::OptionSection* options) {
+                                "timeStampFormat",
+                                moe::String,
+                                "Desired format for timestamps in log messages. One of ctime, "
+                                "iso8601-utc or iso8601-local");
+ 
++#if MONGO_ENTERPRISE_VERSION
++    options->addOptionChaining("security.redactClientLogData",
++                               "redactClientLogData",
++                               moe::Switch,
++                               "Redact client data written to the diagnostics log");
++#endif
++
+     options->addOptionChaining("processManagement.pidFilePath",
+                                "pidfilepath",
+                                moe::String,
+                                "full path to pidfile (if not set, no pidfile is created)");
 ```
 
 ---

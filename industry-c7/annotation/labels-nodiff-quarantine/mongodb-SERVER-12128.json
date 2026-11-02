@@ -1,0 +1,28 @@
+{
+  "id": "mongodb:SERVER-12128",
+  "project": "mongodb",
+  "issue_key": "SERVER-12128",
+  "annotator": "claude-opus-5",
+  "pass": 1,
+  "file_roles": [
+    {
+      "path": "src/mongo/db/geo/geoconstants.h",
+      "role": "causal",
+      "evidence": "The report puts the disputed value in source and says which value is wanted: 'MongoDB tests and documentation utilize mean Earth radius (6371km) rather than equatorial radius (6378.1km)' and 'The constant within MongoDB source code is 6378.1 km (equatorial).' The fix 'changed 3 file(s); 1 of them are non-test source files', and that one is src/mongo/db/geo/geoconstants.h, the header the constant lives in; the other two changes are tests. The hunk itself is not visible: the packet renders '(no diff retrieved)'."
+    }
+  ],
+  "symptom_location": {
+    "file": null,
+    "function": null,
+    "determinable": false
+  },
+  "log_location": {
+    "file": null,
+    "function": null,
+    "determinable": false
+  },
+  "relation": "unclear",
+  "rationale": "There is no failure in this report. It is a consistency complaint that the source constant disagrees with the value used in tests and documentation, and the reporter only argues that 'mean radius may be a more appropriate constant'. The fix touched three files of which one is non-test, and that one is the geo constants header, so the source side of the inconsistency is what the project changed.",
+  "confidence": "medium",
+  "notes": "NO-DIFF-IN-PACKET: every gold file in this packet renders its diff as '(no diff retrieved)', so there is no diff evidence for any role here. Roles rest on the issue report and the gold file list alone, which is weaker than every previously labelled instance. REPORT-NAMES-FIX: the report names the constant, gives its current value and gives the value it should take. The instance has no failure; it is a consistency complaint, so there is no symptom site and no log line, and `relation` is recorded as unclear rather than same-location so the symptom-versus-cause measurement is not inflated by an instance that has no symptom. Two of the three changed files are tests, leaving a one-file gold set. A second rater could reasonably call this refactor, on the view that changing an agreed-on documented constant is cosmetic; it is called causal because the source value is the side the project corrected."
+}

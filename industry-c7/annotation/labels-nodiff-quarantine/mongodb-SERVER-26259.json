@@ -1,0 +1,28 @@
+{
+  "id": "mongodb:SERVER-26259",
+  "project": "mongodb",
+  "issue_key": "SERVER-26259",
+  "annotator": "claude-opus-5",
+  "pass": 1,
+  "file_roles": [
+    {
+      "path": "src/mongo/db/server_options_helpers.cpp",
+      "role": "causal",
+      "evidence": "No diff was retrieved, so the role rests on the report and the gold list. The report prescribes the adopted change in full: 'Add --redactClientLogData to mongos, so that database contents passing through mongos will experience the same log preprocessing they will receive on the underlying mongod.' This is the only file the fix changed, and it is the server-option declaration and validation helper, so the option mongos did not accept was missing here."
+    }
+  ],
+  "symptom_location": {
+    "file": null,
+    "function": null,
+    "determinable": false
+  },
+  "log_location": {
+    "file": null,
+    "function": null,
+    "determinable": false
+  },
+  "relation": "unclear",
+  "rationale": "The report is a feature-parity request with no failure: mongos does not accept --redactClientLogData, which mongod does, so 'database contents passing through mongos' are logged unredacted. Exactly one non-test source file changed, src/mongo/db/server_options_helpers.cpp, which is where server options are declared and processed, so that is where the option was absent. No diff and no commit message were retrieved, so nothing in the packet shows which lines changed.",
+  "confidence": "medium",
+  "notes": "NO-DIFF PACKET: every gold file in this packet shows '(no diff retrieved)' and the fix commit message is '(empty)', so the issue report is the only evidence the packet carries. Decision recorded here per CONVENTIONS.md ('If a case is not covered here, follow RUBRIC.md and say in notes what was decided and why'): a role is assigned only where the report itself names the faulty code, the wrong behaviour, or the adopted fix, and every other gold file is 'unclear', per schema.json ('A label without citable evidence is not auditable and must be unclear'). Instance confidence is capped at medium because no diff was shown. REPORT-NAMES-FIX: the report prescribes the adopted fix, 'Add --redactClientLogData to mongos'. The instance has no failure: it is a parity/usability request, not a bug, so 'causal' here means the file that should have carried the option and did not, following the CONVENTIONS.md rule that an unhandled-but-legal input is causal in the file that owns the feature when no other file was changed. The gold path matches the feature by name only; the packet did not show the source tree. A second rater could reasonably mark this file 'unclear' on the ground that no diff was shown at all, or 'preventive' on the ground that redaction is a configuration tightening rather than a corrected defect."
+}

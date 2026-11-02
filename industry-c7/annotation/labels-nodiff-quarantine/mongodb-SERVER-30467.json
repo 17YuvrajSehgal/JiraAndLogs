@@ -1,0 +1,38 @@
+{
+  "id": "mongodb:SERVER-30467",
+  "project": "mongodb",
+  "issue_key": "SERVER-30467",
+  "annotator": "claude-opus-5",
+  "pass": 1,
+  "file_roles": [
+    {
+      "path": "src/mongo/db/matcher/schema/expression_internal_schema_str_length.h",
+      "role": "causal",
+      "evidence": "The report names exactly the two operators this file implements and calls their counting wrong: '{{$_internalSchemaMinLength}} and {{$_internalSchemaMaxLength}} must be updated to properly count the lengths of Unicode strings, which may contain multibyte characters.' The filename, expression_internal_schema_str_length.h, is the string-length internal schema expression, and it is the only gold file belonging to those operators, so the byte-based counting the report calls wrong is here."
+    },
+    {
+      "path": "src/mongo/db/pipeline/expression.cpp",
+      "role": "unclear",
+      "evidence": "No diff was retrieved. This is the aggregation expression library, a sibling of the matcher operators the report names; the report never mentions aggregation. Under CONVENTIONS.md this would be preventive if the diff showed the same fix extended to a path the report never exercises, and causal if it showed shared counting logic being corrected. The packet shows neither."
+    },
+    {
+      "path": "src/mongo/util/mongoutils/str.h",
+      "role": "unclear",
+      "evidence": "No diff was retrieved and the report never mentions a string utility. A Unicode-aware length helper added here with a body would be causal under CONVENTIONS.md ('a new predicate with a body'), while a signature or declaration change would be refactor. This file's diff would settle it."
+    }
+  ],
+  "symptom_location": {
+    "file": "src/mongo/db/matcher/schema/expression_internal_schema_str_length.h",
+    "function": null,
+    "determinable": true
+  },
+  "log_location": {
+    "file": null,
+    "function": null,
+    "determinable": false
+  },
+  "relation": "same-location",
+  "rationale": "The report is a single sentence naming the two operators that count wrongly and the input that breaks them: multibyte Unicode strings. The gold file whose name matches those operators is where the wrong count is produced and also where a wrong match result would surface, so symptom and cause are the same site. The aggregation expression file and the string helper are never mentioned in the report and have no diff, so their roles are left unclear; the enclosing function is not shown anywhere, so it is recorded as null.",
+  "confidence": "medium",
+  "notes": "NO-DIFF PACKET: every gold file in this packet shows '(no diff retrieved)' and the fix commit message is '(empty)', so the issue report is the only evidence the packet carries. Decision recorded here per CONVENTIONS.md ('If a case is not covered here, follow RUBRIC.md and say in notes what was decided and why'): a role is assigned only where the report itself names the faulty code, the wrong behaviour, or the adopted fix, and every other gold file is 'unclear', per schema.json ('A label without citable evidence is not auditable and must be unclear'). Instance confidence is capped at medium because no diff was shown. REPORT-NAMES-FIX: the report names the faulty operators and prescribes the adopted fix, 'must be updated to properly count the lengths of Unicode strings'. The instance reports no failure instance, log or trace, only the defective behaviour, so log_location is not determinable. Two of three gold files are unclear, which is the main cost of the missing diff here: the split between the operator fix and whatever changed in expression.cpp and str.h is exactly the causal-versus-incidental split this annotation is meant to measure."
+}

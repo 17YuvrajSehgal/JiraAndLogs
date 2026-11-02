@@ -1,0 +1,28 @@
+{
+  "id": "qt:QTBUG-85734",
+  "project": "qt",
+  "issue_key": "QTBUG-85734",
+  "annotator": "claude-opus-5",
+  "pass": 1,
+  "file_roles": [
+    {
+      "path": "src/plugins/platforms/windows/qwindowsscreen.cpp",
+      "role": "causal",
+      "evidence": "The report names the file, the line and the unchecked value, 'QWindowTheme::instance() is null when refreshFonts() is called. Looks like here [https://github.com/qt/qtbase/blob/dev/src/plugins/platforms/windows/qwindowsscreen.cpp#L572]'. The only non-test source file the fix changed is that same file, so the code that calls through a theme instance it never checked is the defect; nothing that could have produced the null was treated as broken."
+    }
+  ],
+  "symptom_location": {
+    "file": "src/plugins/platforms/windows/qwindowsscreen.cpp",
+    "function": null,
+    "determinable": true
+  },
+  "log_location": {
+    "file": null,
+    "function": null,
+    "determinable": false
+  },
+  "relation": "same-location",
+  "rationale": "The reporter gives a crash and its site in one sentence, 'Qt crashes in qwindows.dll' and 'QWindowTheme::instance() is null when refreshFonts() is called', with a link to line 572 of the gold file. Under the rubric's hard case the file is causal only if it owns the violated invariant; the theme's creator is not in the gold set and was not changed, so the unguarded call in this file is what was wrong. Cause and crash site are the same line.",
+  "confidence": "medium",
+  "notes": "REPORT-NAMES-FIX: the reporter names the null value, the call that uses it and the exact source line, 'QWindowTheme::instance() is null when refreshFonts() is called. Looks like here [...qwindowsscreen.cpp#L572]'. The packet renders this file's diff as '(no diff retrieved)', so no hunk could be cited for any gold file in this instance. The function enclosing line 572 is not shown, so only the file is recorded for the symptom, as CONVENTIONS requires. No stack trace and no log line are given; 'Qt crashes in qwindows.dll' names a binary, not an emitting site, so log_location.determinable is false. The failure is environment-specific, 'Crashes in qwindows.dll under WINE', which is why the theme can be absent where it normally is not. Confidence is medium rather than high only because the diff was not rendered: the location is certain, but whether the fix added a null check, created the theme earlier, or reordered the refresh is not shown."
+}

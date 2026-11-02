@@ -1,0 +1,28 @@
+{
+  "id": "qt:QTBUG-96069",
+  "project": "qt",
+  "issue_key": "QTBUG-96069",
+  "annotator": "claude-opus-5",
+  "pass": 1,
+  "file_roles": [
+    {
+      "path": "src/corelib/kernel/qjnienvironment.cpp",
+      "role": "unclear",
+      "evidence": "The reported failure is in another module: 'java.lang.NoSuchMethodError: no non-static method \"Lorg/qtproject/qt/android/multimedia/QtAndroidMediaPlayer;.<init>()V\"' followed by 'java.lang.UnsatisfiedLinkError: JNI_ERR returned from JNI_OnLoad in \"/data/app/org.qtproject.example.camera-1/lib/arm/libQt6Multimedia_armeabi-v7a.so\"'. This gold file is qtbase's JNI helper, and the packet records that the fix changed three files of which only this one is a snapshot source file, so the two files that are not shown may hold the real correction. Whether this file looked up the constructor wrongly, failed to clear the pending exception, or only reported the failure better cannot be decided without its diff, which is rendered as '(no diff retrieved)'."
+    }
+  ],
+  "symptom_location": {
+    "file": "org/qtproject/qt/android/multimedia/QtAndroidMediaPlayer.java",
+    "function": "<init>",
+    "determinable": true
+  },
+  "log_location": {
+    "file": null,
+    "function": null,
+    "determinable": false
+  },
+  "relation": "unclear",
+  "rationale": "The failure surfaces when the no-argument constructor of QtAndroidMediaPlayer cannot be resolved, 'no non-static method \"Lorg/qtproject/qt/android/multimedia/QtAndroidMediaPlayer;.<init>()V\"', which makes JNI_OnLoad in libQt6Multimedia return JNI_ERR. The single gold file is qtbase's QJniEnvironment, a different module from the class that failed to resolve, and two of the three changed files are outside the snapshot. With no diff rendered, the packet cannot say whether this file held the wrong lookup or only reported it.",
+  "confidence": "low",
+  "notes": "The packet renders this file's diff as '(no diff retrieved)', so no hunk could be cited for any gold file in this instance. Decided unclear rather than guessed, per rubric rule on unverifiable labels. The single-changed-file reasoning that CONVENTIONS records does not apply here: the packet says the fix changed three files and only one is in the snapshot, so a correction outside the snapshot is live. The symptom path is inferred from the Java package name in the exception; the packet did not show the tree, and the class belongs to Qt Multimedia, not to the qtbase snapshot the gold file comes from. The pasted lines are Android runtime output, tagged 'W System.err' and 'E AndroidRuntime', not messages emitted by any Qt source file, so log_location.determinable is false. The gold file does not appear in the trace at all. The diff for qjnienvironment.cpp, and the identity of the two unshown changed files, would settle this."
+}

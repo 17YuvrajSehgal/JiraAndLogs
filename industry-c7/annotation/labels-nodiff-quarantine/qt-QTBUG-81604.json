@@ -1,0 +1,28 @@
+{
+  "id": "qt:QTBUG-81604",
+  "project": "qt",
+  "issue_key": "QTBUG-81604",
+  "annotator": "claude-opus-5",
+  "pass": 1,
+  "file_roles": [
+    {
+      "path": "src/gui/image/qpnghandler.cpp",
+      "role": "causal",
+      "evidence": "The reported failure is produced by the operation this file owns, writing a PNG: 'Both save calls return false, though the converted one actually does get saved. For the unconverted image a zero size file is created', shown in the output as 'Result of saving image1 as png false' after 'libpng error: known incorrect sRGB profile'. The PNG handler is the only changed file, so the unhandled profile is its defect under the recorded rule that an unguarded legal-but-unhandled input is the defect of the file that owns the feature when nothing elsewhere was treated as broken. Note the packet shows no diff, so this role rests on the report."
+    }
+  ],
+  "symptom_location": {
+    "file": "src/gui/image/qpnghandler.cpp",
+    "function": null,
+    "determinable": true
+  },
+  "log_location": {
+    "file": null,
+    "function": null,
+    "determinable": false
+  },
+  "relation": "same-location",
+  "rationale": "The failure is a PNG write that fails on an image loaded from certain JPEGs, 'A QImage created from certain jpg files cannot be saved as a PNG', and the single changed file is the PNG handler, so the place it surfaced and the place that was changed are the same file. The report shows the write path aborting part way, since 'For the unconverted image a zero size file is created' and the saved result is reported false in both cases. No function can be named: the report quotes no frame and the packet shows no hunk.",
+  "confidence": "medium",
+  "notes": "No diff was retrieved and the commit message 2d57dc2f3358 is '(empty)', so the role rests on the report plus the single-file gold set, not on corrected logic being shown; a second rater reading rubric rule 1 strictly could mark this unclear, and one could also argue the bad profile originates in the JPEG reader, which was not changed and is therefore not treated as broken. The pasted output belongs to the reporter's own program ('image1 false result true', 'Result of saving image1 as png false') with one third-party line from libpng, 'libpng error: known incorrect sRGB profile', so no project-owned log line is available and log_location.determinable = false. Decision recorded for consistency across the diff-less packets in this batch: with no hunk, a role is assigned only when the report itself localises the failure mechanism to the changed file (as in QTBUG-80945, where a sanitizer names the freeing and the using line in it, and QTBUG-81604, where the single changed file owns the operation that failed); otherwise the file is 'unclear' per rubric rule 1 and the instruction to use 'unclear' rather than guess."
+}

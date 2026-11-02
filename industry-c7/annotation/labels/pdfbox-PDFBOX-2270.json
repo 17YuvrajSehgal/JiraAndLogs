@@ -1,0 +1,33 @@
+{
+  "id": "pdfbox:PDFBOX-2270",
+  "project": "pdfbox",
+  "issue_key": "PDFBOX-2270",
+  "annotator": "claude-opus-5",
+  "pass": 1,
+  "file_roles": [
+    {
+      "path": "pdfbox/src/main/java/org/apache/pdfbox/pdmodel/interactive/form/PDFieldTreeNode.java",
+      "role": "causal",
+      "evidence": "getFullyQualifiedName concatenated the parent name with a partial name that can be null: 'finalName = parentName + \".\" + finalName;' becomes 'if (finalName != null) { finalName = parentName + \".\" + finalName; } else { finalName = parentName; }' (the two local declarations are also reordered so finalName is read first). That concatenation is what produced the reported text, since a null String appended to a String renders as 'null'."
+    },
+    {
+      "path": "examples/src/main/java/org/apache/pdfbox/examples/fdf/PrintFields.java",
+      "role": "preventive",
+      "evidence": "The example program guards the same concatenation at its own two sites: 'sParent = sParent + \".\" + partialName;' becomes 'if (partialName != null) { sParent = sParent + \".\" + partialName; }', and the output line is rebuilt as 'StringBuilder outputString = new StringBuilder(sLevel + sParent);' with 'if (partialName != null) { outputString.append( \".\" + partialName); }'. The reporter ran their own printFields/processField code, not this sample, and the '.null' text came from the library method."
+    }
+  ],
+  "symptom_location": {
+    "file": "pdfbox/src/main/java/org/apache/pdfbox/pdmodel/interactive/form/PDFieldTreeNode.java",
+    "function": "getFullyQualifiedName",
+    "determinable": true
+  },
+  "log_location": {
+    "file": null,
+    "function": null,
+    "determinable": false
+  },
+  "relation": "same-location",
+  "rationale": "The report is a wrong return value, not a crash: 'the result list is: Applicant.name.null, Applicant.phone, Applicant.ssn, Applicant.name.null', and it names the method, 'field.getFullyQualifiedName() is returning duplicated field's names with a prefix .null'. The diff corrects that method's own concatenation in PDFieldTreeNode, so the defect and the place it surfaced are the same function. The second gold file is a sample program that had the same unguarded concatenation but was never run by the reporter.",
+  "confidence": "high",
+  "notes": "REPORT-NAMES-FIX: the report names the faulty method and quotes its wrong output. No log: the reporter reports returned strings collected into a Set, so log_location.determinable = false. The gold set contains a demo program, examples/src/main/java/org/apache/pdfbox/examples/fdf/PrintFields.java, counted as a non-test source file, and part of its change is cosmetic ('fieldValue = \"\"' becoming 'fieldValue = \"no value available\"' and a StringBuilder rewrite of an already-correct string). A second rater could call that file refactor rather than preventive; it does not affect causal-gold either way. Duplicate field names are mentioned as the trigger but the hunks show the cause is simply a null partial name."
+}

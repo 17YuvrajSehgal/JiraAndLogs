@@ -1,0 +1,28 @@
+{
+  "id": "qt:QTBUG-82611",
+  "project": "qt",
+  "issue_key": "QTBUG-82611",
+  "annotator": "claude-opus-5",
+  "pass": 1,
+  "file_roles": [
+    {
+      "path": "src/corelib/tools/qarraydata.h",
+      "role": "causal",
+      "evidence": "The error is a missing conversion between two types this header defines, \"cannot convert argument 1 from 'const QTypedArrayData<T>::iterator' to 'QTypedArrayData<T>::const_iterator'\", with the compiler stating that nothing supplies it, 'No user-defined-conversion operator available that can perform this conversion, or the operator cannot be called'. The call site that needs it, qvector.h, is not in the gold set; the only non-test source file the fix changed is the header that owns QTypedArrayData::iterator and ::const_iterator, so the missing conversion is the wrong logic and it lives here."
+    }
+  ],
+  "symptom_location": {
+    "file": "src/corelib/tools/qvector.h",
+    "function": "QVector<T>::removeAll",
+    "determinable": true
+  },
+  "log_location": {
+    "file": null,
+    "function": null,
+    "determinable": false
+  },
+  "relation": "caller-callee",
+  "rationale": "The failure surfaces where the conversion is needed, 'qtbase/src/corelib/tools/qvector.h(331): error C2664', inside 'while compiling class template member function int QVector<QItemSelectionRange>::removeAll(const T &)', reached from 'qtbase\\\\src\\\\corelib\\\\itemmodels\\\\qitemselectionmodel.h(244)'. Neither of those files is gold. The one gold file defines the iterator types named in the error, so the caller in qvector.h fails on a conversion the callee's type never offered.",
+  "confidence": "medium",
+  "notes": "The packet renders this file's diff as '(no diff retrieved)', so no hunk could be cited for any gold file in this instance. The report names a culprit commit rather than a location, 'After c946b07d9c2023c56ec3cae3ef8a425d12f8d7df, Qt no longer compiles on MSVC2019', which is the bisect-style evidence CONVENTIONS records for MDEV-21063 and MDEV-21195. The gold file does not appear in the reported output at all: the error names qvector.h and qitemselectionmodel.h by path and qarraydata.h only through the type names 'QTypedArrayData<T>::iterator' and 'QTypedArrayData<T>::const_iterator'. The header is labelled causal under the CONVENTIONS header rule because the correction it must carry is a conversion operator with a body, not a declaration; the diff would confirm that. The instance has no runtime failure; it is a compile break on one compiler, 'MSVC2019', and the pasted text is compiler and NMAKE output, not a program log."
+}

@@ -31,7 +31,17 @@ gui/analogclock does compile, and deploys to device, also some widget examples.
 `92b15beb9aa0`
 
 ```
-(empty)
+QNetworkInformation fixups
+
+Addressing feedback that came after the reviews
+ended from both bot and people.
+
+Added CLASS_NAME to the CMakeLists files for the plugins so that
+cmake can generate the correct import.
+
+Fixes: QTBUG-91061
+Change-Id: Ib3f1e863100c1c421a6c0a4081b1d40696d67b23
+Reviewed-by: Thiago Macieira <thiago.macieira@intel.com>
 ```
 
 ## Files the fix changed
@@ -48,25 +58,132 @@ Snapshot holds 5,881 non-test source files. The fix changed 8 file(s); 4 of them
 ### `src/network/kernel/qnetworkinformation.cpp`
 
 ```diff
-(no diff retrieved)
+diff --git a/src/network/kernel/qnetworkinformation.cpp b/src/network/kernel/qnetworkinformation.cpp
+index 2b0493ee269..9696a4fcc23 100644
+--- a/src/network/kernel/qnetworkinformation.cpp
++++ b/src/network/kernel/qnetworkinformation.cpp
+@@ -89,11 +89,10 @@ public:
+ 
+ private:
+     static bool initializeList();
+ 
+     std::unique_ptr<QNetworkInformationBackend> backend;
+-    bool m_isOnline = true; // cached
+ };
+ 
+ bool QNetworkInformationPrivate::initializeList()
+ {
+     if (!loader())
+@@ -459,11 +458,11 @@ QNetworkInformationBackendFactory::~QNetworkInformationBackendFactory()
+ */
+ QNetworkInformation::QNetworkInformation(QNetworkInformationBackend *backend)
+     : QObject(*(new QNetworkInformationPrivate(backend)))
+ {
+     connect(backend, &QNetworkInformationBackend::reachabilityChanged, this,
+-            [this]() { emit reachabilityChanged(d_func()->backend->m_reachability); });
++            [this]() { emit reachabilityChanged(d_func()->backend->reachability()); });
+ }
+ 
+ /*!
+     \internal dtor
+ */
+@@ -483,11 +482,11 @@ QNetworkInformation::~QNetworkInformation() = default;
+     pre-check before attempting to make a connection.
+ */
+ 
+ QNetworkInformation::Reachability QNetworkInformation::reachability() const
+ {
+-    return d_func()->backend->m_reachability;
++    return d_func()->backend->reachability();
+ }
+ 
+ /*!
+     Returns the name of the currently loaded backend.
+ */
 ```
 
 ### `src/network/kernel/qnetworkinformation.h`
 
 ```diff
-(no diff retrieved)
+diff --git a/src/network/kernel/qnetworkinformation.h b/src/network/kernel/qnetworkinformation.h
+index eddabc9707a..a04e7253006 100644
+--- a/src/network/kernel/qnetworkinformation.h
++++ b/src/network/kernel/qnetworkinformation.h
+@@ -68,11 +68,11 @@ public:
+         Reachability = 0x1,
+     };
+     Q_ENUM(Feature)
+     Q_DECLARE_FLAGS(Features, Feature)
+ 
+-    ~QNetworkInformation();
++    ~QNetworkInformation() override;
+ 
+     Reachability reachability() const;
+ 
+     QString backendName() const;
 ```
 
 ### `src/network/kernel/qnetworkinformation_p.h`
 
 ```diff
-(no diff retrieved)
+diff --git a/src/network/kernel/qnetworkinformation_p.h b/src/network/kernel/qnetworkinformation_p.h
+index 389310cc431..8cb31e66414 100644
+--- a/src/network/kernel/qnetworkinformation_p.h
++++ b/src/network/kernel/qnetworkinformation_p.h
+@@ -62,15 +62,17 @@ QT_BEGIN_NAMESPACE
+ class Q_NETWORK_EXPORT QNetworkInformationBackend : public QObject
+ {
+     Q_OBJECT
+ public:
+     QNetworkInformationBackend() = default;
+-    virtual ~QNetworkInformationBackend();
++    ~QNetworkInformationBackend() override;
+ 
+     virtual QString name() const = 0;
+     virtual QNetworkInformation::Features featuresSupported() const = 0;
+ 
++    QNetworkInformation::Reachability reachability() const { return m_reachability; }
++
+ Q_SIGNALS:
+     void reachabilityChanged();
+ 
+ protected:
+     void setReachability(QNetworkInformation::Reachability reachability)
 ```
 
 ### `src/plugins/networkinformationbackends/networkmanager/qnetworkmanagernetworkinformationbackend.cpp`
 
 ```diff
-(no diff retrieved)
+diff --git a/src/plugins/networkinformationbackends/networkmanager/qnetworkmanagernetworkinformationbackend.cpp b/src/plugins/networkinformationbackends/networkmanager/qnetworkmanagernetworkinformationbackend.cpp
+index 1677f36fe11..1356078ee0a 100644
+--- a/src/plugins/networkinformationbackends/networkmanager/qnetworkmanagernetworkinformationbackend.cpp
++++ b/src/plugins/networkinformationbackends/networkmanager/qnetworkmanagernetworkinformationbackend.cpp
+@@ -95,10 +95,12 @@ public:
+     }
+ 
+     bool isValid() const { return iface.isValid(); }
+ 
+ private:
++    Q_DISABLE_COPY_MOVE(QNetworkManagerNetworkInformationBackend)
++
+     QNetworkManagerInterface iface;
+     QNetworkManagerInterface::NMState prevState;
+ };
+ 
+ class QNetworkManagerNetworkInformationBackendFactory : public QNetworkInformationBackendFactory
+@@ -126,10 +128,12 @@ public:
+         auto backend = new QNetworkManagerNetworkInformationBackend();
+         if (!backend->isValid())
+             delete std::exchange(backend, nullptr);
+         return backend;
+     }
++private:
++    Q_DISABLE_COPY_MOVE(QNetworkManagerNetworkInformationBackendFactory)
+ };
+ 
+ QNetworkManagerNetworkInformationBackend::QNetworkManagerNetworkInformationBackend()
+ {
+     prevState = iface.state();
 ```
 
 ---

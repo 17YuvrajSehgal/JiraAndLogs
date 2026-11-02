@@ -1,0 +1,33 @@
+{
+  "id": "mongodb:SERVER-34125",
+  "project": "mongodb",
+  "issue_key": "SERVER-34125",
+  "annotator": "claude-opus-5",
+  "pass": 1,
+  "file_roles": [
+    {
+      "path": "src/mongo/db/storage/wiredtiger/wiredtiger_record_store.cpp",
+      "role": "causal",
+      "evidence": "The report states the rule the code breaks: 'Only RTT WT storage engines may call `getLastStableCheckpoint`.' and 'In particular, {{inMemory}} does not take checkpoints.' The WiredTiger record store is the only component the fix changed, so the unconditional call to a checkpoint query on an engine that takes no checkpoints is made here, and this file owns the decision to make it."
+    },
+    {
+      "path": "src/mongo/db/storage/wiredtiger/wiredtiger_record_store.h",
+      "role": "unclear",
+      "evidence": "No diff was retrieved. The change here could be a new member or flag recording whether the engine supports checkpoints, a changed signature, or an inline predicate. CONVENTIONS.md makes a declaring header refactor and a logic-holding header causal, and the packet shows neither. This file's diff would settle it."
+    }
+  ],
+  "symptom_location": {
+    "file": null,
+    "function": null,
+    "determinable": false
+  },
+  "log_location": {
+    "file": null,
+    "function": null,
+    "determinable": false
+  },
+  "relation": "unclear",
+  "rationale": "The report is a two-line internal statement of an invariant that the code violates: only recover-to-timestamp WiredTiger configurations may call getLastStableCheckpoint, and inMemory does not take checkpoints. It names no failure, no log, no stack trace and no surfaced symptom, so neither symptom nor log location can be recorded and the symptom-cause relation is unclear. The record store .cpp is causal because it is the only changed component and therefore holds the call that must not have been made.",
+  "confidence": "medium",
+  "notes": "NO-DIFF PACKET: every gold file in this packet shows '(no diff retrieved)' and the fix commit message is '(empty)', so the issue report is the only evidence the packet carries. Decision recorded here per CONVENTIONS.md ('If a case is not covered here, follow RUBRIC.md and say in notes what was decided and why'): a role is assigned only where the report itself names the faulty code, the wrong behaviour, or the adopted fix, and every other gold file is 'unclear', per schema.json ('A label without citable evidence is not auditable and must be unclear'). Instance confidence is capped at medium because no diff was shown. REPORT-NAMES-FIX: the report names the function that must not be called and the engine it must not be called on. The instance has no failure: the report asserts a broken invariant, not an observed symptom, so symptom_location and log_location are both not determinable. A second rater could reasonably call wiredtiger_record_store.cpp 'preventive' instead, on the ground that adding an engine guard protects a path the report never shows failing; it is labelled causal under the CONVENTIONS.md rule that an unguarded legal input is the defect when the file owns the feature and no other file was changed."
+}

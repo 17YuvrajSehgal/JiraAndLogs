@@ -19,7 +19,14 @@ The issue can be reproduced at least with the font mentioned above in the warnin
 `29b2387587fe`
 
 ```
-(empty)
+Windows font engine: Silence warnings about not being able to enumate font families
+
+Turn the warning into a qCDebug() statement and add explanatory comment.
+
+Fixes: QTBUG-85683
+Pick-to: 5.15 6.0
+Change-Id: I2a6a7a089a660294f3e9c3096299c75635b3b215
+Reviewed-by: Allan Sandfeld Jensen <allan.jensen@qt.io>
 ```
 
 ## Files the fix changed
@@ -33,7 +40,25 @@ Snapshot holds 5,849 non-test source files. The fix changed 1 file(s); 1 of them
 ### `src/gui/text/windows/qwindowsfontdatabase.cpp`
 
 ```diff
-(no diff retrieved)
+diff --git a/src/gui/text/windows/qwindowsfontdatabase.cpp b/src/gui/text/windows/qwindowsfontdatabase.cpp
+index 381bcea0b37..514ddad8fd6 100644
+--- a/src/gui/text/windows/qwindowsfontdatabase.cpp
++++ b/src/gui/text/windows/qwindowsfontdatabase.cpp
+@@ -669,12 +669,12 @@ bool QWindowsFontDatabase::populateFamilyAliases(const QString &missingFamily)
+ }
+ 
+ void QWindowsFontDatabase::populateFamily(const QString &familyName)
+ {
+     qCDebug(lcQpaFonts) << familyName;
+-    if (familyName.size() >= LF_FACESIZE) {
+-        qCWarning(lcQpaFonts) << "Unable to enumerate family '" << familyName << '\'';
++    if (familyName.size() >= LF_FACESIZE) { // Field length of LOGFONT::lfFaceName
++        qCDebug(lcQpaFonts) << "Unable to enumerate family '" << familyName << '\'';
+         return;
+     }
+     HDC dummy = GetDC(0);
+     LOGFONT lf;
+     lf.lfCharSet = DEFAULT_CHARSET;
 ```
 
 ---

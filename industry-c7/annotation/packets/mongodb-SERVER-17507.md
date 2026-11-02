@@ -15,7 +15,7 @@ MongoDB3 enterprise AuditLog
 `cb126b88afd7`
 
 ```
-(empty)
+SERVER-17507: Set SASL conversation isDone correctly on authentication failure.
 ```
 
 ## Files the fix changed
@@ -29,7 +29,23 @@ Snapshot holds 6,730 non-test source files. The fix changed 1 file(s); 1 of them
 ### `src/mongo/db/auth/native_sasl_authentication_session.cpp`
 
 ```diff
-(no diff retrieved)
+diff --git a/src/mongo/db/auth/native_sasl_authentication_session.cpp b/src/mongo/db/auth/native_sasl_authentication_session.cpp
+index af23a24c7e3..ee7a3e306c8 100644
+--- a/src/mongo/db/auth/native_sasl_authentication_session.cpp
++++ b/src/mongo/db/auth/native_sasl_authentication_session.cpp
+@@ -153,10 +153,12 @@ namespace {
+         }
+ 
+         StatusWith<bool> status = _saslConversation->step(inputData, outputData);
+         if (status.isOK()) {
+             _done = status.getValue();
++        } else {
++            _done = true;
+         }
+         return status.getStatus();
+     }
+ 
+     std::string NativeSaslAuthenticationSession::getPrincipalId() const {
 ```
 
 ---

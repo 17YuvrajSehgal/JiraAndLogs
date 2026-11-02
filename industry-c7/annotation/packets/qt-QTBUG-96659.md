@@ -24,7 +24,17 @@ gcc (SUSE Linux) 10.2.1 20200825 [revision c0746a1beb1ba073c7981eb09f55b3d993b32
 `8cc6c7cd6eb8`
 
 ```
-(empty)
+QProperty: attempt to fix compilation with GCC 10
+
+Somehow it's not expanding properly in constexpr time.
+
+qproperty_p.h:554:30: error: \u2018(QItemSelectionModelPrivate::modelChanged != 0)\u2019 is not a constant expression
+         if constexpr (Signal != nullptr) {
+                       ~~~~~~~^~~~~~~~~~
+
+Fixes: QTBUG-96659
+Change-Id: I3eb1bd30e0124f89a052fffd16a69d2eb4b45784
+Reviewed-by: Fabian Kosmale <fabian.kosmale@qt.io>
 ```
 
 ## Files the fix changed
@@ -38,7 +48,23 @@ Snapshot holds 5,886 non-test source files. The fix changed 1 file(s); 1 of them
 ### `src/corelib/kernel/qproperty_p.h`
 
 ```diff
-(no diff retrieved)
+diff --git a/src/corelib/kernel/qproperty_p.h b/src/corelib/kernel/qproperty_p.h
+index 6fcef939f7e..742ef446ca2 100644
+--- a/src/corelib/kernel/qproperty_p.h
++++ b/src/corelib/kernel/qproperty_p.h
+@@ -549,11 +549,11 @@ public:
+         QBindingStorage *storage = qGetBindingStorage(owner());
+         auto bd = storage->bindingData(this, false);
+         const bool inWrapper = inBindingWrapper(storage);
+         if (bd && !inWrapper)
+             notify(bd);
+-        if constexpr (Signal != nullptr) {
++        if constexpr (!std::is_null_pointer_v<decltype(Signal)>) {
+             if constexpr (SignalTakesValue::value)
+                 (owner()->*Signal)(value());
+             else
+                 (owner()->*Signal)();
+         }
 ```
 
 ---

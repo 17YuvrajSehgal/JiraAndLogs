@@ -37,7 +37,15 @@ agent:2021/01/27 21:15:07 build.go:379: 341: ********* Finished testing of tst_Q
 `0ffdbb21261e`
 
 ```
-(empty)
+Handle macOS 11 issues in softHyphens test
+
+Calculate the effective width of the hyphen better, and compare with
+ceiled sizes.
+
+Pick-to: 6.1 6.0
+Fixes: QTBUG-90698
+Change-Id: I7ed2eb44c54240ecb2f8a38e5acf1f32608b2bfb
+Reviewed-by: Eskil Abrahamsen Blomfeldt <eskil.abrahamsen-blomfeldt@qt.io>
 ```
 
 ## Files the fix changed
@@ -51,7 +59,32 @@ Snapshot holds 5,876 non-test source files. The fix changed 2 file(s); 1 of them
 ### `src/gui/text/qtextengine.cpp`
 
 ```diff
-(no diff retrieved)
+diff --git a/src/gui/text/qtextengine.cpp b/src/gui/text/qtextengine.cpp
+index 28802c9bed3..675e87b3223 100644
+--- a/src/gui/text/qtextengine.cpp
++++ b/src/gui/text/qtextengine.cpp
+@@ -1371,13 +1371,19 @@ static void applyVisibilityRules(ushort ucs, QGlyphLayout *glyphs, uint glyphPos
+         break;
+     case QChar::SoftHyphen:
+         if (!fontEngine->symbol) {
+             // U+00AD [SOFT HYPHEN] is a default ignorable codepoint,
+             // so we replace its glyph and metrics with ones for
+-            // U+002D [HYPHEN-MINUS] and make it visible if it appears at line-break
++            // U+002D [HYPHEN-MINUS] or U+2010 [HYPHEN] and make
++            // it visible if it appears at line-break
+             const uint engineIndex = glyphs->glyphs[glyphPosition] & 0xff000000;
+-            glyphs->glyphs[glyphPosition] = fontEngine->glyphIndex('-');
++            glyph_t glyph = fontEngine->glyphIndex(0x002d);
++            if (glyph == 0)
++                glyph = fontEngine->glyphIndex(0x2010);
++            if (glyph == 0)
++                glyph = fontEngine->glyphIndex(0x00ad);
++            glyphs->glyphs[glyphPosition] = glyph;
+             if (Q_LIKELY(glyphs->glyphs[glyphPosition] != 0)) {
+                 glyphs->glyphs[glyphPosition] |= engineIndex;
+                 QGlyphLayout tmp = glyphs->mid(glyphPosition, 1);
+                 fontEngine->recalcAdvances(&tmp, { });
+             }
 ```
 
 ---

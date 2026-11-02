@@ -20,13 +20,13 @@ This only occurs when for that test and the remainder of the tests pass. This on
 `99ac27f83e67`
 
 ```
-(empty)
+SERVER-35393 Flush output buffer before attempting new writes
 ```
 
 `573ebb251784`
 
 ```
-(empty)
+SERVER-35393 Flush asio output and limit SecureTransport out buffer
 ```
 
 ## Files the fix changed
@@ -40,7 +40,38 @@ Snapshot holds 11,581 non-test source files. The fix changed 3 file(s); 1 of the
 ### `src/mongo/util/net/ssl/detail/io.hpp`
 
 ```diff
-(no diff retrieved)
+--- from commit 573ebb251784 ---
+diff --git a/src/mongo/util/net/ssl/detail/io.hpp b/src/mongo/util/net/ssl/detail/io.hpp
+index 6c0bc5f69fc..b943b1fb16f 100644
+--- a/src/mongo/util/net/ssl/detail/io.hpp
++++ b/src/mongo/util/net/ssl/detail/io.hpp
+@@ -49,21 +49,25 @@ std::size_t io(Stream& next_layer, stream_core& core, const Operation& op, asio:
+             case engine::want_output_and_retry:
+ 
+                 core.output_ = core.engine_.get_output(core.output_buffer_);
+                 // Get output data from the engine and write it to the underlying
+                 // transport.
+-                core.output_ += asio::write(next_layer, core.output_, ec);
++                while (!ec && core.output_.size()) {
++                    core.output_ += asio::write(next_layer, core.output_, ec);
++                }
+ 
+                 // Try the operation again.
+                 continue;
+ 
+             case engine::want_output:
+ 
+                 core.output_ = core.engine_.get_output(core.output_buffer_);
+                 // Get output data from the engine and write it to the underlying
+                 // transport.
+-                core.output_ += asio::write(next_layer, core.output_, ec);
++                while (!ec && core.output_.size()) {
++                    core.output_ += asio::write(next_layer, core.output_, ec);
++                }
+ 
+                 // Operation is complete. Return result to caller.
+                 core.engine_.map_error_code(ec);
+                 return bytes_transferred;
 ```
 
 ---

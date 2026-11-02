@@ -1,0 +1,38 @@
+{
+  "id": "qt:QTBUG-83207",
+  "project": "qt",
+  "issue_key": "QTBUG-83207",
+  "annotator": "claude-opus-5",
+  "pass": 1,
+  "file_roles": [
+    {
+      "path": "src/corelib/plugin/qlibrary.cpp",
+      "role": "causal",
+      "evidence": "Both ends of the deadlock are frames in this file. The thread blocks taking a lock at 'QLibraryPrivate::updatePluginState (this=0x5555573d02f0) at plugin/qlibrary.cpp:753', and the same thread is already inside 'QLibraryPrivate::load (this=0x5555573d02f0) at plugin/qlibrary.cpp:580' called from 'QLibraryPrivate::loadPlugin (this=0x5555573d02f0) at plugin/qlibrary.cpp:638', with an identical this pointer. The bisected commit says where that lock was introduced, 'The majority of the variables is updated in QLibraryPrivate::load_sys and updatePluginState(), which get the mutex protection', so holding it across a dlopen that re-enters QPluginLoader is the wrong logic, and this file holds both the lock and the call order."
+    },
+    {
+      "path": "src/corelib/plugin/qlibrary_unix.cpp",
+      "role": "unclear",
+      "evidence": "This is the POSIX half of load_sys, the frame that calls into the loader, '#26 QLibraryPrivate::load_sys (this=this@entry=0x5555573d02f0)' sitting directly under '#25 dlopen () from /usr/lib/libdl.so.2'. Whether its change moved the lock out of load_sys, which would be causal, or only followed a changed signature or return type decided in qlibrary.cpp, which would be refactor, cannot be read from the packet: the diff is rendered as '(no diff retrieved)'."
+    },
+    {
+      "path": "src/corelib/plugin/qlibrary_win.cpp",
+      "role": "unclear",
+      "evidence": "The Windows half of the same function. It cannot have produced the reported failure, which is a Linux backtrace through 'dlopen () from /usr/lib/libdl.so.2' and '/usr/lib/libkritaplugin.so.18', so it is either the sibling path that the same correction was extended to, which CONVENTIONS calls preventive, or an adaptation to the changed signature, which is refactor. With no diff rendered the two cannot be separated."
+    }
+  ],
+  "symptom_location": {
+    "file": "src/corelib/plugin/qlibrary.cpp",
+    "function": "QLibraryPrivate::updatePluginState",
+    "determinable": true
+  },
+  "log_location": {
+    "file": null,
+    "function": null,
+    "determinable": false
+  },
+  "relation": "concurrency",
+  "rationale": "The process hangs with one thread waiting forever on a futex, '#1 QtLinuxFutex::_q_futex ... at thread/qfutex_p.h:133' under '#7 QLibraryPrivate::updatePluginState ... at plugin/qlibrary.cpp:753', while frames #26 to #29 of the same stack show the thread already inside QLibraryPrivate::load for the same QLibraryPrivate, having re-entered through 'dlopen' and a static initializer in Krita, 'KoColor::KoColor () from /usr/lib/libkritapigment.so.18'. That is one thread taking a non-recursive lock it already holds, an ordering problem spanning the load and update paths, which the reporter bisected to three commits including 'QLibrary: introduce a mutex to protect non-atomic internals'. Only the file holding the lock and the call order can be given a role from this packet.",
+  "confidence": "medium",
+  "notes": "The packet renders this file's diff as '(no diff retrieved)', so no hunk could be cited for any gold file in this instance. The report names culprit commits rather than a location, 'This is a regression from Qt 5.14.1 to Qt 5.14.2 that I have bisected to the following three commits in qtbase', and quotes all three messages in full, which is the strongest bisect evidence in the sample so far. Half of the pasted backtrace belongs to another project: frames #10 to #14 and #31 to #36 are Krita, 'KoJsonTrader::query ... from /usr/lib/libkritaplugin.so.18', and the reporter links the Krita source that triggers it. Frames #1 to #6 are the generic futex and mutex primitives, qfutex_p.h, qmutex_linux.cpp, qmutex.cpp and qmutex.h; they are project-owned but are the blocking primitive rather than the site, so the deepest meaningful project frame recorded is #7 in qlibrary.cpp. A hang emits nothing, so there is no log line. Two of the three gold files are left unclear rather than guessed; their diffs would settle whether the lock moved out of load_sys."
+}

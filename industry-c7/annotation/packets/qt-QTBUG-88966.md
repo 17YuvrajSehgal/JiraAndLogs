@@ -126,7 +126,18 @@ This issue is a result of investigation on: QTCREATORBUG-24981
 `6012285e7ded`
 
 ```
-(empty)
+Fix hashing of QPersistentModelIndex
+
+The hash and equality operators used need to be consistent with
+each other. Unfortunately, QPMI::operator==() is not suitable to do
+this. So specialize qHashEquals() for QPMI.
+
+Fixes: QTBUG-88966
+Change-Id: If5f19a722ae9fc4e78e93537e7ea15726f148768
+Reviewed-by: Jarek Kobus <jaroslaw.kobus@qt.io>
+Reviewed-by: Volker Hilsheimer <volker.hilsheimer@qt.io>
+(cherry picked from commit 83e95956ed58e88b11e2cc3cb61c5beacb7985db)
+Reviewed-by: Qt Cherry-pick Bot <cherrypick_bot@qt-project.org>
 ```
 
 ## Files the fix changed
@@ -140,7 +151,23 @@ Snapshot holds 5,844 non-test source files. The fix changed 2 file(s); 1 of them
 ### `src/corelib/itemmodels/qabstractitemmodel.h`
 
 ```diff
-(no diff retrieved)
+diff --git a/src/corelib/itemmodels/qabstractitemmodel.h b/src/corelib/itemmodels/qabstractitemmodel.h
+index 9b101061879..7479f4b043b 100644
+--- a/src/corelib/itemmodels/qabstractitemmodel.h
++++ b/src/corelib/itemmodels/qabstractitemmodel.h
+@@ -240,10 +240,12 @@ public:
+     const QAbstractItemModel *model() const;
+     bool isValid() const;
+ private:
+     QPersistentModelIndexData *d;
+     friend size_t qHash(const QPersistentModelIndex &, size_t seed) noexcept;
++    friend bool qHashEquals(const QPersistentModelIndex &a, const QPersistentModelIndex &b) noexcept
++    { return a.d == b.d; }
+ #ifndef QT_NO_DEBUG_STREAM
+     friend Q_CORE_EXPORT QDebug operator<<(QDebug, const QPersistentModelIndex &);
+ #endif
+ };
+ Q_DECLARE_SHARED(QPersistentModelIndex)
 ```
 
 ---

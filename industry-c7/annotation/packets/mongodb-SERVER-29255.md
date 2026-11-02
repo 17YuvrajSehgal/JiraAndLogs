@@ -17,7 +17,7 @@ CollectionOptions also supports validation by calling CollectionOptions::validat
 `c5be5fa7124a`
 
 ```
-(empty)
+SERVER-29255 CollectionOptions with UUID passes validation
 ```
 
 ## Files the fix changed
@@ -33,19 +33,67 @@ Snapshot holds 10,596 non-test source files. The fix changed 6 file(s); 3 of the
 ### `src/mongo/db/catalog/collection_options.cpp`
 
 ```diff
-(no diff retrieved)
+diff --git a/src/mongo/db/catalog/collection_options.cpp b/src/mongo/db/catalog/collection_options.cpp
+index 72431637574..12eb650ef7c 100644
+--- a/src/mongo/db/catalog/collection_options.cpp
++++ b/src/mongo/db/catalog/collection_options.cpp
+@@ -96,12 +96,12 @@ Status checkStorageEngineOptions(const BSONElement& elem) {
+ 
+ bool CollectionOptions::isView() const {
+     return !viewOn.empty();
+ }
+ 
+-Status CollectionOptions::validate() const {
+-    return CollectionOptions().parse(toBSON());
++Status CollectionOptions::validateForStorage() const {
++    return CollectionOptions().parse(toBSON(), ParseKind::parseForStorage);
+ }
+ 
+ Status CollectionOptions::parse(const BSONObj& options, ParseKind kind) {
+     *this = {};
 ```
 
 ### `src/mongo/db/catalog/collection_options.h`
 
 ```diff
-(no diff retrieved)
+diff --git a/src/mongo/db/catalog/collection_options.h b/src/mongo/db/catalog/collection_options.h
+index c04c0d4e18a..cc3e60aad90 100644
+--- a/src/mongo/db/catalog/collection_options.h
++++ b/src/mongo/db/catalog/collection_options.h
+@@ -65,11 +65,11 @@ struct CollectionOptions {
+     enum ParseKind { parseForCommand, parseForStorage };
+ 
+     /**
+      * Confirms that collection options can be converted to BSON and back without errors.
+      */
+-    Status validate() const;
++    Status validateForStorage() const;
+ 
+     /**
+      * Parses the "options" subfield of the collection info object.
+      */
+     Status parse(const BSONObj& obj, ParseKind kind = parseForCommand);
 ```
 
 ### `src/mongo/db/repl/collection_cloner.cpp`
 
 ```diff
-(no diff retrieved)
+diff --git a/src/mongo/db/repl/collection_cloner.cpp b/src/mongo/db/repl/collection_cloner.cpp
+index 67ba31592fc..d695ca1c3e7 100644
+--- a/src/mongo/db/repl/collection_cloner.cpp
++++ b/src/mongo/db/repl/collection_cloner.cpp
+@@ -138,11 +138,11 @@ CollectionCloner::CollectionCloner(executor::TaskExecutor* executor,
+     // Fetcher throws an exception on null executor.
+     invariant(executor);
+     uassert(ErrorCodes::BadValue,
+             "invalid collection namespace: " + sourceNss.ns(),
+             sourceNss.isValid());
+-    uassertStatusOK(options.validate());
++    uassertStatusOK(options.validateForStorage());
+     uassert(ErrorCodes::BadValue, "callback function cannot be null", onCompletion);
+     uassert(ErrorCodes::BadValue, "storage interface cannot be null", storageInterface);
+     _stats.ns = _sourceNss.ns();
+ }
 ```
 
 ---

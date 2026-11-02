@@ -17,7 +17,17 @@ I/QTestLib(11729): Loc: [D:\projects\qt\clean-dev\src\qtbase\tests\auto\gui\kern
 `a02ea26b469a`
 
 ```
-(empty)
+[Android] Make sure expose events are emitted after window resize
+
+Expose event would not be sent when window was resized
+
+Fixes: QTBUG-69155
+Pick-to: 5.15
+Change-Id: I81bf2d54f830a0dabf15398e1f25b55ff7ff4479
+Reviewed-by: Tor Arne Vestbø <tor.arne.vestbo@qt.io>
+Reviewed-by: Rami Potinkara <rami.potinkara@qt.io>
+Reviewed-by: Andy Shaw <andy.shaw@qt.io>
+Reviewed-by: Heikki Halmet <heikki.halmet@qt.io>
 ```
 
 ## Files the fix changed
@@ -32,13 +42,49 @@ Snapshot holds 5,843 non-test source files. The fix changed 3 file(s); 2 of them
 ### `src/plugins/platforms/android/qandroidplatformopenglwindow.cpp`
 
 ```diff
-(no diff retrieved)
+diff --git a/src/plugins/platforms/android/qandroidplatformopenglwindow.cpp b/src/plugins/platforms/android/qandroidplatformopenglwindow.cpp
+index dff7e6ec544..333fc2a25f8 100644
+--- a/src/plugins/platforms/android/qandroidplatformopenglwindow.cpp
++++ b/src/plugins/platforms/android/qandroidplatformopenglwindow.cpp
+@@ -105,13 +105,11 @@ void QAndroidPlatformOpenGLWindow::setGeometry(const QRect &rect)
+     QAndroidPlatformWindow::setGeometry(rect);
+     if (m_nativeSurfaceId != -1)
+         QtAndroid::setSurfaceGeometry(m_nativeSurfaceId, rect);
+ 
+     QRect availableGeometry = screen()->availableGeometry();
+-    if (m_oldGeometry.width() == 0
+-            && m_oldGeometry.height() == 0
+-            && rect.width() > 0
++    if (rect.width() > 0
+             && rect.height() > 0
+             && availableGeometry.width() > 0
+             && availableGeometry.height() > 0) {
+         QWindowSystemInterface::handleExposeEvent(window(), QRect(QPoint(0, 0), rect.size()));
+     }
 ```
 
 ### `src/plugins/platforms/android/qandroidplatformvulkanwindow.cpp`
 
 ```diff
-(no diff retrieved)
+diff --git a/src/plugins/platforms/android/qandroidplatformvulkanwindow.cpp b/src/plugins/platforms/android/qandroidplatformvulkanwindow.cpp
+index cc41a871f31..6a1a51b2720 100644
+--- a/src/plugins/platforms/android/qandroidplatformvulkanwindow.cpp
++++ b/src/plugins/platforms/android/qandroidplatformvulkanwindow.cpp
+@@ -82,13 +82,11 @@ void QAndroidPlatformVulkanWindow::setGeometry(const QRect &rect)
+     QAndroidPlatformWindow::setGeometry(rect);
+     if (m_nativeSurfaceId != -1)
+         QtAndroid::setSurfaceGeometry(m_nativeSurfaceId, rect);
+ 
+     QRect availableGeometry = screen()->availableGeometry();
+-    if (m_oldGeometry.width() == 0
+-            && m_oldGeometry.height() == 0
+-            && rect.width() > 0
++    if (rect.width() > 0
+             && rect.height() > 0
+             && availableGeometry.width() > 0
+             && availableGeometry.height() > 0) {
+         QWindowSystemInterface::handleExposeEvent(window(), QRect(QPoint(0, 0), rect.size()));
+     }
 ```
 
 ---

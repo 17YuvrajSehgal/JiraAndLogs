@@ -1,0 +1,28 @@
+{
+  "id": "mongodb:SERVER-21636",
+  "project": "mongodb",
+  "issue_key": "SERVER-21636",
+  "annotator": "claude-opus-5",
+  "pass": 1,
+  "file_roles": [
+    {
+      "path": "src/mongo/db/dbcommands.cpp",
+      "role": "causal",
+      "evidence": "The CI failure is an operation that would not die: 'Error: assert.soon failed, msg:could not kill an op that was waiting for a snapshot :' raised at '@jstests/noPassthrough/read_majority.js:50:1', with the reporter's own reading 'Not sure why we should not be able to kill operations, which are blocked on snapshot creation other than that they sleep on condition variables and we might have killed the snapshot thread'. The fix 'changed 1 file(s); 1 of them are non-test source files' and that file is src/mongo/db/dbcommands.cpp, so the wait that ignored the kill was in it. The hunk is not visible: '(no diff retrieved)'."
+    }
+  ],
+  "symptom_location": {
+    "file": "jstests/noPassthrough/read_majority.js",
+    "function": null,
+    "determinable": true
+  },
+  "log_location": {
+    "file": null,
+    "function": null,
+    "determinable": false
+  },
+  "relation": "unclear",
+  "rationale": "Every frame the report shows is shell or test code: 'doassert@src/mongo/shell/assert.js:15:14', 'assert.soon@src/mongo/shell/assert.js:200:13' and '@jstests/noPassthrough/read_majority.js:50:1'. The server-side site of the uninterruptible wait is never shown, so the relation between the surfacing site and the changed file cannot be stated. The role rests on the single-file gold set and on the reported behaviour, since the diff renders as '(no diff retrieved)'.",
+  "confidence": "medium",
+  "notes": "NO-DIFF-IN-PACKET: every gold file in this packet renders its diff as '(no diff retrieved)', so there is no diff evidence for any role here. Roles rest on the issue report and the gold file list alone, which is weaker than every previously labelled instance. The report names a culprit commit rather than a location: 'Happened after [Matt's commit|https://evergreen.mongodb.com/version/mongodb_mongo_master_463993d94b20b130c8dd1523da5688a561c07862]', a bisect-style pointer that gives a when and not a where. The gold file does not appear in the reported evidence at all: the only frames are src/mongo/shell/assert.js and jstests/noPassthrough/read_majority.js, so a localizer working from this report has nothing in it that leads to src/mongo/db/dbcommands.cpp. Per CONVENTIONS a test-harness assertion is not a log, so log_location.determinable is false, and symptom_location records the jstest frame because that is the only place the failure is shown surfacing. A second rater could reasonably call dbcommands.cpp preventive, if the one-file change added an interrupt check at a convenient command boundary rather than at the wait that actually ignored the kill."
+}

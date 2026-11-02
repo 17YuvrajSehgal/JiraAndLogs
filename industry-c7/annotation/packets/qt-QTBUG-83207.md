@@ -122,7 +122,32 @@ Downstream bug report in Arch Linux: [FS#66046|https://bugs.archlinux.org/task/6
 `276fa8383a75`
 
 ```
-(empty)
+QLibrary: fix deadlock caused by fix to QTBUG-39642
+
+Commit ae6f73e8566fa76470937aca737141183929a5ec inserted a mutex around
+the entire load_sys(). We had reasoed that deadlocks would only occur if
+the object creation in instance() recursed into its own instance(),
+which was already a bug. But we had forgotten that dlopen()/
+LoadLibrary() executes initialization code from the module being loaded,
+which could cause a recursion back into the same QPluginLoader or
+QLibrary object. This recursion is benign because the module *is* loaded
+and dlopen()/LoadLibrary() returns the same handle.
+
+[ChangeLog][QtCore][QLibrary and QPluginLoader] Fixed a deadlock that
+would happen if the plugin or library being loaded has load-time
+initialization code (C++ global variables) that recursed back into the
+same QLibrary or QPluginLoader object.
+
+PS: QLibraryPrivate::loadPlugin() updates pluginState outside a mutex
+lock, so pluginState should be made an atomic variable. Once that is
+done, we'll only need locking the mutex to update errorString (no
+locking before loading).
+
+Fixes: QTBUG-83207
+Task-number: QTBUG-39642
+Change-Id: Ibdc95e9af7bd456a94ecfffd160209304e5ab2eb
+Reviewed-by: Volker Hilsheimer <volker.hilsheimer@qt.io>
+Reviewed-by: David Faure <david.faure@kdab.com>
 ```
 
 ## Files the fix changed
@@ -138,19 +163,115 @@ Snapshot holds 6,986 non-test source files. The fix changed 3 file(s); 3 of them
 ### `src/corelib/plugin/qlibrary.cpp`
 
 ```diff
-(no diff retrieved)
+diff --git a/src/corelib/plugin/qlibrary.cpp b/src/corelib/plugin/qlibrary.cpp
+index ddb053c26fa..be9d92b2048 100644
+--- a/src/corelib/plugin/qlibrary.cpp
++++ b/src/corelib/plugin/qlibrary.cpp
+@@ -574,13 +574,11 @@ bool QLibraryPrivate::load()
+     if (fileName.isEmpty())
+         return false;
+ 
+     Q_TRACE(QLibraryPrivate_load_entry, fileName);
+ 
+-    mutex.lock();
+     bool ret = load_sys();
+-    mutex.unlock();
+     if (qt_debug_component()) {
+         if (ret) {
+             qDebug() << "loaded library" << fileName;
+         } else {
+             qDebug() << qUtf8Printable(errorString);
 ```
 
 ### `src/corelib/plugin/qlibrary_unix.cpp`
 
 ```diff
-(no diff retrieved)
+diff --git a/src/corelib/plugin/qlibrary_unix.cpp b/src/corelib/plugin/qlibrary_unix.cpp
+index 017aa97b66a..a5c72f81d96 100644
+--- a/src/corelib/plugin/qlibrary_unix.cpp
++++ b/src/corelib/plugin/qlibrary_unix.cpp
+@@ -121,10 +121,11 @@ QStringList QLibraryPrivate::prefixes_sys()
+     return QStringList() << QLatin1String("lib");
+ }
+ 
+ bool QLibraryPrivate::load_sys()
+ {
++    QMutexLocker locker(&mutex);
+     QString attempt;
+     QFileSystemEntry fsEntry(fileName);
+ 
+     QString path = fsEntry.path();
+     QString name = fsEntry.fileName();
+@@ -211,10 +212,11 @@ bool QLibraryPrivate::load_sys()
+             transform(prefixes, [](QString *s) { s->prepend(QLatin1String("haswell/")); });
+         }
+     }
+ #endif
+ 
++    locker.unlock();
+     bool retry = true;
+     Handle hnd = nullptr;
+     for (int prefix = 0; retry && !hnd && prefix < prefixes.size(); prefix++) {
+         for (int suffix = 0; retry && !hnd && suffix < suffixes.size(); suffix++) {
+             if (!prefixes.at(prefix).isEmpty() && name.startsWith(prefixes.at(prefix)))
+@@ -271,10 +273,12 @@ bool QLibraryPrivate::load_sys()
+             attempt = QString::fromUtf8(executableFile);
+             hnd = dlopen(QFile::encodeName(attempt), dlFlags);
+         }
+     }
+ #endif
++
++    locker.relock();
+     if (!hnd) {
+         errorString = QLibrary::tr("Cannot load library %1: %2").arg(fileName, qdlerror());
+     }
+     if (hnd) {
+         qualifiedFileName = attempt;
 ```
 
 ### `src/corelib/plugin/qlibrary_win.cpp`
 
 ```diff
-(no diff retrieved)
+diff --git a/src/corelib/plugin/qlibrary_win.cpp b/src/corelib/plugin/qlibrary_win.cpp
+index 000bf762763..ef58724be8e 100644
+--- a/src/corelib/plugin/qlibrary_win.cpp
++++ b/src/corelib/plugin/qlibrary_win.cpp
+@@ -76,10 +76,11 @@ bool QLibraryPrivate::load_sys()
+     // else
+     //     fileName + ".dll"
+     //     fileName
+     //
+     // NB If it's a plugin we do not ever try the ".dll" extension
++    QMutexLocker locker(&mutex);
+     QStringList attempts;
+ 
+     if (pluginState != IsAPlugin)
+         attempts.append(fileName + QLatin1String(".dll"));
+ 
+@@ -93,10 +94,11 @@ bool QLibraryPrivate::load_sys()
+ #ifdef Q_OS_WINRT
+     if (fileName.startsWith(QLatin1Char('/')))
+         attempts.prepend(QDir::rootPath() + fileName);
+ #endif
+ 
++    locker.unlock();
+     Handle hnd = nullptr;
+     for (const QString &attempt : qAsConst(attempts)) {
+ #ifndef Q_OS_WINRT
+         hnd = LoadLibrary(reinterpret_cast<const wchar_t*>(QDir::toNativeSeparators(attempt).utf16()));
+ #else // Q_OS_WINRT
+@@ -113,10 +115,11 @@ bool QLibraryPrivate::load_sys()
+     }
+ 
+ #ifndef Q_OS_WINRT
+     SetErrorMode(oldmode);
+ #endif
++    locker.relock();
+     if (!hnd) {
+         errorString = QLibrary::tr("Cannot load library %1: %2").arg(
+                     QDir::toNativeSeparators(fileName), qt_error_string());
+     } else {
+         // Query the actual name of the library that was loaded
 ```
 
 ---

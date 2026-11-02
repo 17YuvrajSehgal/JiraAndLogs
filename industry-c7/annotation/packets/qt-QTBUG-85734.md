@@ -15,7 +15,14 @@ Qt crashes in qwindows.dll. QWindowTheme::instance() is null when refreshFonts()
 `beb3916858dc`
 
 ```
-(empty)
+Windows QPA: Potential crash fix for Wine
+
+Add a check for theme instance.
+
+Pick-to: 5.15
+Fixes: QTBUG-85734
+Change-Id: I10aced73379cd5e0b49d5cee08ceead060397a54
+Reviewed-by: Oliver Wolff <oliver.wolff@qt.io>
 ```
 
 ## Files the fix changed
@@ -29,7 +36,27 @@ Snapshot holds 5,967 non-test source files. The fix changed 1 file(s); 1 of them
 ### `src/plugins/platforms/windows/qwindowsscreen.cpp`
 
 ```diff
-(no diff retrieved)
+diff --git a/src/plugins/platforms/windows/qwindowsscreen.cpp b/src/plugins/platforms/windows/qwindowsscreen.cpp
+index 34e9e8fe310..a15a39c2a45 100644
+--- a/src/plugins/platforms/windows/qwindowsscreen.cpp
++++ b/src/plugins/platforms/windows/qwindowsscreen.cpp
+@@ -567,12 +567,14 @@ bool QWindowsScreenManager::handleScreenChanges()
+         for (int i = m_screens.size() - 1; i >= 0; --i) {
+             if (indexOfMonitor(newDataList, m_screens.at(i)->data().name) == -1)
+                 removeScreen(i);
+         }     // for existing screens
+     }     // not lock screen
+-    if (primaryScreenChanged)
+-        QWindowsTheme::instance()->refreshFonts();
++    if (primaryScreenChanged) {
++        if (auto theme = QWindowsTheme::instance()) // QTBUG-85734/Wine
++            theme->refreshFonts();
++    }
+     QHighDpiScaling::updateHighDpiScaling();
+     return true;
+ }
+ 
+ void QWindowsScreenManager::clearScreens()
 ```
 
 ---

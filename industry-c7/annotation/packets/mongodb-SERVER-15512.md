@@ -40,7 +40,7 @@ Nothing else obviously useful from the logs yet.
 `8f349cc6f6c3`
 
 ```
-(empty)
+SERVER-15512 add lock to protect legacy initial sync flag access
 ```
 
 ## Files the fix changed
@@ -54,7 +54,22 @@ Snapshot holds 8,739 non-test source files. The fix changed 1 file(s); 1 of them
 ### `src/mongo/db/repl/rs_sync.cpp`
 
 ```diff
-(no diff retrieved)
+diff --git a/src/mongo/db/repl/rs_sync.cpp b/src/mongo/db/repl/rs_sync.cpp
+index b30b97e87cf..42ef7436461 100644
+--- a/src/mongo/db/repl/rs_sync.cpp
++++ b/src/mongo/db/repl/rs_sync.cpp
+@@ -171,10 +171,11 @@ namespace repl {
+         SyncTail tail(BackgroundSync::get(), multiSyncApply);
+         tail.oplogApplication();
+     }
+ 
+     void ReplSetImpl::clearVetoes() {
++        lock lk(this);
+         _veto.clear();
+     }
+ 
+     void ReplSetImpl::syncThread() {
+         while( 1 ) {
 ```
 
 ---

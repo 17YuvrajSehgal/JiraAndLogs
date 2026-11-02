@@ -36,6 +36,12 @@ SAMPLE = ROOT / "industry-c7/annotation/sample.json"
 PACKETS = ROOT / "industry-c7/annotation/packets"
 REPOS = ROOT / "data/c7-repos"
 
+# The project -> git-dir mapping lives in exactly one place, the miner.
+# Re-deriving it here as f"{project}-full.git" was wrong for mongodb and
+# qt and cost 48 packets their entire evidence.
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from mine_benchmark import PROJECTS as _MINER_PROJECTS  # noqa: E402
+
 # Both caps were set by guesswork and both bit: 16 of 151 packets lost part
 # of the fix diff (up to 467 lines) and 3 lost part of the report. An
 # annotator cannot assign a role to a file whose change it cannot see, so
@@ -54,10 +60,17 @@ BANNED = re.compile(
 
 
 def git(gd: Path, *a: str, timeout: int = 300) -> str:
+    """Raise on failure. Returning "" here silently produced 48 packets with
+    no diff and no commit message at all, across the whole of mongodb and qt,
+    because the git-dir was wrong. An empty diff must never be mistaken for
+    a commit that changed nothing."""
     r = subprocess.run(["git", "--git-dir", str(gd), *a], capture_output=True,
                        text=True, encoding="utf-8", errors="replace",
                        timeout=timeout)
-    return r.stdout if r.returncode == 0 else ""
+    if r.returncode != 0:
+        raise RuntimeError(f"git --git-dir {gd} {' '.join(a[:3])}: "
+                           f"{r.stderr.strip()[:300]}")
+    return r.stdout
 
 
 def shorten(text: str, limit: int) -> str:
@@ -73,7 +86,7 @@ def shorten(text: str, limit: int) -> str:
 
 def render(rec: dict, inst: dict) -> str:
     p = rec["project"]
-    gd = REPOS / f"{p}-full.git"
+    gd = _MINER_PROJECTS[p]["git_dir"]
     L = [f"# Annotation packet: {rec['issue_key']}  ({p})", ""]
     L += ["Label this against `annotation/RUBRIC.md`. You are seeing the issue "
           "as the reporter filed it, plus the change that eventually fixed it.",

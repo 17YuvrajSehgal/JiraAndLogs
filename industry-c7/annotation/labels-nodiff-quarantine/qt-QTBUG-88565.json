@@ -1,0 +1,28 @@
+{
+  "id": "qt:QTBUG-88565",
+  "project": "qt",
+  "issue_key": "QTBUG-88565",
+  "annotator": "claude-opus-5",
+  "pass": 1,
+  "file_roles": [
+    {
+      "path": "src/plugins/platforms/wayland/qwaylandwindow.cpp",
+      "role": "causal",
+      "evidence": "The compiler quotes the failing statement in this file, 'src/client/qwaylandwindow.cpp:165:81: error: conversion from QString to non-scalar type QFileInfo requested' on the line '  165 |                 QFileInfo fi = QCoreApplication::instance()->applicationFilePath();'. The only non-test source file the fix changed is that same window file, so the statement that relies on a conversion the QFileInfo constructor no longer offers is where the correction had to go, and nothing else was treated as broken."
+    }
+  ],
+  "symptom_location": {
+    "file": "src/plugins/platforms/wayland/qwaylandwindow.cpp",
+    "function": "QtWaylandClient::QWaylandWindow::initWindow",
+    "determinable": true
+  },
+  "log_location": {
+    "file": null,
+    "function": null,
+    "determinable": false
+  },
+  "relation": "same-location",
+  "rationale": "The build fails on one statement and the compiler gives file, line, column and enclosing function, 'In member function void QtWaylandClient::QWaylandWindow::initWindow()' and 'qwaylandwindow.cpp:165:81'. That statement is in the single gold file, so the failure surfaces exactly where the change was made. The trigger was a dependency update rather than a change in this module, 'Update dependencies on dev in qt/qtwayland'.",
+  "confidence": "medium",
+  "notes": "The packet renders this file's diff as '(no diff retrieved)', so no hunk could be cited for any gold file in this instance. The build log gives the path as 'src/client/qwaylandwindow.cpp' while the gold path is 'src/plugins/platforms/wayland/qwaylandwindow.cpp'; the same file is laid out differently in the qtwayland repository and in the snapshot, the same mismatch CONVENTIONS notes for QTBUG-96464. The role is the one place a second rater could reasonably disagree: the statement was correct when written and became an error because QFileInfo's implicit constructor changed outside this module, so the change here can be read as the API adaptation the rubric lists under refactor. It is labelled causal because no fix elsewhere accompanies it in this commit, the failure is this file's own compilation, and correcting this statement is what stops it. The instance has no runtime failure; it is a CI build break, and the pasted text is GCC output relayed by the CI agent, not a program log. The snapshot here holds only 128 non-test source files, so this instance is a small module rather than the qtbase tree."
+}

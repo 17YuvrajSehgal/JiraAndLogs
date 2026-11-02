@@ -28,7 +28,15 @@ Tested changes (refs/builds/qtci/dev/1605587014):
 `4db304cc9e34`
 
 ```
-(empty)
+Fix compilation after QFileInfo changes
+
+The QFileInfo constructors were made explicit in
+784a290c4b08e84d895a62dada5420a3b47dde48, breaking compilation
+where the implicit construction was used.
+
+Fixes: QTBUG-88565
+Change-Id: Icc4c335ea5cbbd21f8a9027beb57823e233b253d
+Reviewed-by: Volker Hilsheimer <volker.hilsheimer@qt.io>
 ```
 
 ## Files the fix changed
@@ -42,7 +50,23 @@ Snapshot holds 128 non-test source files. The fix changed 1 file(s); 1 of them a
 ### `src/plugins/platforms/wayland/qwaylandwindow.cpp`
 
 ```diff
-(no diff retrieved)
+diff --git a/src/plugins/platforms/wayland/qwaylandwindow.cpp b/src/plugins/platforms/wayland/qwaylandwindow.cpp
+index c7e715b6574..328e4f3ce24 100644
+--- a/src/plugins/platforms/wayland/qwaylandwindow.cpp
++++ b/src/plugins/platforms/wayland/qwaylandwindow.cpp
+@@ -160,11 +160,11 @@ void QWaylandWindow::initWindow()
+                 QString name = QGuiApplication::desktopFileName();
+                 if (name.endsWith(QLatin1String(".desktop")))
+                     name.chop(8);
+                 mShellSurface->setAppId(name);
+             } else {
+-                QFileInfo fi = QCoreApplication::instance()->applicationFilePath();
++                QFileInfo fi = QFileInfo(QCoreApplication::instance()->applicationFilePath());
+                 QStringList domainName =
+                         QCoreApplication::instance()->organizationDomain().split(QLatin1Char('.'),
+                                                                                  Qt::SkipEmptyParts);
+ 
+                 if (domainName.isEmpty()) {
 ```
 
 ---

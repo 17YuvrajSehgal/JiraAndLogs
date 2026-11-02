@@ -1,0 +1,28 @@
+{
+  "id": "qt:QTBUG-96464",
+  "project": "qt",
+  "issue_key": "QTBUG-96464",
+  "annotator": "claude-opus-5",
+  "pass": 1,
+  "file_roles": [
+    {
+      "path": "src/plugins/platforms/wayland/qwaylandwindow.cpp",
+      "role": "causal",
+      "evidence": "The assertion fires in a different file than the one that was fixed: 'ASSERT: \"m_pendingConfigureSerial != 0\" in file qtwayland/src/plugins/shellintegration/xdg-shell/qwaylandxdgshell.cpp, line 351', while the fix changed only this file, 'The fix changed 1 file(s); 1 of them are non-test source files'. The ordering the report names, 'xdg_surface_configure() may be called again before QWaylandXdgSurface::applyConfigure()', is scheduled by the window, so the window is where the wrong logic sits and the shell surface is only where it is detected."
+    }
+  ],
+  "symptom_location": {
+    "file": "src/plugins/shellintegration/xdg-shell/qwaylandxdgshell.cpp",
+    "function": "QWaylandXdgSurface::applyConfigure",
+    "determinable": true
+  },
+  "log_location": {
+    "file": "src/plugins/shellintegration/xdg-shell/qwaylandxdgshell.cpp",
+    "function": "QWaylandXdgSurface::applyConfigure",
+    "determinable": true
+  },
+  "relation": "concurrency",
+  "rationale": "The report states the ordering precisely, 'When windows are repeatedly shown and hidden, xdg_surface_configure() may be called again before QWaylandXdgSurface::applyConfigure()', and the consequence, an assertion on a serial that has already been consumed at qwaylandxdgshell.cpp line 351. The one file the fix changed is QWaylandWindow, which decides when a pending configure is applied, so the defect and the assertion sit in different files. The assertion message names file, line and, through the report sentence, the function, which places the symptom even though the diff was not rendered.",
+  "confidence": "medium",
+  "notes": "The packet renders this file's diff as '(no diff retrieved)', so no hunk could be cited for any gold file in this instance. A clean separation of symptom and cause that the packet shows without any diff: the assertion names qwaylandxdgshell.cpp line 351, and the single gold file is qwaylandwindow.cpp, which is never mentioned in the report. The gold file does not appear in the reported evidence at all. The causal call uses the single-changed-file rule, since nothing else was treated as broken. The assertion message names file and line and the report sentence supplies the function, so the site is placed the way CONVENTIONS records for MDEV-14684 and MDEV-22734; an assertion is not a program log, but it is the only emitted line there is, so it is recorded as the log location with that caveat. Relation is concurrency in the rubric's sense of an ordering spanning sites: the report calls it a race, though on a Wayland client this is event ordering on one thread rather than two threads contending. Two paths in the report carry a 'qtwayland/' prefix that the gold path does not; they refer to the same module."
+}

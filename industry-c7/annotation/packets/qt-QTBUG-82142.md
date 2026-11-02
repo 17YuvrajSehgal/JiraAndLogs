@@ -124,7 +124,13 @@ Find the configure and build outputs attached.
 `2a10a6f6d423`
 
 ```
-(empty)
+Fix namespaced build of QTestLib
+
+This amends 93b8cdc974e584d80dbaabf459610a555af25b81
+
+Fixes: QTBUG-82142
+Change-Id: Id77a35a1e1c244b6778159e85b50728f2e4103db
+Reviewed-by: Tor Arne Vestbø <tor.arne.vestbo@qt.io>
 ```
 
 ## Files the fix changed
@@ -138,7 +144,21 @@ Snapshot holds 6,967 non-test source files. The fix changed 1 file(s); 1 of them
 ### `src/testlib/qtestlog.cpp`
 
 ```diff
-(no diff retrieved)
+diff --git a/src/testlib/qtestlog.cpp b/src/testlib/qtestlog.cpp
+index 7bd108ab00c..a3887805324 100644
+--- a/src/testlib/qtestlog.cpp
++++ b/src/testlib/qtestlog.cpp
+@@ -595,8 +595,8 @@ qint64 QTestLog::nsecsTotalTime()
+ qint64 QTestLog::nsecsFunctionTime()
+ {
+     return elapsedFunctionTime.nsecsElapsed();
+ }
+ 
+-#include "moc_qtestlog_p.cpp"
+-
+ QT_END_NAMESPACE
++
++#include "moc_qtestlog_p.cpp"
 ```
 
 ---

@@ -24,7 +24,7 @@ This bug seems to have been introduced after 3.3.6.
 `df8ee2e1ffcf`
 
 ```
-(empty)
+SERVER-24739: Validate syncdelay at startup and on setParameter
 ```
 
 ## Files the fix changed
@@ -40,19 +40,101 @@ Snapshot holds 10,463 non-test source files. The fix changed 5 file(s); 3 of the
 ### `src/mongo/db/mongod_options.cpp`
 
 ```diff
-(no diff retrieved)
+diff --git a/src/mongo/db/mongod_options.cpp b/src/mongo/db/mongod_options.cpp
+index 9a3f4f3b4fe..67344ece83a 100644
+--- a/src/mongo/db/mongod_options.cpp
++++ b/src/mongo/db/mongod_options.cpp
+@@ -1044,10 +1044,17 @@ Status storeMongodOptions(const moe::Environment& params) {
+         serverGlobalParams.slowMS = params["operationProfiling.slowOpThresholdMs"].as<int>();
+     }
+ 
+     if (params.count("storage.syncPeriodSecs")) {
+         storageGlobalParams.syncdelay = params["storage.syncPeriodSecs"].as<double>();
++        if (storageGlobalParams.syncdelay < 0 ||
++            storageGlobalParams.syncdelay > StorageGlobalParams::kMaxSyncdelaySecs) {
++            return Status(ErrorCodes::BadValue,
++                          str::stream() << "syncdelay out of allowed range (0-"
++                                        << StorageGlobalParams::kMaxSyncdelaySecs
++                                        << "s)");
++        }
+     }
+ 
+     if (params.count("storage.directoryPerDB")) {
+         storageGlobalParams.directoryperdb = params["storage.directoryPerDB"].as<bool>();
+     }
 ```
 
 ### `src/mongo/db/storage/storage_options.cpp`
 
 ```diff
-(no diff retrieved)
+diff --git a/src/mongo/db/storage/storage_options.cpp b/src/mongo/db/storage/storage_options.cpp
+index 8b031ff7a59..2756720a24c 100644
+--- a/src/mongo/db/storage/storage_options.cpp
++++ b/src/mongo/db/storage/storage_options.cpp
+@@ -47,10 +47,11 @@ const char* StorageGlobalParams::kDefaultConfigDbPath = "\\data\\configdb\\";
+ const char* StorageGlobalParams::kDefaultDbPath = "/data/db";
+ const char* StorageGlobalParams::kDefaultConfigDbPath = "/data/configdb";
+ #endif
+ 
+ const int StorageGlobalParams::kMaxJournalCommitIntervalMs = 500;
++const double StorageGlobalParams::kMaxSyncdelaySecs = 9.0 * 1000.0 * 1000.0;
+ 
+ /**
+  * Specify whether all queries must use indexes.
+  * If 1, MongoDB will not execute queries that require a table scan and will return an error.
+  * NOT recommended for production use.
+@@ -61,12 +62,29 @@ ExportedServerParameter<bool, ServerParameterType::kStartupAndRuntime> NoTableSc
+ /**
+  * Specify the interval in seconds between fsync operations where mongod flushes its
+  * working memory to disk. By default, mongod flushes memory to disk every 60 seconds.
+  * In almost every situation you should not set this value and use the default setting.
+  */
+-ExportedServerParameter<double, ServerParameterType::kStartupAndRuntime> SyncdelaySetting(
+-    ServerParameterSet::getGlobal(), "syncdelay", &storageGlobalParams.syncdelay);
++class SyncdelaySetting
++    : public ExportedServerParameter<double, ServerParameterType::kStartupAndRuntime> {
++public:
++    SyncdelaySetting()
++        : ExportedServerParameter<double, ServerParameterType::kStartupAndRuntime>(
++              ServerParameterSet::getGlobal(), "syncdelay", &storageGlobalParams.syncdelay) {}
++
++    virtual Status validate(const double& potentialNewValue) {
++        if (potentialNewValue < 0.0 || potentialNewValue > StorageGlobalParams::kMaxSyncdelaySecs) {
++            return Status(ErrorCodes::BadValue,
++                          str::stream() << "syncdelay must be between 0 and "
++                                        << StorageGlobalParams::kMaxSyncdelaySecs
++                                        << ", but attempted to set to: "
++                                        << potentialNewValue);
++        }
++
++        return Status::OK();
++    }
++} syncdelaySetting;
+ 
+ /**
+  * Specify an integer between 1 and kMaxJournalCommitInterval signifying the number of milliseconds
+  * (ms) between journal commits.
+  */
 ```
 
 ### `src/mongo/db/storage/storage_options.h`
 
 ```diff
-(no diff retrieved)
+diff --git a/src/mongo/db/storage/storage_options.h b/src/mongo/db/storage/storage_options.h
+index 2e4f936e60e..8ae1467e307 100644
+--- a/src/mongo/db/storage/storage_options.h
++++ b/src/mongo/db/storage/storage_options.h
+@@ -96,10 +96,11 @@ struct StorageGlobalParams {
+     // --syncdelay
+     // Controls how much time can pass before MongoDB flushes data to the data files
+     // via an fsync operation.
+     // Do not set this value on production systems.
+     // In almost every situation, you should use the default setting.
++    static const double kMaxSyncdelaySecs;
+     AtomicDouble syncdelay{60.0};  // seconds between fsyncs
+ 
+     bool readOnly = false;
+ };
 ```
 
 ---
