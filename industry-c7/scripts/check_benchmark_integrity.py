@@ -61,6 +61,19 @@ def check_project(path: Path) -> tuple[str, int, int, list]:
             bad.append((r["issue_key"], "n_universe is 0: the universe scan "
                                         "failed and was written as a count"))
             continue
+        # no fix commit may precede its own snapshot, or the snapshot already
+        # contains part of the fix and the instance is easier than it looks
+        leaked = [s for s in r.get("fix_shas", []) if s != r["fix_sha"]
+                  and subprocess.run(
+                      ["git", "--git-dir", str(gd), "merge-base",
+                       "--is-ancestor", s, r["snapshot_sha"]],
+                      capture_output=True).returncode == 0]
+        if leaked:
+            bad.append((r["issue_key"],
+                        f"{len(leaked)} fix commit(s) are ANCESTORS of the "
+                        f"snapshot, so it already contains part of the fix, "
+                        f"e.g. {leaked[0][:10]}"))
+            continue
         missing = [f for f in r["gold_files"] if f not in tree]
         if missing:
             bad.append((r["issue_key"],

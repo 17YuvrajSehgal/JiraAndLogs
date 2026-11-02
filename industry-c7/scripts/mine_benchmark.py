@@ -460,6 +460,39 @@ def load_wolv2_issues(cfg: dict) -> dict[str, dict]:
     return issues
 
 
+def topo_first(git_dir: Path, shas: list[str]) -> str | None:
+    """The fix commit no other fix commit precedes.
+
+    The snapshot is the parent of the "first" fix commit, and first was taken
+    to mean earliest commit timestamp. Timestamps disagree with apply order
+    after a rebase, a cherry-pick or a cross-branch merge, and when they do
+    the snapshot already contains part of the fix: measured, 539 commits over
+    380 instances were ancestors of their own snapshot. That is leakage, and
+    it makes those instances easier than they look.
+
+    Returns the sha that has no other given sha as an ancestor. If every
+    candidate is preceded by another, the commits sit on divergent branches
+    and no single snapshot predates them all, so return None and let the
+    caller drop the instance.
+    """
+    if len(shas) == 1:
+        return shas[0]
+    for c in shas:
+        if not any(o != c and subprocess.run(
+                ["git", "--git-dir", str(git_dir), "merge-base",
+                 "--is-ancestor", o, c],
+                capture_output=True).returncode == 0 for o in shas):
+            return c
+    return None
+
+
+def topo_first_many(git_dir: Path, groups: list[list[str]]) -> list:
+    """topo_first for many instances at once; one thread per instance."""
+    from concurrent.futures import ThreadPoolExecutor
+    with ThreadPoolExecutor(max_workers=GIT_WORKERS) as ex:
+        return list(ex.map(lambda g: topo_first(git_dir, g), groups))
+
+
 def scan_snapshots(git_dir: Path, tasks: list[tuple[str, frozenset]],
                    src_ext: tuple[str, ...]) -> dict:
     """One `ls-tree` per snapshot, answering both questions we ask of it.
@@ -600,6 +633,29 @@ def mine_project(name: str) -> dict:
                     gold.add(path)
         prepared.append((key, commits, frozenset(gold), len(all_changed)))
 
+    # The snapshot is the parent of commits[0], so commits[0] must be the one
+    # no other fix commit precedes. Sorting by timestamp does not guarantee
+    # that; see topo_first. Only multi-commit instances need the git calls.
+    multi = [i for i, p in enumerate(prepared) if len(p[1]) > 1]
+    if multi:
+        firsts = topo_first_many(
+            cfg["git_dir"], [[c["sha"] for c in prepared[i][1]] for i in multi])
+        for i, sha in zip(multi, firsts):
+            key, commits, gold, n_ch = prepared[i]
+            if sha is None:
+                # divergent branches: no snapshot predates every fix commit
+                prepared[i] = None
+                continue
+            if commits[0]["sha"] != sha:
+                head = next(c for c in commits if c["sha"] == sha)
+                prepared[i] = (key, [head] + [c for c in commits if c is not head],
+                               gold, n_ch)
+                funnel["snapshot_reordered_topologically"] += 1
+        dropped = sum(1 for i in multi if prepared[i] is None)
+        if dropped:
+            funnel["fix_commits_on_divergent_branches"] = dropped
+        prepared = [p for p in prepared if p is not None]
+
     scans, n_scan_failed = scan_snapshots(
         cfg["git_dir"],
         [(c[0]["parent"], g) for _, c, g, _ in prepared],
@@ -643,7 +699,11 @@ def mine_project(name: str) -> dict:
             "n_fix_commits": len(commits),
             "fix_sha": first["sha"],
             "fix_shas": [c["sha"] for c in commits],
-            "fix_time": first["ts"],
+            # min, not first["ts"]: commits[0] is now the topologically first
+            # commit, which need not be the earliest by timestamp. fix_time
+            # drives the chronological dev/eval split and is a firewall
+            # fallback, so keep the earliest, which is the conservative end.
+            "fix_time": min(c["ts"] for c in commits),
             "fix_subject": first["subject"],
             "snapshot_sha": first["parent"],
             "gold_files": sorted(gold),

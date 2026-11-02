@@ -27,7 +27,7 @@ from __future__ import annotations
 import glob
 import json
 import os
-import random
+import hashlib
 from collections import Counter
 from pathlib import Path
 
@@ -72,7 +72,16 @@ def main() -> int:
     print(f"of those, {len(core_pool):,} survive into v2 "
           f"({missing} dropped by the new filters)")
 
-    rng = random.Random(SEED)
+    def rank(i: str) -> str:
+        """Each instance's position depends only on its own id and the seed.
+
+        rng.shuffle() orders a bucket as a whole, so adding or removing a few
+        instances reshuffles all of them: one benchmark correction changed
+        20 of 21 already-annotated instances, discarding the work. Hashing
+        per instance keeps every other instance where it was, so a later
+        correction costs only the instances it actually touches.
+        """
+        return hashlib.sha256(f"{SEED}:{i}".encode()).hexdigest()
 
     def pick(pool: list[str], n: int, key) -> list[str]:
         """Even draw across the strata produced by key()."""
@@ -81,7 +90,7 @@ def main() -> int:
             buckets.setdefault(key(i), []).append(i)
         out, bl = [], sorted(buckets)
         for b in bl:
-            rng.shuffle(buckets[b])
+            buckets[b].sort(key=rank, reverse=True)  # pop() takes the lowest
         k = 0
         while len(out) < n and any(buckets[b] for b in bl):
             b = bl[k % len(bl)]
