@@ -1,0 +1,38 @@
+{
+  "id": "derby:DERBY-4451",
+  "project": "derby",
+  "issue_key": "DERBY-4451",
+  "annotator": "claude-opus-5",
+  "pass": 1,
+  "file_roles": [
+    {
+      "path": "java/engine/org/apache/derby/impl/sql/compile/DMLModStatementNode.java",
+      "role": "causal",
+      "evidence": "The shared forbidGenerationOverrides(targetRCL, forUpdate, addedGeneratedColumns) is deleted outright. The commit message names it as the defect: 'the former way of checking for illegal override of generated columns in the presence of an explicit target column list failed to look below the top level UnionNode in a table constructor'."
+    },
+    {
+      "path": "java/engine/org/apache/derby/impl/sql/compile/InsertNode.java",
+      "role": "causal",
+      "evidence": "The call into the broken check is removed: '// don't allow overriding of generation clauses' and 'forbidGenerationOverrides( targetColumnList, false, null );' are both deleted, so INSERT now goes through the general no-target-list path. This is the 'insert into t(b,a) values (default,1), (default,2)' case in the report."
+    },
+    {
+      "path": "java/engine/org/apache/derby/impl/sql/compile/UpdateNode.java",
+      "role": "refactor",
+      "evidence": "A private, UPDATE-only copy of forbidGenerationOverrides is added and the call loses its now-meaningless boolean, 'forbidGenerationOverrides(resultSet.getResultColumns(), addedGeneratedColumns)'. The body is the same logic moved down from the shared parent; UPDATE behaviour is unchanged."
+    }
+  ],
+  "symptom_location": {
+    "file": null,
+    "function": null,
+    "determinable": false
+  },
+  "log_location": {
+    "file": null,
+    "function": null,
+    "determinable": false
+  },
+  "relation": "unclear",
+  "rationale": "The reporter gives the failing statements and the two messages, 'ArrayIndexOutOfBoundsException' in an insane build and 'ASSERT FAILED More columns in result column list than in base table' in a sane one, but pastes no stack trace, so no symptom or log file can be placed. The commit message states the mechanism plainly, and the diff matches: the broken check is deleted from the shared parent and its INSERT call site, while UPDATE keeps a private copy. Two gold files are therefore causal and the third is a code move.",
+  "confidence": "medium",
+  "notes": "The fix for both reported symptoms is a deletion, and the only file that gains code, UpdateNode, is the one labelled refactor. The same commit also closes DERBY-4448, so the gold set covers two issues."
+}

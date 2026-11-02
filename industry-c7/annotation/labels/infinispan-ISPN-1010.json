@@ -1,0 +1,28 @@
+{
+  "id": "infinispan:ISPN-1010",
+  "project": "infinispan",
+  "issue_key": "ISPN-1010",
+  "annotator": "claude-opus-5",
+  "pass": 1,
+  "file_roles": [
+    {
+      "path": "core/src/main/java/org/infinispan/loaders/cluster/ClusterCacheLoader.java",
+      "role": "causal",
+      "evidence": "The check counted raw responses, 'if (response.size() > 1) throw new CacheLoaderException(\"Response length is always 0 or 1, received: \" + response)'. It becomes a count after deduplication, 'Set<Response> setResponses = new HashSet(responses); if (setResponses.size() > 1) throw ...'. Rejecting two identical answers is the wrong logic the issue title names, and it is corrected here."
+    }
+  ],
+  "symptom_location": {
+    "file": "core/src/main/java/org/infinispan/loaders/cluster/ClusterCacheLoader.java",
+    "function": "load",
+    "determinable": true
+  },
+  "log_location": {
+    "file": "core/src/main/java/org/infinispan/loaders/cluster/ClusterCacheLoader.java",
+    "function": "load",
+    "determinable": true
+  },
+  "relation": "same-location",
+  "rationale": "The reported exception text, 'Response length is always 0 or 1, received:', is a literal in the method the fix rewrites, and the single frame given, 'ClusterCacheLoader.load(ClusterCacheLoader.java:57)', points at the same method. The pasted payload shows why it fired: the two SuccessfulResponse entries carry the same TopologyView with the same two addresses, so they are duplicates rather than a genuine conflict. Throw site, defect and fix coincide.",
+  "confidence": "high",
+  "notes": "Two commits close this key and both touch only this file. The first deduplicates; the second, 'Optimise when only one response', restructures the loop into a single Response variable and skips the HashSet when only one response arrived. The gold set is one file either way."
+}

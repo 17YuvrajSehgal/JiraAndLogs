@@ -1,0 +1,28 @@
+{
+  "id": "cassandra:CASSANDRA-10057",
+  "project": "cassandra",
+  "issue_key": "CASSANDRA-10057",
+  "annotator": "claude-opus-5",
+  "pass": 1,
+  "file_roles": [
+    {
+      "path": "src/java/org/apache/cassandra/repair/RepairMessageVerbHandler.java",
+      "role": "causal",
+      "evidence": "The handler threw instead of answering: 'throw new RuntimeException(\"Cannot start multiple repair sessions over the same sstables\")' is replaced by a failure reply, 'new MessageOut(...).withParameter(MessagingService.FAILURE_RESPONSE_PARAM, MessagingService.ONE_BYTE); MessagingService.instance().sendReply(reply, id, message.from); return;', plus 'cfs.clearSnapshot(desc.sessionId.toString())'. A verb handler that never replies is why the coordinator waited forever."
+    }
+  ],
+  "symptom_location": {
+    "file": "src/java/org/apache/cassandra/repair/RepairMessageVerbHandler.java",
+    "function": "doVerb",
+    "determinable": true
+  },
+  "log_location": {
+    "file": "src/java/org/apache/cassandra/repair/RepairMessageVerbHandler.java",
+    "function": "doVerb",
+    "determinable": true
+  },
+  "relation": "same-location",
+  "rationale": "The reported ERROR lines name the file and line directly, 'RepairMessageVerbHandler.java:95 - Cannot start multiple repair sessions over the same sstables', and that logger.error call sits in the hunk the fix changes. The commit message addresses the second of the reporter's two problems, 'Fix repair hang when snapshot failed', and the diff shows why: throwing left the request unanswered. It also clears the snapshot the handler had just taken, which would otherwise leak.",
+  "confidence": "high",
+  "notes": "The reporter describes two problems and the fix only answers one. The 'Cannot start multiple repair sessions' condition is still reported, just reported properly; nothing here prevents it arising. A localizer is scored on a gold file that handles the symptom gracefully rather than removing it."
+}

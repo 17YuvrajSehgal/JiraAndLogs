@@ -1,0 +1,28 @@
+{
+  "id": "ignite:IGNITE-13235",
+  "project": "ignite",
+  "issue_key": "IGNITE-13235",
+  "annotator": "claude-opus-5",
+  "pass": 1,
+  "file_roles": [
+    {
+      "path": "modules/core/src/main/java/org/apache/ignite/internal/processors/service/IgniteServiceProcessor.java",
+      "role": "causal",
+      "evidence": "'opsLock.writeLock().lock()' in onDeActivate becomes 'opsLock.writeLock().lockInterruptibly()' inside a try that restores the flag and rethrows, 'Thread.currentThread().interrupt(); throw new IgniteInterruptedException(e)'. An uninterruptible acquire in a worker that shutdown must be able to interrupt is the wrong logic, and both ends of the deadlock are methods of this class."
+    }
+  ],
+  "symptom_location": {
+    "file": "modules/core/src/main/java/org/apache/ignite/internal/processors/service/IgniteServiceProcessor.java",
+    "function": "onDeActivate",
+    "determinable": true
+  },
+  "log_location": {
+    "file": null,
+    "function": null,
+    "determinable": false
+  },
+  "relation": "concurrency",
+  "rationale": "The two dumps close the cycle. Main is inside 'IgniteServiceProcessor.stopProcessor(IgniteServiceProcessor.java:261)' and blocked joining the worker at 'GridWorker.join(GridWorker.java:242)', while the services-deployment-worker is parked on the write lock at 'IgniteServiceProcessor.onDeActivate(IgniteServiceProcessor.java:405)'. Shutdown holds what the worker waits for and waits for the worker, so making the worker's acquire interruptible is what breaks the cycle. Both frames name the gold file.",
+  "confidence": "high",
+  "notes": "The evidence is a JVM thread dump rather than anything the program logged, so no log site is recorded. It is still the most precise evidence seen so far: the dump names IgniteServiceProcessor.java:405, which is the exact line the fix changes."
+}

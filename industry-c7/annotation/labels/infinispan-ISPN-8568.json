@@ -1,0 +1,43 @@
+{
+  "id": "infinispan:ISPN-8568",
+  "project": "infinispan",
+  "issue_key": "ISPN-8568",
+  "annotator": "claude-opus-5",
+  "pass": 1,
+  "file_roles": [
+    {
+      "path": "commons/src/main/java/org/infinispan/commons/dataconversion/CompatModeEncoder.java",
+      "role": "causal",
+      "evidence": "The marshaller was built with no classloader, 'this.marshaller = marshaller == null ? new GenericJBossMarshaller() : marshaller'. A second constructor is added that takes one and passes it on, 'new GenericJBossMarshaller(classLoader)'. This is the encoder the compat path uses, and building its marshaller without a classloader is the defect the reporter describes."
+    },
+    {
+      "path": "core/src/main/java/org/infinispan/encoding/DataConversion.java",
+      "role": "causal",
+      "evidence": "The call site had the right classloader available and did not pass it: 'this.lookupEncoder(encoderRegistry, compatibility)' becomes 'this.lookupEncoder(encoderRegistry, compatibility, gcr.classLoader())', and inside, 'new CompatModeEncoder(compatMarshaller)' becomes 'new CompatModeEncoder(compatMarshaller, classLoader)'. This branch is the one a compat cache takes, so the wrong classloader is chosen here."
+    },
+    {
+      "path": "commons/src/main/java/org/infinispan/commons/dataconversion/GenericJbossMarshallerEncoder.java",
+      "role": "preventive",
+      "evidence": "The same omission is corrected for a different encoder: the private singleton constructor calling 'super(new GenericJBossMarshaller())' gains a public 'GenericJbossMarshallerEncoder(ClassLoader classLoader)'. This encoder serves the APPLICATION_JBOSS_MARSHALLED storage format rather than the compat path the report exercises."
+    },
+    {
+      "path": "core/src/main/java/org/infinispan/factories/EncoderRegistryFactory.java",
+      "role": "preventive",
+      "evidence": "Registry registrations gain the classloader, 'GenericJbossMarshallerEncoder.INSTANCE' becomes 'new GenericJbossMarshallerEncoder(classLoader)' and 'new CompatModeEncoder(globalMarshaller)' becomes 'new CompatModeEncoder(globalMarshaller, classLoader)'. These are the registry-held instances; the reported path builds its own encoder in DataConversion instead of taking one from the registry."
+    }
+  ],
+  "symptom_location": {
+    "file": null,
+    "function": null,
+    "determinable": false
+  },
+  "log_location": {
+    "file": null,
+    "function": null,
+    "determinable": false
+  },
+  "relation": "config-build",
+  "rationale": "No frame from this project appears anywhere in the report. The failure text, 'java.lang.ClassNotFoundException: org.infinispan.server.test.Entity from [Module \"org.infinispan.commons:main\" ...]', is raised by JBoss Modules and reaches the reporter wrapped in a HotRodClientException, while the surrounding line comes from the test harness. The reporter supplies the mechanism instead, that GenericJBossMarshaller is used and 'the classloader used is ModuleClassLoader for Module \"org.infinispan.commons:main\" that does not have visibility of the deployed jar's classes', and that class is not in the gold set. The classloader is fixed when the encoder is constructed and only matters much later when a class has to be resolved, so the two ends are a configuration choice and its consequence.",
+  "confidence": "medium",
+  "notes": "Which of the four files sits on the reported path is read off DataConversion.lookupEncoder, where a compat cache that is not embedded constructs its own CompatModeEncoder rather than taking one from the registry. On that reading two files carry the defect and two apply the same correction elsewhere. The deserialization site named by the reporter, GenericJBossMarshaller in infinispan-commons, is not in the gold set at all, so the file a reader would reach from the error message is not part of the answer key."
+}

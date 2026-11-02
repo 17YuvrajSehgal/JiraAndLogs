@@ -1,0 +1,38 @@
+{
+  "id": "ambari:AMBARI-11867",
+  "project": "ambari",
+  "issue_key": "AMBARI-11867",
+  "annotator": "claude-opus-5",
+  "pass": 1,
+  "file_roles": [
+    {
+      "path": "ambari-server/src/main/java/org/apache/ambari/server/state/configgroup/ConfigGroup.java",
+      "role": "refactor",
+      "evidence": "Interface declarations only: 'void persistHostMapping();' is added, '@Transactional' is removed from persist() and refresh(), and the now-unused Transactional import is dropped. Guice-persist applies @Transactional on the implementation, not the interface, so removing it here changes no behaviour."
+    },
+    {
+      "path": "ambari-server/src/main/java/org/apache/ambari/server/state/configgroup/ConfigGroupImpl.java",
+      "role": "refactor",
+      "evidence": "A single visibility change, 'void persistHostMapping()' becoming 'public void persistHostMapping()', so the method can be reached through the interface. The method body is untouched."
+    },
+    {
+      "path": "ambari-server/src/main/java/org/apache/ambari/server/topology/AmbariContext.java",
+      "role": "causal",
+      "evidence": "'group.addHost(...); group.persist();' becomes a guarded, narrower call: 'if (! group.getHosts().containsKey(host.getHostId())) { group.addHost(host); group.persistHostMapping(); }'. Calling the full persist() re-persisted the config mappings as well, which is the path the trace takes into persistConfigMapping and removeAllByGroup."
+    }
+  ],
+  "symptom_location": {
+    "file": "ambari-server/src/main/java/org/apache/ambari/server/orm/dao/ConfigGroupConfigMappingDAO.java",
+    "function": "removeAllByGroup",
+    "determinable": true
+  },
+  "log_location": {
+    "file": "ambari-server/src/main/java/org/apache/ambari/server/orm/dao/ConfigGroupConfigMappingDAO.java",
+    "function": "removeAllByGroup",
+    "determinable": true
+  },
+  "relation": "caller-callee",
+  "rationale": "The ConcurrentModificationException surfaces at 'ConfigGroupConfigMappingDAO.removeAllByGroup(ConfigGroupConfigMappingDAO.java:101)', a file no commit touches, while the fix lands four frames up in AmbariContext. The caller asked for more persistence than it needed, and the callee is where EclipseLink's change-set merge then blew up. The other two gold files only widen a method's visibility and declare it on the interface.",
+  "confidence": "medium",
+  "notes": "Neither the file in the deepest frame nor ConfigGroupImpl.persistConfigMapping, the method actually named in the trace, is a causal target. A localizer following the stack trace lands on files that are either absent from gold or labelled refactor."
+}

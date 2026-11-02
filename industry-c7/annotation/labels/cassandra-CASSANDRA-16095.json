@@ -1,0 +1,43 @@
+{
+  "id": "cassandra:CASSANDRA-16095",
+  "project": "cassandra",
+  "issue_key": "CASSANDRA-16095",
+  "annotator": "claude-opus-5",
+  "pass": 1,
+  "file_roles": [
+    {
+      "path": "src/java/org/apache/cassandra/config/CassandraRelevantProperties.java",
+      "role": "refactor",
+      "evidence": "Adds the MBEAN_REGISTRATION_CLASS enum constant and six accessors, getString/setString, getBoolean/setBoolean and getInt/setInt, each taking an override default or writing to System properties. Support for injecting a wrapper during tests; no metric logic."
+    },
+    {
+      "path": "src/java/org/apache/cassandra/db/ColumnFamilyStore.java",
+      "role": "refactor",
+      "evidence": "Two inline String.format calls are lifted into static helpers, getTableMBeanName and getColumnFamilieMBeanName, and the original sites now call them. The produced names are identical."
+    },
+    {
+      "path": "src/java/org/apache/cassandra/metrics/TableMetrics.java",
+      "role": "causal",
+      "evidence": "'public final static Set<ReleasableMetric> all = Sets.newHashSet()' becomes 'private final Set<ReleasableMetric> all = Sets.newHashSet()'. The set of metrics to release was static, so every table shared one list and releasing one table released all of them, which is the issue title. allTableMetrics is likewise narrowed to a private ALL_TABLE_METRICS. The full diff shows what that shared set held: register() does 'all.add(() -> releaseMetric(name, alias, deprecated))', so with a static set every table's release lambda sat in one collection and one table's release ran all of them."
+    },
+    {
+      "path": "src/java/org/apache/cassandra/utils/MBeanWrapper.java",
+      "role": "refactor",
+      "evidence": "The singleton initialiser moves into a create() method that can return a class named by MBEAN_REGISTRATION_CLASS, 'return FBUtilities.construct(klass, \"mbean\")'. A seam for tests; the default path still builds a PlatformMBeanWrapper."
+    }
+  ],
+  "symptom_location": {
+    "file": null,
+    "function": null,
+    "determinable": false
+  },
+  "log_location": {
+    "file": null,
+    "function": null,
+    "determinable": false
+  },
+  "relation": "state-producer",
+  "rationale": "The reporter pastes a bare 'javax.management.InstanceNotFoundException' with an empty stack trace, so no file can be named for either the symptom or the log. The metrics were unregistered earlier, when some other table released its own, and the absence is only discovered later when nodetool queries the MBean, which is a produced-state relation. One of four gold files carries the defect; the other three are name extraction and test seams.",
+  "confidence": "high",
+  "notes": "The reporter's own observation supports the static-sharing diagnosis: 'if i restart the node and check it works but if i write something then i get the error again', that is, the metrics are fine until another table triggers a release. This label was first written against a packet whose diff was cut at 120 lines per file and was re-checked against the full diff after the renderer cap was raised. The 187 newly visible lines are the register/releaseMetric pair quoted above plus renames of allTableMetrics, globalFactory and the latency fields to uppercase constants, which is consistent with the three refactor labels."
+}

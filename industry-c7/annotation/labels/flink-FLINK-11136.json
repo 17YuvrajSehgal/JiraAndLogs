@@ -1,0 +1,28 @@
+{
+  "id": "flink:FLINK-11136",
+  "project": "flink",
+  "issue_key": "FLINK-11136",
+  "annotator": "claude-opus-5",
+  "pass": 1,
+  "file_roles": [
+    {
+      "path": "flink-libraries/flink-table/src/main/scala/org/apache/flink/table/codegen/AggregationCodeGenerator.scala",
+      "role": "causal",
+      "evidence": "The emitted merge branch passed the map key straight through, '${aggs(i)}.accumulate(aAcc$i, k)', where k is a Row. It becomes '${aggs(i)}.accumulate(aAcc$i, ${parametersCodeForDistinctMerge(i)})', and the new parametersCodeForDistinctMerge unpacks the row, '(${CodeGenUtils.boxedTypeTermForTypeInfo(physicalInputTypes(f))}) k.getField($i)'. The generator emitted the wrong argument, and that is what is corrected."
+    }
+  ],
+  "symptom_location": {
+    "file": "flink-libraries/flink-table/src/main/scala/org/apache/flink/table/functions/aggfunctions/SumAggFunction.scala",
+    "function": "accumulate",
+    "determinable": true
+  },
+  "log_location": {
+    "file": "flink-libraries/flink-table/src/main/scala/org/apache/flink/table/functions/aggfunctions/SumAggFunction.scala",
+    "function": "accumulate",
+    "determinable": true
+  },
+  "relation": "state-producer",
+  "rationale": "The throw is 'java.lang.ClassCastException: org.apache.flink.types.Row cannot be cast to java.lang.Integer' and the deepest frame owned by this project is 'SumAggFunction.accumulate(SumAggFunction.scala:50)', reached from 'GroupingWindowAggregateHelper$18.mergeAccumulatorsPair(Unknown Source)', which is the generated class. SumAggFunction is correct and is handed a Row because the generator wrote the call that way, so the gold file produces the faulty artifact and the failure appears in code it emitted. Only the DISTINCT merge path is touched, which matches a report whose query uses COUNT(DISTINCT b) and SUM(DISTINCT b) over a SESSION window.",
+  "confidence": "high",
+  "notes": "The symptom path is read off the package in the trace, org.apache.flink.table.functions.aggfunctions.SumAggFunction, laid out under the same source root as the gold file; the packet does not show the tree. 'Unknown Source' for the generated frame means the true symptom site has no file at all, which is a case worth keeping."
+}

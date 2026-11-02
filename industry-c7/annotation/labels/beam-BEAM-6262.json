@@ -1,0 +1,27 @@
+{
+  "id": "beam:BEAM-6262",
+  "project": "beam",
+  "issue_key": "BEAM-6262",
+  "annotator": "claude-opus-5",
+  "pass": 1,
+  "file_roles": [
+    {
+      "path": "sdks/java/io/kinesis/src/main/java/org/apache/beam/sdk/io/kinesis/ShardReadersPool.java",
+      "role": "causal",
+      "evidence": "stop() went straight to 'executorService.shutdownNow()', which interrupts reader threads in the middle of an HTTP read. The fix calls 'executorService.shutdown()' first, waits in the new awaitTermination(), and only escalates to shutdownNow() 'if (!executorService.isTerminated())'. The commit message is 'gracefully shutdown executor service'."
+    }
+  ],
+  "symptom_location": {
+    "file": "sdks/java/io/kinesis/src/main/java/org/apache/beam/sdk/io/kinesis/ShardReadersPool.java",
+    "function": "readLoop",
+    "determinable": true
+  },
+  "log_location": {
+    "file": "sdks/java/io/kinesis/src/main/java/org/apache/beam/sdk/io/kinesis/ShardReadersPool.java",
+    "function": "readLoop",
+    "determinable": true
+  },
+  "relation": "concurrency",
+  "rationale": "The log ordering gives the mechanism away: 'ShardReadersPool stop / INFO: Closing shard iterators pool' is immediately followed by 'ShardReadersPool readLoop / SEVERE: Unexpected exception occurred', and the root cause is 'com.amazonaws.AbortedException' from SdkFilterInputStream.abortIfNeeded. One thread's abrupt shutdownNow interrupted another thread mid-read, so the defect and the surface are different methods of the same class joined by thread interleaving. Nothing was actually broken in the read path, which matches the reporter's note that there is no data loss.",
+  "confidence": "high"
+}

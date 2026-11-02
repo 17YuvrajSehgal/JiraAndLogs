@@ -1,0 +1,43 @@
+{
+  "id": "hbase:HBASE-12102",
+  "project": "hbase",
+  "issue_key": "HBASE-12102",
+  "annotator": "claude-opus-5",
+  "pass": 1,
+  "file_roles": [
+    {
+      "path": "hbase-hadoop2-compat/src/main/java/org/apache/hadoop/hbase/regionserver/MetricsRegionAggregateSourceImpl.java",
+      "role": "causal",
+      "evidence": "'collector.addRecord(metricsName).setContext(metricsContext)' loses the setContext call. This source backs 'name=RegionServer,sub=Regions', the first block the reporter pastes with two 'tag.Context' : 'regionserver' entries."
+    },
+    {
+      "path": "hbase-hadoop2-compat/src/main/java/org/apache/hadoop/hbase/regionserver/MetricsRegionServerSourceImpl.java",
+      "role": "causal",
+      "evidence": "Same removal, 'metricsCollector.addRecord(metricsName).setContext(metricsContext)' becomes 'metricsCollector.addRecord(metricsName)'. This source backs 'name=RegionServer,sub=Server', the reporter's second pasted block."
+    },
+    {
+      "path": "hbase-hadoop2-compat/src/main/java/org/apache/hadoop/hbase/ipc/MetricsHBaseServerSourceImpl.java",
+      "role": "causal",
+      "evidence": "Same removal. This source backs 'name=IPC,sub=IPC', the reporter's third block, whose duplicated key is 'tag.Context' : 'ipc' and matches this class's ipc context."
+    },
+    {
+      "path": "hbase-hadoop2-compat/src/main/java/org/apache/hadoop/hbase/master/MetricsMasterSourceImpl.java",
+      "role": "preventive",
+      "evidence": "The same 'setContext(metricsContext)' removal, but for the Master source. The report pastes RegionServer and IPC output only and never mentions the Master, so this file carries the same latent defect without having produced the reported failure."
+    }
+  ],
+  "symptom_location": {
+    "file": null,
+    "function": null,
+    "determinable": false
+  },
+  "log_location": {
+    "file": null,
+    "function": null,
+    "determinable": false
+  },
+  "relation": "state-producer",
+  "rationale": "Each gold file built its metrics record and set the context a second time, so the record carried a duplicate tag before anything serialized it; the four diffs are the same one-call removal. The duplicate is only visible once the record is rendered to JSON by the /jmx endpoint, which is not in this repository and is not in the gold set, so the symptom site cannot be named from the packet. Three of the four sources map onto the three JSON blocks the reporter pastes; the Master source does not appear in the report at all.",
+  "confidence": "medium",
+  "notes": "The other half of the duplication, the context being set once already by the shared base source, is not visible in the packet, and the base class is not in the gold set. The fix chose to drop the redundant call at the four leaves rather than at the base, so a reader of the gold set alone cannot see why one removal is enough. The reported evidence is JSON output, not a log line or a trace."
+}

@@ -1,0 +1,33 @@
+{
+  "id": "hbase:HBASE-10330",
+  "project": "hbase",
+  "issue_key": "HBASE-10330",
+  "annotator": "claude-opus-5",
+  "pass": 1,
+  "file_roles": [
+    {
+      "path": "hbase-server/src/main/java/org/apache/hadoop/hbase/mapred/TableRecordReaderImpl.java",
+      "role": "causal",
+      "evidence": "close() held only 'this.scanner.close();' and gains 'this.htable.close();' in a try block. The reporter names this method, 'TableRecordReaderImpl.close() only closes the scanner, not the table', so the omission is the defect itself."
+    },
+    {
+      "path": "hbase-server/src/main/java/org/apache/hadoop/hbase/mapreduce/TableRecordReaderImpl.java",
+      "role": "causal",
+      "evidence": "The identical omission and the identical repair in the other API package: 'this.scanner.close();' alone becomes scanner plus 'this.htable.close();' with a warn on IOException. Both copies of the class leaked independently."
+    }
+  ],
+  "symptom_location": {
+    "file": null,
+    "function": null,
+    "determinable": false
+  },
+  "log_location": {
+    "file": null,
+    "function": null,
+    "determinable": false
+  },
+  "relation": "unclear",
+  "rationale": "The report describes a mechanism and no observed failure: the table is never closed, so 'the HTable's HConnection's reference count is never decreased which leads to leaking HConnections'. There is no stack trace, no error and no log, and nothing states where the leak became visible, so neither a symptom site nor its relation to the fix can be placed. Both gold files carry the same missing close in the same method.",
+  "confidence": "medium",
+  "notes": "The report writes the class as 'TableInputFormat/TableRecordReaderImpl' without a package, and the class exists twice, once under mapred and once under mapreduce. Only one of them produced the reporter's leak; the other carries identical defective code and is fixed alongside. Both are labelled causal because the defect is genuinely present in each, but a second rater could reasonably call the unexercised one preventive. Good candidate for the agreement check. The reporter also writes 'TableOutputFormat might have a similar bug', and the fix does not touch it."
+}

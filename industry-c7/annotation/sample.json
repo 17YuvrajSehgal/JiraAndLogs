@@ -1,0 +1,1517 @@
+{
+ "seed": 20261102,
+ "n": 151,
+ "note": "agent outcome was used to balance the core stratum and is deliberately NOT stored here, so it cannot leak to the annotator",
+ "instances": [
+  {
+   "id": "kafka:KAFKA-6624",
+   "project": "kafka",
+   "issue_key": "KAFKA-6624",
+   "stratum": "core",
+   "n_gold": 1,
+   "n_universe": 1494,
+   "fix_sha": "1ea07b993d75ed68f4c04282eb177bf84156e0b2",
+   "snapshot_sha": "724032bd06ae6928595ad3d5d21ead7f9e834d34"
+  },
+  {
+   "id": "mongodb:SERVER-35393",
+   "project": "mongodb",
+   "issue_key": "SERVER-35393",
+   "stratum": "core",
+   "n_gold": 1,
+   "n_universe": 11581,
+   "fix_sha": "99ac27f83e67aca7e9244c3aadb3026492e45da3",
+   "snapshot_sha": "a50d12c4eb502e9ff5a2902c0f31e09f66e5dcf9"
+  },
+  {
+   "id": "mariadb:MDEV-18587",
+   "project": "mariadb",
+   "issue_key": "MDEV-18587",
+   "stratum": "core",
+   "n_gold": 1,
+   "n_universe": 3369,
+   "fix_sha": "4baab8697ac398e461d2a07988d9ad1739ce9019",
+   "snapshot_sha": "75c6fce5a35a6ce38882e8228dd1a2b6020831b6"
+  },
+  {
+   "id": "mongodb:SERVER-14738",
+   "project": "mongodb",
+   "issue_key": "SERVER-14738",
+   "stratum": "core",
+   "n_gold": 8,
+   "n_universe": 7707,
+   "fix_sha": "1f00ffcd22e671f5adeece53c68b5e462ba01ec0",
+   "snapshot_sha": "f76e04154f73286fc1ce4a023116faa4170bcfdf"
+  },
+  {
+   "id": "qt:QTBUG-83456",
+   "project": "qt",
+   "issue_key": "QTBUG-83456",
+   "stratum": "core",
+   "n_gold": 1,
+   "n_universe": 6971,
+   "fix_sha": "9ba09e26d7fc667355d48a7d26361be6fb20612d",
+   "snapshot_sha": "e7eff98401723ff7e4e8d962405f9af1b53b9759"
+  },
+  {
+   "id": "mariadb:MDEV-22734",
+   "project": "mariadb",
+   "issue_key": "MDEV-22734",
+   "stratum": "core",
+   "n_gold": 1,
+   "n_universe": 3263,
+   "fix_sha": "86c50a255a8319a4c89399b9c2d4f416b4973815",
+   "snapshot_sha": "57022dfb25b931a329905364d7056ac61950d300"
+  },
+  {
+   "id": "kafka:KAFKA-5449",
+   "project": "kafka",
+   "issue_key": "KAFKA-5449",
+   "stratum": "core",
+   "n_gold": 5,
+   "n_universe": 1218,
+   "fix_sha": "54a3718a900a5286baf2193713ea8d58ca2c08f6",
+   "snapshot_sha": "6cc29e32169e069a75304803feac67591a57b6a5"
+  },
+  {
+   "id": "mariadb:MDEV-13972",
+   "project": "mariadb",
+   "issue_key": "MDEV-13972",
+   "stratum": "core",
+   "n_gold": 1,
+   "n_universe": 3114,
+   "fix_sha": "c2509a1588ee1dc7351b67b2f9149003540015c4",
+   "snapshot_sha": "e30b6a983fe135dd1af0c79c81dbdb5b14b881c8"
+  },
+  {
+   "id": "mariadb:MDEV-13333",
+   "project": "mariadb",
+   "issue_key": "MDEV-13333",
+   "stratum": "core",
+   "n_gold": 2,
+   "n_universe": 3625,
+   "fix_sha": "3b37edee1a5121e9523fa8a7f483185f402905e2",
+   "snapshot_sha": "998b1c0e75a9512bfec308da19096cbced4150ad"
+  },
+  {
+   "id": "kafka:KAFKA-5173",
+   "project": "kafka",
+   "issue_key": "KAFKA-5173",
+   "stratum": "core",
+   "n_gold": 1,
+   "n_universe": 1149,
+   "fix_sha": "0bede30ada6d5719950ad35a69c586f0ba9c4f7e",
+   "snapshot_sha": "a420d20c0e3da2c9637820f7d1a344706fd835fa"
+  },
+  {
+   "id": "kafka:KAFKA-6052",
+   "project": "kafka",
+   "issue_key": "KAFKA-6052",
+   "stratum": "core",
+   "n_gold": 2,
+   "n_universe": 1497,
+   "fix_sha": "3f611044cc55c6633cb64fd86a3ac6274952fa72",
+   "snapshot_sha": "f66aebff363c768afb50b10f31458c2f447b0abc"
+  },
+  {
+   "id": "mariadb:MDEV-16980",
+   "project": "mariadb",
+   "issue_key": "MDEV-16980",
+   "stratum": "core",
+   "n_gold": 2,
+   "n_universe": 3323,
+   "fix_sha": "7d4beb7286d53be07ff552de9d37ea90c2762651",
+   "snapshot_sha": "859536176897305f2e2f089eeba77871aefdb79c"
+  },
+  {
+   "id": "mariadb:MDEV-12609",
+   "project": "mariadb",
+   "issue_key": "MDEV-12609",
+   "stratum": "core",
+   "n_gold": 2,
+   "n_universe": 4005,
+   "fix_sha": "d03abc71a490f4ee6d173d07c95a2adb9c60457c",
+   "snapshot_sha": "d8d39721dfef6b965d782e6099493c36150585cf"
+  },
+  {
+   "id": "mongodb:SERVER-14268",
+   "project": "mongodb",
+   "issue_key": "SERVER-14268",
+   "stratum": "core",
+   "n_gold": 9,
+   "n_universe": 7705,
+   "fix_sha": "dac9ac4a46348a67296b8b3ff11c58e522bd1b0b",
+   "snapshot_sha": "6d66597265e158ec16dd31f823f0d474194519e7"
+  },
+  {
+   "id": "qt:QTBUG-90698",
+   "project": "qt",
+   "issue_key": "QTBUG-90698",
+   "stratum": "core",
+   "n_gold": 1,
+   "n_universe": 5876,
+   "fix_sha": "0ffdbb21261eee3a9ec1cd541478ee883a12065c",
+   "snapshot_sha": "4e5d0cf5e51bede27016ae52fee9199547d0c658"
+  },
+  {
+   "id": "mongodb:SERVER-45007",
+   "project": "mongodb",
+   "issue_key": "SERVER-45007",
+   "stratum": "core",
+   "n_gold": 3,
+   "n_universe": 14754,
+   "fix_sha": "25ffb326e1ecd57db0e1c309d0bcf6b8fd2e072c",
+   "snapshot_sha": "1a8fea4b5a2fe7ec14d88d1ce4e7c8a1eaaa03cd"
+  },
+  {
+   "id": "mariadb:MDEV-11780",
+   "project": "mariadb",
+   "issue_key": "MDEV-11780",
+   "stratum": "core",
+   "n_gold": 2,
+   "n_universe": 3348,
+   "fix_sha": "ae91690d893c13e86fd9f84e0c37fd9640bca257",
+   "snapshot_sha": "836804499704396aacff58d415b63741b22ff2f6"
+  },
+  {
+   "id": "mariadb:MDEV-18272",
+   "project": "mariadb",
+   "issue_key": "MDEV-18272",
+   "stratum": "core",
+   "n_gold": 2,
+   "n_universe": 3118,
+   "fix_sha": "8024f8c6b86b204c3475e562587640cf2b141683",
+   "snapshot_sha": "cb11b3fbe9d4dde776cb8f2c0d6f83a569655efc"
+  },
+  {
+   "id": "mongodb:SERVER-26389",
+   "project": "mongodb",
+   "issue_key": "SERVER-26389",
+   "stratum": "core",
+   "n_gold": 2,
+   "n_universe": 10289,
+   "fix_sha": "cb9e5e2f0a8ea4c47747e9eeac1aa4524092ea57",
+   "snapshot_sha": "637ddd4b1c740c54f658be5583336c029fd5de87"
+  },
+  {
+   "id": "qt:QTBUG-96659",
+   "project": "qt",
+   "issue_key": "QTBUG-96659",
+   "stratum": "core",
+   "n_gold": 1,
+   "n_universe": 5886,
+   "fix_sha": "8cc6c7cd6eb88b197defc3e4f73d2f5706455bd4",
+   "snapshot_sha": "67b2c849923d16182529fb55c4c805ded2d01615"
+  },
+  {
+   "id": "mariadb:MDEV-17849",
+   "project": "mariadb",
+   "issue_key": "MDEV-17849",
+   "stratum": "core",
+   "n_gold": 7,
+   "n_universe": 3685,
+   "fix_sha": "e82e216e374739d7cab022a86b48498aa9c33ad5",
+   "snapshot_sha": "eb6364619ff807645230479bf7d2eb87d1a4edb4"
+  },
+  {
+   "id": "mariadb:MDEV-17354",
+   "project": "mariadb",
+   "issue_key": "MDEV-17354",
+   "stratum": "core",
+   "n_gold": 1,
+   "n_universe": 3682,
+   "fix_sha": "6d29c8527b4215cb516f709013cc6dfc6475da7d",
+   "snapshot_sha": "81a5b6ccd531e802bbb0f2034189095d2196de8b"
+  },
+  {
+   "id": "mongodb:SERVER-60958",
+   "project": "mongodb",
+   "issue_key": "SERVER-60958",
+   "stratum": "core",
+   "n_gold": 1,
+   "n_universe": 16556,
+   "fix_sha": "dc5de6843f2e9c5ef2f351bbd85d61251f4b7848",
+   "snapshot_sha": "0bd0ddfb1d6875c3ce4390d30e0566b107256f29"
+  },
+  {
+   "id": "kafka:KAFKA-10564",
+   "project": "kafka",
+   "issue_key": "KAFKA-10564",
+   "stratum": "core",
+   "n_gold": 1,
+   "n_universe": 2027,
+   "fix_sha": "250c71b532605172693ada6ac93a68909fe0b2b6",
+   "snapshot_sha": "65c29a9dec3c8b14775344c2edf5c929ec5d1694"
+  },
+  {
+   "id": "mariadb:MDEV-20831",
+   "project": "mariadb",
+   "issue_key": "MDEV-20831",
+   "stratum": "core",
+   "n_gold": 4,
+   "n_universe": 3286,
+   "fix_sha": "22b645ef5292387871b12b26fd550eed6e57aa2d",
+   "snapshot_sha": "8ec978142b1572f54ce8b1afc71a68e924c089f4"
+  },
+  {
+   "id": "mariadb:MDEV-18859",
+   "project": "mariadb",
+   "issue_key": "MDEV-18859",
+   "stratum": "core",
+   "n_gold": 1,
+   "n_universe": 3370,
+   "fix_sha": "7e3e2d060b35c6c4f1cec05da79f571108af58d6",
+   "snapshot_sha": "04055060b6fa29e72a7e851486085bd59e708614"
+  },
+  {
+   "id": "mongodb:SERVER-21636",
+   "project": "mongodb",
+   "issue_key": "SERVER-21636",
+   "stratum": "core",
+   "n_gold": 1,
+   "n_universe": 8529,
+   "fix_sha": "160de93cc00ad5162dc8a344a4c067ff75bf577e",
+   "snapshot_sha": "7f357a6865619ee32ab4f33240084f6b7c47f3ba"
+  },
+  {
+   "id": "qt:QTBUG-82142",
+   "project": "qt",
+   "issue_key": "QTBUG-82142",
+   "stratum": "core",
+   "n_gold": 1,
+   "n_universe": 6967,
+   "fix_sha": "2a10a6f6d42353f9997e223d38cf167d427b1c24",
+   "snapshot_sha": "bace97aa5ba382191ccc616b33bbb11fe2b72f2b"
+  },
+  {
+   "id": "kafka:KAFKA-4848",
+   "project": "kafka",
+   "issue_key": "KAFKA-4848",
+   "stratum": "core",
+   "n_gold": 2,
+   "n_universe": 1057,
+   "fix_sha": "197a5d5a6d160e9f3f1642caf85bad968a35f109",
+   "snapshot_sha": "5a2fcdd6d480e9f003cc49a59d5952ba4c515a71"
+  },
+  {
+   "id": "mariadb:MDEV-14730",
+   "project": "mariadb",
+   "issue_key": "MDEV-14730",
+   "stratum": "core",
+   "n_gold": 2,
+   "n_universe": 3327,
+   "fix_sha": "e6c5eb5c583b2789861b9042fe584608d6450837",
+   "snapshot_sha": "7e39f7004415517cbbd51c3cd53049d5e5cd5c52"
+  },
+  {
+   "id": "kafka:KAFKA-12185",
+   "project": "kafka",
+   "issue_key": "KAFKA-12185",
+   "stratum": "core",
+   "n_gold": 1,
+   "n_universe": 2096,
+   "fix_sha": "92e72f7bf96841d7991f1d71f440c2da06dd89cf",
+   "snapshot_sha": "24e7e81524d60e933d05298ff2fa47c699e6ac35"
+  },
+  {
+   "id": "kafka:KAFKA-6051",
+   "project": "kafka",
+   "issue_key": "KAFKA-6051",
+   "stratum": "core",
+   "n_gold": 1,
+   "n_universe": 1393,
+   "fix_sha": "5c1a85caa074267fd84a2fed3662cbe1af93738d",
+   "snapshot_sha": "b71ee043f8959ee0d4699071ba8fc1e2c5675842"
+  },
+  {
+   "id": "qt:QTBUG-82611",
+   "project": "qt",
+   "issue_key": "QTBUG-82611",
+   "stratum": "core",
+   "n_gold": 1,
+   "n_universe": 6900,
+   "fix_sha": "d1882c79f2e2366a2a77e64ef9d7a5a918a776a8",
+   "snapshot_sha": "4f7cc722985fb52ea67f56dfb766bb274410ba2d"
+  },
+  {
+   "id": "mongodb:SERVER-35244",
+   "project": "mongodb",
+   "issue_key": "SERVER-35244",
+   "stratum": "core",
+   "n_gold": 1,
+   "n_universe": 11372,
+   "fix_sha": "d6e7f0c811acabd3405871d0e09f3d2d84fe9c1c",
+   "snapshot_sha": "2c50fbc340bb7ef787cd213ae95cabb6b8f8e56f"
+  },
+  {
+   "id": "mariadb:MDEV-20821",
+   "project": "mariadb",
+   "issue_key": "MDEV-20821",
+   "stratum": "core",
+   "n_gold": 1,
+   "n_universe": 3263,
+   "fix_sha": "5cd21ac202256e1dea55d05875c1928a3ec9c433",
+   "snapshot_sha": "7c0e4748ac51a02870474d842b3e5e58c343add2"
+  },
+  {
+   "id": "mariadb:MDEV-11817",
+   "project": "mariadb",
+   "issue_key": "MDEV-11817",
+   "stratum": "core",
+   "n_gold": 1,
+   "n_universe": 3316,
+   "fix_sha": "aa9db4c162e9fa7560abb1bf8012233f30980e04",
+   "snapshot_sha": "17cc6198479d83bd4f88e9fff197b0b342dca5d9"
+  },
+  {
+   "id": "mariadb:MDEV-18163",
+   "project": "mariadb",
+   "issue_key": "MDEV-18163",
+   "stratum": "core",
+   "n_gold": 1,
+   "n_universe": 3694,
+   "fix_sha": "5933081d8b05893b8987c0c89237b4764a2f22e0",
+   "snapshot_sha": "b3a9fbdbab5d29408a637d9d2422a75876f76756"
+  },
+  {
+   "id": "kafka:KAFKA-9645",
+   "project": "kafka",
+   "issue_key": "KAFKA-9645",
+   "stratum": "core",
+   "n_gold": 2,
+   "n_universe": 1850,
+   "fix_sha": "fe0b704285ebc916ce5080a5248d91b4dc3c60e0",
+   "snapshot_sha": "27755723c23d475d915befe58f4c63966e3b02d1"
+  },
+  {
+   "id": "qt:QTBUG-91401",
+   "project": "qt",
+   "issue_key": "QTBUG-91401",
+   "stratum": "core",
+   "n_gold": 2,
+   "n_universe": 5896,
+   "fix_sha": "63152571844a15adfa76db5f8a9e7a505da75412",
+   "snapshot_sha": "b7e08599cc784777d06d34e49e90c2d408ab629d"
+  },
+  {
+   "id": "qt:QTBUG-84924",
+   "project": "qt",
+   "issue_key": "QTBUG-84924",
+   "stratum": "core",
+   "n_gold": 1,
+   "n_universe": 5963,
+   "fix_sha": "a2cec17407b83aed23b01065f4e10d32008552e1",
+   "snapshot_sha": "2df41e2c4876cb692bf575d9d0d1cc798e09237c"
+  },
+  {
+   "id": "qt:QTBUG-83207",
+   "project": "qt",
+   "issue_key": "QTBUG-83207",
+   "stratum": "core",
+   "n_gold": 3,
+   "n_universe": 6986,
+   "fix_sha": "276fa8383a7535765be7182883ef4aade17ce013",
+   "snapshot_sha": "615204e0762c2e12077e8c8dd3c6d29b9648f163"
+  },
+  {
+   "id": "mariadb:MDEV-15408",
+   "project": "mariadb",
+   "issue_key": "MDEV-15408",
+   "stratum": "core",
+   "n_gold": 2,
+   "n_universe": 3331,
+   "fix_sha": "3d649c6e37de47336860bee6d23804d62a0746cb",
+   "snapshot_sha": "3d56adbfac394b2b3ffd22a89fe7c2978ed9a505"
+  },
+  {
+   "id": "mariadb:MDEV-22867",
+   "project": "mariadb",
+   "issue_key": "MDEV-22867",
+   "stratum": "core",
+   "n_gold": 4,
+   "n_universe": 3311,
+   "fix_sha": "431200090e404b1fd618f1b6bda1afd830e79ce0",
+   "snapshot_sha": "d7d80689b37f02129a32f5dc93729d539aca2a39"
+  },
+  {
+   "id": "qt:QTBUG-80945",
+   "project": "qt",
+   "issue_key": "QTBUG-80945",
+   "stratum": "core",
+   "n_gold": 1,
+   "n_universe": 6981,
+   "fix_sha": "2ad3348031d8a622374920eac5bdd8fb9ecefcd7",
+   "snapshot_sha": "e0b9beb63dead017b6849ebcaa91c04a57f955c6"
+  },
+  {
+   "id": "mongodb:SERVER-15763",
+   "project": "mongodb",
+   "issue_key": "SERVER-15763",
+   "stratum": "core",
+   "n_gold": 2,
+   "n_universe": 8767,
+   "fix_sha": "ede05b3fc832e015241702fa19a92d63f2f00481",
+   "snapshot_sha": "11ad1edebfafea650ff00912bdf7a3a48dede144"
+  },
+  {
+   "id": "qt:QTBUG-68636",
+   "project": "qt",
+   "issue_key": "QTBUG-68636",
+   "stratum": "core",
+   "n_gold": 2,
+   "n_universe": 5901,
+   "fix_sha": "493a85a9e468874471057910a61e7c54a45eee83",
+   "snapshot_sha": "9c05fdac81d5fe0d3007ba55cfddf4eb99183153"
+  },
+  {
+   "id": "kafka:KAFKA-6250",
+   "project": "kafka",
+   "issue_key": "KAFKA-6250",
+   "stratum": "core",
+   "n_gold": 1,
+   "n_universe": 1435,
+   "fix_sha": "936e81afcb0488e65a3dbca688c768b0100fe04a",
+   "snapshot_sha": "b8aa1761c39bd320950104fa2ddf4fbd7163fc85"
+  },
+  {
+   "id": "mongodb:SERVER-62000",
+   "project": "mongodb",
+   "issue_key": "SERVER-62000",
+   "stratum": "core",
+   "n_gold": 2,
+   "n_universe": 16633,
+   "fix_sha": "5e5230ee102f10460ff12f3f70a23c1cccc34bef",
+   "snapshot_sha": "eddd659580fc123251a0bb0430bf10faf1732f2d"
+  },
+  {
+   "id": "kafka:KAFKA-5140",
+   "project": "kafka",
+   "issue_key": "KAFKA-5140",
+   "stratum": "core",
+   "n_gold": 2,
+   "n_universe": 1394,
+   "fix_sha": "d3f24798f92a6e4d6038d28b63daf3ac9d14fcbf",
+   "snapshot_sha": "a3c4ab24278d8d5dfc662bc276ceba8ec6fe0a90"
+  },
+  {
+   "id": "kafka:KAFKA-4893",
+   "project": "kafka",
+   "issue_key": "KAFKA-4893",
+   "stratum": "core",
+   "n_gold": 2,
+   "n_universe": 1671,
+   "fix_sha": "e6563aab722b35c4984b77e9eee42a1904cd1ea6",
+   "snapshot_sha": "055c9c7bd6780436d201f5101df464814ba940e2"
+  },
+  {
+   "id": "mariadb:MDEV-12600",
+   "project": "mariadb",
+   "issue_key": "MDEV-12600",
+   "stratum": "core",
+   "n_gold": 26,
+   "n_universe": 3458,
+   "fix_sha": "112b21da37dad0fbb28bc65f9ab5a3ba6c0c2186",
+   "snapshot_sha": "6b6987154a23a8eba72fd58cbff915ae6d17189f"
+  },
+  {
+   "id": "kafka:KAFKA-8803",
+   "project": "kafka",
+   "issue_key": "KAFKA-8803",
+   "stratum": "core",
+   "n_gold": 1,
+   "n_universe": 1863,
+   "fix_sha": "6a88d32b9fe3cb320088dec72fce30992b89ef28",
+   "snapshot_sha": "97156256c733c89cdebac7bac35a17547e4cf28d"
+  },
+  {
+   "id": "mariadb:MDEV-12602",
+   "project": "mariadb",
+   "issue_key": "MDEV-12602",
+   "stratum": "core",
+   "n_gold": 13,
+   "n_universe": 3450,
+   "fix_sha": "4b24467ff37d6db82500e736e832d0a53842ac9b",
+   "snapshot_sha": "f740d23ce6574bf57449aa48b22d6345f35ad2c0"
+  },
+  {
+   "id": "qt:QTBUG-96464",
+   "project": "qt",
+   "issue_key": "QTBUG-96464",
+   "stratum": "core",
+   "n_gold": 1,
+   "n_universe": 130,
+   "fix_sha": "430ab36bb48ec6c16bd7a42baa82a124ae0d02e9",
+   "snapshot_sha": "8bedacb8d3de8c6cee1d016b2ba8f2fa1bf29ebd"
+  },
+  {
+   "id": "mongodb:SERVER-15512",
+   "project": "mongodb",
+   "issue_key": "SERVER-15512",
+   "stratum": "core",
+   "n_gold": 1,
+   "n_universe": 8739,
+   "fix_sha": "8f349cc6f6c3904aeaede2d0779a476b8c6df448",
+   "snapshot_sha": "cecd33c23d3a47b936aa1d50ecfe9b02abea8a31"
+  },
+  {
+   "id": "mariadb:MDEV-15812",
+   "project": "mariadb",
+   "issue_key": "MDEV-15812",
+   "stratum": "core",
+   "n_gold": 1,
+   "n_universe": 3323,
+   "fix_sha": "0bfd45f63419c45b68448cbd210a6e73e5c1ab34",
+   "snapshot_sha": "529c1a3b6c36a7c1c9b8dae1feeb752a905fedbe"
+  },
+  {
+   "id": "mariadb:MDEV-21063",
+   "project": "mariadb",
+   "issue_key": "MDEV-21063",
+   "stratum": "core",
+   "n_gold": 1,
+   "n_universe": 3296,
+   "fix_sha": "20b474be5b75929727c693f91448f12257d1b6d4",
+   "snapshot_sha": "251c6e1726971376a65315adc5a8e74bea62ee05"
+  },
+  {
+   "id": "mongodb:SERVER-24739",
+   "project": "mongodb",
+   "issue_key": "SERVER-24739",
+   "stratum": "core",
+   "n_gold": 3,
+   "n_universe": 10463,
+   "fix_sha": "df8ee2e1ffcf24ff1a871ddd0ca1a68d778c77bf",
+   "snapshot_sha": "159c34fe121cc472d57ccbeb70abb04f02e14208"
+  },
+  {
+   "id": "kafka:KAFKA-9743",
+   "project": "kafka",
+   "issue_key": "KAFKA-9743",
+   "stratum": "core",
+   "n_gold": 1,
+   "n_universe": 1865,
+   "fix_sha": "cc7061410567be3e5f2aae199b67e943409fd215",
+   "snapshot_sha": "99eb0d10067a95cbb85ba6dd02ad9a8e6a8f1791"
+  },
+  {
+   "id": "mariadb:MDEV-11553",
+   "project": "mariadb",
+   "issue_key": "MDEV-11553",
+   "stratum": "core",
+   "n_gold": 10,
+   "n_universe": 3530,
+   "fix_sha": "80b9ce359312c1520623531bf173ee048317fee3",
+   "snapshot_sha": "1320ad5b9253256afe98e948d25ed0a423a1e6da"
+  },
+  {
+   "id": "mongodb:SERVER-42061",
+   "project": "mongodb",
+   "issue_key": "SERVER-42061",
+   "stratum": "core",
+   "n_gold": 1,
+   "n_universe": 13911,
+   "fix_sha": "7eab0b598578261829a7adce6330ae7eff2894a1",
+   "snapshot_sha": "a3244d8ac0ae530e2394248e72aadb27241adba3"
+  },
+  {
+   "id": "mariadb:MDEV-17725",
+   "project": "mariadb",
+   "issue_key": "MDEV-17725",
+   "stratum": "core",
+   "n_gold": 1,
+   "n_universe": 3686,
+   "fix_sha": "cac14b92252b3e7bcbebb8090cdeb2ac47143d1d",
+   "snapshot_sha": "2c734c980ef0292e00fc26492f17eb412907688a"
+  },
+  {
+   "id": "qt:QTBUG-81604",
+   "project": "qt",
+   "issue_key": "QTBUG-81604",
+   "stratum": "core",
+   "n_gold": 1,
+   "n_universe": 6983,
+   "fix_sha": "2d57dc2f33582833efff5ccc950ec863765eaedb",
+   "snapshot_sha": "0b28f1e3bae10def59e7fe8afac29ed5355a3f1e"
+  },
+  {
+   "id": "mongodb:SERVER-34125",
+   "project": "mongodb",
+   "issue_key": "SERVER-34125",
+   "stratum": "core",
+   "n_gold": 2,
+   "n_universe": 11319,
+   "fix_sha": "57909b80fd32677f556d816e6b33747c2ec53c95",
+   "snapshot_sha": "74a2c827946529a68c3ecb1cdcaa2aeb89fd275f"
+  },
+  {
+   "id": "qt:QTBUG-88565",
+   "project": "qt",
+   "issue_key": "QTBUG-88565",
+   "stratum": "core",
+   "n_gold": 1,
+   "n_universe": 128,
+   "fix_sha": "4db304cc9e3424e1e3ac8912a3546d63452682f0",
+   "snapshot_sha": "f2bc2a7c1970cc36199ddbe302e437eb9726aa62"
+  },
+  {
+   "id": "mongodb:SERVER-16031",
+   "project": "mongodb",
+   "issue_key": "SERVER-16031",
+   "stratum": "core",
+   "n_gold": 10,
+   "n_universe": 9099,
+   "fix_sha": "a29dc744d4259897a37a8cf71f531c7cd045041e",
+   "snapshot_sha": "7e2937e75e84c8cb27a22488a202cf4411977c6a"
+  },
+  {
+   "id": "qt:QTBUG-69155",
+   "project": "qt",
+   "issue_key": "QTBUG-69155",
+   "stratum": "core",
+   "n_gold": 2,
+   "n_universe": 5843,
+   "fix_sha": "a02ea26b469a32fbdcd9ce777dd46aeacc5cd82f",
+   "snapshot_sha": "1be271713ebcbca2f2cc1dd8734f2740165dab96"
+  },
+  {
+   "id": "mariadb:MDEV-13352",
+   "project": "mariadb",
+   "issue_key": "MDEV-13352",
+   "stratum": "core",
+   "n_gold": 1,
+   "n_universe": 3525,
+   "fix_sha": "17fc288b3054514f139b32c89c62905d374968e4",
+   "snapshot_sha": "bc75c57cfc18be64f167d91c431076f581b0382b"
+  },
+  {
+   "id": "mongodb:SERVER-26259",
+   "project": "mongodb",
+   "issue_key": "SERVER-26259",
+   "stratum": "core",
+   "n_gold": 1,
+   "n_universe": 10291,
+   "fix_sha": "dfb56737ec8506e60676b93332558cf155b767a7",
+   "snapshot_sha": "3665b6c94eca099458b212875560655d2b5371c9"
+  },
+  {
+   "id": "qt:QTBUG-84629",
+   "project": "qt",
+   "issue_key": "QTBUG-84629",
+   "stratum": "core",
+   "n_gold": 1,
+   "n_universe": 6149,
+   "fix_sha": "c2dcb7eaa19251123f9fa9546f4fe3508751b918",
+   "snapshot_sha": "7f927b373e4652af9777748c5e2bce4bddad8da3"
+  },
+  {
+   "id": "kafka:KAFKA-3123",
+   "project": "kafka",
+   "issue_key": "KAFKA-3123",
+   "stratum": "core",
+   "n_gold": 1,
+   "n_universe": 1220,
+   "fix_sha": "2d154420c54f725988a7ca696febe341f625049a",
+   "snapshot_sha": "7d1ef63bec459bcf05b46c1542488283db02a6e2"
+  },
+  {
+   "id": "mongodb:SERVER-12128",
+   "project": "mongodb",
+   "issue_key": "SERVER-12128",
+   "stratum": "core",
+   "n_gold": 1,
+   "n_universe": 6732,
+   "fix_sha": "565f050f414888a8ebcc3f3cc4fe6dc737e75271",
+   "snapshot_sha": "240d693c8f3e60acbe6722024cf2110a3660eea1"
+  },
+  {
+   "id": "mariadb:MDEV-13712",
+   "project": "mariadb",
+   "issue_key": "MDEV-13712",
+   "stratum": "core",
+   "n_gold": 1,
+   "n_universe": 3525,
+   "fix_sha": "6670b4e58ca1c97b6f35277fc2aef93ee7367b89",
+   "snapshot_sha": "203e2176fe046f9cdbf6bc46be03ef2c1a670f91"
+  },
+  {
+   "id": "mariadb:MDEV-17881",
+   "project": "mariadb",
+   "issue_key": "MDEV-17881",
+   "stratum": "core",
+   "n_gold": 1,
+   "n_universe": 3327,
+   "fix_sha": "e46a3aa42e1d391cef30881809d8b0d5416489c0",
+   "snapshot_sha": "0abd2766b1b82b03a259bae4df0d1c2dc5a5a69d"
+  },
+  {
+   "id": "mariadb:MDEV-15611",
+   "project": "mariadb",
+   "issue_key": "MDEV-15611",
+   "stratum": "core",
+   "n_gold": 2,
+   "n_universe": 3681,
+   "fix_sha": "efae12680e7a245a6bdc919a67c2ec17ed6ddfda",
+   "snapshot_sha": "66c14d3a8d31e877ede75d23f96dc61a4aa12971"
+  },
+  {
+   "id": "qt:QTBUG-85529",
+   "project": "qt",
+   "issue_key": "QTBUG-85529",
+   "stratum": "core",
+   "n_gold": 1,
+   "n_universe": 5922,
+   "fix_sha": "73ea9f032864566cc019d286b2f210b78cd70a3d",
+   "snapshot_sha": "d49f19e66107f6f56271e32284ee952af598ff1b"
+  },
+  {
+   "id": "kafka:KAFKA-10063",
+   "project": "kafka",
+   "issue_key": "KAFKA-10063",
+   "stratum": "core",
+   "n_gold": 1,
+   "n_universe": 1889,
+   "fix_sha": "8d3d2742b39980e7c0c0ee0713a25dbb14abc148",
+   "snapshot_sha": "0fa95935dbe9b942f44088010a8fd8b742572ab1"
+  },
+  {
+   "id": "kafka:KAFKA-12851",
+   "project": "kafka",
+   "issue_key": "KAFKA-12851",
+   "stratum": "core",
+   "n_gold": 1,
+   "n_universe": 2340,
+   "fix_sha": "fd36e5a8b657b0858dbfef4ae9706bf714db4ca7",
+   "snapshot_sha": "fe0fe686e92d019ac2b5c8407ab2cbb55ae069e1"
+  },
+  {
+   "id": "mongodb:SERVER-17507",
+   "project": "mongodb",
+   "issue_key": "SERVER-17507",
+   "stratum": "core",
+   "n_gold": 1,
+   "n_universe": 6730,
+   "fix_sha": "cb126b88afd72a2bcfa225e21870f7eaa4fffc9d",
+   "snapshot_sha": "1755f3e99209c32d5e7bcc4aa18a58c24a69a8dc"
+  },
+  {
+   "id": "mongodb:SERVER-30467",
+   "project": "mongodb",
+   "issue_key": "SERVER-30467",
+   "stratum": "core",
+   "n_gold": 3,
+   "n_universe": 10935,
+   "fix_sha": "83e1ff54a1ef7fed5050e01ee9672f7dcf460e3e",
+   "snapshot_sha": "aef10829fc71cb41c54df5838e9e7e74d41d122b"
+  },
+  {
+   "id": "qt:QTBUG-89764",
+   "project": "qt",
+   "issue_key": "QTBUG-89764",
+   "stratum": "core",
+   "n_gold": 2,
+   "n_universe": 5847,
+   "fix_sha": "f0d1a50333f3945369077a48ba7f2bdf228276cc",
+   "snapshot_sha": "5f8efb259774040303f37d00b6307afd22857af2"
+  },
+  {
+   "id": "qt:QTBUG-96069",
+   "project": "qt",
+   "issue_key": "QTBUG-96069",
+   "stratum": "core",
+   "n_gold": 1,
+   "n_universe": 5873,
+   "fix_sha": "dfb4b7856a82a72934211d9a1a44626777570d30",
+   "snapshot_sha": "f3e26891061f26a42d009ec6395f82975019039d"
+  },
+  {
+   "id": "qt:QTBUG-85734",
+   "project": "qt",
+   "issue_key": "QTBUG-85734",
+   "stratum": "core",
+   "n_gold": 1,
+   "n_universe": 5967,
+   "fix_sha": "beb3916858dcf5fa2fe0d9d98013fa8190497826",
+   "snapshot_sha": "37649b0942748f668320d4a151d733d0d8d1dbd9"
+  },
+  {
+   "id": "qt:QTBUG-85683",
+   "project": "qt",
+   "issue_key": "QTBUG-85683",
+   "stratum": "core",
+   "n_gold": 1,
+   "n_universe": 5849,
+   "fix_sha": "29b2387587fe2ed2a73bdcbfa928acb755537284",
+   "snapshot_sha": "c262a698511519a57866b2c5fce386b0ec1e6905"
+  },
+  {
+   "id": "qt:QTBUG-88966",
+   "project": "qt",
+   "issue_key": "QTBUG-88966",
+   "stratum": "core",
+   "n_gold": 1,
+   "n_universe": 5844,
+   "fix_sha": "6012285e7dedb4364e2db087b7d5cbfc2973320a",
+   "snapshot_sha": "793dbd8ee67ee8ad62dcb9b2304645293eabe837"
+  },
+  {
+   "id": "mariadb:MDEV-21983",
+   "project": "mariadb",
+   "issue_key": "MDEV-21983",
+   "stratum": "core",
+   "n_gold": 6,
+   "n_universe": 3694,
+   "fix_sha": "6960e9ed24dbdab587730cdceab1f29bcdd6d52a",
+   "snapshot_sha": "9fd692aecacfc944fd3a6a58f4cae5a49eeb1cf0"
+  },
+  {
+   "id": "qt:QTBUG-84562",
+   "project": "qt",
+   "issue_key": "QTBUG-84562",
+   "stratum": "core",
+   "n_gold": 1,
+   "n_universe": 6149,
+   "fix_sha": "33e6e5fac3c86805b1b4e744462645cac8c8a044",
+   "snapshot_sha": "b99ade85b0b11ce63be50b3a6c2eff8bcc04349d"
+  },
+  {
+   "id": "qt:QTBUG-91061",
+   "project": "qt",
+   "issue_key": "QTBUG-91061",
+   "stratum": "core",
+   "n_gold": 4,
+   "n_universe": 5881,
+   "fix_sha": "92b15beb9aa09467583230a018c23114bb666a8e",
+   "snapshot_sha": "153ffff7d53933784a19acbb14b3d8cacdea2ece"
+  },
+  {
+   "id": "kafka:KAFKA-7112",
+   "project": "kafka",
+   "issue_key": "KAFKA-7112",
+   "stratum": "core",
+   "n_gold": 1,
+   "n_universe": 1497,
+   "fix_sha": "be0f10e1902961daa51b543f293f7038dc6e4344",
+   "snapshot_sha": "daa8082d6718d39584ed6d25863af48acec2cea6"
+  },
+  {
+   "id": "qt:QTBUG-80844",
+   "project": "qt",
+   "issue_key": "QTBUG-80844",
+   "stratum": "core",
+   "n_gold": 5,
+   "n_universe": 6981,
+   "fix_sha": "7ac4e55cb979dff890f1575e771e5f2def9e3131",
+   "snapshot_sha": "6c2052f9d77beff7c125848cf459025d1ca7716b"
+  },
+  {
+   "id": "mongodb:SERVER-23901",
+   "project": "mongodb",
+   "issue_key": "SERVER-23901",
+   "stratum": "core",
+   "n_gold": 1,
+   "n_universe": 10005,
+   "fix_sha": "d2ca3517188d7912768d3aed8b6eaeaec2ff4d02",
+   "snapshot_sha": "824e401068b6370d03d37c43e3304c9fda747063"
+  },
+  {
+   "id": "kafka:KAFKA-6981",
+   "project": "kafka",
+   "issue_key": "KAFKA-6981",
+   "stratum": "core",
+   "n_gold": 8,
+   "n_universe": 1589,
+   "fix_sha": "faa15b8b758ed4e3f93aaa4d49a941562bdc86bb",
+   "snapshot_sha": "ba0ebca7a516d4179b6327ddc60b0b49b1265347"
+  },
+  {
+   "id": "mongodb:SERVER-29255",
+   "project": "mongodb",
+   "issue_key": "SERVER-29255",
+   "stratum": "core",
+   "n_gold": 3,
+   "n_universe": 10596,
+   "fix_sha": "c5be5fa7124ab601144b03d80786dd5279066cb2",
+   "snapshot_sha": "622cda85e48e3610c85e780f75dc6d5a229d912a"
+  },
+  {
+   "id": "mariadb:MDEV-8638",
+   "project": "mariadb",
+   "issue_key": "MDEV-8638",
+   "stratum": "core",
+   "n_gold": 1,
+   "n_universe": 3990,
+   "fix_sha": "b449612907bd09bebf8d1280d80839cd16784fd3",
+   "snapshot_sha": "5fd80875909c88e624a79a528eaaf9418089a211"
+  },
+  {
+   "id": "mongodb:SERVER-50097",
+   "project": "mongodb",
+   "issue_key": "SERVER-50097",
+   "stratum": "core",
+   "n_gold": 1,
+   "n_universe": 15014,
+   "fix_sha": "9e4b6e5c2f9e266ed05ce7c913631f12548e4160",
+   "snapshot_sha": "ea7de0274b3e5f3e63079f9507498d4a0915106a"
+  },
+  {
+   "id": "mariadb:MDEV-21195",
+   "project": "mariadb",
+   "issue_key": "MDEV-21195",
+   "stratum": "core",
+   "n_gold": 3,
+   "n_universe": 3342,
+   "fix_sha": "b0fa30808622fe12d474a70af1838906e60b9897",
+   "snapshot_sha": "74deeaee342c901c92b91d12033771716a373d8e"
+  },
+  {
+   "id": "qt:QTBUG-96285",
+   "project": "qt",
+   "issue_key": "QTBUG-96285",
+   "stratum": "core",
+   "n_gold": 1,
+   "n_universe": 5886,
+   "fix_sha": "4e0082a9cacfdfd0c43e6105274bc0d41dd18801",
+   "snapshot_sha": "a2653331330340c4f44457c49005f4c7226b8316"
+  },
+  {
+   "id": "kafka:KAFKA-10432",
+   "project": "kafka",
+   "issue_key": "KAFKA-10432",
+   "stratum": "core",
+   "n_gold": 1,
+   "n_universe": 1959,
+   "fix_sha": "d2521855b8eb8a0dbb6f94cd9bb5093276fb7db2",
+   "snapshot_sha": "d7f3505a212a8e97b39b3baae5f347bd859c87e4"
+  },
+  {
+   "id": "mongodb:SERVER-22458",
+   "project": "mongodb",
+   "issue_key": "SERVER-22458",
+   "stratum": "core",
+   "n_gold": 1,
+   "n_universe": 8537,
+   "fix_sha": "e4474b03eaa11834f4f26be4b64d6f1f0184d3df",
+   "snapshot_sha": "c3d0eecc3cad249849734eae96096b8ad313ab04"
+  },
+  {
+   "id": "kafka:KAFKA-4558",
+   "project": "kafka",
+   "issue_key": "KAFKA-4558",
+   "stratum": "core",
+   "n_gold": 1,
+   "n_universe": 1048,
+   "fix_sha": "d0932b0286d8e69a704211aeaba9fa9503c0fb42",
+   "snapshot_sha": "88809b9b8eb7895f3756a39ee2ad7dffd0b4d516"
+  },
+  {
+   "id": "mariadb:MDEV-14684",
+   "project": "mariadb",
+   "issue_key": "MDEV-14684",
+   "stratum": "core",
+   "n_gold": 1,
+   "n_universe": 3328,
+   "fix_sha": "8ba06032aea45c9a7d587b60d3a783f265726bd7",
+   "snapshot_sha": "04bed58acf4a4b66e66eff1afb6086ea6093b0f0"
+  },
+  {
+   "id": "ambari:AMBARI-11867",
+   "project": "ambari",
+   "issue_key": "AMBARI-11867",
+   "stratum": "breadth",
+   "n_gold": 3,
+   "n_universe": 2719,
+   "fix_sha": "043e35a6b5bf970406b1d935edeb7ee06e4e9936",
+   "snapshot_sha": "dc25acbc953d0c6895e7fd6fee69618108fcbb8d"
+  },
+  {
+   "id": "ambari:AMBARI-9125",
+   "project": "ambari",
+   "issue_key": "AMBARI-9125",
+   "stratum": "breadth",
+   "n_gold": 2,
+   "n_universe": 2348,
+   "fix_sha": "b5c907032321d101be123b18906f7738bafed60d",
+   "snapshot_sha": "1a4d5aa6d0f1e59f0387ab7d3986964c15c45cdd"
+  },
+  {
+   "id": "beam:BEAM-6262",
+   "project": "beam",
+   "issue_key": "BEAM-6262",
+   "stratum": "breadth",
+   "n_gold": 1,
+   "n_universe": 2652,
+   "fix_sha": "72486020e5196313b3ce1103b502c198a0bab51a",
+   "snapshot_sha": "bed57479a876103468ee695a19335c35cbe0df4b"
+  },
+  {
+   "id": "beam:BEAM-3793",
+   "project": "beam",
+   "issue_key": "BEAM-3793",
+   "stratum": "breadth",
+   "n_gold": 1,
+   "n_universe": 1894,
+   "fix_sha": "952f571074c06076896fbb39ffadbed02119b427",
+   "snapshot_sha": "e8db6a81e9b03b5a0bbffc9117f3128ea23ff184"
+  },
+  {
+   "id": "camel:CAMEL-8748",
+   "project": "camel",
+   "issue_key": "CAMEL-8748",
+   "stratum": "breadth",
+   "n_gold": 2,
+   "n_universe": 4287,
+   "fix_sha": "08a5722f5cf70ca4cf5bd182426a4f1420e0ce41",
+   "snapshot_sha": "90e82c42c1895e070bb0ea4c13830b38fec461b7"
+  },
+  {
+   "id": "camel:CAMEL-9227",
+   "project": "camel",
+   "issue_key": "CAMEL-9227",
+   "stratum": "breadth",
+   "n_gold": 1,
+   "n_universe": 4363,
+   "fix_sha": "7c0377b9faefc6ac3ffbb7159619ded9cb1767ae",
+   "snapshot_sha": "d45296dcebe0a1e7705247fdfeeb5aafd1a1d420"
+  },
+  {
+   "id": "cassandra:CASSANDRA-10057",
+   "project": "cassandra",
+   "issue_key": "CASSANDRA-10057",
+   "stratum": "breadth",
+   "n_gold": 1,
+   "n_universe": 1309,
+   "fix_sha": "0a4ce4449f137a959b02fee14e1fdd427ccd520e",
+   "snapshot_sha": "c2b6dd4503dc8f11a98fbb2c732b21179997f894"
+  },
+  {
+   "id": "cassandra:CASSANDRA-16095",
+   "project": "cassandra",
+   "issue_key": "CASSANDRA-16095",
+   "stratum": "breadth",
+   "n_gold": 4,
+   "n_universe": 1998,
+   "fix_sha": "876ac8c6111697c8105899889bf794438110bc74",
+   "snapshot_sha": "7bdecd217606ca258cb77b8231d459b8b8f438f4"
+  },
+  {
+   "id": "derby:DERBY-2218",
+   "project": "derby",
+   "issue_key": "DERBY-2218",
+   "stratum": "breadth",
+   "n_gold": 1,
+   "n_universe": 1574,
+   "fix_sha": "a18352f764358f0ade98ba2673364182429876a5",
+   "snapshot_sha": "af4791122782cdba731b289e42555103ca1b681c"
+  },
+  {
+   "id": "derby:DERBY-4451",
+   "project": "derby",
+   "issue_key": "DERBY-4451",
+   "stratum": "breadth",
+   "n_gold": 3,
+   "n_universe": 1965,
+   "fix_sha": "47611b15f9599718c37fa63b0b94c86658357d52",
+   "snapshot_sha": "18373c4fcf14f0316cd37ce8a384ad919f3fd5a3"
+  },
+  {
+   "id": "drill:DRILL-4884",
+   "project": "drill",
+   "issue_key": "DRILL-4884",
+   "stratum": "breadth",
+   "n_gold": 1,
+   "n_universe": 1823,
+   "fix_sha": "1e6fa00cd4b0b1db41614749f6d12c03f0ca7990",
+   "snapshot_sha": "2081d76c9cfa33a796dba8a2676747edeccd9dfe"
+  },
+  {
+   "id": "drill:DRILL-6710",
+   "project": "drill",
+   "issue_key": "DRILL-6710",
+   "stratum": "breadth",
+   "n_gold": 9,
+   "n_universe": 2518,
+   "fix_sha": "fa0d78d16eaf35d30d95613913a5613b2a82280d",
+   "snapshot_sha": "cc75188d0ce70f102786f69aa070255dd406ff3c"
+  },
+  {
+   "id": "flink:FLINK-10693",
+   "project": "flink",
+   "issue_key": "FLINK-10693",
+   "stratum": "breadth",
+   "n_gold": 1,
+   "n_universe": 4668,
+   "fix_sha": "68df7f969c898bbc7ca348e917fd5fc40a123faf",
+   "snapshot_sha": "089a9fb98f72afe91ff7fd5205a04c568f45a4e5"
+  },
+  {
+   "id": "flink:FLINK-11136",
+   "project": "flink",
+   "issue_key": "FLINK-11136",
+   "stratum": "breadth",
+   "n_gold": 1,
+   "n_universe": 4662,
+   "fix_sha": "ed0aefa6775f655591b4c0fe46382446921b7155",
+   "snapshot_sha": "c8dc83c3a6b62d95dbd1b1197a2c874208b1e0b6"
+  },
+  {
+   "id": "geode:GEODE-8079",
+   "project": "geode",
+   "issue_key": "GEODE-8079",
+   "stratum": "breadth",
+   "n_gold": 2,
+   "n_universe": 4745,
+   "fix_sha": "78a4fb9bf1643aaf72c120b0f378ca8730e16719",
+   "snapshot_sha": "a4c8b9ed8bbea584f798164fa5308d236e9b6048"
+  },
+  {
+   "id": "geode:GEODE-440",
+   "project": "geode",
+   "issue_key": "GEODE-440",
+   "stratum": "breadth",
+   "n_gold": 1,
+   "n_universe": 3819,
+   "fix_sha": "f8935b3b81e3abc9a5e0a0a9d91f89a449aca251",
+   "snapshot_sha": "17d00616fdace860ee8ea485f21aebb3a7bc19d4"
+  },
+  {
+   "id": "groovy:GROOVY-8953",
+   "project": "groovy",
+   "issue_key": "GROOVY-8953",
+   "stratum": "breadth",
+   "n_gold": 1,
+   "n_universe": 1630,
+   "fix_sha": "179d193a5a5f7a58076f68ef737340f2e461fc7c",
+   "snapshot_sha": "5deb67296dff179871ba2af9f87ef39e35645461"
+  },
+  {
+   "id": "groovy:GROOVY-3685",
+   "project": "groovy",
+   "issue_key": "GROOVY-3685",
+   "stratum": "breadth",
+   "n_gold": 1,
+   "n_universe": 934,
+   "fix_sha": "40a62cf58768f0046dfc6ca542ce3f9ae80b13cb",
+   "snapshot_sha": "4122bfa140ba91e421e9605804c2353068b86d0f"
+  },
+  {
+   "id": "hadoop:HADOOP-13285",
+   "project": "hadoop",
+   "issue_key": "HADOOP-13285",
+   "stratum": "breadth",
+   "n_gold": 1,
+   "n_universe": 4690,
+   "fix_sha": "0761379fe45898c44c8f161834c298ef932e4d8c",
+   "snapshot_sha": "280069510b71d81a150b2b28d9fa987891d82774"
+  },
+  {
+   "id": "hadoop:HDFS-10457",
+   "project": "hadoop",
+   "issue_key": "HDFS-10457",
+   "stratum": "breadth",
+   "n_gold": 1,
+   "n_universe": 4909,
+   "fix_sha": "cc48251bfdef3d38ca5658da5a3624ef8941858d",
+   "snapshot_sha": "85422bb7c5d3e70a49f620ba1c8800e0ba4b64f2"
+  },
+  {
+   "id": "hbase:HBASE-10330",
+   "project": "hbase",
+   "issue_key": "HBASE-10330",
+   "stratum": "breadth",
+   "n_gold": 2,
+   "n_universe": 1337,
+   "fix_sha": "e04009c9894b1ace20759c5f97f30126f3129aa3",
+   "snapshot_sha": "bf827a0331fe3294a11b5f0257093110503c3efc"
+  },
+  {
+   "id": "hbase:HBASE-12102",
+   "project": "hbase",
+   "issue_key": "HBASE-12102",
+   "stratum": "breadth",
+   "n_gold": 4,
+   "n_universe": 1483,
+   "fix_sha": "cecc475d2f194eed67edf16cd84fbf9716b8d5c5",
+   "snapshot_sha": "d64ce3106378ad505389ab7704127c498f92be37"
+  },
+  {
+   "id": "hive:HIVE-2752",
+   "project": "hive",
+   "issue_key": "HIVE-2752",
+   "stratum": "breadth",
+   "n_gold": 1,
+   "n_universe": 2528,
+   "fix_sha": "839f9cd1c1fb913770bd541a92811f4a216a2c9f",
+   "snapshot_sha": "f4fc477e2aa5cb64e18d3929d61ac4f1e7b8cc5d"
+  },
+  {
+   "id": "hive:HIVE-2334",
+   "project": "hive",
+   "issue_key": "HIVE-2334",
+   "stratum": "breadth",
+   "n_gold": 1,
+   "n_universe": 1122,
+   "fix_sha": "53cf27b412535b5d7c95c760971280c6a68e63ff",
+   "snapshot_sha": "e31c71efec509a367816995f6f99559ec2a9919e"
+  },
+  {
+   "id": "ignite:IGNITE-13235",
+   "project": "ignite",
+   "issue_key": "IGNITE-13235",
+   "stratum": "breadth",
+   "n_gold": 1,
+   "n_universe": 6273,
+   "fix_sha": "aa4e8f7e097a93dd96c1d941eb47a7972c18537b",
+   "snapshot_sha": "9b8e9cc384ab92d9811e158344516c927ddcaebc"
+  },
+  {
+   "id": "ignite:IGNITE-5204",
+   "project": "ignite",
+   "issue_key": "IGNITE-5204",
+   "stratum": "breadth",
+   "n_gold": 6,
+   "n_universe": 3954,
+   "fix_sha": "0d6fb1ad73e8ed448dabe7c0cc631222835b52c4",
+   "snapshot_sha": "ea4420e6aad509c4ae58d6d0880918c98fd1959a"
+  },
+  {
+   "id": "impala:IMPALA-1351",
+   "project": "impala",
+   "issue_key": "IMPALA-1351",
+   "stratum": "breadth",
+   "n_gold": 3,
+   "n_universe": 798,
+   "fix_sha": "5845a02b6e285e00a9b9e3460469579a7b727469",
+   "snapshot_sha": "0752b9fa624d3588f3b15dbb5d1bc60d517412f8"
+  },
+  {
+   "id": "impala:IMPALA-1061",
+   "project": "impala",
+   "issue_key": "IMPALA-1061",
+   "stratum": "breadth",
+   "n_gold": 8,
+   "n_universe": 749,
+   "fix_sha": "003da0ec59db936fd869f7f28f728adedd87bfec",
+   "snapshot_sha": "f0fb28158b813856a31d4bb2671a38b7e1800741"
+  },
+  {
+   "id": "infinispan:ISPN-1010",
+   "project": "infinispan",
+   "issue_key": "ISPN-1010",
+   "stratum": "breadth",
+   "n_gold": 1,
+   "n_universe": 787,
+   "fix_sha": "4299a35c69c378f3eafc8cb00499a2e6f8779033",
+   "snapshot_sha": "63e63c7990ec57a84e2f5228ef91a7a204a5a198"
+  },
+  {
+   "id": "infinispan:ISPN-8568",
+   "project": "infinispan",
+   "issue_key": "ISPN-8568",
+   "stratum": "breadth",
+   "n_gold": 4,
+   "n_universe": 4031,
+   "fix_sha": "b042793b60891eb7d478bb14068930e92e21848f",
+   "snapshot_sha": "53a373370860b1ed4ea5abc706a81df2a06a0dba"
+  },
+  {
+   "id": "keycloak:KEYCLOAK-2362",
+   "project": "keycloak",
+   "issue_key": "KEYCLOAK-2362",
+   "stratum": "breadth",
+   "n_gold": 1,
+   "n_universe": 1907,
+   "fix_sha": "4f890e8f2e184ae3521b6f10e29123a49b33502a",
+   "snapshot_sha": "b93deddda3084b7b0ec7aa5e8b59c6555b79af9f"
+  },
+  {
+   "id": "keycloak:KEYCLOAK-9402",
+   "project": "keycloak",
+   "issue_key": "KEYCLOAK-9402",
+   "stratum": "breadth",
+   "n_gold": 1,
+   "n_universe": 3368,
+   "fix_sha": "2a82ed6eea1c5cc6e98912dce01148b0e54d1d04",
+   "snapshot_sha": "873c62bbef68b77f8c8fc5eee381dc01409b9152"
+  },
+  {
+   "id": "pdfbox:PDFBOX-5046",
+   "project": "pdfbox",
+   "issue_key": "PDFBOX-5046",
+   "stratum": "breadth",
+   "n_gold": 1,
+   "n_universe": 1140,
+   "fix_sha": "81b8d471144267e479722cb004e0617e7cda3e88",
+   "snapshot_sha": "62728d9b6010c18baa50d2735f9a602e1e0edcaa"
+  },
+  {
+   "id": "pdfbox:PDFBOX-2270",
+   "project": "pdfbox",
+   "issue_key": "PDFBOX-2270",
+   "stratum": "breadth",
+   "n_gold": 2,
+   "n_universe": 846,
+   "fix_sha": "cd00954622284fb38f6e10025b1de6674a05bb04",
+   "snapshot_sha": "0fc3d647787fb4402b57c95e086c06beea3dcdc5"
+  },
+  {
+   "id": "phoenix:PHOENIX-1551",
+   "project": "phoenix",
+   "issue_key": "PHOENIX-1551",
+   "stratum": "breadth",
+   "n_gold": 1,
+   "n_universe": 914,
+   "fix_sha": "ddcb591f3ed3aa8e9d4ab1f7eda62052638647bc",
+   "snapshot_sha": "71832b59ff8435067f9db3ac79f0a6360271fa75"
+  },
+  {
+   "id": "phoenix:PHOENIX-3308",
+   "project": "phoenix",
+   "issue_key": "PHOENIX-3308",
+   "stratum": "breadth",
+   "n_gold": 7,
+   "n_universe": 1330,
+   "fix_sha": "8174fc44b73679fbb292316dac69e774703166f6",
+   "snapshot_sha": "b4b7642363c6b9921212b9c4e7ec237dcc88f00e"
+  },
+  {
+   "id": "pig:PIG-5320",
+   "project": "pig",
+   "issue_key": "PIG-5320",
+   "stratum": "breadth",
+   "n_gold": 1,
+   "n_universe": 1260,
+   "fix_sha": "235e7c5294f5ddd2f664ee5671cbf262763d4853",
+   "snapshot_sha": "22a5d18ddf5f17161902398691c2ce56a388a8e1"
+  },
+  {
+   "id": "pig:PIG-1871",
+   "project": "pig",
+   "issue_key": "PIG-1871",
+   "stratum": "breadth",
+   "n_gold": 2,
+   "n_universe": 1051,
+   "fix_sha": "67afa4fc1a5465fb098596cd77b06b1aebbb528d",
+   "snapshot_sha": "c49c15eab688b5958d2d919695996c4861055007"
+  },
+  {
+   "id": "sakai:SAK-5477",
+   "project": "sakai",
+   "issue_key": "SAK-5477",
+   "stratum": "breadth",
+   "n_gold": 2,
+   "n_universe": 495,
+   "fix_sha": "dab7db82c33d6566194fb9dc1eb1b05dd2930b7f",
+   "snapshot_sha": "7fb2a82c9daf1cd7ed38b2c65871c49d02dce541"
+  },
+  {
+   "id": "sakai:SAK-5571",
+   "project": "sakai",
+   "issue_key": "SAK-5571",
+   "stratum": "breadth",
+   "n_gold": 2,
+   "n_universe": 520,
+   "fix_sha": "d49bc332ca90afd27c581a7bc9b049f0aa8c5e09",
+   "snapshot_sha": "e141fd1a2fea06bc0539bd1b1a93aeec28548765"
+  },
+  {
+   "id": "solr:SOLR-6706",
+   "project": "solr",
+   "issue_key": "SOLR-6706",
+   "stratum": "breadth",
+   "n_gold": 1,
+   "n_universe": 3175,
+   "fix_sha": "d32a68961bfa57d6853d2e5e2d160d9c6cc651b9",
+   "snapshot_sha": "ba0c5980fe3cfebc4f2768895ab993b678c8061b"
+  },
+  {
+   "id": "solr:SOLR-14247",
+   "project": "solr",
+   "issue_key": "SOLR-14247",
+   "stratum": "breadth",
+   "n_gold": 1,
+   "n_universe": 5661,
+   "fix_sha": "71b869381ef0090a6e96eccbc9924ebdb4f57306",
+   "snapshot_sha": "b21312f411bdfb069114846f31f45dcc6ec6ecb8"
+  },
+  {
+   "id": "spark:SPARK-13410",
+   "project": "spark",
+   "issue_key": "SPARK-13410",
+   "stratum": "breadth",
+   "n_gold": 1,
+   "n_universe": 1829,
+   "fix_sha": "0f90f4e6ac9e9ca694e3622b866f33d3fdf1a459",
+   "snapshot_sha": "0cbadf28c99721ba1ac22ac57beef9df998ea685"
+  },
+  {
+   "id": "spark:SPARK-32975",
+   "project": "spark",
+   "issue_key": "SPARK-32975",
+   "stratum": "breadth",
+   "n_gold": 2,
+   "n_universe": 3030,
+   "fix_sha": "497c80a1ad7fdd605b75c8a6601fce35c7449578",
+   "snapshot_sha": "dc3317fdf9c3fd718ef23c191fe00f730f341c79"
+  },
+  {
+   "id": "wildfly:WFLY-2582",
+   "project": "wildfly",
+   "issue_key": "WFLY-2582",
+   "stratum": "breadth",
+   "n_gold": 1,
+   "n_universe": 4928,
+   "fix_sha": "7454d230788b331f96cd7bc1d8769629357a34ad",
+   "snapshot_sha": "a1e3cf122f07c23d72d926b950e646fa0d7c38ad"
+  },
+  {
+   "id": "wildfly:WFLY-11010",
+   "project": "wildfly",
+   "issue_key": "WFLY-11010",
+   "stratum": "breadth",
+   "n_gold": 3,
+   "n_universe": 4030,
+   "fix_sha": "0d151a1a50f39c62fe76ab18275ed5d6f5555c67",
+   "snapshot_sha": "921f8b520d36adb2e2a571acdad42998858f96a6"
+  },
+  {
+   "id": "ambari:AMBARI-10949",
+   "project": "ambari",
+   "issue_key": "AMBARI-10949",
+   "stratum": "breadth",
+   "n_gold": 1,
+   "n_universe": 2675,
+   "fix_sha": "28a88d3f51d0ed70552d7008b28937f1483c8aa9",
+   "snapshot_sha": "aa477d93cb840dbe3876660a57d535ef9046ff82"
+  },
+  {
+   "id": "ambari:AMBARI-12280",
+   "project": "ambari",
+   "issue_key": "AMBARI-12280",
+   "stratum": "breadth",
+   "n_gold": 9,
+   "n_universe": 2726,
+   "fix_sha": "23cdd769ae1ef056b2afc770fea672ca4421f447",
+   "snapshot_sha": "6f2b5c2f9ca37ed5681f554da87c618c75ca9abe"
+  },
+  {
+   "id": "beam:BEAM-4066",
+   "project": "beam",
+   "issue_key": "BEAM-4066",
+   "stratum": "breadth",
+   "n_gold": 1,
+   "n_universe": 1960,
+   "fix_sha": "30261ce1d45f16e79d167b1115fb456dbbdc962e",
+   "snapshot_sha": "247a62ff1d4368f1e7c2ade6bed5dec71d8d2bcc"
+  },
+  {
+   "id": "beam:BEAM-9575",
+   "project": "beam",
+   "issue_key": "BEAM-9575",
+   "stratum": "breadth",
+   "n_gold": 1,
+   "n_universe": 3556,
+   "fix_sha": "a15dd3b57a24c3bd234379b0a39579fadf634db6",
+   "snapshot_sha": "cfe172f10701ebf61d355b16b0f423140ad859d3"
+  }
+ ]
+}

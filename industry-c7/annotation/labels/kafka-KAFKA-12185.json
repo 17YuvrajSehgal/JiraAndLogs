@@ -1,0 +1,28 @@
+{
+  "id": "kafka:KAFKA-12185",
+  "project": "kafka",
+  "issue_key": "KAFKA-12185",
+  "annotator": "claude-opus-5",
+  "pass": 1,
+  "file_roles": [
+    {
+      "path": "streams/src/main/java/org/apache/kafka/streams/processor/internals/Tasks.java",
+      "role": "causal",
+      "evidence": "The map was mutated while being streamed, 'activeTasksPerPartition.entrySet().stream().filter(...).forEach(e -> activeTasksPerPartition.remove(e.getKey()))'. The fix collects first and removes after, '.map(Map.Entry::getKey).collect(Collectors.toSet())' then 'toBeRemoved.forEach(activeTasksPerPartition::remove)'. The commit names the fault, 'fix ConcurrentModificationException in newly added Tasks container class'."
+    }
+  ],
+  "symptom_location": {
+    "file": null,
+    "function": null,
+    "determinable": false
+  },
+  "log_location": {
+    "file": null,
+    "function": null,
+    "determinable": false
+  },
+  "relation": "unclear",
+  "rationale": "The pasted trace contains no frame from any non-test source file. Its three lines are 'Assert.fail(Assert.java:89)', 'IntegrationTestUtils.startApplicationAndWaitUntilRunning(IntegrationTestUtils.java:892)' and 'StoreQueryIntegrationTest.shouldQueryAllStalePartitionStores(StoreQueryIntegrationTest.java:270)', and the message only reports the outcome, 'Application did not reach a RUNNING state for all streams instances'. So the evidence places the failure in the test harness, and nothing in the report connects it to the gold file or shows how a thread dying reached that state.",
+  "confidence": "medium",
+  "notes": "The role is clear from the diff alone, but the link between this defect and the reported flaky test rests entirely on the commit message; the report itself never mentions a ConcurrentModificationException. This is the strongest example so far of a report whose stack trace points only at test code, which the benchmark excludes from gold, so there is no path from the evidence to the answer."
+}

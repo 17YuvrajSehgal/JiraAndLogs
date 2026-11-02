@@ -1,0 +1,33 @@
+{
+  "id": "camel:CAMEL-8748",
+  "project": "camel",
+  "issue_key": "CAMEL-8748",
+  "annotator": "claude-opus-5",
+  "pass": 1,
+  "file_roles": [
+    {
+      "path": "components/camel-dozer/src/main/java/org/apache/camel/converter/dozer/DozerThreadContextClassLoader.java",
+      "role": "causal",
+      "evidence": "The class had only 'public DozerThreadContextClassLoader(DozerClassLoader delegate)', and the fix deletes both that constructor and the delegate field, leaving the implicit no-arg constructor. Dozer instantiates it reflectively, which is why the report ends in 'NoSuchMethodException: org.apache.camel.converter.dozer.DozerThreadContextClassLoader.<init>()'."
+    },
+    {
+      "path": "components/camel-dozer/src/main/java/org/apache/camel/converter/dozer/DozerTypeConverterLoader.java",
+      "role": "refactor",
+      "evidence": "switchClassloader() is deleted outright, including the line that built the delegating instance, 'DozerThreadContextClassLoader newCl = new DozerThreadContextClassLoader(oldCl); BeanContainer.getInstance().setClassLoader(newCl)'. Its job is taken over by an explicit save and restore around the whole body, 'ClassLoader tccl = Thread.currentThread().getContextClassLoader(); ... finally { Thread.currentThread().setContextClassLoader(tccl); }'. Removing the delegating constructor is what forces this, so it follows the real fix rather than being it."
+    }
+  ],
+  "symptom_location": {
+    "file": "components/camel-dozer/src/main/java/org/apache/camel/converter/dozer/DozerTypeConverterLoader.java",
+    "function": "createDozerBeanMapper",
+    "determinable": true
+  },
+  "log_location": {
+    "file": null,
+    "function": null,
+    "determinable": false
+  },
+  "relation": "caller-callee",
+  "rationale": "The reporter quotes Dozer's own registerClassLoader, which calls 'ReflectionUtils.newInstance(classLoaderType)' and therefore requires a no-arg constructor, and the trace bottoms out in 'NoSuchMethodException ... <init>()'. The deepest Camel frame is createDozerBeanMapper in the second gold file, which is the caller that drives Dozer into instantiating the first. The SEVERE line comes from Arquillian's JMXTestRunner in a separate project, so no log site exists in this repository.",
+  "confidence": "high",
+  "notes": "The symptom site is itself a gold file, but labelled refactor rather than causal: it is where the failure surfaces and where the compensating classloader handling went, while the defect is the missing constructor in the other file. This label was first written against a packet whose diff was cut at 120 lines per file and was re-checked against the full diff after the renderer cap was raised; the newly visible hunks, the deletion of switchClassloader and the try/finally wrapper, confirm both roles rather than changing them."
+}

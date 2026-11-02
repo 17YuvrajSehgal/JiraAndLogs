@@ -1,0 +1,33 @@
+{
+  "id": "ambari:AMBARI-9125",
+  "project": "ambari",
+  "issue_key": "AMBARI-9125",
+  "annotator": "claude-opus-5",
+  "pass": 1,
+  "file_roles": [
+    {
+      "path": "ambari-server/src/main/resources/common-services/HDFS/2.1.0.2.0/package/scripts/hdfs_snamenode.py",
+      "role": "causal",
+      "evidence": "A single Directory(params.fs_checkpoint_dir, ...) call becomes 'for fs_checkpoint_dir in params.fs_checkpoint_dirs: Directory(fs_checkpoint_dir, ...)'. Creating one directory for a comma-separated list is why the second checkpoint directory never existed."
+    },
+    {
+      "path": "ambari-server/src/main/resources/common-services/HDFS/2.1.0.2.0/package/scripts/params.py",
+      "role": "causal",
+      "evidence": "'fs_checkpoint_dir = config[...][\"dfs.namenode.checkpoint.dir\"]' becomes 'fs_checkpoint_dirs = ....split(\",\")'. The value was carried as a single path string when the setting is a list, which is the other half of the same defect."
+    }
+  ],
+  "symptom_location": {
+    "file": "hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/server/namenode/SecondaryNameNode.java",
+    "function": "CheckpointStorage.recoverCreate",
+    "determinable": true
+  },
+  "log_location": {
+    "file": "hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/server/namenode/SecondaryNameNode.java",
+    "function": "main",
+    "determinable": true
+  },
+  "relation": "state-producer",
+  "rationale": "The failure is reported from Hadoop, not Ambari: 'InconsistentFSStateException: Directory /hadoop/hdfs/namesecondary2 is in an inconsistent state' at SecondaryNameNode.recoverCreate, and the FATAL line is logged by SecondaryNameNode.main. Ambari produced the bad state earlier by creating only the first of the configured directories, and Hadoop consumed it at start-up. Both gold files are causal, one for not splitting the value and one for not looping over it.",
+  "confidence": "high",
+  "notes": "The symptom and log sites are in a DIFFERENT repository (Hadoop), not merely outside the gold set. No localizer working from the Ambari tree can find them, and the stack trace therefore points entirely away from the fix. A good illustration for the paper of why fix-modified files and symptom sites come apart."
+}

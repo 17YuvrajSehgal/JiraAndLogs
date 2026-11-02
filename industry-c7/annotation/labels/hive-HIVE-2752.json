@@ -1,0 +1,28 @@
+{
+  "id": "hive:HIVE-2752",
+  "project": "hive",
+  "issue_key": "HIVE-2752",
+  "annotator": "claude-opus-5",
+  "pass": 1,
+  "file_roles": [
+    {
+      "path": "metastore/src/java/org/apache/hadoop/hive/metastore/ObjectStore.java",
+      "role": "causal",
+      "evidence": "Both ends of the mismatch are corrected here: the stored name gains a fold, 'new MIndex(index.getIndexName().toLowerCase(), origTable, ...)', and so does the lookup, 'midx = (MIndex) query.execute(originalTblName, dbName, indexName.toLowerCase())'. The name was written in the case the user typed and looked up folded, which is the defect."
+    }
+  ],
+  "symptom_location": {
+    "file": "metastore/src/java/org/apache/hadoop/hive/metastore/ObjectStore.java",
+    "function": "alterIndex",
+    "determinable": true
+  },
+  "log_location": {
+    "file": "metastore/src/java/org/apache/hadoop/hive/metastore/ObjectStore.java",
+    "function": "alterIndex",
+    "determinable": true
+  },
+  "relation": "state-producer",
+  "rationale": "The deepest frame is 'ObjectStore.alterIndex(ObjectStore.java:1880)' and the message it raises, 'MetaException(message:index testtablea_idx doesn't exist)', shows the folded name being searched for. The reporter had already worked out the mechanism from SHOW INDEXES, 'it looks like things don't get lower cased when they go into the metastore, but they do when the rebuild op is trying to execute', and the diff folds both ends. The bad row is written at CREATE INDEX time and only fails at REBUILD, so the two ends are far apart in time while sitting in one file.",
+  "confidence": "high",
+  "notes": "REPORT-NAMES-FIX: the reporter derives the fold mismatch from SHOW INDEXES output and states where it happens."
+}

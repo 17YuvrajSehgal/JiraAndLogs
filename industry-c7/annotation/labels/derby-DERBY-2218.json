@@ -1,0 +1,27 @@
+{
+  "id": "derby:DERBY-2218",
+  "project": "derby",
+  "issue_key": "DERBY-2218",
+  "annotator": "claude-opus-5",
+  "pass": 1,
+  "file_roles": [
+    {
+      "path": "java/engine/org/apache/derby/impl/sql/compile/SubqueryNode.java",
+      "role": "causal",
+      "evidence": "bindExpression never rejected untyped nulls, so a null type descriptor reached setDataTypeServices. The fix adds 'resultSet.bindUntypedNullsToResultColumns(null)' on both the EXISTS path and the general path, with the comment 'reject any untyped nulls in the subquery'. The second commit then removes a bindResultColumns call that the first had added and did not need."
+    }
+  ],
+  "symptom_location": {
+    "file": "java/engine/org/apache/derby/impl/sql/compile/SubqueryNode.java",
+    "function": "setDataTypeServices",
+    "determinable": true
+  },
+  "log_location": {
+    "file": "java/engine/org/apache/derby/impl/sql/compile/SubqueryNode.java",
+    "function": "setDataTypeServices",
+    "determinable": true
+  },
+  "relation": "same-location",
+  "rationale": "The NPE's top two frames are both in the gold file, 'SubqueryNode.setDataTypeServices(SubqueryNode.java:2289)' called from 'SubqueryNode.bindExpression(SubqueryNode.java:529)', and the fix adds the missing rejection in bindExpression. The reporter establishes the invariant by contrast: an untyped null in the FROM list already produces the proper error 42X07, 'Null is only allowed in a VALUES clause within an INSERT statement', and only the other positions fall through to the NPE. SubqueryNode owns that binding step, so this is the defect rather than a guard bolted on elsewhere.",
+  "confidence": "high"
+}

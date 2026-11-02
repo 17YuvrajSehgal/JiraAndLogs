@@ -1,0 +1,68 @@
+{
+  "id": "drill:DRILL-6710",
+  "project": "drill",
+  "issue_key": "DRILL-6710",
+  "annotator": "claude-opus-5",
+  "pass": 1,
+  "file_roles": [
+    {
+      "path": "exec/java-exec/src/main/codegen/templates/Decimal/DecimalAggrTypeFunctions1.java",
+      "role": "preventive",
+      "evidence": "Adds 'DecimalUtility.checkValueOverflow(...)' after the accumulate, and drops the output clamp 'out.scale = Math.min(outputScale.value, getMaxNumericScale())' in favour of 'out.scale = outputScale.value'. This is the aggregate path, not the binary addition the report exercises."
+    },
+    {
+      "path": "exec/java-exec/src/main/codegen/templates/Decimal/DecimalAggrTypeFunctions3.java",
+      "role": "preventive",
+      "evidence": "A single added guard, 'DecimalUtility.checkValueOverflow(result, out.precision, out.scale)'. Again an aggregate template, extending the same protection rather than correcting the reported path."
+    },
+    {
+      "path": "exec/java-exec/src/main/codegen/templates/Decimal/DecimalFunctions.java",
+      "role": "causal",
+      "evidence": "'result.scale = right.value' becomes 'result.scale = Math.max(right.value, 0)' at two sites, plus an added checkValueOverflow. Letting a computed scale go negative at runtime is the defect the report names, 'Scale can't be less than zero'."
+    },
+    {
+      "path": "exec/java-exec/src/main/java/org/apache/drill/exec/expr/fn/output/DecimalReturnTypeInference.java",
+      "role": "causal",
+      "evidence": "'.setScale(scale)' becomes '.setScale(Math.max(scale, 0))'. This is where the result type reported back to the client is built, so an unclamped negative scale here is what the ODBC driver rejected."
+    },
+    {
+      "path": "exec/java-exec/src/main/java/org/apache/drill/exec/planner/types/decimal/DecimalScalePrecisionAddFunction.java",
+      "role": "refactor",
+      "evidence": "One call-site rename, 'checkPrecisionRange()' to 'adjustScaleAndPrecision()'. The behaviour change lives in the base class the call now reaches."
+    },
+    {
+      "path": "exec/java-exec/src/main/java/org/apache/drill/exec/planner/types/decimal/DecimalScalePrecisionDivideFunction.java",
+      "role": "preventive",
+      "evidence": "Adds 'adjustScaleAndPrecision();' where no such call existed before, so division gains a guard it never had. The reported query uses addition, not division."
+    },
+    {
+      "path": "exec/java-exec/src/main/java/org/apache/drill/exec/planner/types/decimal/DecimalScalePrecisionModFunction.java",
+      "role": "preventive",
+      "evidence": "'outputPrecision = Math.max(outputPrecision, Math.max(leftPrecision, rightPrecision))' becomes Math.min, alongside a comment typo fix. A real correction, but on the modulo operator, which the report does not exercise."
+    },
+    {
+      "path": "exec/java-exec/src/main/java/org/apache/drill/exec/planner/types/decimal/DecimalScalePrecisionMulFunction.java",
+      "role": "refactor",
+      "evidence": "The same single call-site rename as the add function, 'checkPrecisionRange()' to 'adjustScaleAndPrecision()'."
+    },
+    {
+      "path": "exec/java-exec/src/main/java/org/apache/drill/exec/planner/types/decimal/DrillBaseComputeScalePrecision.java",
+      "role": "causal",
+      "evidence": "checkPrecisionRange is renamed adjustScaleAndPrecision and stops merely checking: 'if (outputScale < 0) { logger.warn(\"Resulting precision: {} may overflow max allowed precision: {}.\\nForced setting max allowed precision and 0 scale.\", ...); outputScale = 0; }'. This is the clamp every other call site now inherits."
+    }
+  ],
+  "symptom_location": {
+    "file": null,
+    "function": null,
+    "determinable": false
+  },
+  "log_location": {
+    "file": null,
+    "function": null,
+    "determinable": false
+  },
+  "relation": "state-producer",
+  "rationale": "The only error text is from the client driver, 'HY000:1:40140:[MapR][Support] (40140) Scale can't be less than zero.', which is outside this repository and carries no frames, so neither symptom nor log site can be placed. The negative scale is computed during planning and type inference and is only rejected much later when the result type reaches the driver, which is a produced-state relation. Three of nine gold files clamp the scale on the reported addition path; two are call-site renames and four extend the same protection to aggregates, division and modulo.",
+  "confidence": "medium",
+  "notes": "Which of the three clamping sites actually produced the scale the driver saw cannot be settled from the report, since no plan or trace is given. The split between causal and preventive here rests on which operator the reported query uses, so this instance is a good candidate for the agreement check."
+}

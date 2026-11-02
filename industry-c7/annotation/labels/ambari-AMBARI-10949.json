@@ -1,0 +1,28 @@
+{
+  "id": "ambari:AMBARI-10949",
+  "project": "ambari",
+  "issue_key": "AMBARI-10949",
+  "annotator": "claude-opus-5",
+  "pass": 1,
+  "file_roles": [
+    {
+      "path": "ambari-server/src/main/resources/common-services/HIVE/0.12.0.2.0/package/scripts/params_linux.py",
+      "role": "causal",
+      "evidence": "The block 'if security_enabled: hive_principal = hive_server_principal.replace(\"_HOST\", hostname.lower())' is deleted from the end of the module and re-inserted above line 403, which uses it in 'format(\"{hive_url}/default;principal={hive_principal}\")'. The name was defined after its use at module import, which is the reported \"KeyError: 'hive_principal'\"."
+    }
+  ],
+  "symptom_location": {
+    "file": "ambari-server/src/main/resources/common-services/HIVE/0.12.0.2.0/package/scripts/params_linux.py",
+    "function": null,
+    "determinable": true
+  },
+  "log_location": {
+    "file": "ambari-server/src/main/resources/common-services/HIVE/0.12.0.2.0/package/scripts/params_linux.py",
+    "function": null,
+    "determinable": true
+  },
+  "relation": "same-location",
+  "rationale": "The traceback's deepest frame in this repository is 'params_linux.py, line 403, in <module>', which is the exact line the fix moves the definition above. The remaining frames are the Python standard library's string formatter resolving the missing key. Cause and symptom are one statement apart in a single file, and the fix is a pure reordering.",
+  "confidence": "high",
+  "notes": "The traceback passes through 'format.py, line 47, result_protected = self.vformat(format_string, args, all_params)', which is the double-format masking introduced by AMBARI-4487. Unrelated to this defect, but it shows the two instances touch the same code path."
+}

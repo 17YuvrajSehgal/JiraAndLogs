@@ -1,0 +1,27 @@
+{
+  "id": "beam:BEAM-4066",
+  "project": "beam",
+  "issue_key": "BEAM-4066",
+  "annotator": "claude-opus-5",
+  "pass": 1,
+  "file_roles": [
+    {
+      "path": "sdks/java/nexmark/src/main/java/org/apache/beam/sdk/nexmark/NexmarkLauncher.java",
+      "role": "causal",
+      "evidence": "Two anonymous DoFns declared inside instance methods, 'ParDo.of(new DoFn<PubsubMessage, Event>() { ... })' and 'ParDo.of(new DoFn<Event, PubsubMessage>() { ... })', are replaced by 'new PubsubMessageEventDoFn()' and 'new EventPubsubMessageDoFn()', both declared 'private static class'. An anonymous class in an instance method captures the enclosing NexmarkLauncher, which is exactly what the reported NotSerializableException names."
+    }
+  ],
+  "symptom_location": {
+    "file": "sdks/java/nexmark/src/main/java/org/apache/beam/sdk/nexmark/NexmarkLauncher.java",
+    "function": null,
+    "determinable": true
+  },
+  "log_location": {
+    "file": null,
+    "function": null,
+    "determinable": false
+  },
+  "relation": "same-location",
+  "rationale": "The exception names the offending class directly, 'java.io.NotSerializableException: org.apache.beam.sdk.nexmark.NexmarkLauncher', and that class is the single gold file, so the defect and the class that fails to serialise are the same place. The throw itself happens inside the JDK's serialization machinery, and the report supplies only the Caused by line with no file or line, so no log site can be placed. Making the DoFns static removes the implicit outer reference, which is the whole fix.",
+  "confidence": "high"
+}
