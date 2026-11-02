@@ -87,10 +87,16 @@ def render(rec: dict, inst: dict) -> str:
           f"The fix changed {inst['n_all_changed_files']} file(s); "
           f"{len(inst['gold_files'])} of them are non-test source files "
           f"(listed below as gold).", ""]
-    for f in inst["gold_files"][:MAX_FILES_SHOWN]:
+    # The LIST is never truncated: a label must carry a role for every gold
+    # file, and annotation_validate.py rejects one that does not, so hiding
+    # files here would make a complete label impossible to write. Only the
+    # diffs below are capped, for packet size.
+    for f in inst["gold_files"]:
         L.append(f"- `{f}`")
     if len(inst["gold_files"]) > MAX_FILES_SHOWN:
-        L.append(f"- ... and {len(inst['gold_files']) - MAX_FILES_SHOWN} more")
+        L.append("")
+        L.append(f"Diffs are shown for the first {MAX_FILES_SHOWN} of these "
+                 f"{len(inst['gold_files'])} files.")
     L.append("")
 
     L += ["## The fix diff", ""]
@@ -130,6 +136,11 @@ def assert_blind(path: Path) -> list[str]:
     """
     txt = path.read_text(encoding="utf-8").rsplit("\n---\n", 1)[0]
     prose = re.sub(r"```.*?```", "", txt, flags=re.S)
+    # Inline code spans are quoted evidence too: the gold file list renders
+    # real repository paths in backticks, and Ambari ships a component called
+    # "ambari-agent", which tripped \bagent\b on every Ambari packet. Strip
+    # them for the same reason fenced blocks are stripped.
+    prose = re.sub(r"`[^`\n]*`", "", prose)
     hits = []
     for m in BANNED.finditer(prose):
         s = max(0, m.start() - 40)
