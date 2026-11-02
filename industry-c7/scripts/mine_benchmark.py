@@ -83,7 +83,11 @@ PROJECTS = {
     },
 }
 WOLV2_MONGO = "mongodb://localhost:27017"
-MAX_QUERY_CHARS = 20_000
+MAX_QUERY_CHARS = 0        # 0 = no truncation (was 20_000; it clipped 0.3% of
+                           # instances, so the cap bought nothing and invited
+                           # the question). TRUNC_REPORT_AT only *reports*.
+TRUNC_REPORT_AT = 20_000   # recorded in the datasheet so the old cap's cost
+                           # stays visible without being applied
 UNCERTAINTY_MAX = 0.05  # WoL paper: treat pred_uncertainty > 0.05 with caution
 
 TEST_PATH = re.compile(r"(^|/)(test|tests|testing|mysql-test|unittest|jtest)(/|$)"
@@ -96,7 +100,9 @@ TRACE_PATTERNS = (
     re.compile(r"mysqld got signal|stack_bottom", re.I),
 )
 GIT_SHOW_BATCH = 100
-MAX_FIX_COMMITS = 3
+MAX_FIX_COMMITS = 10       # was 3; cost 1.2% here but 8.3% on PDFBOX, and
+                           # a multi-commit fix is a harder instance, not a
+                           # worse one. Full distribution is recorded.
 
 
 def run_git(git_dir: Path, *args: str) -> str:
@@ -190,7 +196,8 @@ def load_wolv2_issues(cfg: dict) -> dict[str, dict]:
         text = f"{f.get('summary') or ''}\n\n{f.get('description') or ''}"
         issues[d["key"]] = {
             "window_id": f"pjd-{d['key']}",
-            "evidence_text": text[:MAX_QUERY_CHARS],
+            "evidence_text": (text[:MAX_QUERY_CHARS] if MAX_QUERY_CHARS
+                              else text),
             "split": "test",
             "service_name": None,
             "triage_severity": (f.get("priority") or {}).get("name"),
@@ -262,7 +269,7 @@ def mine_project(name: str) -> dict:
             funnel["root_commit_fix"] += 1
             continue
         candidates[key] = commits
-    funnel["linked_1_to_3_commits"] = len(candidates)
+    funnel[f"linked_1_to_{MAX_FIX_COMMITS}_commits"] = len(candidates)
 
     all_shas = [c["sha"] for commits in candidates.values() for c in commits]
     file_cache = fetch_file_lists(cfg["git_dir"], all_shas, REPOS / f"cache-{name}.json")
@@ -319,6 +326,19 @@ def mine_project(name: str) -> dict:
         for r in rows:
             f.write(json.dumps(r, ensure_ascii=False) + "\n")
     gold_sizes = sorted(len(r["gold_files"]) for r in rows)
+
+    def dist(vals: list[int]) -> dict:
+        """Distribution we report instead of silently capping."""
+        if not vals:
+            return {}
+        v = sorted(vals)
+        return {"n": len(v), "min": v[0], "median": v[len(v) // 2],
+                "p95": v[int(0.95 * len(v))], "max": v[-1],
+                "mean": round(sum(v) / len(v), 2)}
+
+    q_chars = [len(r["query_text"]) for r in rows]
+    n_commits = [r["n_fix_commits"] for r in rows]
+    n_files = [r["n_all_changed_files"] for r in rows]
     summary = {
         "project": name,
         "git_dir": str(cfg["git_dir"]),
@@ -328,6 +348,17 @@ def mine_project(name: str) -> dict:
         "dropped_commit_level": dict(dropped_commits),
         "strata": dict(strata),
         "gold_files_median": gold_sizes[len(gold_sizes) // 2] if gold_sizes else 0,
+        # recorded, not capped: the two limits a reviewer would ask about
+        "query_chars": dict(dist(q_chars),
+                            over_20k=sum(1 for x in q_chars if x > TRUNC_REPORT_AT),
+                            truncated_at=MAX_QUERY_CHARS or None),
+        "fix_commits_per_issue": dict(dist(n_commits), cap=MAX_FIX_COMMITS,
+                                      hist={str(k): sum(1 for x in n_commits if x == k)
+                                            for k in range(1, MAX_FIX_COMMITS + 1)}),
+        "files_changed_by_fix": dict(dist(n_files),
+                                     over_3=sum(1 for x in n_files if x > 3),
+                                     over_10=sum(1 for x in n_files if x > 10),
+                                     over_50=sum(1 for x in n_files if x > 50)),
         "gold_files_mean": round(sum(gold_sizes) / len(gold_sizes), 2) if gold_sizes else 0,
         "output": str(out_path),
     }
