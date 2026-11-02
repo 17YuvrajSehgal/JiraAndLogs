@@ -60,6 +60,20 @@ def check(lab: dict, v2: dict, sample_ids: set[str]) -> list[str]:
     if e:
         return e
 
+    # schema.json sets additionalProperties:false, but checking only the
+    # required keys let an invented field ("relation_note") through silently.
+    # An unknown key is either a typo or a label carrying data nothing reads.
+    allowed = {"id", "project", "issue_key", "annotator", "pass", "file_roles",
+               "symptom_location", "log_location", "relation", "rationale",
+               "confidence", "notes"}
+    extra = set(lab) - allowed
+    if extra:
+        e.append(f"unknown field(s) not in schema.json: {sorted(extra)}")
+    for fr in lab["file_roles"]:
+        fx = set(fr) - {"path", "role", "evidence"}
+        if fx:
+            e.append(f"unknown field(s) in file_roles entry: {sorted(fx)}")
+
     i = lab["id"]
     if i not in sample_ids:
         e.append(f"id {i} is not in the sample")
