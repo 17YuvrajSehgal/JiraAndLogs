@@ -1,0 +1,73 @@
+{
+  "id": "mongodb:SERVER-16031",
+  "project": "mongodb",
+  "issue_key": "SERVER-16031",
+  "annotator": "claude-opus-5",
+  "pass": 1,
+  "file_roles": [
+    {
+      "path": "src/mongo/db/storage/devnull/devnull_kv_engine.h",
+      "role": "refactor",
+      "evidence": "One empty stub forced by the new pure virtual in the base class: 'virtual void cleanShutdown(OperationContext* txn) {};'. The body does nothing, and this engine cannot produce a WiredTiger crash."
+    },
+    {
+      "path": "src/mongo/db/storage/heap1/heap1_engine.h",
+      "role": "refactor",
+      "evidence": "The same compile-forced empty stub, 'virtual void cleanShutdown(OperationContext* txn) {};', added above the existing 'private:' section. No behaviour is defined."
+    },
+    {
+      "path": "src/mongo/db/storage/kv/kv_engine.h",
+      "role": "refactor",
+      "evidence": "A declaration-only interface change: 'virtual void cleanShutdown(OperationContext* txn) = 0;' is added with its comment, and 'virtual ~KVEngine() {}' moves from the top of the class to the bottom under a new comment, 'The destructor will never be called from mongod, but may be called from tests.' The header holds no body that changed behaviour."
+    },
+    {
+      "path": "src/mongo/db/storage/kv/kv_storage_engine.cpp",
+      "role": "causal",
+      "evidence": "Shutdown destroyed the engine out from under threads that were still inside it: '_engine.reset( NULL );' becomes '_engine->cleanShutdown(txn);' with the comment '// intentionally not deleting _engine'. Deleting the engine while a connection thread still held a recovery unit is the wrong logic, and this function owns the shutdown order."
+    },
+    {
+      "path": "src/mongo/db/storage/kv/kv_storage_engine.h",
+      "role": "refactor",
+      "evidence": "The whole change is a comment and a blank line around an unmoved member: '// This must be the first member so it is destroyed last.' above 'boost::scoped_ptr<KVEngine> _engine;'. The declaration order on both sides of the diff is identical."
+    },
+    {
+      "path": "src/mongo/db/storage/rocks/rocks_engine.h",
+      "role": "refactor",
+      "evidence": "The third compile-forced stub, 'virtual void cleanShutdown(OperationContext* txn) {}', added above the '// rocks specific api' comment. RocksDB is not the engine in the trace."
+    },
+    {
+      "path": "src/mongo/db/storage/wiredtiger/wiredtiger_kv_engine.cpp",
+      "role": "causal",
+      "evidence": "The connection was closed without first quiescing the session cache. The destructor body, 'log() << \"WiredTigerKVEngine shutting down\"; syncSizeInfo(); ... invariantWTOK( _conn->close(_conn, NULL) ); _conn = NULL;', moves into a new cleanShutdown that adds the missing step, '// this must be the last thing we do before _conn->close(); _sessionCache->shuttingDown();'. Closing the connection while sessions could still be released is wrong logic owned by this file."
+    },
+    {
+      "path": "src/mongo/db/storage/wiredtiger/wiredtiger_kv_engine.h",
+      "role": "refactor",
+      "evidence": "One declaration added, 'virtual void cleanShutdown(OperationContext* txn);', beside the existing 'void dropAllQueued();'. Nothing else changes."
+    },
+    {
+      "path": "src/mongo/db/storage/wiredtiger/wiredtiger_session_cache.cpp",
+      "role": "causal",
+      "evidence": "The cache had no notion of shutdown and did WiredTiger work on any thread that released a session, which is the crashing frame. It gains the state and the guards: '_shuttingDown(false)' in both constructors, 'void WiredTigerSessionCache::shuttingDown() { boost::mutex::scoped_lock lk( _sessionLock ); _shuttingDown = true; _closeAll(); }', 'if (_shuttingDown) return; // leak session to avoid race condition.' at the top of releaseSession, the same early return in closeAll and 'invariant(!_shuttingDown); // shouldn't get here after this is set.' in getSession. The same hunk also corrects the locking: 'boost::mutex::scoped_lock lk( _sessionLock );' moves from just above '_sessionPool.push_back( session );' to the first line of releaseSession, so the session handling that calls '_engine->dropAllQueued();' is no longer done unlocked."
+    },
+    {
+      "path": "src/mongo/db/storage/wiredtiger/wiredtiger_session_cache.h",
+      "role": "refactor",
+      "evidence": "Declarations only: 'void shuttingDown();' beside the existing 'void closeAll();', and the member 'bool _shuttingDown;' above 'mutable boost::mutex _sessionLock;'. No body in this header changes."
+    }
+  ],
+  "symptom_location": {
+    "file": "src/mongo/db/storage/wiredtiger/wiredtiger_kv_engine.cpp",
+    "function": "WiredTigerKVEngine::dropAllQueued",
+    "determinable": true
+  },
+  "log_location": {
+    "file": null,
+    "function": null,
+    "determinable": false
+  },
+  "relation": "concurrency",
+  "rationale": "A connection thread tore down its OperationContext while shutdown was running, and the trace shows exactly that path, 'WiredTigerRecoveryUnitD1Ev' to 'WiredTigerSessionCache14releaseSession' to 'WiredTigerKVEngine13dropAllQueuedEv' and then into WiredTiger itself, '__wt_schema_drop' and '__wt_free_int', ending in 'Invalid access at address: 0x78c'. The three changed .cpp files are the two ends of that race and the state between them: shutdown stops deleting the engine, '_engine->cleanShutdown(txn);' with '// intentionally not deleting _engine', the engine marks the cache first, '_sessionCache->shuttingDown();', and the cache then refuses to touch WiredTiger, 'if (_shuttingDown) return; // leak session to avoid race condition.' The title says the same thing, 'Race condition at shutdown for KVEngines'.",
+  "confidence": "high",
+  "notes": "Three of the ten gold files are empty stub overrides that exist only so the new pure virtual compiles, 'virtual void cleanShutdown(OperationContext* txn) {}' in the devnull, heap1 and rocks engines, and two of those even keep a stray semicolon, '{};'. A fourth, kv_storage_engine.h, changes nothing but a comment and a blank line, so its whole contribution is cosmetic. The crash is WiredTiger-specific, so four gold files belong to engines that could not have produced the report. The symptom site is in the gold set but at a different function than the fix: the deepest mongo-owned frame is 'WiredTigerKVEngine13dropAllQueuedEv', while the change to that file is in the destructor and the new cleanShutdown; the file is placed from the packet, since 'void dropAllQueued();' is declared in the wiredtiger_kv_engine.h hunk. The frames above it, '__wt_free_int', '__wt_remove' and '__wt_schema_drop', belong to the bundled WiredTiger library rather than mongo, and conventions say to record the deepest project-owned frame. log_location.determinable = false: the only identified emitter is 'mongo::printStackTrace(std::ostream&)' in the signal handler, whose file the packet never shows, and '[conn3]' is a thread name, not a class tag. The judgement a second rater would most likely dispute is wiredtiger_session_cache.cpp: the rubric's hard case says a guard added where the failure surfaced is symptom-handling when the bad state came from another file that was also changed, which is true here, and under that reading this file is symptom-handling and only the other two are causal. It is labelled causal because the guard is not detection or reporting but the missing coordination state itself, which matches the convention 'a missing capability plus its missing use', and because the same hunk independently corrects a lock that was taken too late. The fix ships with no regression test: the packet records 10 changed files and all 10 are gold."
+}
