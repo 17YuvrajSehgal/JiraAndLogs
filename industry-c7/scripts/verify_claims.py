@@ -11,6 +11,7 @@ Usage:
 from __future__ import annotations
 
 import json
+import re
 import sys
 from collections import Counter
 from pathlib import Path
@@ -824,11 +825,38 @@ def main() -> int:
     check("T-tools table covers every tool the model was offered (8)",
           offered == set(t_tools) and len(offered) == 8,
           f"schema has {sorted(offered)}")
+    FIGS = ROOT / "industry-c7" / "paper" / "figures"
+    agent_svg = (FIGS / "agent.svg").read_text(encoding="utf-8")
+    research_svg = (FIGS / "research.svg").read_text(encoding="utf-8")
     check("Figure agent.svg says EIGHT TOOLS and shows all 8 names",
-          (lambda s: "EIGHT TOOLS" in s and all(n in s for n in t_tools))(
-              (ROOT / "industry-c7" / "paper" / "figures" / "agent.svg")
-              .read_text(encoding="utf-8")),
+          "EIGHT TOOLS" in agent_svg and all(n in agent_svg for n in t_tools),
           "agent.svg header/rows out of sync with the tool schema")
+    # Each tool's measured rate must also be printed on its row.
+    for name, per in t_tools.items():
+        lbl = f"{per:.2f}" if per >= 0.1 else f"{per:.2f}"
+        check(f"Figure agent.svg prints {name} rate {lbl}",
+              lbl in agent_svg, f"{lbl} missing from agent.svg")
+    # Both figures carry headline numbers. They are percentages now, and a
+    # figure that still shows the old decimals would contradict the tables.
+    fig_pct = {"agent.svg": [("90.3%", "acc@1 is 72.3%"), ("72.3%", ""),
+                             ("81.6%", ""), ("60.8%", ""),
+                             ("83.9%", ""), ("53.8%", "")],
+               "research.svg": [("18.0%", ""), ("68.1%", ""), ("83.2%", ""),
+                                ("83.9%", ""), ("90.3%", ""), ("89.2%", "")]}
+    for fn, wanted in fig_pct.items():
+        svg = agent_svg if fn == "agent.svg" else research_svg
+        missing = [v for v, _ in wanted if v not in svg]
+        stale = [v for v in ("0.903", "0.723", "0.816", "0.608", ">.180<",
+                             ">.681<", ">.832<", ">.903<") if v in svg]
+        check(f"Figure {fn} uses percentages and no stale decimals",
+              not missing and not stale,
+              f"missing {missing}, stale {stale}")
+    # The figure must NOT hard-code a check count: the count changes every
+    # time a check is added, so any number printed there goes stale the
+    # moment this file grows.
+    check("Figure research.svg hard-codes no check count",
+          not re.search(r"\d+\s+checks", research_svg),
+          "research.svg prints a check count that will go stale")
 
     # ---- report ---------------------------------------------------------------
     failed = [(c, d) for c, ok, d in checks if not ok]

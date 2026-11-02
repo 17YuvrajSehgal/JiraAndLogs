@@ -9,6 +9,9 @@
     <g id="i-shield"><path d="M18,1 L33,7 v12 c0,9 -7,15 -15,17 C10,34 3,28 3,19 V7 Z" fill="#FBECEC" stroke="#C25B5B" stroke-width="2.2" stroke-linejoin="round"/><path d="M11,18 l5,5 l10,-11" fill="none" stroke="#C25B5B" stroke-width="2.6" stroke-linecap="round"/></g>
     <g id="i-magnify"><circle cx="15" cy="15" r="11" fill="#EAF2FB" stroke="#2D5A94" stroke-width="2.4"/><line x1="23" y1="23" x2="34" y2="34" stroke="#2D5A94" stroke-width="3.4" stroke-linecap="round"/></g>
     <g id="i-check"><circle cx="18" cy="18" r="16" fill="#FDEFE6" stroke="#E8794A" stroke-width="2.2"/><path d="M10,18 l6,6 l12,-13" fill="none" stroke="#E8794A" stroke-width="3" stroke-linecap="round"/></g>
+    <g id="i-codefile"><path d="M5,1 h17 l9,9 v26 h-26 z" fill="#FFFFFF" stroke="#2D5A94" stroke-width="2.4" stroke-linejoin="round"/><path d="M22,1 v9 h9" fill="none" stroke="#2D5A94" stroke-width="2.4" stroke-linejoin="round"/><polyline points="15,18 10,24 15,30" fill="none" stroke="#2D5A94" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/><polyline points="22,18 27,24 22,30" fill="none" stroke="#2D5A94" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></g>
+    <g id="i-textlines"><rect x="3" y="1" width="30" height="34" rx="3" fill="#FFFFFF" stroke="#2D5A94" stroke-width="2.4"/><g stroke="#4A7FC1" stroke-width="2.6" stroke-linecap="round"><line x1="9" y1="10" x2="27" y2="10"/><line x1="9" y1="17" x2="27" y2="17"/><line x1="9" y1="24" x2="21" y2="24"/></g><circle cx="24" cy="27" r="7" fill="#EAF2FB" stroke="#2D5A94" stroke-width="2.2"/><line x1="29" y1="32" x2="34" y2="37" stroke="#2D5A94" stroke-width="2.8" stroke-linecap="round"/></g>
+    <g id="i-pin"><path d="M18,2 C11,2 5.5,7.5 5.5,14.5 C5.5,24 18,35 18,35 C18,35 30.5,24 30.5,14.5 C30.5,7.5 25,2 18,2 Z" fill="#FBE3C9" stroke="#A54B22" stroke-width="2.4" stroke-linejoin="round"/><circle cx="18" cy="14.5" r="5.2" fill="#FFFFFF" stroke="#A54B22" stroke-width="2.2"/></g>
     <marker id="m-orange" viewBox="0 0 10 10" refX="7" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#E8794A"/></marker>
     <marker id="m-pink" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#D4537E"/></marker>
     <marker id="m-gray" viewBox="0 0 10 10" refX="7" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#4B5563"/></marker>
@@ -105,33 +108,37 @@
   <text x="1324" y="228" font-size="13.5" font-style="italic" text-anchor="end" fill="#777">calls per issue</text>
 
   <rect x="790" y="240" width="534" height="46" rx="8" fill="#EAF2FB" stroke="#4A7FC1" stroke-width="1.8"/>
-  <use href="#i-magnify" x="802" y="245"/>
+  <g transform="translate(802,249) scale(0.78)"><use href="#i-codefile"/></g>
   <text x="846" y="261" font-size="15" font-weight="bold" font-family="monospace" fill="#2D5A94">read_code</text>
   <text x="846" y="279" font-size="13.5" fill="#555">what does this code actually do?</text>
   <rect x="1238" y="252" width="72" height="24" rx="12" fill="#4A7FC1"/>
   <text x="1274" y="269" font-size="14" font-weight="bold" fill="#FFF" text-anchor="middle">7.28</text>
 
   <rect x="790" y="294" width="534" height="46" rx="8" fill="#EAF2FB" stroke="#4A7FC1" stroke-width="1.8"/>
+  <g transform="translate(802,303) scale(0.78)"><use href="#i-magnify"/></g>
   <text x="846" y="315" font-size="15" font-weight="bold" font-family="monospace" fill="#2D5A94">search_symbol</text>
   <text x="846" y="333" font-size="13.5" fill="#555">where is it defined, used, and called from?</text>
   <rect x="1238" y="306" width="72" height="24" rx="12" fill="#4A7FC1"/>
   <text x="1274" y="323" font-size="14" font-weight="bold" fill="#FFF" text-anchor="middle">3.42</text>
-  <rect x="802" y="304" width="34" height="26" rx="6" fill="#FFF8E4" stroke="#D9A520" stroke-width="1.6"/>
-  <text x="819" y="322" font-size="12.5" font-weight="bold" fill="#8A6A10" text-anchor="middle">KEY</text>
+  <rect x="975" y="303" width="36" height="22" rx="6" fill="#FFF8E4" stroke="#D9A520" stroke-width="1.6"/>
+  <text x="993" y="319" font-size="12.5" font-weight="bold" fill="#8A6A10" text-anchor="middle">KEY</text>
 
   <rect x="790" y="348" width="534" height="46" rx="8" fill="#EAF2FB" stroke="#4A7FC1" stroke-width="1.8"/>
+  <g transform="translate(802,357) scale(0.78)"><use href="#i-textlines"/></g>
   <text x="846" y="369" font-size="15" font-weight="bold" font-family="monospace" fill="#2D5A94">search_text</text>
   <text x="846" y="387" font-size="13.5" fill="#555">which file's content matches this behaviour?</text>
   <rect x="1238" y="360" width="72" height="24" rx="12" fill="#4A7FC1"/>
   <text x="1274" y="377" font-size="14" font-weight="bold" fill="#FFF" text-anchor="middle">2.61</text>
 
   <rect x="790" y="402" width="534" height="46" rx="8" fill="#FDEFE6" stroke="#E8794A" stroke-width="1.8"/>
+  <g transform="translate(802,411) scale(0.78)"><use href="#i-pin"/></g>
   <text x="846" y="423" font-size="15" font-weight="bold" font-family="monospace" fill="#A54B22">note_candidate</text>
   <text x="846" y="441" font-size="13.5" fill="#555">record a suspect file and the evidence for it</text>
   <rect x="1238" y="414" width="72" height="24" rx="12" fill="#E8794A"/>
   <text x="1274" y="431" font-size="14" font-weight="bold" fill="#FFF" text-anchor="middle">2.38</text>
 
   <rect x="790" y="456" width="534" height="46" rx="8" fill="#FDEEF3" stroke="#D4537E" stroke-width="1.8"/>
+  <g transform="translate(802,465) scale(0.78)"><use href="#i-brain"/></g>
   <text x="846" y="477" font-size="15" font-weight="bold" font-family="monospace" fill="#A32C58">recall_incidents</text>
   <text x="846" y="495" font-size="13.5" fill="#555">which past fixes resemble this? (also pre-run)</text>
   <rect x="1238" y="468" width="72" height="24" rx="12" fill="#D4537E"/>
@@ -160,7 +167,7 @@
   <text x="802" y="610" font-size="14" fill="#555">73% of a plain model's misses are choosing wrongly, not searching wrongly.</text>
 
   <!-- the loop -->
-  <path d="M786,556 C758,556 758,252 786,252" fill="none" stroke="#4B5563" stroke-width="2.6" stroke-dasharray="9 6" marker-end="url(#m-gray)"/>
+  <path d="M786,533 C756,533 756,263 786,263" fill="none" stroke="#4B5563" stroke-width="2.6" stroke-dasharray="9 6" marker-end="url(#m-gray)"/>
   <text x="762" y="404" font-size="13" font-weight="bold" fill="#2F3A4A" text-anchor="middle" transform="rotate(-90 762 404)">read result, choose next tool</text>
 
   <polygon points="1346,322 1362,322 1362,310 1380,330 1362,350 1362,338 1346,338" fill="#FBE3C9" stroke="#E8794A" stroke-width="2" stroke-linejoin="round"/>
@@ -191,8 +198,8 @@
   <rect x="1396" y="440" width="348" height="180" rx="10" fill="#FFF8E4" stroke="#D9A520" stroke-width="2.4"/>
   <use href="#i-star" x="1412" y="452"/>
   <text x="1458" y="476" font-size="18" font-weight="bold" fill="#8A6A10">Ranked files + evidence</text>
-  <text x="1412" y="512" font-size="16" fill="#444">Acc@5 <tspan font-weight="bold" font-size="19" fill="#8A6A10">0.903</tspan>   Acc@1 <tspan font-weight="bold" font-size="19" fill="#8A6A10">0.723</tspan></text>
+  <text x="1412" y="512" font-size="16" fill="#444">Acc@5 <tspan font-weight="bold" font-size="19" fill="#8A6A10">90.3%</tspan>   Acc@1 <tspan font-weight="bold" font-size="19" fill="#8A6A10">72.3%</tspan></text>
   <text x="1412" y="544" font-size="15" fill="#444">on reports naming no faulty file:</text>
-  <text x="1412" y="568" font-size="16" fill="#444">Acc@5 <tspan font-weight="bold" font-size="19" fill="#8A6A10">0.816</tspan>   Acc@1 <tspan font-weight="bold" font-size="19" fill="#8A6A10">0.608</tspan></text>
-  <text x="1412" y="598" font-size="13.5" font-style="italic" fill="#8A6A10">best non-agent system: 0.839 / 0.538</text>
+  <text x="1412" y="568" font-size="16" fill="#444">Acc@5 <tspan font-weight="bold" font-size="19" fill="#8A6A10">81.6%</tspan>   Acc@1 <tspan font-weight="bold" font-size="19" fill="#8A6A10">60.8%</tspan></text>
+  <text x="1412" y="598" font-size="13.5" font-style="italic" fill="#8A6A10">best non-agent system: 83.9% / 53.8%</text>
 </svg>
