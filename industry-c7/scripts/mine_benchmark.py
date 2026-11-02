@@ -254,8 +254,36 @@ TRUNC_REPORT_AT = 20_000   # recorded in the datasheet so the old cap's cost
                            # stays visible without being applied
 UNCERTAINTY_MAX = 0.05  # WoL paper: treat pred_uncertainty > 0.05 with caution
 
-TEST_PATH = re.compile(r"(^|/)(test|tests|testing|mysql-test|unittest|jtest)(/|$)"
-                       r"|Test\.(java|scala)$|(^|/)Test[A-Z]\w*\.(java|scala)$", re.I)
+# Gold must be a file a localizer could sensibly be asked to rank. The first
+# version of this pattern only knew Java and Scala conventions, so C++, Python
+# and Go test files, and whole alternative test source sets, survived into the
+# gold set: 1,717 such files over 1,166 instances, and 200 instances whose
+# ENTIRE ground truth was test code. MongoDB alone contributed 1,155, mostly
+# "*_test.cpp", which matters because it is one of the four study projects.
+#
+# Deliberately NOT excluded: shipped test-support libraries that are real
+# product APIs with their own defects, such as Kafka's streams/test-utils
+# (TopologyTestDriver), Flink's flink-test-utils, Qt's src/testlib (QTestLib)
+# and MariaDB's client/mysqltest.cc. Those are published artifacts, so asking
+# a localizer to rank them is fair.
+# NOTE: case-SENSITIVE on purpose. The previous pattern used re.I, so
+# "Test\.(java|scala)$" also matched Latest.java, Protest.java, Contest.java
+# and Greatest.java, quietly dropping ordinary source files from gold. The
+# camelCase suffix convention is capital-T by definition, so matching it
+# exactly is both correct and more precise.
+TEST_PATH = re.compile(
+    # test source sets and directories (lowercase by convention)
+    r"(^|/)(test|tests|Test|Tests|testing|mysql-test|unittest|jtest"
+    r"|itest|itests|dbtest|dbtests|testsuite|testutil|testutils)(/|$)"
+    # gradle/maven alternative source sets: src/distributedTest/java, ...
+    r"|(^|/)(?:unit|integration|distributed|acceptance|functional|system"
+    r"|upgrade|performance|benchmark)Test(/|$)"
+    # camelCase file suffix: FooTest.java, QueryTest.cpp
+    r"|Test\.(java|scala|cpp|cc|py|go)$"
+    r"|(^|/)Test[A-Z]\w*\.(java|scala)$"
+    # separator conventions: query_planner_test.cpp, admission-controller-test.cc
+    r"|[_-][Tt]est\.(cpp|cc|c|py|go|js|ts)$"
+    r"|(^|/)test_\w+\.(py|cpp|cc|go)$")
 # stack-trace shapes: JVM frames, C/C++ file:line refs, gdb/mysqld frames, signal dumps
 TRACE_PATTERNS = (
     re.compile(r"^\s+at [\w.$<>]+\(", re.M),
