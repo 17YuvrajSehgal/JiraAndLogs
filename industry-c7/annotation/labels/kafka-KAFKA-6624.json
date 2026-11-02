@@ -1,0 +1,28 @@
+{
+  "id": "kafka:KAFKA-6624",
+  "project": "kafka",
+  "issue_key": "KAFKA-6624",
+  "annotator": "claude-opus-5",
+  "pass": 1,
+  "file_roles": [
+    {
+      "path": "core/src/main/scala/kafka/log/LogManager.scala",
+      "role": "causal",
+      "evidence": "The deletion queue stops being a bare list of logs and starts carrying when each was scheduled, 'new LinkedBlockingQueue[(Log, Long)]()' filled through a new 'addLogToBeDeleted' that records 'time.milliseconds()'. deleteLogs then waits before touching the files, 'val waitingTimeMs = scheduleTimeMs + currentDefaultConfig.fileDeleteDelayMs - time.milliseconds(); if (waitingTimeMs > 0) Thread.sleep(waitingTimeMs)'. Deleting a log with no interval between the rename and the delete is what let a scheduled flush meet a closed channel, and this class owns that scheduling."
+    }
+  ],
+  "symptom_location": {
+    "file": "clients/src/main/java/org/apache/kafka/common/record/FileRecords.java",
+    "function": "flush",
+    "determinable": true
+  },
+  "log_location": {
+    "file": "core/src/main/scala/kafka/server/LogDirFailureChannel.scala",
+    "function": null,
+    "determinable": true
+  },
+  "relation": "concurrency",
+  "rationale": "The ClosedChannelException surfaces at 'FileRecords.flush(FileRecords.java:163)' on a scheduler thread, reached through LogSegment.flush and Log.flush from 'Log$$anonfun$roll$2', while a different thread was deleting the same log. The reporter reads it the same way, 'It seems that topic1 was being deleted around the time when flushing was called', and the consequence follows one millisecond later, '[ReplicaManager broker=0] Stopping serving replicas in dir /data01/kafka-logs'. Two threads and an ordering, with the fix inserting the delay that separates them.",
+  "confidence": "high",
+  "notes": "The gold file does not appear anywhere in the reported evidence. The trace names FileChannelImpl, FileRecords, LogSegment, Log, KafkaTimer, KafkaScheduler and CoreUtils; the two log lines are tagged LogDirFailureChannel and ReplicaManager. LogManager.scala, the one file that was changed, is in none of them, and no frame leads to it, because the thread that caused the failure had already returned. This is the clearest instance in the sample of evidence that is complete, precise and entirely unable to reach the answer. A second rater could call this preventive rather than causal, since the repair is a sleep that narrows the window rather than a lock that closes it; it is labelled causal because LogManager owns deletion scheduling and the absence of any interval there is the wrong logic. Worth putting in the agreement check."
+}

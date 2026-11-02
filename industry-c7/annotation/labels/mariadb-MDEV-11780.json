@@ -1,0 +1,33 @@
+{
+  "id": "mariadb:MDEV-11780",
+  "project": "mariadb",
+  "issue_key": "MDEV-11780",
+  "annotator": "claude-opus-5",
+  "pass": 1,
+  "file_roles": [
+    {
+      "path": "sql/item.h",
+      "role": "causal",
+      "evidence": "The unconditional claim is here, 'Settable_routine_parameter *get_settable_routine_parameter() { return this; }', and it becomes '{ return m_is_settable_routine_parameter ? this : NULL; }' with a new private 'bool m_is_settable_routine_parameter'. The commit names this as the change, that the method 'previously always returned this'."
+    },
+    {
+      "path": "sql/item.cc",
+      "role": "causal",
+      "evidence": "The flag the new branch reads is maintained here: initialised 'm_is_settable_routine_parameter(true)' in the constructor, taken from the bound item in set_from_item with 'm_is_settable_routine_parameter= item->get_settable_routine_parameter()', and cleared in set_default and set_ignore. Without this the header's test has nothing truthful to read."
+    }
+  ],
+  "symptom_location": {
+    "file": "sql/protocol.cc",
+    "function": "send_out_parameters",
+    "determinable": true
+  },
+  "log_location": {
+    "file": "sql/protocol.cc",
+    "function": "send_out_parameters",
+    "determinable": true
+  },
+  "relation": "caller-callee",
+  "rationale": "The crash is an assertion, 'sql/protocol.cc:1326: virtual Protocol_text::send_out_parameters(List<Item_param>*): Assertion `0' failed', and protocol.cc is not in the gold set. That assertion was correct and was doing its job: the commit explains that it 'guarded that the actual parameter is really settable', and the regression came from MDEV-10709 allowing any expression as an EXECUTE parameter without restricting OUT parameters to settable ones. The caller interrogates the Item_param and the lie is told in the callee.",
+  "confidence": "high",
+  "notes": "The file named by every frame and by the assertion text, sql/protocol.cc, is not part of the answer, and the code there needed no change. Worth noting for the benchmark as a whole: this fix spans sql/item.h and sql/item.cc, which are the declaration and definition of one class, so a single logical change counts as two gold files. In C and C++ projects that pairing is routine and inflates gold file counts without adding distinct locations, which is a language-dependent effect on any per-file metric and does not arise in the Java and Scala projects. Worth measuring across the benchmark before reporting per-file numbers."
+}

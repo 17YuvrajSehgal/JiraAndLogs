@@ -1,0 +1,33 @@
+{
+  "id": "mariadb:MDEV-12609",
+  "project": "mariadb",
+  "issue_key": "MDEV-12609",
+  "annotator": "claude-opus-5",
+  "pass": 1,
+  "file_roles": [
+    {
+      "path": "storage/innobase/fsp/fsp0fsp.cc",
+      "role": "causal",
+      "evidence": "The message the reporter is drowning in is deleted here, together with the counter that gated it: 'ulint rounds = 0', 'rounds++' and the whole 'if (rounds > 50) { ib_logf(IB_LOG_LEVEL_INFO, \"Space id %lu trying to reserve %lu extents actually reserved %lu reserve %lu free %lu size %lu rounds %lu total_reserved %llu\", ...); }' are removed from fsp_reserve_free_extents."
+    },
+    {
+      "path": "storage/xtradb/fsp/fsp0fsp.cc",
+      "role": "causal",
+      "evidence": "The identical removal in the XtraDB copy of the same function, same variable, same ib_logf call. Both engines emitted the same line."
+    }
+  ],
+  "symptom_location": {
+    "file": "storage/innobase/fsp/fsp0fsp.cc",
+    "function": "fsp_reserve_free_extents",
+    "determinable": true
+  },
+  "log_location": {
+    "file": "storage/innobase/fsp/fsp0fsp.cc",
+    "function": "fsp_reserve_free_extents",
+    "determinable": true
+  },
+  "relation": "same-location",
+  "rationale": "Here the log line is the defect rather than a pointer to one. The reporter pastes it verbatim, 'InnoDB: Space id 1131 trying to reserve 3 extents actually reserved 256 reserve 7010 free 201 size 44857344 rounds 51 total_reserved 13056', and explains the harm, that 'these messages are causing the user's error log to grow very large'. The format string is a literal in both gold files, so symptom, log site and fix coincide exactly.",
+  "confidence": "medium",
+  "notes": "The format string appears identically in the InnoDB and XtraDB copies and the pasted line says only 'InnoDB:', so which engine the user was running cannot be determined and both are labelled causal; the same ambiguity as the two TableRecordReaderImpl copies in HBASE-10330. This instance is the opposite extreme from KAFKA-6624: the reported log text is a literal in the gold files and a plain string match would land on both of them. Keeping instances like this and KAFKA-6624 in the same benchmark is what makes an average accuracy figure hard to interpret, and is an argument for reporting the distribution rather than the mean. The reporter also supplies a true and useful pointer that is not a file, 'It looks like these messages were added as part of the fix for MDEV-8386'."
+}

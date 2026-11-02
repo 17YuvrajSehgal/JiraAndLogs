@@ -1,0 +1,28 @@
+{
+  "id": "mariadb:MDEV-13972",
+  "project": "mariadb",
+  "issue_key": "MDEV-13972",
+  "annotator": "claude-opus-5",
+  "pass": 1,
+  "file_roles": [
+    {
+      "path": "sql/item_timefunc.cc",
+      "role": "causal",
+      "evidence": "On the overflow path the result of 'String *err= args[0]->val_str(&tmp)' was dereferenced without a check, 'make_truncated_value_warning(current_thd, ..., err->ptr(), err->length(), ...)'. The fix branches on it, using 'ErrConvInteger err2(sec, unsigned_flag)' when err is NULL and 'ErrConvString err2(err)' otherwise. val_str returning NULL for an expression that evaluated to NULL is ordinary, so the unchecked dereference is the defect."
+    }
+  ],
+  "symptom_location": {
+    "file": "sql/item_timefunc.cc",
+    "function": "Item_func_sec_to_time::get_date",
+    "determinable": true
+  },
+  "log_location": {
+    "file": null,
+    "function": null,
+    "determinable": false
+  },
+  "relation": "same-location",
+  "rationale": "The top frame is 'Item_func_sec_to_time::get_date()[item_timefunc.cc:1855]' and the hunk sits at the end of that same function, immediately before Item_func_date_format::fix_length_and_dec. The reproduction explains how err becomes NULL, since 'do to_days(sec_to_time(makedate('',rand(~(''))))' feeds an expression that evaluates to NULL into the overflow path. Crash site and defect are one statement.",
+  "confidence": "high",
+  "notes": "One of the cleanest instances in the sample: a crash backtrace whose first frame names the gold file, the right function, and a line inside the changed hunk. The line numbers differ, 1855 in the reported 10.2.9 build against roughly 1736 in the fixed tree, so matching on file and function works while matching on file and line would not. The backtrace itself is produced by the server's crash handler, which is a different file and not in gold, so no log site is recorded."
+}

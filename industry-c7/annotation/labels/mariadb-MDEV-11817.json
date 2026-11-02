@@ -1,0 +1,28 @@
+{
+  "id": "mariadb:MDEV-11817",
+  "project": "mariadb",
+  "issue_key": "MDEV-11817",
+  "annotator": "claude-opus-5",
+  "pass": 1,
+  "file_roles": [
+    {
+      "path": "sql/handler.cc",
+      "role": "causal",
+      "evidence": "The counter was charged for every row touched. 'DBUG_RETURN(check_wsrep_max_ws_rows())' in ha_write_row and the matching 'return check_wsrep_max_ws_rows()' in ha_update_row and ha_delete_row all become plain returns, and the call moves inside binlog_log_row behind 'if (error == 0) error= check_wsrep_max_ws_rows();'. The commit gives the rule that was broken: 'Since, the temporary table records are not placed into the binary log, wsrep_affected_rows must not be incremented.'"
+    }
+  ],
+  "symptom_location": {
+    "file": "sql/handler.cc",
+    "function": "check_wsrep_max_ws_rows",
+    "determinable": true
+  },
+  "log_location": {
+    "file": "sql/handler.cc",
+    "function": "check_wsrep_max_ws_rows",
+    "determinable": true
+  },
+  "relation": "same-location",
+  "rationale": "The reported failure is the client error 'ERROR 1180 (HY000): wsrep_max_ws_rows exceeded done', raised by the very check whose call sites the fix moves, and both the check and its three callers live in the gold file. The reporter describes the ALTER path precisely, that rows copied into the temporary table are counted against a limit meant for replicated writes, and the commit confirms it.",
+  "confidence": "high",
+  "notes": "The damaging part of this issue is not the error the reporter quotes but what follows it, that 'the node you were connected to will still have the old table schema, but the other nodes have successfully applied the alter table changes', after which writes terminate the other nodes. That divergence happens across three machines and leaves no trace in any one of them, so the only locatable evidence is the comparatively harmless rejection message."
+}

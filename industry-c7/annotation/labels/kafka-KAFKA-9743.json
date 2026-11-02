@@ -1,0 +1,28 @@
+{
+  "id": "kafka:KAFKA-9743",
+  "project": "kafka",
+  "issue_key": "KAFKA-9743",
+  "annotator": "claude-opus-5",
+  "pass": 1,
+  "file_roles": [
+    {
+      "path": "streams/src/main/java/org/apache/kafka/streams/processor/internals/TaskManager.java",
+      "role": "causal",
+      "evidence": "The commit was unguarded, so a throw from 'commitOffsetsOrTransaction(consumedOffsetsAndMetadataPerTask)' skipped everything after it, including the clean close. It is wrapped in try/catch with a fallback, 'log.error(\"Failed to commit tasks that are prepared to close clean, will close them as dirty instead\", e); dirtyTasks.addAll(checkpointPerTask.keySet()); checkpointPerTask.clear();'. Leaving tasks neither committed nor closed is the defect."
+    }
+  ],
+  "symptom_location": {
+    "file": "streams/src/main/java/org/apache/kafka/streams/state/internals/metrics/RocksDBMetricsRecordingTrigger.java",
+    "function": "addMetricsRecorder",
+    "determinable": true
+  },
+  "log_location": {
+    "file": "streams/src/main/java/org/apache/kafka/streams/processor/internals/StreamThread.java",
+    "function": null,
+    "determinable": true
+  },
+  "relation": "state-producer",
+  "rationale": "The throw is 'IllegalStateException: RocksDB metrics recorder for store ... of task 2_2 has already been added. This is a bug in Kafka Streams.' at 'RocksDBMetricsRecordingTrigger.addMetricsRecorder(RocksDBMetricsRecordingTrigger.java:30)', reached while initializing the task again. The recorder was still registered because an earlier close never finished, which the reporter states directly: 'if we fail to do the commit during task close section, the actual closeClean call could not be triggered'. The leftover registration is produced on one path and tripped over on another.",
+  "confidence": "high",
+  "notes": "The gold file does appear in the trace, at 'TaskManager.tryToCompleteRestoration(TaskManager.java:329)', but that is the re-initialization path and the fix is in the close path around line 235. Right file, wrong method, which is the same shape as KAFKA-3123, and again the frame cannot show the real site because the call that caused the damage had already returned. Note also that the message the exception carries, 'This is a bug in Kafka Streams', is an assertion in a third file that is neither the cause nor in gold. REPORT-NAMES-FIX: the reporter gives the mechanism in the last sentence of the report."
+}

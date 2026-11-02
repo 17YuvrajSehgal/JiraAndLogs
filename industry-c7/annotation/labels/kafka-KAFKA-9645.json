@@ -1,0 +1,33 @@
+{
+  "id": "kafka:KAFKA-9645",
+  "project": "kafka",
+  "issue_key": "KAFKA-9645",
+  "annotator": "claude-opus-5",
+  "pass": 1,
+  "file_roles": [
+    {
+      "path": "streams/src/main/java/org/apache/kafka/streams/processor/internals/StreamThread.java",
+      "role": "causal",
+      "evidence": "The fenced-thread handler asked for a rebalance without giving up its assignment, 'taskManager.handleLostAll(); mainConsumer.enforceRebalance();'. It becomes 'mainConsumer.unsubscribe(); subscribeConsumer();'. The commit states the consequence of the weaker form, that 'we could still return data during the rebalance phase, which means it could be possible to find records without corresponding tasks'."
+    },
+    {
+      "path": "clients/src/main/java/org/apache/kafka/clients/consumer/MockConsumer.java",
+      "role": "refactor",
+      "evidence": "Adds a 'shouldRebalance' flag with a getter and a reset so enforceRebalance can be observed, and deletes the unused addEndOffsets together with the innerUpdateEndOffsets replace parameter. Scaffolding for exercising the change, with no production behaviour of its own."
+    }
+  ],
+  "symptom_location": {
+    "file": "streams/src/main/java/org/apache/kafka/streams/processor/internals/StreamThread.java",
+    "function": "addRecordsToTasks",
+    "determinable": true
+  },
+  "log_location": {
+    "file": "streams/src/main/java/org/apache/kafka/streams/processor/internals/StreamThread.java",
+    "function": null,
+    "determinable": true
+  },
+  "relation": "state-producer",
+  "rationale": "The failure is 'NullPointerException: Task was unexpectedly missing for partition node-name-repartition-1' at 'StreamThread.addRecordsToTasks(StreamThread.java:984)', and the log immediately before it, 'Unable to locate active task for received-record partition node-name-repartition-1. Current tasks:' followed by an empty task list, shows the state that produced it. The tasks were closed and the assignment was not, in the fenced handler earlier in the same class, so records kept arriving for tasks that no longer existed. The first warning in the excerpt, 'Detected that the thread is being fenced', is the literal the fix sits beneath.",
+  "confidence": "high",
+  "notes": "Evidence and answer agree here by three routes: the NPE frame, the preceding ERROR line and the fenced warning are all tagged '(org.apache.kafka.streams.processor.internals.StreamThread)', which is the gold file. Worth flagging about the second gold file: MockConsumer is a test double, but it ships in clients/src/main/java as public API, so a path-based test filter cannot exclude it and it enters gold like any production file. That is a blind spot in the benchmark's test filter, distinct from the test files the filter does catch, and it should be mentioned beside the filtering rules."
+}

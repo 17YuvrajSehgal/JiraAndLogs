@@ -1,0 +1,28 @@
+{
+  "id": "keycloak:KEYCLOAK-9402",
+  "project": "keycloak",
+  "issue_key": "KEYCLOAK-9402",
+  "annotator": "claude-opus-5",
+  "pass": 1,
+  "file_roles": [
+    {
+      "path": "adapters/oidc/adapter-core/src/main/java/org/keycloak/adapters/authorization/AbstractPolicyEnforcer.java",
+      "role": "causal",
+      "evidence": "authorize returned success for DISABLED without ever looking at the token: 'if (EnforcementMode.DISABLED.equals(enforcementMode)) { return createEmptyAuthorizationContext(true); }'. The security context lookup is hoisted above that branch and the branch gains 'if (securityContext == null) { httpFacade.getResponse().sendError(401, \"Invalid bearer\"); }'. Treating a disabled enforcement mode as a reason to skip authentication entirely is the defect, and this method owns that decision."
+    }
+  ],
+  "symptom_location": {
+    "file": "adapters/oidc/adapter-core/src/main/java/org/keycloak/adapters/authorization/AbstractPolicyEnforcer.java",
+    "function": "authorize",
+    "determinable": true
+  },
+  "log_location": {
+    "file": null,
+    "function": null,
+    "determinable": false
+  },
+  "relation": "same-location",
+  "rationale": "The reported symptom is an absence rather than a crash: 'with configured policy-enforcer.enforcement-mode DISABLED and with expired token, I receive response with status 200 OK and empty body'. That response is produced by the early return the fix guards, so the symptom and the defect are the same branch. The log format in the report carries no logger names, only level and message, so the emitting file cannot be placed.",
+  "confidence": "high",
+  "notes": "The most prominent evidence in the report, a 33-line TokenNotActiveException trace under 'Failed to verify token', describes code that is working correctly: the token really is expired and verification really should fail. The defect is that the enforcer ignores that result. So here the trace does not point at the wrong file so much as at correct code, and following it would lead to TokenVerifier and BearerTokenRequestAuthenticator, neither of which is in the gold set. The two DEBUG lines that actually matter, 'Policy enforcement result for path [...] is : GRANTED' after 'Bearer FAILED', are the contradiction that locates the bug, and they are far less conspicuous than the trace."
+}
