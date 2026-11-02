@@ -1,0 +1,28 @@
+{
+  "id": "mariadb:MDEV-14684",
+  "project": "mariadb",
+  "issue_key": "MDEV-14684",
+  "annotator": "claude-opus-5",
+  "pass": 1,
+  "file_roles": [
+    {
+      "path": "sql/sql_delete.cc",
+      "role": "causal",
+      "evidence": "The truncate_history branch assumed a real table, going straight to 'TABLE *table= table_list->table; DBUG_ASSERT(table);'. A rejection is added above it, 'if (table_list->is_view_or_derived()) { my_error(ER_VERS_TRUNCATE_TO_VIEW, MYF(0)); DBUG_RETURN(true); }'. A view has no table, so the branch accepting one is the defect, and this function owns that branch."
+    }
+  ],
+  "symptom_location": {
+    "file": "sql/sql_delete.cc",
+    "function": "mysql_delete",
+    "determinable": true
+  },
+  "log_location": {
+    "file": "sql/sql_delete.cc",
+    "function": "mysql_delete",
+    "determinable": true
+  },
+  "relation": "same-location",
+  "rationale": "The assertion text identifies the site exactly, 'sql/sql_delete.cc:316: bool mysql_delete(...): Assertion `table' failed', and that is the line the new guard is inserted above. The assertion itself was correct and is kept; what was missing was a check for the one input that cannot satisfy it, which the reproduction supplies with 'CREATE OR REPLACE VIEW v1 AS SELECT * FROM t1; TRUNCATE v1 TO system_time NOW()'. Defect, assertion and fix are the same function.",
+  "confidence": "high",
+  "notes": "The other reading is that the statement should never have reached mysql_delete, since Sql_cmd_truncate_table::execute is one frame up and is not in the gold set; the project chose to reject it at the consumer instead, so the consumer is labelled causal. The diff also carries unrelated brace reformatting, 'if (!table->versioned(VERS_TIMESTAMP)) {' becoming the same condition with the brace on its own line, which is noise inside an otherwise substantive hunk."
+}

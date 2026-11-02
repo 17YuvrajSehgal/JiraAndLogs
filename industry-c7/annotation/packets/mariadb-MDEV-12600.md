@@ -185,8 +185,6 @@ Snapshot holds 3,458 non-test source files. The fix changed 30 file(s); 26 of th
 - `storage/xtradb/srv/srv0start.cc`
 - `storage/xtradb/trx/trx0rseg.cc`
 
-Diffs are shown for the first 25 of these 26 files.
-
 ## The fix diff
 
 ### `storage/innobase/btr/btr0btr.cc`
@@ -2989,6 +2987,110 @@ index cbab9b2f8c4..6fd8e8944f5 100644
  	/* Here the double write buffer has already been created and so
  	any new rollback segments will be allocated after the double
  	write buffer. The default segment should already exist.
+```
+
+### `storage/xtradb/trx/trx0rseg.cc`
+
+```diff
+--- from commit 112b21da37da ---
+diff --git a/storage/xtradb/trx/trx0rseg.cc b/storage/xtradb/trx/trx0rseg.cc
+index 003d1036a8c..21dbab98e48 100644
+--- a/storage/xtradb/trx/trx0rseg.cc
++++ b/storage/xtradb/trx/trx0rseg.cc
+@@ -321,11 +321,14 @@ trx_rseg_create(
+ 		trx_sysf_t*	sys_header;
+ 
+ 		page_no = trx_rseg_header_create(
+ 			space, 0, ULINT_MAX, slot_no, &mtr);
+ 
+-		ut_a(page_no != FIL_NULL);
++		if (page_no == FIL_NULL) {
++			mtr_commit(&mtr);
++			return (rseg);
++		}
+ 
+ 		sys_header = trx_sysf_get(&mtr);
+ 
+ 		id = trx_sysf_rseg_get_space(sys_header, slot_no, &mtr);
+ 		ut_a(id == space);
+--- from commit fbeb9489cd7d ---
+diff --git a/storage/xtradb/trx/trx0rseg.cc b/storage/xtradb/trx/trx0rseg.cc
+index 21dbab98e48..16fa334872b 100644
+--- a/storage/xtradb/trx/trx0rseg.cc
++++ b/storage/xtradb/trx/trx0rseg.cc
+@@ -1,8 +1,9 @@
+ /*****************************************************************************
+ 
+ Copyright (c) 1996, 2011, Oracle and/or its affiliates. All Rights Reserved.
++Copyright (c) 2017, MariaDB Corporation.
+ 
+ This program is free software; you can redistribute it and/or modify it under
+ the terms of the GNU General Public License as published by the Free Software
+ Foundation; version 2 of the License.
+ 
+@@ -291,18 +292,17 @@ trx_rseg_create_instance(
+ 			ut_a(trx_sys->rseg_array[i] == NULL);
+ 		}
+ 	}
+ }
+ 
+-/*********************************************************************
+-Creates a rollback segment.
+-@return pointer to new rollback segment if create successful */
++/** Create a rollback segment.
++@param[in]	space	undo tablespace ID
++@return pointer to new rollback segment
++@retval	NULL	on failure */
+ UNIV_INTERN
+ trx_rseg_t*
+-trx_rseg_create(
+-/*============*/
+-	ulint		space)		/*!< in: id of UNDO tablespace */
++trx_rseg_create(ulint space)
+ {
+ 	mtr_t		mtr;
+ 	ulint		slot_no;
+ 	trx_rseg_t*	rseg = NULL;
+ 
+@@ -321,29 +321,25 @@ trx_rseg_create(
+ 		trx_sysf_t*	sys_header;
+ 
+ 		page_no = trx_rseg_header_create(
+ 			space, 0, ULINT_MAX, slot_no, &mtr);
+ 
+-		if (page_no == FIL_NULL) {
+-			mtr_commit(&mtr);
+-			return (rseg);
+-		}
+-
+-		sys_header = trx_sysf_get(&mtr);
++		if (page_no != FIL_NULL) {
++			sys_header = trx_sysf_get(&mtr);
+ 
+-		id = trx_sysf_rseg_get_space(sys_header, slot_no, &mtr);
+-		ut_a(id == space);
++			id = trx_sysf_rseg_get_space(sys_header, slot_no, &mtr);
++			ut_a(id == space);
+ 
+-		zip_size = space ? fil_space_get_zip_size(space) : 0;
++			zip_size = space ? fil_space_get_zip_size(space) : 0;
+ 
+-		rseg = trx_rseg_mem_create(
+-			slot_no, space, zip_size, page_no,
+-			purge_sys->ib_bh, &mtr);
++			rseg = trx_rseg_mem_create(
++				slot_no, space, zip_size, page_no,
++				purge_sys->ib_bh, &mtr);
++		}
+ 	}
+ 
+ 	mtr_commit(&mtr);
+-
+ 	return(rseg);
+ }
+ 
+ /*********************************************************************//**
+ Creates the memory copies for rollback segments and initializes the
 ```
 
 ---

@@ -1,0 +1,33 @@
+{
+  "id": "mariadb:MDEV-14730",
+  "project": "mariadb",
+  "issue_key": "MDEV-14730",
+  "annotator": "claude-opus-5",
+  "pass": 1,
+  "file_roles": [
+    {
+      "path": "sql/partition_info.cc",
+      "role": "causal",
+      "evidence": "The hand-rolled lock and unlock pair is removed, 'int rc= file->ha_external_lock(thd, F_RDLCK)' with its 'goto lock_fail' path and the matching 'file->ha_external_lock(thd, F_UNLCK)', and replaced by an RAII guard, 'Table_locker l(thd, *table, TL_READ); if (l.lock())'. Its destructor restores what the old code could skip on an error path, 'mysql_unlock_tables(thd, thd->lock); table.reginfo.lock_type= saved_mode; thd->lock= saved_lock;'. Leaving the handler locked when a path bailed out early is the defect."
+    },
+    {
+      "path": "sql/table.h",
+      "role": "refactor",
+      "evidence": "Adds one constructor, 'TABLE_LIST(TABLE &_table, thr_lock_type lock_type)', wrapping the init_one_table call the old code wrote out by hand. It exists so the new guard can build its TABLE_LIST; no locking decision is made here."
+    }
+  ],
+  "symptom_location": {
+    "file": "sql/handler.cc",
+    "function": "handler::ha_close",
+    "determinable": true
+  },
+  "log_location": {
+    "file": "sql/handler.cc",
+    "function": "handler::ha_close",
+    "determinable": true
+  },
+  "relation": "state-producer",
+  "rationale": "The assertion is 'sql/handler.cc:2612: int handler::ha_close(): Assertion `m_lock_type == 2' failed', that is, the handler was still locked when it was closed, and handler.cc is not in the gold set. The stack reaches it through ha_partition::close, open_table_from_share and mysql_alter_table, none of which are in gold either. The lock was taken and not released during partition min/max scanning in the gold file, on an earlier call that had already returned, which is why no frame points there.",
+  "confidence": "medium",
+  "notes": "The precise error path that skipped the unlock is not visible in the packet, only that the replacement guarantees release through a destructor; seeing the removed goto target in context would settle it. The first line of the report is also worth recording, 'This is a non-deterministic test case, for reproducing only, don't put it into the regression suite', so this fix ships with no regression test by the reporter's own instruction, which is the second such instance after IMPALA-1351. The InnoDB line above the assertion, 'Cannot save table statistics for table ... Lock wait timeout', is a consequence of the same stuck lock and is emitted by the statistics background code, which is a third file outside the gold set."
+}

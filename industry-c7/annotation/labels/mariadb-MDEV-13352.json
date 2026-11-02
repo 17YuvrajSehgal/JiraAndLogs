@@ -1,0 +1,28 @@
+{
+  "id": "mariadb:MDEV-13352",
+  "project": "mariadb",
+  "issue_key": "MDEV-13352",
+  "annotator": "claude-opus-5",
+  "pass": 1,
+  "file_roles": [
+    {
+      "path": "sql/sql_select.cc",
+      "role": "causal",
+      "evidence": "Inside the zero_result_cause branch of JOIN::exec_inner, 'if (select_lex->have_window_funcs())' becomes 'if (select_lex->have_window_funcs() && send_row_on_empty_set())', so the window computation step is only set up when a row will actually be produced. The commit states the consequence of the old condition, that running it on an empty result 'may cause reads from uninitialized memory'."
+    }
+  ],
+  "symptom_location": {
+    "file": "sql/sql_select.cc",
+    "function": "st_join_table::remove_duplicates",
+    "determinable": true
+  },
+  "log_location": {
+    "file": null,
+    "function": null,
+    "determinable": false
+  },
+  "relation": "caller-callee",
+  "rationale": "The crash is at 'st_join_table::remove_duplicates ... sql_select.cc:21785', reached through join_init_read_record, AGGR_OP::end_send, sub_select_postjoin_aggr and do_select from 'JOIN::exec_inner ... sql_select.cc:3477'. That last frame is the function the fix changes, roughly sixty lines below the hunk, so the whole chain from the faulty setup to the crash is visible in one stack. The reproduction is three lines and the WHERE 0 in 'SELECT DISTINCT ROW_NUMBER() OVER(), i FROM t1 WHERE 0' is exactly the empty-result case the new guard covers.",
+  "confidence": "high",
+  "notes": "An instance where the trace carries the answer rather than pointing away from it: the crash frame and the fixed function are both in the stack, and the fixed function appears by name. Worth noting that file-level matching would look trivially correct here for a weaker reason, since sql_select.cc is over twenty thousand lines and holds both the crash site at 21785 and the fix near 3400. Granularity matters for what this instance is taken to demonstrate."
+}

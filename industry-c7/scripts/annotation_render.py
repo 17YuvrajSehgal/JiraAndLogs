@@ -42,7 +42,9 @@ REPOS = ROOT / "data/c7-repos"
 # these are sized to the measured worst case in the sample, not to taste.
 MAX_REPORT_CHARS = 40_000       # longest sampled report is 13,066 chars
 MAX_DIFF_LINES_PER_FILE = 600   # largest sampled single-file diff is 587
-MAX_FILES_SHOWN = 25
+# The gold cap is 50 files, so 25 here silently hid a file's diff on
+# MDEV-12600 (26 gold). Sized to the cap, not below it.
+MAX_FILES_SHOWN = 50
 
 # Terms that would mean a system's answer leaked into a packet.
 BANNED = re.compile(
