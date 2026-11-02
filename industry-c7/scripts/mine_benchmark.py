@@ -44,7 +44,7 @@ ROOT = Path(__file__).resolve().parents[2]
 WOL_GLOBAL = ROOT / "data/derived/global/2026-06-17-wol-real-v3-global/global-triage-examples.jsonl"
 # shared, regenerable infra (bare git clones; see industry-c7/README.md)
 REPOS = ROOT / "data/c7-repos"
-OUT = ROOT / "industry-c7/data/benchmark"
+OUT = ROOT / "industry-c7/data/benchmark"   # overridden by --out
 
 PROJECTS = {
     # ALL projects use source "wolv2" (decision 2026-10-30): one population
@@ -81,6 +81,170 @@ PROJECTS = {
         "source": "wolv2",
         "link_via": "fixes_trailer",  # Qt convention: "Fixes: QTBUG-nnn" trailer
     },
+
+# ---- expanded set (screened 2026-11-02; see paper/screening-results.json)
+# 23 projects that passed linkage and non-test-source screening.
+    "hive": {
+        "key_prefix": "HIVE",
+        "git_dir": REPOS / "hive-full.git",
+        "src_ext": (".java",),
+        "source": "wolv2",
+        "link_via": "subject",
+    },
+    "hadoop": {
+        "key_prefix": ["HADOOP", "HDFS", "YARN", "MAPREDUCE"],
+        "git_dir": REPOS / "hadoop-full.git",
+        "src_ext": (".java",),
+        "source": "wolv2",
+        "link_via": "subject",
+    },
+    "hbase": {
+        "key_prefix": "HBASE",
+        "git_dir": REPOS / "hbase-full.git",
+        "src_ext": (".java",),
+        "source": "wolv2",
+        "link_via": "subject",
+    },
+    "ambari": {
+        "key_prefix": "AMBARI",
+        "git_dir": REPOS / "ambari-full.git",
+        "src_ext": (".java", ".py"),
+        "source": "wolv2",
+        "link_via": "subject",
+    },
+    "cassandra": {
+        "key_prefix": "CASSANDRA",
+        "git_dir": REPOS / "cassandra-full.git",
+        "src_ext": (".java",),
+        "source": "wolv2",
+        "link_via": "subject_or_body",
+    },
+    "sakai": {
+        "key_prefix": "SAK",
+        "git_dir": REPOS / "sakai-full.git",
+        "src_ext": (".java",),
+        "source": "wolv2",
+        "link_via": "subject",
+    },
+    "spark": {
+        "key_prefix": "SPARK",
+        "git_dir": REPOS / "spark-full.git",
+        "src_ext": (".scala", ".java"),
+        "source": "wolv2",
+        "link_via": "subject",
+    },
+    "flink": {
+        "key_prefix": "FLINK",
+        "git_dir": REPOS / "flink-full.git",
+        "src_ext": (".java", ".scala"),
+        "source": "wolv2",
+        "link_via": "subject",
+    },
+    "groovy": {
+        "key_prefix": "GROOVY",
+        "git_dir": REPOS / "groovy-full.git",
+        "src_ext": (".java", ".groovy"),
+        "source": "wolv2",
+        "link_via": "subject",
+    },
+    "camel": {
+        "key_prefix": "CAMEL",
+        "git_dir": REPOS / "camel-full.git",
+        "src_ext": (".java",),
+        "source": "wolv2",
+        "link_via": "subject",
+    },
+    "phoenix": {
+        "key_prefix": "PHOENIX",
+        "git_dir": REPOS / "phoenix-full.git",
+        "src_ext": (".java",),
+        "source": "wolv2",
+        "link_via": "subject",
+    },
+    "impala": {
+        "key_prefix": "IMPALA",
+        "git_dir": REPOS / "impala-full.git",
+        "src_ext": (".cc", ".h", ".java"),
+        "source": "wolv2",
+        "link_via": "subject",
+    },
+    "infinispan": {
+        "key_prefix": "ISPN",
+        "git_dir": REPOS / "infinispan-full.git",
+        "src_ext": (".java",),
+        "source": "wolv2",
+        "link_via": "subject",
+    },
+    "ignite": {
+        "key_prefix": "IGNITE",
+        "git_dir": REPOS / "ignite-full.git",
+        "src_ext": (".java",),
+        "source": "wolv2",
+        "link_via": "subject",
+    },
+    "wildfly": {
+        "key_prefix": "WFLY",
+        "git_dir": REPOS / "wildfly-full.git",
+        "src_ext": (".java",),
+        "source": "wolv2",
+        "link_via": "subject",
+    },
+    "pdfbox": {
+        "key_prefix": "PDFBOX",
+        "git_dir": REPOS / "pdfbox-full.git",
+        "src_ext": (".java",),
+        "source": "wolv2",
+        "link_via": "subject",
+    },
+    "derby": {
+        "key_prefix": "DERBY",
+        "git_dir": REPOS / "derby-full.git",
+        "src_ext": (".java",),
+        "source": "wolv2",
+        "link_via": "subject",
+    },
+    "solr": {
+        "key_prefix": "SOLR",
+        "git_dir": REPOS / "solr-full.git",
+        "src_ext": (".java",),
+        "source": "wolv2",
+        "link_via": "subject",
+    },
+    "pig": {
+        "key_prefix": "PIG",
+        "git_dir": REPOS / "pig-full.git",
+        "src_ext": (".java",),
+        "source": "wolv2",
+        "link_via": "subject",
+    },
+    "geode": {
+        "key_prefix": "GEODE",
+        "git_dir": REPOS / "geode-full.git",
+        "src_ext": (".java",),
+        "source": "wolv2",
+        "link_via": "subject",
+    },
+    "drill": {
+        "key_prefix": "DRILL",
+        "git_dir": REPOS / "drill-full.git",
+        "src_ext": (".java",),
+        "source": "wolv2",
+        "link_via": "subject",
+    },
+    "keycloak": {
+        "key_prefix": "KEYCLOAK",
+        "git_dir": REPOS / "keycloak-full.git",
+        "src_ext": (".java",),
+        "source": "wolv2",
+        "link_via": "subject",
+    },
+    "beam": {
+        "key_prefix": "BEAM",
+        "git_dir": REPOS / "beam-full.git",
+        "src_ext": (".java", ".go", ".py"),
+        "source": "wolv2",
+        "link_via": "subject",
+    },
 }
 WOLV2_MONGO = "mongodb://localhost:27017"
 MAX_QUERY_CHARS = 0        # 0 = no truncation (was 20_000; it clipped 0.3% of
@@ -99,6 +263,23 @@ TRACE_PATTERNS = (
     re.compile(r"^#\d+\s+0x[0-9a-f]+", re.M),
     re.compile(r"mysqld got signal|stack_bottom", re.I),
 )
+# For via="subject_or_body": only body text AFTER a fix cue counts as a link.
+# Validated on Cassandra, whose convention is "patch by X; reviewed by Y for
+# CASSANDRA-123". A bare mention is rejected because those are usually
+# cross-references ("extends the feature from CASSANDRA-18112").
+BODY_FIX_CUE = re.compile(
+    r"(?:\bpatch\s+by\b[^\n]*?\bfor\b"
+    r"|^[ \t]*(?:fixes|fix|closes|close|resolves|resolve)\b[:\s]+)"
+    r"\s*((?:[A-Za-z]+-\d+[\s,]*(?:and\s+)?)+)", re.I | re.M)
+
+# A fix modifying more than this many non-test source files is a bulk edit
+# (license headers, log4j->slf4j, interface annotations), not a targeted fix.
+# Acc@K counts a hit if ANY gold file is retrieved, so such instances are
+# trivially solvable: HIVE-17952 touches 3,493 of 4,819 files, where random
+# top-5 guessing hits 99.8% of the time. Keeping them inflates every system
+# equally and measures nothing. Set to 0 to disable.
+GOLD_MAX_FILES = 50
+
 GIT_SHOW_BATCH = 100
 MAX_FIX_COMMITS = 10       # was 3; cost 1.2% here but 8.3% on PDFBOX, and
                            # a multi-commit fix is a harder instance, not a
@@ -140,23 +321,44 @@ def load_wol_issues(key_prefix: str) -> dict[str, dict]:
     return issues
 
 
-def link_commits(git_dir: Path, key_prefix: str,
+def link_commits(git_dir: Path, key_prefix: str | list[str],
                  via: str = "subject") -> tuple[dict[str, list[dict]], Counter]:
     """key -> [{sha, ts, subject, parents}] from the default branch, with
     revert/merge commits dropped (counted in the returned Counter).
-    via="subject" scans commit subjects; via="fixes_trailer" scans the
-    Fixes: trailer (the Qt convention)."""
-    key_re = re.compile(rf"\b({key_prefix}-\d+)\b")
-    key_field = ("%s" if via == "subject"
-                 else "%(trailers:key=Fixes,valueonly,separator=;)")
+
+    via="subject"         scan commit subjects (the Apache convention)
+    via="fixes_trailer"   scan the Fixes: trailer (the Qt convention)
+    via="subject_or_body" subject, plus body text that follows a FIX cue
+                          ("patch by X; reviewed by Y for KEY-1", or
+                          Fixes/Closes/Resolves). A bare body mention is
+                          NOT matched: in Cassandra's history those are
+                          cross-references to other issues, and matching
+                          them would manufacture false ground truth.
+
+    key_prefix may be a list: one repo can serve several trackers (the
+    Hadoop repo carries HADOOP, HDFS, YARN and MAPREDUCE).
+    """
+    prefixes = [key_prefix] if isinstance(key_prefix, str) else list(key_prefix)
+    key_re = re.compile(r"\b((?:" + "|".join(prefixes) + r")-\d+)\b")
     dropped = Counter()
     linked: dict[str, list[dict]] = defaultdict(list)
-    out = run_git(git_dir, "log", f"--format=%H%x01%ct%x01%P%x01%s%x01{key_field}")
-    for line in out.splitlines():
+    # %x02 separates records so a multi-line body cannot break parsing
+    out = run_git(git_dir, "log",
+                  "--format=%H%x01%ct%x01%P%x01%s%x01"
+                  "%(trailers:key=Fixes,valueonly,separator=;)%x01%b%x02")
+    for rec in out.split("\x02"):
+        if not rec.strip():
+            continue
         try:
-            sha, ts, parents, subj, keysrc = line.split("\x01", 4)
+            sha, ts, parents, subj, trailers, body = rec.strip("\n").split("\x01", 5)
         except ValueError:
             continue
+        if via == "subject":
+            keysrc = subj
+        elif via == "fixes_trailer":
+            keysrc = trailers
+        else:  # subject_or_body
+            keysrc = subj + " " + " ".join(BODY_FIX_CUE.findall(body))
         keys = set(key_re.findall(keysrc))
         if not keys:
             continue
@@ -168,7 +370,8 @@ def link_commits(git_dir: Path, key_prefix: str,
             continue
         for k in keys:
             linked[k].append({"sha": sha, "ts": int(ts),
-                              "parent": parents.strip(), "subject": subj})
+                              "parent": parents.split()[0] if parents.strip() else "",
+                              "subject": subj})
     return linked, dropped
 
 
@@ -179,8 +382,10 @@ def load_wolv2_issues(cfg: dict) -> dict[str, dict]:
     from pymongo import MongoClient
     jira = MongoClient(WOLV2_MONGO)["WoL_v2_gh_so"]["JIRA"]
     issues: dict[str, dict] = {}
+    kp = cfg["key_prefix"]
+    prefixes = [kp] if isinstance(kp, str) else list(kp)
     cur = jira.find(
-        {"key": {"$regex": f"^{cfg['key_prefix']}-"},
+        {"key": {"$regex": "^(?:" + "|".join(prefixes) + ")-"},
          "fields.issuetype.name": "Bug",
          "fields.resolution.name": {"$in": ["Fixed", "Done"]}},
         {"key": 1, "has_log_msg": 1, "log_msg_count": 1, "pred_uncertainty": 1,
@@ -286,6 +491,10 @@ def mine_project(name: str) -> dict:
         if not gold:
             funnel["no_source_gold"] += 1
             continue
+        if GOLD_MAX_FILES and len(gold) > GOLD_MAX_FILES:
+            # bulk edit, not a targeted fix: see GOLD_MAX_FILES
+            funnel[f"gold_over_{GOLD_MAX_FILES}_files"] += 1
+            continue
 
         rec = issues[key]
         ev = rec["evidence_text"]
@@ -370,7 +579,13 @@ def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--project", required=True, choices=[*PROJECTS, "all"])
+    ap.add_argument("--out", default="", help="output dir under industry-c7/data/ "
+                    "(default: benchmark). Use benchmark-v2 to build the expanded "
+                    "set without touching the frozen one.")
     args = ap.parse_args()
+    if args.out:
+        global OUT
+        OUT = ROOT / "industry-c7/data" / args.out
 
     names = list(PROJECTS) if args.project == "all" else [args.project]
     datasheet_path = OUT / "datasheet.json"

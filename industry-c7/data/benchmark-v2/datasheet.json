@@ -1,0 +1,1918 @@
+{
+  "pdfbox": {
+    "project": "pdfbox",
+    "git_dir": "C:\\workplace\\JiraAndLogs\\data\\c7-repos\\pdfbox-full.git",
+    "git_head": "a9ae066a942c122c9dded9bfa1b08dfae4078ba4",
+    "branch_scanned": "default branch only (first-parent history not enforced)",
+    "funnel": {
+      "wolv2_log_fixed_lowuncert_issues": 890,
+      "no_fix_commit": 154,
+      "gt10_fix_commits": 4,
+      "linked_1_to_10_commits": 732,
+      "no_source_gold": 18,
+      "final_instances": 714
+    },
+    "dropped_commit_level": {
+      "revert_commits": 182
+    },
+    "strata": {
+      "single_commit": 457,
+      "trace_present": 404,
+      "easy_gold_named": 533,
+      "multi_commit": 257,
+      "trace_absent": 310,
+      "hard_gold_not_named": 181
+    },
+    "gold_files_median": 1,
+    "query_chars": {
+      "n": 714,
+      "min": 66,
+      "median": 1045,
+      "p95": 3402,
+      "max": 107981,
+      "mean": 1571.42,
+      "over_20k": 3,
+      "truncated_at": null
+    },
+    "fix_commits_per_issue": {
+      "n": 714,
+      "min": 1,
+      "median": 1,
+      "p95": 5,
+      "max": 10,
+      "mean": 1.83,
+      "cap": 10,
+      "hist": {
+        "1": 457,
+        "2": 133,
+        "3": 57,
+        "4": 27,
+        "5": 8,
+        "6": 5,
+        "7": 5,
+        "8": 7,
+        "9": 3,
+        "10": 12
+      }
+    },
+    "files_changed_by_fix": {
+      "n": 714,
+      "min": 1,
+      "median": 1,
+      "p95": 8,
+      "max": 107,
+      "mean": 2.64,
+      "over_3": 108,
+      "over_10": 30,
+      "over_50": 2
+    },
+    "gold_files_mean": 2.09,
+    "output": "C:\\workplace\\JiraAndLogs\\industry-c7\\data\\benchmark-v2\\pdfbox.jsonl"
+  },
+  "hive": {
+    "project": "hive",
+    "git_dir": "C:\\workplace\\JiraAndLogs\\data\\c7-repos\\hive-full.git",
+    "git_head": "02004f8dab1039ef1b5258b7c52c9e8909377a28",
+    "branch_scanned": "default branch only (first-parent history not enforced)",
+    "funnel": {
+      "wolv2_log_fixed_lowuncert_issues": 5910,
+      "no_fix_commit": 298,
+      "linked_1_to_10_commits": 5612,
+      "no_source_gold": 856,
+      "gold_over_50_files": 20,
+      "final_instances": 4736
+    },
+    "dropped_commit_level": {
+      "revert_commits": 237,
+      "merge_commits": 151
+    },
+    "strata": {
+      "single_commit": 4458,
+      "trace_absent": 4041,
+      "hard_gold_not_named": 2794,
+      "easy_gold_named": 1942,
+      "trace_present": 695,
+      "multi_commit": 278
+    },
+    "gold_files_median": 1,
+    "query_chars": {
+      "n": 4736,
+      "min": 19,
+      "median": 426,
+      "p95": 4363,
+      "max": 140730,
+      "mean": 1121.04,
+      "over_20k": 8,
+      "truncated_at": null
+    },
+    "fix_commits_per_issue": {
+      "n": 4736,
+      "min": 1,
+      "median": 1,
+      "p95": 2,
+      "max": 5,
+      "mean": 1.07,
+      "cap": 10,
+      "hist": {
+        "1": 4458,
+        "2": 241,
+        "3": 35,
+        "4": 1,
+        "5": 1,
+        "6": 0,
+        "7": 0,
+        "8": 0,
+        "9": 0,
+        "10": 0
+      }
+    },
+    "files_changed_by_fix": {
+      "n": 4736,
+      "min": 1,
+      "median": 3,
+      "p95": 30,
+      "max": 2755,
+      "mean": 12.0,
+      "over_3": 2171,
+      "over_10": 717,
+      "over_50": 129
+    },
+    "gold_files_mean": 2.81,
+    "output": "C:\\workplace\\JiraAndLogs\\industry-c7\\data\\benchmark-v2\\hive.jsonl"
+  },
+  "hbase": {
+    "project": "hbase",
+    "git_dir": "C:\\workplace\\JiraAndLogs\\data\\c7-repos\\hbase-full.git",
+    "git_head": "4fc3c275d4214678e574d3fb4648db6f1362aabf",
+    "branch_scanned": "default branch only (first-parent history not enforced)",
+    "funnel": {
+      "wolv2_log_fixed_lowuncert_issues": 5215,
+      "no_fix_commit": 700,
+      "linked_1_to_10_commits": 4515,
+      "no_source_gold": 1256,
+      "gold_over_50_files": 10,
+      "final_instances": 3249
+    },
+    "dropped_commit_level": {
+      "revert_commits": 586,
+      "merge_commits": 4
+    },
+    "strata": {
+      "single_commit": 2773,
+      "trace_absent": 2529,
+      "easy_gold_named": 2091,
+      "multi_commit": 476,
+      "trace_present": 720,
+      "hard_gold_not_named": 1158
+    },
+    "gold_files_median": 1,
+    "query_chars": {
+      "n": 3249,
+      "min": 21,
+      "median": 710,
+      "p95": 4515,
+      "max": 76415,
+      "mean": 1349.67,
+      "over_20k": 3,
+      "truncated_at": null
+    },
+    "fix_commits_per_issue": {
+      "n": 3249,
+      "min": 1,
+      "median": 1,
+      "p95": 2,
+      "max": 7,
+      "mean": 1.19,
+      "cap": 10,
+      "hist": {
+        "1": 2773,
+        "2": 383,
+        "3": 63,
+        "4": 20,
+        "5": 7,
+        "6": 2,
+        "7": 1,
+        "8": 0,
+        "9": 0,
+        "10": 0
+      }
+    },
+    "files_changed_by_fix": {
+      "n": 3249,
+      "min": 1,
+      "median": 2,
+      "p95": 15,
+      "max": 320,
+      "mean": 4.59,
+      "over_3": 1023,
+      "over_10": 287,
+      "over_50": 16
+    },
+    "gold_files_mean": 2.69,
+    "output": "C:\\workplace\\JiraAndLogs\\industry-c7\\data\\benchmark-v2\\hbase.jsonl"
+  },
+  "hadoop": {
+    "project": "hadoop",
+    "git_dir": "C:\\workplace\\JiraAndLogs\\data\\c7-repos\\hadoop-full.git",
+    "git_head": "57f78d283ae105b4982c2fee176dd36883466cdb",
+    "branch_scanned": "default branch only (first-parent history not enforced)",
+    "funnel": {
+      "wolv2_log_fixed_lowuncert_issues": 7848,
+      "no_fix_commit": 1653,
+      "linked_1_to_10_commits": 6195,
+      "no_source_gold": 1808,
+      "gold_over_50_files": 1,
+      "final_instances": 4386
+    },
+    "dropped_commit_level": {
+      "revert_commits": 508,
+      "merge_commits": 190
+    },
+    "strata": {
+      "single_commit": 4052,
+      "trace_absent": 3580,
+      "easy_gold_named": 2562,
+      "hard_gold_not_named": 1824,
+      "trace_present": 806,
+      "multi_commit": 334
+    },
+    "gold_files_median": 1,
+    "query_chars": {
+      "n": 4386,
+      "min": 26,
+      "median": 559,
+      "p95": 3660,
+      "max": 133657,
+      "mean": 1117.81,
+      "over_20k": 4,
+      "truncated_at": null
+    },
+    "fix_commits_per_issue": {
+      "n": 4386,
+      "min": 1,
+      "median": 1,
+      "p95": 2,
+      "max": 6,
+      "mean": 1.09,
+      "cap": 10,
+      "hist": {
+        "1": 4052,
+        "2": 296,
+        "3": 34,
+        "4": 2,
+        "5": 1,
+        "6": 1,
+        "7": 0,
+        "8": 0,
+        "9": 0,
+        "10": 0
+      }
+    },
+    "files_changed_by_fix": {
+      "n": 4386,
+      "min": 1,
+      "median": 3,
+      "p95": 11,
+      "max": 93,
+      "mean": 4.09,
+      "over_3": 1583,
+      "over_10": 241,
+      "over_50": 4
+    },
+    "gold_files_mean": 2.18,
+    "output": "C:\\workplace\\JiraAndLogs\\industry-c7\\data\\benchmark-v2\\hadoop.jsonl"
+  },
+  "spark": {
+    "project": "spark",
+    "git_dir": "C:\\workplace\\JiraAndLogs\\data\\c7-repos\\spark-full.git",
+    "git_head": "9e771a7bef9a5f5bba407dec3f5aebd5ec784adc",
+    "branch_scanned": "default branch only (first-parent history not enforced)",
+    "funnel": {
+      "wolv2_log_fixed_lowuncert_issues": 2314,
+      "no_fix_commit": 330,
+      "linked_1_to_10_commits": 1984,
+      "no_source_gold": 419,
+      "gold_over_50_files": 1,
+      "final_instances": 1564
+    },
+    "dropped_commit_level": {
+      "revert_commits": 727,
+      "merge_commits": 20
+    },
+    "strata": {
+      "single_commit": 1394,
+      "trace_present": 791,
+      "easy_gold_named": 992,
+      "hard_gold_not_named": 572,
+      "trace_absent": 773,
+      "multi_commit": 170
+    },
+    "gold_files_median": 1,
+    "query_chars": {
+      "n": 1564,
+      "min": 53,
+      "median": 1732,
+      "p95": 8139,
+      "max": 94651,
+      "mean": 2840.46,
+      "over_20k": 9,
+      "truncated_at": null
+    },
+    "fix_commits_per_issue": {
+      "n": 1564,
+      "min": 1,
+      "median": 1,
+      "p95": 2,
+      "max": 5,
+      "mean": 1.13,
+      "cap": 10,
+      "hist": {
+        "1": 1394,
+        "2": 148,
+        "3": 17,
+        "4": 4,
+        "5": 1,
+        "6": 0,
+        "7": 0,
+        "8": 0,
+        "9": 0,
+        "10": 0
+      }
+    },
+    "files_changed_by_fix": {
+      "n": 1564,
+      "min": 1,
+      "median": 2,
+      "p95": 9,
+      "max": 214,
+      "mean": 3.53,
+      "over_3": 402,
+      "over_10": 64,
+      "over_50": 3
+    },
+    "gold_files_mean": 1.97,
+    "output": "C:\\workplace\\JiraAndLogs\\industry-c7\\data\\benchmark-v2\\spark.jsonl"
+  },
+  "flink": {
+    "project": "flink",
+    "git_dir": "C:\\workplace\\JiraAndLogs\\data\\c7-repos\\flink-full.git",
+    "git_head": "ac917e901a7e05c2db9047298eef7cc0c220a3fd",
+    "branch_scanned": "default branch only (first-parent history not enforced)",
+    "funnel": {
+      "wolv2_log_fixed_lowuncert_issues": 2076,
+      "no_fix_commit": 358,
+      "gt10_fix_commits": 1,
+      "linked_1_to_10_commits": 1717,
+      "no_source_gold": 626,
+      "final_instances": 1091
+    },
+    "dropped_commit_level": {
+      "revert_commits": 227,
+      "merge_commits": 1
+    },
+    "strata": {
+      "single_commit": 901,
+      "trace_absent": 546,
+      "easy_gold_named": 733,
+      "trace_present": 545,
+      "hard_gold_not_named": 358,
+      "multi_commit": 190
+    },
+    "gold_files_median": 1,
+    "query_chars": {
+      "n": 1091,
+      "min": 65,
+      "median": 1755,
+      "p95": 9710,
+      "max": 46757,
+      "mean": 2984.96,
+      "over_20k": 7,
+      "truncated_at": null
+    },
+    "fix_commits_per_issue": {
+      "n": 1091,
+      "min": 1,
+      "median": 1,
+      "p95": 2,
+      "max": 10,
+      "mean": 1.28,
+      "cap": 10,
+      "hist": {
+        "1": 901,
+        "2": 138,
+        "3": 26,
+        "4": 10,
+        "5": 8,
+        "6": 3,
+        "7": 1,
+        "8": 1,
+        "9": 2,
+        "10": 1
+      }
+    },
+    "files_changed_by_fix": {
+      "n": 1091,
+      "min": 1,
+      "median": 3,
+      "p95": 18,
+      "max": 105,
+      "mean": 5.72,
+      "over_3": 495,
+      "over_10": 146,
+      "over_50": 4
+    },
+    "gold_files_mean": 2.9,
+    "output": "C:\\workplace\\JiraAndLogs\\industry-c7\\data\\benchmark-v2\\flink.jsonl"
+  },
+  "ambari": {
+    "project": "ambari",
+    "git_dir": "C:\\workplace\\JiraAndLogs\\data\\c7-repos\\ambari-full.git",
+    "git_head": "2c5b362d3a5395787c11ab6b1f3bd1480410c8cf",
+    "branch_scanned": "default branch only (first-parent history not enforced)",
+    "funnel": {
+      "wolv2_log_fixed_lowuncert_issues": 5995,
+      "no_fix_commit": 340,
+      "gt10_fix_commits": 2,
+      "linked_1_to_10_commits": 5653,
+      "no_source_gold": 2352,
+      "gold_over_50_files": 7,
+      "final_instances": 3294
+    },
+    "dropped_commit_level": {
+      "revert_commits": 673,
+      "merge_commits": 320
+    },
+    "strata": {
+      "single_commit": 2744,
+      "trace_absent": 2833,
+      "hard_gold_not_named": 2185,
+      "easy_gold_named": 1109,
+      "trace_present": 461,
+      "multi_commit": 550
+    },
+    "gold_files_median": 2,
+    "query_chars": {
+      "n": 3294,
+      "min": 23,
+      "median": 591,
+      "p95": 6503,
+      "max": 43887,
+      "mean": 1593.34,
+      "over_20k": 15,
+      "truncated_at": null
+    },
+    "fix_commits_per_issue": {
+      "n": 3294,
+      "min": 1,
+      "median": 1,
+      "p95": 2,
+      "max": 10,
+      "mean": 1.21,
+      "cap": 10,
+      "hist": {
+        "1": 2744,
+        "2": 452,
+        "3": 60,
+        "4": 32,
+        "5": 3,
+        "6": 2,
+        "7": 0,
+        "8": 0,
+        "9": 0,
+        "10": 1
+      }
+    },
+    "files_changed_by_fix": {
+      "n": 3294,
+      "min": 1,
+      "median": 3,
+      "p95": 23,
+      "max": 259,
+      "mean": 6.6,
+      "over_3": 1512,
+      "over_10": 484,
+      "over_50": 33
+    },
+    "gold_files_mean": 3.1,
+    "output": "C:\\workplace\\JiraAndLogs\\industry-c7\\data\\benchmark-v2\\ambari.jsonl"
+  },
+  "impala": {
+    "project": "impala",
+    "git_dir": "C:\\workplace\\JiraAndLogs\\data\\c7-repos\\impala-full.git",
+    "git_head": "0f474f8e372fe56a7e137aa37323dad2db1a7434",
+    "branch_scanned": "default branch only (first-parent history not enforced)",
+    "funnel": {
+      "wolv2_log_fixed_lowuncert_issues": 1492,
+      "no_fix_commit": 291,
+      "linked_1_to_10_commits": 1201,
+      "no_source_gold": 398,
+      "gold_over_50_files": 2,
+      "final_instances": 801
+    },
+    "dropped_commit_level": {
+      "revert_commits": 94
+    },
+    "strata": {
+      "single_commit": 753,
+      "trace_present": 451,
+      "easy_gold_named": 429,
+      "trace_absent": 350,
+      "hard_gold_not_named": 372,
+      "multi_commit": 48
+    },
+    "gold_files_median": 2,
+    "query_chars": {
+      "n": 801,
+      "min": 165,
+      "median": 1908,
+      "p95": 9101,
+      "max": 84722,
+      "mean": 3300.25,
+      "over_20k": 7,
+      "truncated_at": null
+    },
+    "fix_commits_per_issue": {
+      "n": 801,
+      "min": 1,
+      "median": 1,
+      "p95": 2,
+      "max": 7,
+      "mean": 1.08,
+      "cap": 10,
+      "hist": {
+        "1": 753,
+        "2": 39,
+        "3": 6,
+        "4": 1,
+        "5": 1,
+        "6": 0,
+        "7": 1,
+        "8": 0,
+        "9": 0,
+        "10": 0
+      }
+    },
+    "files_changed_by_fix": {
+      "n": 801,
+      "min": 1,
+      "median": 3,
+      "p95": 12,
+      "max": 69,
+      "mean": 4.35,
+      "over_3": 321,
+      "over_10": 57,
+      "over_50": 1
+    },
+    "gold_files_mean": 3.03,
+    "output": "C:\\workplace\\JiraAndLogs\\industry-c7\\data\\benchmark-v2\\impala.jsonl"
+  },
+  "geode": {
+    "project": "geode",
+    "git_dir": "C:\\workplace\\JiraAndLogs\\data\\c7-repos\\geode-full.git",
+    "git_head": "68d758fa560f0b162505bd9b6a26b637c09848d6",
+    "branch_scanned": "default branch only (first-parent history not enforced)",
+    "funnel": {
+      "wolv2_log_fixed_lowuncert_issues": 1378,
+      "no_fix_commit": 283,
+      "gt10_fix_commits": 2,
+      "linked_1_to_10_commits": 1093,
+      "no_source_gold": 441,
+      "gold_over_50_files": 4,
+      "final_instances": 648
+    },
+    "dropped_commit_level": {
+      "revert_commits": 293,
+      "merge_commits": 307
+    },
+    "strata": {
+      "single_commit": 465,
+      "trace_present": 383,
+      "hard_gold_not_named": 261,
+      "easy_gold_named": 387,
+      "multi_commit": 183,
+      "trace_absent": 265
+    },
+    "gold_files_median": 1,
+    "query_chars": {
+      "n": 648,
+      "min": 98,
+      "median": 2063,
+      "p95": 8240,
+      "max": 50870,
+      "mean": 3083.12,
+      "over_20k": 8,
+      "truncated_at": null
+    },
+    "fix_commits_per_issue": {
+      "n": 648,
+      "min": 1,
+      "median": 1,
+      "p95": 3,
+      "max": 7,
+      "mean": 1.42,
+      "cap": 10,
+      "hist": {
+        "1": 465,
+        "2": 131,
+        "3": 28,
+        "4": 19,
+        "5": 1,
+        "6": 1,
+        "7": 3,
+        "8": 0,
+        "9": 0,
+        "10": 0
+      }
+    },
+    "files_changed_by_fix": {
+      "n": 648,
+      "min": 1,
+      "median": 3,
+      "p95": 16,
+      "max": 133,
+      "mean": 5.49,
+      "over_3": 278,
+      "over_10": 60,
+      "over_50": 6
+    },
+    "gold_files_mean": 2.63,
+    "output": "C:\\workplace\\JiraAndLogs\\industry-c7\\data\\benchmark-v2\\geode.jsonl"
+  },
+  "ignite": {
+    "project": "ignite",
+    "git_dir": "C:\\workplace\\JiraAndLogs\\data\\c7-repos\\ignite-full.git",
+    "git_head": "7b4a2a91fdaf29fabf6b56b119871b6b15da3117",
+    "branch_scanned": "default branch only (first-parent history not enforced)",
+    "funnel": {
+      "wolv2_log_fixed_lowuncert_issues": 1244,
+      "no_fix_commit": 289,
+      "gt10_fix_commits": 1,
+      "linked_1_to_10_commits": 954,
+      "no_source_gold": 255,
+      "gold_over_50_files": 4,
+      "final_instances": 695
+    },
+    "dropped_commit_level": {
+      "revert_commits": 88,
+      "merge_commits": 47
+    },
+    "strata": {
+      "single_commit": 636,
+      "trace_absent": 320,
+      "hard_gold_not_named": 218,
+      "easy_gold_named": 477,
+      "trace_present": 375,
+      "multi_commit": 59
+    },
+    "gold_files_median": 2,
+    "query_chars": {
+      "n": 695,
+      "min": 28,
+      "median": 2220,
+      "p95": 9690,
+      "max": 156199,
+      "mean": 3668.34,
+      "over_20k": 6,
+      "truncated_at": null
+    },
+    "fix_commits_per_issue": {
+      "n": 695,
+      "min": 1,
+      "median": 1,
+      "p95": 2,
+      "max": 7,
+      "mean": 1.14,
+      "cap": 10,
+      "hist": {
+        "1": 636,
+        "2": 39,
+        "3": 11,
+        "4": 5,
+        "5": 0,
+        "6": 2,
+        "7": 2,
+        "8": 0,
+        "9": 0,
+        "10": 0
+      }
+    },
+    "files_changed_by_fix": {
+      "n": 695,
+      "min": 1,
+      "median": 3,
+      "p95": 17,
+      "max": 73,
+      "mean": 5.23,
+      "over_3": 313,
+      "over_10": 77,
+      "over_50": 3
+    },
+    "gold_files_mean": 2.87,
+    "output": "C:\\workplace\\JiraAndLogs\\industry-c7\\data\\benchmark-v2\\ignite.jsonl"
+  },
+  "camel": {
+    "project": "camel",
+    "git_dir": "C:\\workplace\\JiraAndLogs\\data\\c7-repos\\camel-full.git",
+    "git_head": "44bf7ffec6e810a23e495d8ad35b7ae8d8a193c6",
+    "branch_scanned": "default branch only (first-parent history not enforced)",
+    "funnel": {
+      "wolv2_log_fixed_lowuncert_issues": 1201,
+      "no_fix_commit": 168,
+      "gt10_fix_commits": 3,
+      "linked_1_to_10_commits": 1030,
+      "no_source_gold": 157,
+      "gold_over_50_files": 3,
+      "final_instances": 870
+    },
+    "dropped_commit_level": {
+      "revert_commits": 243,
+      "merge_commits": 154
+    },
+    "strata": {
+      "single_commit": 604,
+      "trace_absent": 487,
+      "easy_gold_named": 547,
+      "multi_commit": 266,
+      "hard_gold_not_named": 323,
+      "trace_present": 383
+    },
+    "gold_files_median": 1,
+    "query_chars": {
+      "n": 870,
+      "min": 59,
+      "median": 1548,
+      "p95": 7901,
+      "max": 98435,
+      "mean": 2716.05,
+      "over_20k": 7,
+      "truncated_at": null
+    },
+    "fix_commits_per_issue": {
+      "n": 870,
+      "min": 1,
+      "median": 1,
+      "p95": 4,
+      "max": 10,
+      "mean": 1.54,
+      "cap": 10,
+      "hist": {
+        "1": 604,
+        "2": 161,
+        "3": 55,
+        "4": 28,
+        "5": 13,
+        "6": 4,
+        "7": 1,
+        "8": 1,
+        "9": 1,
+        "10": 2
+      }
+    },
+    "files_changed_by_fix": {
+      "n": 870,
+      "min": 1,
+      "median": 3,
+      "p95": 11,
+      "max": 574,
+      "mean": 4.77,
+      "over_3": 306,
+      "over_10": 50,
+      "over_50": 4
+    },
+    "gold_files_mean": 2.08,
+    "output": "C:\\workplace\\JiraAndLogs\\industry-c7\\data\\benchmark-v2\\camel.jsonl"
+  },
+  "phoenix": {
+    "project": "phoenix",
+    "git_dir": "C:\\workplace\\JiraAndLogs\\data\\c7-repos\\phoenix-full.git",
+    "git_head": "a3e8731c272468dad3f062ff14742a77007743d7",
+    "branch_scanned": "default branch only (first-parent history not enforced)",
+    "funnel": {
+      "wolv2_log_fixed_lowuncert_issues": 1059,
+      "no_fix_commit": 131,
+      "linked_1_to_10_commits": 928,
+      "no_source_gold": 123,
+      "gold_over_50_files": 1,
+      "final_instances": 804
+    },
+    "dropped_commit_level": {
+      "revert_commits": 65,
+      "merge_commits": 3
+    },
+    "strata": {
+      "single_commit": 673,
+      "trace_present": 188,
+      "easy_gold_named": 390,
+      "trace_absent": 616,
+      "hard_gold_not_named": 414,
+      "multi_commit": 131
+    },
+    "gold_files_median": 2,
+    "query_chars": {
+      "n": 804,
+      "min": 26,
+      "median": 629,
+      "p95": 4700,
+      "max": 48144,
+      "mean": 1435.55,
+      "over_20k": 2,
+      "truncated_at": null
+    },
+    "fix_commits_per_issue": {
+      "n": 804,
+      "min": 1,
+      "median": 1,
+      "p95": 2,
+      "max": 4,
+      "mean": 1.22,
+      "cap": 10,
+      "hist": {
+        "1": 673,
+        "2": 97,
+        "3": 24,
+        "4": 10,
+        "5": 0,
+        "6": 0,
+        "7": 0,
+        "8": 0,
+        "9": 0,
+        "10": 0
+      }
+    },
+    "files_changed_by_fix": {
+      "n": 804,
+      "min": 1,
+      "median": 3,
+      "p95": 16,
+      "max": 58,
+      "mean": 4.81,
+      "over_3": 297,
+      "over_10": 78,
+      "over_50": 1
+    },
+    "gold_files_mean": 3.8,
+    "output": "C:\\workplace\\JiraAndLogs\\industry-c7\\data\\benchmark-v2\\phoenix.jsonl"
+  },
+  "beam": {
+    "project": "beam",
+    "git_dir": "C:\\workplace\\JiraAndLogs\\data\\c7-repos\\beam-full.git",
+    "git_head": "99dbd880e07d9b4cbd3561e3bb0c129b51365595",
+    "branch_scanned": "default branch only (first-parent history not enforced)",
+    "funnel": {
+      "wolv2_log_fixed_lowuncert_issues": 923,
+      "no_fix_commit": 413,
+      "linked_1_to_10_commits": 510,
+      "no_source_gold": 167,
+      "gold_over_50_files": 1,
+      "final_instances": 342
+    },
+    "dropped_commit_level": {
+      "merge_commits": 4492,
+      "revert_commits": 214
+    },
+    "strata": {
+      "multi_commit": 69,
+      "trace_absent": 238,
+      "hard_gold_not_named": 111,
+      "single_commit": 273,
+      "easy_gold_named": 231,
+      "trace_present": 104
+    },
+    "gold_files_median": 1,
+    "query_chars": {
+      "n": 342,
+      "min": 37,
+      "median": 1761,
+      "p95": 8001,
+      "max": 62386,
+      "mean": 2841.74,
+      "over_20k": 2,
+      "truncated_at": null
+    },
+    "fix_commits_per_issue": {
+      "n": 342,
+      "min": 1,
+      "median": 1,
+      "p95": 3,
+      "max": 10,
+      "mean": 1.33,
+      "cap": 10,
+      "hist": {
+        "1": 273,
+        "2": 45,
+        "3": 16,
+        "4": 3,
+        "5": 2,
+        "6": 1,
+        "7": 1,
+        "8": 0,
+        "9": 0,
+        "10": 1
+      }
+    },
+    "files_changed_by_fix": {
+      "n": 342,
+      "min": 1,
+      "median": 2,
+      "p95": 11,
+      "max": 45,
+      "mean": 3.33,
+      "over_3": 86,
+      "over_10": 18,
+      "over_50": 0
+    },
+    "gold_files_mean": 2.25,
+    "output": "C:\\workplace\\JiraAndLogs\\industry-c7\\data\\benchmark-v2\\beam.jsonl"
+  },
+  "pig": {
+    "project": "pig",
+    "git_dir": "C:\\workplace\\JiraAndLogs\\data\\c7-repos\\pig-full.git",
+    "git_head": "09588bb38843de4f4673980e969f51406ec9ceb0",
+    "branch_scanned": "default branch only (first-parent history not enforced)",
+    "funnel": {
+      "wolv2_log_fixed_lowuncert_issues": 868,
+      "no_fix_commit": 122,
+      "linked_1_to_10_commits": 746,
+      "no_source_gold": 137,
+      "gold_over_50_files": 3,
+      "final_instances": 606
+    },
+    "dropped_commit_level": {
+      "revert_commits": 27
+    },
+    "strata": {
+      "single_commit": 528,
+      "trace_absent": 373,
+      "hard_gold_not_named": 297,
+      "multi_commit": 78,
+      "easy_gold_named": 309,
+      "trace_present": 233
+    },
+    "gold_files_median": 1,
+    "query_chars": {
+      "n": 606,
+      "min": 43,
+      "median": 950,
+      "p95": 3987,
+      "max": 16741,
+      "mean": 1393.1,
+      "over_20k": 0,
+      "truncated_at": null
+    },
+    "fix_commits_per_issue": {
+      "n": 606,
+      "min": 1,
+      "median": 1,
+      "p95": 2,
+      "max": 3,
+      "mean": 1.15,
+      "cap": 10,
+      "hist": {
+        "1": 528,
+        "2": 64,
+        "3": 14,
+        "4": 0,
+        "5": 0,
+        "6": 0,
+        "7": 0,
+        "8": 0,
+        "9": 0,
+        "10": 0
+      }
+    },
+    "files_changed_by_fix": {
+      "n": 606,
+      "min": 1,
+      "median": 3,
+      "p95": 12,
+      "max": 59,
+      "mean": 4.82,
+      "over_3": 280,
+      "over_10": 42,
+      "over_50": 1
+    },
+    "gold_files_mean": 2.32,
+    "output": "C:\\workplace\\JiraAndLogs\\industry-c7\\data\\benchmark-v2\\pig.jsonl"
+  },
+  "groovy": {
+    "project": "groovy",
+    "git_dir": "C:\\workplace\\JiraAndLogs\\data\\c7-repos\\groovy-full.git",
+    "git_head": "09837793319f39daecd31fc9cff53c9bd04b9ae5",
+    "branch_scanned": "default branch only (first-parent history not enforced)",
+    "funnel": {
+      "wolv2_log_fixed_lowuncert_issues": 1604,
+      "no_fix_commit": 487,
+      "linked_1_to_10_commits": 1117,
+      "no_source_gold": 105,
+      "final_instances": 1012
+    },
+    "dropped_commit_level": {
+      "merge_commits": 158,
+      "revert_commits": 68
+    },
+    "strata": {
+      "multi_commit": 247,
+      "trace_absent": 652,
+      "easy_gold_named": 297,
+      "single_commit": 765,
+      "hard_gold_not_named": 715,
+      "trace_present": 360
+    },
+    "gold_files_median": 1,
+    "query_chars": {
+      "n": 1012,
+      "min": 15,
+      "median": 980,
+      "p95": 4897,
+      "max": 88528,
+      "mean": 1648.22,
+      "over_20k": 3,
+      "truncated_at": null
+    },
+    "fix_commits_per_issue": {
+      "n": 1012,
+      "min": 1,
+      "median": 1,
+      "p95": 3,
+      "max": 9,
+      "mean": 1.37,
+      "cap": 10,
+      "hist": {
+        "1": 765,
+        "2": 164,
+        "3": 60,
+        "4": 16,
+        "5": 2,
+        "6": 1,
+        "7": 2,
+        "8": 1,
+        "9": 1,
+        "10": 0
+      }
+    },
+    "files_changed_by_fix": {
+      "n": 1012,
+      "min": 1,
+      "median": 2,
+      "p95": 7,
+      "max": 70,
+      "mean": 3.13,
+      "over_3": 216,
+      "over_10": 25,
+      "over_50": 2
+    },
+    "gold_files_mean": 1.7,
+    "output": "C:\\workplace\\JiraAndLogs\\industry-c7\\data\\benchmark-v2\\groovy.jsonl"
+  },
+  "sakai": {
+    "project": "sakai",
+    "git_dir": "C:\\workplace\\JiraAndLogs\\data\\c7-repos\\sakai-full.git",
+    "git_head": "4467a0c90681a696e8755fd9372e474f2a996db9",
+    "branch_scanned": "default branch only (first-parent history not enforced)",
+    "funnel": {
+      "wolv2_log_fixed_lowuncert_issues": 3420,
+      "no_fix_commit": 1350,
+      "gt10_fix_commits": 14,
+      "linked_1_to_10_commits": 2056,
+      "no_source_gold": 603,
+      "gold_over_50_files": 2,
+      "final_instances": 1451
+    },
+    "dropped_commit_level": {
+      "revert_commits": 225,
+      "merge_commits": 1310
+    },
+    "strata": {
+      "single_commit": 1079,
+      "trace_absent": 999,
+      "hard_gold_not_named": 793,
+      "multi_commit": 372,
+      "trace_present": 452,
+      "easy_gold_named": 658
+    },
+    "gold_files_median": 1,
+    "query_chars": {
+      "n": 1451,
+      "min": 77,
+      "median": 833,
+      "p95": 9100,
+      "max": 32830,
+      "mean": 2140.51,
+      "over_20k": 6,
+      "truncated_at": null
+    },
+    "fix_commits_per_issue": {
+      "n": 1451,
+      "min": 1,
+      "median": 1,
+      "p95": 4,
+      "max": 9,
+      "mean": 1.48,
+      "cap": 10,
+      "hist": {
+        "1": 1079,
+        "2": 213,
+        "3": 82,
+        "4": 38,
+        "5": 17,
+        "6": 10,
+        "7": 2,
+        "8": 6,
+        "9": 4,
+        "10": 0
+      }
+    },
+    "files_changed_by_fix": {
+      "n": 1451,
+      "min": 1,
+      "median": 2,
+      "p95": 12,
+      "max": 523,
+      "mean": 4.31,
+      "over_3": 385,
+      "over_10": 99,
+      "over_50": 9
+    },
+    "gold_files_mean": 2.09,
+    "output": "C:\\workplace\\JiraAndLogs\\industry-c7\\data\\benchmark-v2\\sakai.jsonl"
+  },
+  "wildfly": {
+    "project": "wildfly",
+    "git_dir": "C:\\workplace\\JiraAndLogs\\data\\c7-repos\\wildfly-full.git",
+    "git_head": "c0db41110568cdda058c4574b719d4f87de25a05",
+    "branch_scanned": "default branch only (first-parent history not enforced)",
+    "funnel": {
+      "wolv2_log_fixed_lowuncert_issues": 1604,
+      "no_fix_commit": 542,
+      "linked_1_to_10_commits": 1062,
+      "no_source_gold": 333,
+      "gold_over_50_files": 1,
+      "final_instances": 728
+    },
+    "dropped_commit_level": {
+      "merge_commits": 7025,
+      "revert_commits": 236
+    },
+    "strata": {
+      "single_commit": 600,
+      "trace_absent": 372,
+      "easy_gold_named": 318,
+      "multi_commit": 128,
+      "trace_present": 356,
+      "hard_gold_not_named": 410
+    },
+    "gold_files_median": 1,
+    "query_chars": {
+      "n": 728,
+      "min": 48,
+      "median": 2110,
+      "p95": 11507,
+      "max": 208010,
+      "mean": 3927.11,
+      "over_20k": 13,
+      "truncated_at": null
+    },
+    "fix_commits_per_issue": {
+      "n": 728,
+      "min": 1,
+      "median": 1,
+      "p95": 2,
+      "max": 7,
+      "mean": 1.25,
+      "cap": 10,
+      "hist": {
+        "1": 600,
+        "2": 98,
+        "3": 17,
+        "4": 5,
+        "5": 5,
+        "6": 1,
+        "7": 2,
+        "8": 0,
+        "9": 0,
+        "10": 0
+      }
+    },
+    "files_changed_by_fix": {
+      "n": 728,
+      "min": 1,
+      "median": 2,
+      "p95": 14,
+      "max": 84,
+      "mean": 4.0,
+      "over_3": 238,
+      "over_10": 51,
+      "over_50": 1
+    },
+    "gold_files_mean": 2.39,
+    "output": "C:\\workplace\\JiraAndLogs\\industry-c7\\data\\benchmark-v2\\wildfly.jsonl"
+  },
+  "infinispan": {
+    "project": "infinispan",
+    "git_dir": "C:\\workplace\\JiraAndLogs\\data\\c7-repos\\infinispan-full.git",
+    "git_head": "dbedfe9d596e042521f923ba19de6d62836f2e6e",
+    "branch_scanned": "default branch only (first-parent history not enforced)",
+    "funnel": {
+      "wolv2_log_fixed_lowuncert_issues": 1546,
+      "no_fix_commit": 231,
+      "linked_1_to_10_commits": 1315,
+      "no_source_gold": 448,
+      "gold_over_50_files": 1,
+      "final_instances": 866
+    },
+    "dropped_commit_level": {
+      "revert_commits": 61,
+      "merge_commits": 5
+    },
+    "strata": {
+      "single_commit": 665,
+      "trace_absent": 334,
+      "easy_gold_named": 549,
+      "multi_commit": 201,
+      "hard_gold_not_named": 317,
+      "trace_present": 532
+    },
+    "gold_files_median": 2,
+    "query_chars": {
+      "n": 866,
+      "min": 42,
+      "median": 2020,
+      "p95": 10461,
+      "max": 102062,
+      "mean": 3751.55,
+      "over_20k": 16,
+      "truncated_at": null
+    },
+    "fix_commits_per_issue": {
+      "n": 866,
+      "min": 1,
+      "median": 1,
+      "p95": 3,
+      "max": 10,
+      "mean": 1.38,
+      "cap": 10,
+      "hist": {
+        "1": 665,
+        "2": 135,
+        "3": 35,
+        "4": 16,
+        "5": 9,
+        "6": 1,
+        "7": 1,
+        "8": 2,
+        "9": 1,
+        "10": 1
+      }
+    },
+    "files_changed_by_fix": {
+      "n": 866,
+      "min": 1,
+      "median": 3,
+      "p95": 18,
+      "max": 64,
+      "mean": 5.44,
+      "over_3": 380,
+      "over_10": 109,
+      "over_50": 4
+    },
+    "gold_files_mean": 2.88,
+    "output": "C:\\workplace\\JiraAndLogs\\industry-c7\\data\\benchmark-v2\\infinispan.jsonl"
+  },
+  "keycloak": {
+    "project": "keycloak",
+    "git_dir": "C:\\workplace\\JiraAndLogs\\data\\c7-repos\\keycloak-full.git",
+    "git_head": "a79e665763efefee10a3ec0585e54035f34a2a65",
+    "branch_scanned": "default branch only (first-parent history not enforced)",
+    "funnel": {
+      "wolv2_log_fixed_lowuncert_issues": 940,
+      "no_fix_commit": 294,
+      "linked_1_to_10_commits": 646,
+      "no_source_gold": 209,
+      "gold_over_50_files": 1,
+      "final_instances": 436
+    },
+    "dropped_commit_level": {
+      "revert_commits": 30,
+      "merge_commits": 1181
+    },
+    "strata": {
+      "single_commit": 386,
+      "trace_absent": 228,
+      "hard_gold_not_named": 182,
+      "trace_present": 208,
+      "easy_gold_named": 254,
+      "multi_commit": 50
+    },
+    "gold_files_median": 1,
+    "query_chars": {
+      "n": 436,
+      "min": 143,
+      "median": 1677,
+      "p95": 11735,
+      "max": 80878,
+      "mean": 3673.82,
+      "over_20k": 4,
+      "truncated_at": null
+    },
+    "fix_commits_per_issue": {
+      "n": 436,
+      "min": 1,
+      "median": 1,
+      "p95": 2,
+      "max": 4,
+      "mean": 1.15,
+      "cap": 10,
+      "hist": {
+        "1": 386,
+        "2": 38,
+        "3": 8,
+        "4": 4,
+        "5": 0,
+        "6": 0,
+        "7": 0,
+        "8": 0,
+        "9": 0,
+        "10": 0
+      }
+    },
+    "files_changed_by_fix": {
+      "n": 436,
+      "min": 1,
+      "median": 2,
+      "p95": 14,
+      "max": 121,
+      "mean": 4.84,
+      "over_3": 158,
+      "over_10": 43,
+      "over_50": 2
+    },
+    "gold_files_mean": 2.64,
+    "output": "C:\\workplace\\JiraAndLogs\\industry-c7\\data\\benchmark-v2\\keycloak.jsonl"
+  },
+  "derby": {
+    "project": "derby",
+    "git_dir": "C:\\workplace\\JiraAndLogs\\data\\c7-repos\\derby-full.git",
+    "git_head": "4253dcf4aa37dc64cf7235d494cd2f00f72e678a",
+    "branch_scanned": "default branch only (first-parent history not enforced)",
+    "funnel": {
+      "wolv2_log_fixed_lowuncert_issues": 1192,
+      "no_fix_commit": 168,
+      "gt10_fix_commits": 5,
+      "linked_1_to_10_commits": 1019,
+      "no_source_gold": 336,
+      "final_instances": 683
+    },
+    "dropped_commit_level": {
+      "revert_commits": 19
+    },
+    "strata": {
+      "single_commit": 467,
+      "trace_absent": 425,
+      "easy_gold_named": 290,
+      "hard_gold_not_named": 393,
+      "multi_commit": 216,
+      "trace_present": 258
+    },
+    "gold_files_median": 1,
+    "query_chars": {
+      "n": 683,
+      "min": 59,
+      "median": 1280,
+      "p95": 5635,
+      "max": 67018,
+      "mean": 1997.8,
+      "over_20k": 1,
+      "truncated_at": null
+    },
+    "fix_commits_per_issue": {
+      "n": 683,
+      "min": 1,
+      "median": 1,
+      "p95": 4,
+      "max": 10,
+      "mean": 1.62,
+      "cap": 10,
+      "hist": {
+        "1": 467,
+        "2": 125,
+        "3": 44,
+        "4": 18,
+        "5": 10,
+        "6": 9,
+        "7": 3,
+        "8": 5,
+        "9": 0,
+        "10": 2
+      }
+    },
+    "files_changed_by_fix": {
+      "n": 683,
+      "min": 1,
+      "median": 3,
+      "p95": 17,
+      "max": 193,
+      "mean": 5.67,
+      "over_3": 316,
+      "over_10": 75,
+      "over_50": 2
+    },
+    "gold_files_mean": 2.72,
+    "output": "C:\\workplace\\JiraAndLogs\\industry-c7\\data\\benchmark-v2\\derby.jsonl"
+  },
+  "solr": {
+    "project": "solr",
+    "git_dir": "C:\\workplace\\JiraAndLogs\\data\\c7-repos\\solr-full.git",
+    "git_head": "f489a30a31b1b97c7c8aa7a2c05c15d80114dc70",
+    "branch_scanned": "default branch only (first-parent history not enforced)",
+    "funnel": {
+      "wolv2_log_fixed_lowuncert_issues": 1123,
+      "no_fix_commit": 150,
+      "gt10_fix_commits": 3,
+      "linked_1_to_10_commits": 970,
+      "no_source_gold": 211,
+      "gold_over_50_files": 1,
+      "final_instances": 758
+    },
+    "dropped_commit_level": {
+      "revert_commits": 226,
+      "merge_commits": 45
+    },
+    "strata": {
+      "multi_commit": 273,
+      "trace_absent": 534,
+      "easy_gold_named": 482,
+      "single_commit": 485,
+      "hard_gold_not_named": 276,
+      "trace_present": 224
+    },
+    "gold_files_median": 1,
+    "query_chars": {
+      "n": 758,
+      "min": 48,
+      "median": 1142,
+      "p95": 5944,
+      "max": 105190,
+      "mean": 2031.94,
+      "over_20k": 3,
+      "truncated_at": null
+    },
+    "fix_commits_per_issue": {
+      "n": 758,
+      "min": 1,
+      "median": 1,
+      "p95": 4,
+      "max": 10,
+      "mean": 1.67,
+      "cap": 10,
+      "hist": {
+        "1": 485,
+        "2": 158,
+        "3": 59,
+        "4": 24,
+        "5": 19,
+        "6": 5,
+        "7": 3,
+        "8": 2,
+        "9": 1,
+        "10": 2
+      }
+    },
+    "files_changed_by_fix": {
+      "n": 758,
+      "min": 1,
+      "median": 4,
+      "p95": 16,
+      "max": 187,
+      "mean": 5.76,
+      "over_3": 381,
+      "over_10": 62,
+      "over_50": 5
+    },
+    "gold_files_mean": 2.6,
+    "output": "C:\\workplace\\JiraAndLogs\\industry-c7\\data\\benchmark-v2\\solr.jsonl"
+  },
+  "drill": {
+    "project": "drill",
+    "git_dir": "C:\\workplace\\JiraAndLogs\\data\\c7-repos\\drill-full.git",
+    "git_head": "ddded87fd00a987ca88ff15d715a46efa5b99a14",
+    "branch_scanned": "default branch only (first-parent history not enforced)",
+    "funnel": {
+      "wolv2_log_fixed_lowuncert_issues": 1046,
+      "no_fix_commit": 375,
+      "linked_1_to_10_commits": 671,
+      "no_source_gold": 132,
+      "gold_over_50_files": 3,
+      "final_instances": 536
+    },
+    "dropped_commit_level": {
+      "revert_commits": 16,
+      "merge_commits": 3
+    },
+    "strata": {
+      "single_commit": 500,
+      "trace_absent": 397,
+      "hard_gold_not_named": 338,
+      "trace_present": 139,
+      "easy_gold_named": 198,
+      "multi_commit": 36
+    },
+    "gold_files_median": 2,
+    "query_chars": {
+      "n": 536,
+      "min": 41,
+      "median": 1205,
+      "p95": 7629,
+      "max": 31901,
+      "mean": 2416.88,
+      "over_20k": 7,
+      "truncated_at": null
+    },
+    "fix_commits_per_issue": {
+      "n": 536,
+      "min": 1,
+      "median": 1,
+      "p95": 2,
+      "max": 3,
+      "mean": 1.07,
+      "cap": 10,
+      "hist": {
+        "1": 500,
+        "2": 33,
+        "3": 3,
+        "4": 0,
+        "5": 0,
+        "6": 0,
+        "7": 0,
+        "8": 0,
+        "9": 0,
+        "10": 0
+      }
+    },
+    "files_changed_by_fix": {
+      "n": 536,
+      "min": 1,
+      "median": 3,
+      "p95": 20,
+      "max": 92,
+      "mean": 6.21,
+      "over_3": 256,
+      "over_10": 77,
+      "over_50": 5
+    },
+    "gold_files_mean": 3.78,
+    "output": "C:\\workplace\\JiraAndLogs\\industry-c7\\data\\benchmark-v2\\drill.jsonl"
+  },
+  "cassandra": {
+    "project": "cassandra",
+    "git_dir": "C:\\workplace\\JiraAndLogs\\data\\c7-repos\\cassandra-full.git",
+    "git_head": "ae4e78c0ece616138963019388061efa4208f67a",
+    "branch_scanned": "default branch only (first-parent history not enforced)",
+    "funnel": {
+      "wolv2_log_fixed_lowuncert_issues": 2116,
+      "no_fix_commit": 401,
+      "gt10_fix_commits": 1,
+      "linked_1_to_10_commits": 1714,
+      "no_source_gold": 293,
+      "final_instances": 1421
+    },
+    "dropped_commit_level": {
+      "revert_commits": 73,
+      "merge_commits": 31
+    },
+    "strata": {
+      "single_commit": 1171,
+      "trace_absent": 679,
+      "hard_gold_not_named": 569,
+      "trace_present": 742,
+      "easy_gold_named": 852,
+      "multi_commit": 250
+    },
+    "gold_files_median": 1,
+    "query_chars": {
+      "n": 1421,
+      "min": 18,
+      "median": 1580,
+      "p95": 5909,
+      "max": 59558,
+      "mean": 2284.66,
+      "over_20k": 5,
+      "truncated_at": null
+    },
+    "fix_commits_per_issue": {
+      "n": 1421,
+      "min": 1,
+      "median": 1,
+      "p95": 2,
+      "max": 8,
+      "mean": 1.24,
+      "cap": 10,
+      "hist": {
+        "1": 1171,
+        "2": 189,
+        "3": 36,
+        "4": 16,
+        "5": 8,
+        "6": 0,
+        "7": 0,
+        "8": 1,
+        "9": 0,
+        "10": 0
+      }
+    },
+    "files_changed_by_fix": {
+      "n": 1421,
+      "min": 1,
+      "median": 3,
+      "p95": 13,
+      "max": 164,
+      "mean": 4.63,
+      "over_3": 524,
+      "over_10": 104,
+      "over_50": 5
+    },
+    "gold_files_mean": 2.7,
+    "output": "C:\\workplace\\JiraAndLogs\\industry-c7\\data\\benchmark-v2\\cassandra.jsonl"
+  },
+  "kafka": {
+    "project": "kafka",
+    "git_dir": "C:\\workplace\\JiraAndLogs\\data\\c7-repos\\kafka-full.git",
+    "git_head": "14ee92ca1ecf469eb8f006abf7b75453513cac49",
+    "branch_scanned": "default branch only (first-parent history not enforced)",
+    "funnel": {
+      "wolv2_log_fixed_lowuncert_issues": 1172,
+      "no_fix_commit": 340,
+      "linked_1_to_10_commits": 832,
+      "no_source_gold": 148,
+      "final_instances": 684
+    },
+    "dropped_commit_level": {
+      "revert_commits": 71,
+      "merge_commits": 2
+    },
+    "strata": {
+      "single_commit": 620,
+      "trace_present": 323,
+      "easy_gold_named": 489,
+      "trace_absent": 361,
+      "hard_gold_not_named": 195,
+      "multi_commit": 64
+    },
+    "gold_files_median": 1,
+    "query_chars": {
+      "n": 684,
+      "min": 62,
+      "median": 1662,
+      "p95": 6610,
+      "max": 20796,
+      "mean": 2265.66,
+      "over_20k": 1,
+      "truncated_at": null
+    },
+    "fix_commits_per_issue": {
+      "n": 684,
+      "min": 1,
+      "median": 1,
+      "p95": 2,
+      "max": 5,
+      "mean": 1.12,
+      "cap": 10,
+      "hist": {
+        "1": 620,
+        "2": 54,
+        "3": 6,
+        "4": 3,
+        "5": 1,
+        "6": 0,
+        "7": 0,
+        "8": 0,
+        "9": 0,
+        "10": 0
+      }
+    },
+    "files_changed_by_fix": {
+      "n": 684,
+      "min": 1,
+      "median": 3,
+      "p95": 16,
+      "max": 74,
+      "mean": 4.95,
+      "over_3": 253,
+      "over_10": 66,
+      "over_50": 3
+    },
+    "gold_files_mean": 2.75,
+    "output": "C:\\workplace\\JiraAndLogs\\industry-c7\\data\\benchmark-v2\\kafka.jsonl"
+  },
+  "mariadb": {
+    "project": "mariadb",
+    "git_dir": "C:\\workplace\\JiraAndLogs\\data\\c7-repos\\mariadb-full.git",
+    "git_head": "5104ebf86a1015cb96cbf50c37c7659a45d92d54",
+    "branch_scanned": "default branch only (first-parent history not enforced)",
+    "funnel": {
+      "wolv2_log_fixed_lowuncert_issues": 3004,
+      "no_fix_commit": 955,
+      "linked_1_to_10_commits": 2049,
+      "no_source_gold": 330,
+      "gold_over_50_files": 1,
+      "final_instances": 1718
+    },
+    "dropped_commit_level": {
+      "merge_commits": 334,
+      "revert_commits": 158
+    },
+    "strata": {
+      "multi_commit": 314,
+      "trace_absent": 745,
+      "easy_gold_named": 958,
+      "trace_present": 973,
+      "hard_gold_not_named": 760,
+      "single_commit": 1404
+    },
+    "gold_files_median": 1,
+    "query_chars": {
+      "n": 1718,
+      "min": 191,
+      "median": 2253,
+      "p95": 7888,
+      "max": 66260,
+      "mean": 3166.09,
+      "over_20k": 11,
+      "truncated_at": null
+    },
+    "fix_commits_per_issue": {
+      "n": 1718,
+      "min": 1,
+      "median": 1,
+      "p95": 2,
+      "max": 10,
+      "mean": 1.26,
+      "cap": 10,
+      "hist": {
+        "1": 1404,
+        "2": 237,
+        "3": 43,
+        "4": 18,
+        "5": 10,
+        "6": 3,
+        "7": 2,
+        "8": 0,
+        "9": 0,
+        "10": 1
+      }
+    },
+    "files_changed_by_fix": {
+      "n": 1718,
+      "min": 1,
+      "median": 3,
+      "p95": 14,
+      "max": 120,
+      "mean": 5.08,
+      "over_3": 774,
+      "over_10": 155,
+      "over_50": 5
+    },
+    "gold_files_mean": 2.55,
+    "output": "C:\\workplace\\JiraAndLogs\\industry-c7\\data\\benchmark-v2\\mariadb.jsonl"
+  },
+  "mongodb": {
+    "project": "mongodb",
+    "git_dir": "C:\\workplace\\JiraAndLogs\\data\\c7-repos\\mongo-full.git",
+    "git_head": "31765f90f94a7dae2180100dd7e687e59edd1a29",
+    "branch_scanned": "default branch only (first-parent history not enforced)",
+    "funnel": {
+      "wolv2_log_fixed_lowuncert_issues": 6407,
+      "no_fix_commit": 1139,
+      "gt10_fix_commits": 19,
+      "linked_1_to_10_commits": 5249,
+      "no_source_gold": 1483,
+      "gold_over_50_files": 20,
+      "final_instances": 3746
+    },
+    "dropped_commit_level": {
+      "revert_commits": 3312,
+      "merge_commits": 39
+    },
+    "strata": {
+      "single_commit": 2881,
+      "trace_absent": 3390,
+      "hard_gold_not_named": 2255,
+      "multi_commit": 865,
+      "easy_gold_named": 1491,
+      "trace_present": 356
+    },
+    "gold_files_median": 2,
+    "query_chars": {
+      "n": 3746,
+      "min": 16,
+      "median": 571,
+      "p95": 5146,
+      "max": 706007,
+      "mean": 1530.06,
+      "over_20k": 11,
+      "truncated_at": null
+    },
+    "fix_commits_per_issue": {
+      "n": 3746,
+      "min": 1,
+      "median": 1,
+      "p95": 3,
+      "max": 10,
+      "mean": 1.4,
+      "cap": 10,
+      "hist": {
+        "1": 2881,
+        "2": 561,
+        "3": 163,
+        "4": 55,
+        "5": 38,
+        "6": 23,
+        "7": 20,
+        "8": 1,
+        "9": 1,
+        "10": 3
+      }
+    },
+    "files_changed_by_fix": {
+      "n": 3746,
+      "min": 1,
+      "median": 2,
+      "p95": 14,
+      "max": 73,
+      "mean": 3.97,
+      "over_3": 1167,
+      "over_10": 280,
+      "over_50": 6
+    },
+    "gold_files_mean": 3.09,
+    "output": "C:\\workplace\\JiraAndLogs\\industry-c7\\data\\benchmark-v2\\mongodb.jsonl"
+  },
+  "qt": {
+    "project": "qt",
+    "git_dir": "C:\\workplace\\JiraAndLogs\\data\\c7-repos\\qtbase-full.git",
+    "git_head": "f5535b4c8323bceca013f9b82778a72f92c48fd6",
+    "branch_scanned": "default branch only (first-parent history not enforced)",
+    "funnel": {
+      "wolv2_log_fixed_lowuncert_issues": 7412,
+      "no_fix_commit": 6699,
+      "linked_1_to_10_commits": 713,
+      "no_source_gold": 257,
+      "final_instances": 456
+    },
+    "dropped_commit_level": {
+      "revert_commits": 111
+    },
+    "strata": {
+      "single_commit": 437,
+      "trace_absent": 347,
+      "hard_gold_not_named": 308,
+      "multi_commit": 19,
+      "easy_gold_named": 148,
+      "trace_present": 109
+    },
+    "gold_files_median": 1,
+    "query_chars": {
+      "n": 456,
+      "min": 122,
+      "median": 965,
+      "p95": 7084,
+      "max": 21780,
+      "mean": 1929.6,
+      "over_20k": 1,
+      "truncated_at": null
+    },
+    "fix_commits_per_issue": {
+      "n": 456,
+      "min": 1,
+      "median": 1,
+      "p95": 1,
+      "max": 3,
+      "mean": 1.05,
+      "cap": 10,
+      "hist": {
+        "1": 437,
+        "2": 16,
+        "3": 3,
+        "4": 0,
+        "5": 0,
+        "6": 0,
+        "7": 0,
+        "8": 0,
+        "9": 0,
+        "10": 0
+      }
+    },
+    "files_changed_by_fix": {
+      "n": 456,
+      "min": 1,
+      "median": 1,
+      "p95": 7,
+      "max": 48,
+      "mean": 2.36,
+      "over_3": 67,
+      "over_10": 8,
+      "over_50": 0
+    },
+    "gold_files_mean": 1.73,
+    "output": "C:\\workplace\\JiraAndLogs\\industry-c7\\data\\benchmark-v2\\qt.jsonl"
+  }
+}
