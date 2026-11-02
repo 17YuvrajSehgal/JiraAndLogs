@@ -278,6 +278,11 @@ BODY_FIX_CUE = re.compile(
 # trivially solvable: HIVE-17952 touches 3,493 of 4,819 files, where random
 # top-5 guessing hits 99.8% of the time. Keeping them inflates every system
 # equally and measures nothing. Set to 0 to disable.
+# Linked commits more than this far after the earliest are not part of the
+# same fix. Measured span across multi-commit instances: median 2 days, p90
+# 105, max 5,919 (16 years). A commit years later merely mentions the key.
+MAX_COMMIT_SPAN_DAYS = 180
+
 GOLD_MAX_FILES = 50
 
 GIT_SHOW_BATCH = 100
@@ -433,6 +438,21 @@ def universe_size(git_dir: Path, snapshot_sha: str,
                if p.lower().endswith(src_ext) and not TEST_PATH.search(p))
 
 
+def snapshot_tree(git_dir: Path, sha: str) -> set[str]:
+    """Every path in the snapshot. Gold means 'files to find in THIS
+    snapshot', so a gold file absent from it is an impossible target: every
+    system misses it, which depresses all scores equally and measures
+    nothing. Arises when an issue links to commits spread over time and the
+    later ones touch files that did not exist yet."""
+    if not sha:
+        return set()
+    try:
+        return set(run_git(git_dir, "ls-tree", "-r", "--name-only", sha
+                           ).splitlines())
+    except Exception:  # noqa: BLE001
+        return set()
+
+
 def universe_sizes(git_dir: Path, shas: list[str],
                    src_ext: tuple[str, ...]) -> dict[str, int]:
     """universe_size for many snapshots at once.
@@ -509,7 +529,12 @@ def mine_project(name: str) -> dict:
         if not commits[0]["parent"]:
             funnel["root_commit_fix"] += 1
             continue
-        candidates[key] = commits
+        # drop commits far after the first: same-fix commits land together
+        span = MAX_COMMIT_SPAN_DAYS * 86400
+        kept = [c for c in commits if c["ts"] - commits[0]["ts"] <= span]
+        if len(kept) != len(commits):
+            funnel["commits_dropped_span"] += len(commits) - len(kept)
+        candidates[key] = kept
     funnel[f"linked_1_to_{MAX_FIX_COMMITS}_commits"] = len(candidates)
 
     all_shas = [c["sha"] for commits in candidates.values() for c in commits]
@@ -528,6 +553,13 @@ def mine_project(name: str) -> dict:
                 if (status == "M" and path.endswith(cfg["src_ext"])
                         and not TEST_PATH.search(path)):
                     gold.add(path)
+        first = commits[0]
+        snap = snapshot_tree(cfg["git_dir"], first["parent"])
+        if snap:
+            absent = {g for g in gold if g not in snap}
+            if absent:
+                funnel["gold_files_absent_from_snapshot"] += len(absent)
+                gold -= absent
         if not gold:
             funnel["no_source_gold"] += 1
             continue
@@ -540,7 +572,6 @@ def mine_project(name: str) -> dict:
         ev = rec["evidence_text"]
         has_trace = any(p.search(ev) for p in TRACE_PATTERNS)
         named = any(Path(f).stem in ev for f in gold)
-        first = commits[0]
         rows.append({
             "project": name,
             "issue_key": key,
