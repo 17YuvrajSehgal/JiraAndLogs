@@ -1,0 +1,28 @@
+{
+  "id": "mariadb:MDEV-17725",
+  "project": "mariadb",
+  "issue_key": "MDEV-17725",
+  "annotator": "claude-opus-5",
+  "pass": 1,
+  "file_roles": [
+    {
+      "path": "sql/sql_table.cc",
+      "role": "causal",
+      "evidence": "copy_data_between_tables pushed an informational warning without regard to the session's escalation setting. The push is now bracketed, 'bool save_abort_on_warning= thd->abort_on_warning; thd->abort_on_warning= false;' before 'push_warning(thd, Sql_condition::WARN_LEVEL_WARN, ER_UNKNOWN_ERROR, warn_buff)' and restored after. With abort_on_warning set, that warning became an error and left the diagnostics area occupied."
+    }
+  ],
+  "symptom_location": {
+    "file": "sql/sql_error.cc",
+    "function": "Diagnostics_area::set_ok_status",
+    "determinable": true
+  },
+  "log_location": {
+    "file": "sql/sql_error.cc",
+    "function": "Diagnostics_area::set_ok_status",
+    "determinable": true
+  },
+  "relation": "state-producer",
+  "rationale": "The assertion, 'sql/sql_error.cc:380: void Diagnostics_area::set_ok_status(...): Assertion `!is_set() || (m_status == DA_OK_BULK && is_bulk_op())' failed', says the diagnostics area was already set when success was being reported, and sql_error.cc is not in the gold set. The message carried into it, 'Records: 0 Duplicates: 0 Warnings: 1', shows the warning that occupied it. That warning is raised earlier in the copy step, so the state is produced in one function and tripped over in another.",
+  "confidence": "high",
+  "notes": "The gold file appears in the stack at 'mysql_alter_table ... sql/sql_table.cc:9766', which is the my_ok call, while the fix is in copy_data_between_tables around line 10019. Right file, wrong function again. The non-debug behaviour the reporter also records is the more useful evidence and does not appear in any trace: 'query ALTER TABLE t1 ORDER BY a failed: 1105: ORDER BY ignored as there is a user-defined clustered index in the table t1', which is the warning text being returned to the client as an error, and that string is a literal in the gold file."
+}

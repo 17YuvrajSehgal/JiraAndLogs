@@ -1,0 +1,28 @@
+{
+  "id": "mariadb:MDEV-20821",
+  "project": "mariadb",
+  "issue_key": "MDEV-20821",
+  "annotator": "claude-opus-5",
+  "pass": 1,
+  "file_roles": [
+    {
+      "path": "sql/slave.cc",
+      "role": "causal",
+      "evidence": "slave_prepare_for_shutdown freed the connections and went straight on to stop_slave_background_thread, leaving the worker pool alive. One call is inserted with its reason, '// It's safe to destruct worker pool now when all driver threads are gone.' followed by 'global_rpl_thread_pool.destroy();'. The commit states the consequence of the omission, that 'a slave worker thread would not be notified to exit in case the worker was sitting idle'."
+    }
+  ],
+  "symptom_location": {
+    "file": "sql/mysqld.cc",
+    "function": "close_connections",
+    "determinable": true
+  },
+  "log_location": {
+    "file": "sql/slave.cc",
+    "function": null,
+    "determinable": true
+  },
+  "relation": "state-producer",
+  "rationale": "The report describes a hang with no trace and no error: shutdown 'failed with timeout' under both systemctl and mysqladmin, and the reporter isolates it correctly by hand, 'So If I stop the slave with stop slave; and then tried to stop the mariadb server, it stops immediately.' The commit places the wait in close_connections, while the pool that is waited on was left undestroyed earlier in the gold file, so the two ends are a leftover resource and the code that later waits for it.",
+  "confidence": "medium",
+  "notes": "The symptom site is taken from the commit message rather than from the report, which contains no frame at all. The one log line quoted is an ordinary startup note, '[Note] Slave I/O thread: connected to master ... replication starts at GTID position 0-1000-382', included only because it is the last line before the hang. That string does live in the gold file, so matching it would reach the right file for a reason unconnected to the defect, which is worth separating from cases where the log genuinely points at the fix."
+}

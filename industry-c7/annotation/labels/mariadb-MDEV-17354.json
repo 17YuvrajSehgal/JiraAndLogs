@@ -1,0 +1,28 @@
+{
+  "id": "mariadb:MDEV-17354",
+  "project": "mariadb",
+  "issue_key": "MDEV-17354",
+  "annotator": "claude-opus-5",
+  "pass": 1,
+  "file_roles": [
+    {
+      "path": "sql/item.cc",
+      "role": "causal",
+      "evidence": "Item_direct_view_ref::derived_field_transformer_for_where ended with 'return this;' and now ends with 'return (*ref);'. The commit explains what that one token meant: the function 'erroneously did not strip off ref wrappers from references to materialized derived tables / views', so wrapped items were pushed into the view and later dereferenced as if unwrapped."
+    }
+  ],
+  "symptom_location": {
+    "file": "sql/sql_select.cc",
+    "function": "add_key_field",
+    "determinable": true
+  },
+  "log_location": {
+    "file": null,
+    "function": null,
+    "determinable": false
+  },
+  "relation": "state-producer",
+  "rationale": "The crash is a bad pointer, 'Bitmap<64u>::merge (this=0x1b0 ...)' reached from 'add_key_field ... sql/sql_select.cc:4930', with the issue title naming that function. The malformed item was built earlier during WHERE pushdown into the derived table and is only dereferenced here, during optimization, which is why the faulty transform does not appear on the stack.",
+  "confidence": "high",
+  "notes": "The gold file is absent from the entire thirty-frame stack. Every project frame is in sql_select.cc, sql_derived.cc, sql_parse.cc, sql_connect.cc or sql_bitmap.h, and item.cc appears in none of them. This is the same shape as KAFKA-6624, a complete and deep trace that cannot reach the answer, and it is now the second instance of it in the sample. The reporter also establishes breadth that no localizer could use, 'Reproducible on 10.2, 10.3, 10.4, debug- and non-debug builds, with MyISAM, Aria, InnoDB.'"
+}
