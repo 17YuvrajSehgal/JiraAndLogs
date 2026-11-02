@@ -114,28 +114,6 @@
   "status": "KEEP"
  },
  {
-  "name": "cassandra",
-  "repo": "apache/cassandra",
-  "keys": [
-   "CASSANDRA"
-  ],
-  "wave": 1,
-  "ext": [
-   ".java"
-  ],
-  "repo_mb": 59,
-  "eligible": 2116,
-  "linked": 702,
-  "le_cap": 701,
-  "link_rate": 0.331,
-  "over_cap": 1,
-  "src_rate": 0.825,
-  "src_sampled": 120,
-  "projected": 578,
-  "link": "subject",
-  "status": "REVIEW"
- },
- {
   "name": "flink",
   "repo": "apache/flink",
   "keys": [
@@ -655,6 +633,28 @@
   "src_sampled": 120,
   "projected": 532,
   "link": "subject",
+  "status": "KEEP"
+ },
+ {
+  "name": "cassandra",
+  "repo": "apache/cassandra",
+  "keys": [
+   "CASSANDRA"
+  ],
+  "wave": 1,
+  "ext": [
+   ".java"
+  ],
+  "repo_mb": 59,
+  "eligible": 2116,
+  "linked": 1723,
+  "le_cap": 1722,
+  "link_rate": 0.814,
+  "over_cap": 1,
+  "src_rate": 0.875,
+  "src_sampled": 120,
+  "projected": 1506,
+  "link": "subject_or_body",
   "status": "KEEP"
  }
 ]

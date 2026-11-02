@@ -296,3 +296,29 @@ and roughly **35,800 instances**, with Go and Python entering through Beam.
 
 External validity stops being a soft spot. The cost is that every number in
 the paper re-runs, which is the trade recorded in §5 above.
+
+
+## Cassandra re-screened: it was our bug, not their repo
+
+Added a ``subject_or_body`` link mode and re-screened.
+
+| | before | after |
+|---|---|---|
+| link rate | 33.1% | **81.4%** |
+| projected instances | 578 | **1,506** |
+| status | REVIEW | **KEEP** |
+
+The mode matches the body only after a fix cue (``patch by X; reviewed by Y
+for CASSANDRA-123``, or ``Fixes:``/``Closes:``/``Resolves:``). A bare body
+mention is not matched, because in Cassandra's history those are usually
+cross-references: the same commit sample contains ``Extends the index hints
+feature from CASSANDRA-18112``, which names an issue the commit does not
+fix. Matching it would have manufactured false ground truth. Verified on six
+hand-checked cases, three that must match and three that must not.
+
+Then tested both modes on every other project under 75% linkage (beam,
+drill, keycloak, sakai, wildfly): **all showed +0.0%**. Their lower rates
+are genuinely unlinked issues, not a convention mismatch. Cassandra was the
+only project where our tooling, rather than the project, was at fault.
+
+**Final: 23 KEEP projects, 30,879 projected instances.**

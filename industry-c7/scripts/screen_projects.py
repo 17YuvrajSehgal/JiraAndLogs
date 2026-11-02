@@ -57,7 +57,10 @@ CANDIDATES: dict[str, dict] = {
                       repo="apache/hadoop", ext=JVM, wave=1),
     "spark":     dict(keys=["SPARK"], repo="apache/spark",
                       ext=(".scala", ".java"), wave=1),
-    "cassandra": dict(keys=["CASSANDRA"], repo="apache/cassandra", ext=JVM, wave=1),
+    # Cassandra puts the key in the commit body, not the subject:
+    # "patch by X; reviewed by Y for CASSANDRA-123" (see subject_or_body).
+    "cassandra": dict(keys=["CASSANDRA"], repo="apache/cassandra", ext=JVM,
+                      link="subject_or_body", wave=1),
     "flink":     dict(keys=["FLINK"], repo="apache/flink",
                       ext=(".java", ".scala"), wave=1),
     "ambari":    dict(keys=["AMBARI"], repo="apache/ambari",
@@ -156,6 +159,14 @@ def key_to_commits(gd: Path, prefixes: list[str], link: str) -> dict[str, int]:
               if False else "HEAD")
     pat = re.compile(r"\b(" + "|".join(prefixes) + r")-(\d+)\b", re.I)
     trailer = re.compile(r"^\s*Fixes:\s*(.+)$", re.I | re.M)
+    # subject_or_body: the key may sit in the body, but only after a FIX cue.
+    # Cassandra writes "patch by X; reviewed by Y for CASSANDRA-123". A bare
+    # body mention is usually a cross-reference ("extends the feature from
+    # CASSANDRA-18112") and would create a false link, so it is not matched.
+    body_cue = re.compile(
+        r"(?:\bpatch\s+by\b[^\n]*?\bfor\b"
+        r"|^[ \t]*(?:fixes|fix|closes|close|resolves|resolve)\b[:\s]+)"
+        r"\s*((?:[A-Za-z]+-\d+[\s,]*(?:and\s+)?)+)", re.I | re.M)
     n = Counter()
     for rec in log.split("\x02"):
         if not rec.strip():
@@ -167,7 +178,12 @@ def key_to_commits(gd: Path, prefixes: list[str], link: str) -> dict[str, int]:
         body = parts[2] if len(parts) > 2 else ""
         if "revert" in subj.lower():
             continue
-        hay = subj if link == "subject" else " ".join(trailer.findall(body))
+        if link == "subject":
+            hay = subj
+        elif link == "subject_or_body":
+            hay = subj + " " + " ".join(body_cue.findall(body))
+        else:
+            hay = " ".join(trailer.findall(body))
         for m in pat.finditer(hay or ""):
             n[f"{m.group(1).upper()}-{m.group(2)}"] += 1
     return n
