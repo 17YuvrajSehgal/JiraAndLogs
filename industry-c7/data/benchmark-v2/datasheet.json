@@ -1,74 +1,4 @@
 {
-  "pdfbox": {
-    "project": "pdfbox",
-    "git_dir": "C:\\workplace\\JiraAndLogs\\data\\c7-repos\\pdfbox-full.git",
-    "git_head": "a9ae066a942c122c9dded9bfa1b08dfae4078ba4",
-    "branch_scanned": "default branch only (first-parent history not enforced)",
-    "funnel": {
-      "wolv2_log_fixed_lowuncert_issues": 890,
-      "no_fix_commit": 154,
-      "gt10_fix_commits": 4,
-      "linked_1_to_10_commits": 732,
-      "no_source_gold": 18,
-      "final_instances": 714
-    },
-    "dropped_commit_level": {
-      "revert_commits": 182
-    },
-    "strata": {
-      "single_commit": 457,
-      "trace_present": 404,
-      "easy_gold_named": 533,
-      "multi_commit": 257,
-      "trace_absent": 310,
-      "hard_gold_not_named": 181
-    },
-    "gold_files_median": 1,
-    "query_chars": {
-      "n": 714,
-      "min": 66,
-      "median": 1045,
-      "p95": 3402,
-      "max": 107981,
-      "mean": 1571.42,
-      "over_20k": 3,
-      "truncated_at": null
-    },
-    "fix_commits_per_issue": {
-      "n": 714,
-      "min": 1,
-      "median": 1,
-      "p95": 5,
-      "max": 10,
-      "mean": 1.83,
-      "cap": 10,
-      "hist": {
-        "1": 457,
-        "2": 133,
-        "3": 57,
-        "4": 27,
-        "5": 8,
-        "6": 5,
-        "7": 5,
-        "8": 7,
-        "9": 3,
-        "10": 12
-      }
-    },
-    "files_changed_by_fix": {
-      "n": 714,
-      "min": 1,
-      "median": 1,
-      "p95": 8,
-      "max": 107,
-      "mean": 2.64,
-      "over_3": 108,
-      "over_10": 30,
-      "over_50": 2
-    },
-    "gold_files_mean": 2.09,
-    "output": "C:\\workplace\\JiraAndLogs\\industry-c7\\data\\benchmark-v2\\pdfbox.jsonl"
-  },
   "hive": {
     "project": "hive",
     "git_dir": "C:\\workplace\\JiraAndLogs\\data\\c7-repos\\hive-full.git",
@@ -77,46 +7,48 @@
     "funnel": {
       "wolv2_log_fixed_lowuncert_issues": 5910,
       "no_fix_commit": 298,
+      "commits_dropped_span": 20,
       "linked_1_to_10_commits": 5612,
-      "no_source_gold": 856,
+      "no_source_gold": 858,
+      "gold_files_absent_from_snapshot": 60,
       "gold_over_50_files": 20,
-      "final_instances": 4736
+      "final_instances": 4734
     },
     "dropped_commit_level": {
       "revert_commits": 237,
       "merge_commits": 151
     },
     "strata": {
-      "single_commit": 4458,
-      "trace_absent": 4041,
-      "hard_gold_not_named": 2794,
-      "easy_gold_named": 1942,
+      "single_commit": 4472,
+      "trace_absent": 4039,
+      "hard_gold_not_named": 2793,
+      "easy_gold_named": 1941,
       "trace_present": 695,
-      "multi_commit": 278
+      "multi_commit": 262
     },
     "gold_files_median": 1,
     "query_chars": {
-      "n": 4736,
+      "n": 4734,
       "min": 19,
       "median": 426,
       "p95": 4363,
       "max": 140730,
-      "mean": 1121.04,
+      "mean": 1121.41,
       "over_20k": 8,
       "truncated_at": null
     },
     "fix_commits_per_issue": {
-      "n": 4736,
+      "n": 4734,
       "min": 1,
       "median": 1,
       "p95": 2,
       "max": 5,
-      "mean": 1.07,
+      "mean": 1.06,
       "cap": 10,
       "hist": {
-        "1": 4458,
-        "2": 241,
-        "3": 35,
+        "1": 4472,
+        "2": 228,
+        "3": 32,
         "4": 1,
         "5": 1,
         "6": 0,
@@ -127,14 +59,14 @@
       }
     },
     "files_changed_by_fix": {
-      "n": 4736,
+      "n": 4734,
       "min": 1,
       "median": 3,
       "p95": 30,
       "max": 2755,
       "mean": 12.0,
-      "over_3": 2171,
-      "over_10": 717,
+      "over_3": 2168,
+      "over_10": 715,
       "over_50": 129
     },
     "gold_files_mean": 2.81,
@@ -148,48 +80,50 @@
     "funnel": {
       "wolv2_log_fixed_lowuncert_issues": 5215,
       "no_fix_commit": 700,
+      "commits_dropped_span": 35,
       "linked_1_to_10_commits": 4515,
-      "no_source_gold": 1256,
+      "no_source_gold": 1260,
+      "gold_files_absent_from_snapshot": 27,
       "gold_over_50_files": 10,
-      "final_instances": 3249
+      "final_instances": 3245
     },
     "dropped_commit_level": {
       "revert_commits": 586,
       "merge_commits": 4
     },
     "strata": {
-      "single_commit": 2773,
-      "trace_absent": 2529,
-      "easy_gold_named": 2091,
-      "multi_commit": 476,
+      "single_commit": 2789,
+      "trace_absent": 2525,
+      "easy_gold_named": 2089,
+      "multi_commit": 456,
       "trace_present": 720,
-      "hard_gold_not_named": 1158
+      "hard_gold_not_named": 1156
     },
     "gold_files_median": 1,
     "query_chars": {
-      "n": 3249,
+      "n": 3245,
       "min": 21,
-      "median": 710,
+      "median": 709,
       "p95": 4515,
       "max": 76415,
-      "mean": 1349.67,
+      "mean": 1350.44,
       "over_20k": 3,
       "truncated_at": null
     },
     "fix_commits_per_issue": {
-      "n": 3249,
+      "n": 3245,
       "min": 1,
       "median": 1,
       "p95": 2,
       "max": 7,
-      "mean": 1.19,
+      "mean": 1.18,
       "cap": 10,
       "hist": {
-        "1": 2773,
-        "2": 383,
-        "3": 63,
-        "4": 20,
-        "5": 7,
+        "1": 2789,
+        "2": 371,
+        "3": 58,
+        "4": 18,
+        "5": 6,
         "6": 2,
         "7": 1,
         "8": 0,
@@ -198,17 +132,17 @@
       }
     },
     "files_changed_by_fix": {
-      "n": 3249,
+      "n": 3245,
       "min": 1,
       "median": 2,
       "p95": 15,
       "max": 320,
-      "mean": 4.59,
-      "over_3": 1023,
-      "over_10": 287,
+      "mean": 4.56,
+      "over_3": 1015,
+      "over_10": 283,
       "over_50": 16
     },
-    "gold_files_mean": 2.69,
+    "gold_files_mean": 2.67,
     "output": "C:\\workplace\\JiraAndLogs\\industry-c7\\data\\benchmark-v2\\hbase.jsonl"
   },
   "hadoop": {
@@ -219,48 +153,50 @@
     "funnel": {
       "wolv2_log_fixed_lowuncert_issues": 7848,
       "no_fix_commit": 1653,
+      "commits_dropped_span": 54,
       "linked_1_to_10_commits": 6195,
-      "no_source_gold": 1808,
+      "no_source_gold": 1809,
+      "gold_files_absent_from_snapshot": 32,
       "gold_over_50_files": 1,
-      "final_instances": 4386
+      "final_instances": 4385
     },
     "dropped_commit_level": {
       "revert_commits": 508,
       "merge_commits": 190
     },
     "strata": {
-      "single_commit": 4052,
+      "single_commit": 4085,
       "trace_absent": 3580,
       "easy_gold_named": 2562,
-      "hard_gold_not_named": 1824,
-      "trace_present": 806,
-      "multi_commit": 334
+      "hard_gold_not_named": 1823,
+      "trace_present": 805,
+      "multi_commit": 300
     },
     "gold_files_median": 1,
     "query_chars": {
-      "n": 4386,
+      "n": 4385,
       "min": 26,
-      "median": 559,
+      "median": 558,
       "p95": 3660,
       "max": 133657,
-      "mean": 1117.81,
+      "mean": 1117.82,
       "over_20k": 4,
       "truncated_at": null
     },
     "fix_commits_per_issue": {
-      "n": 4386,
+      "n": 4385,
       "min": 1,
       "median": 1,
       "p95": 2,
       "max": 6,
-      "mean": 1.09,
+      "mean": 1.08,
       "cap": 10,
       "hist": {
-        "1": 4052,
-        "2": 296,
-        "3": 34,
-        "4": 2,
-        "5": 1,
+        "1": 4085,
+        "2": 270,
+        "3": 28,
+        "4": 1,
+        "5": 0,
         "6": 1,
         "7": 0,
         "8": 0,
@@ -269,17 +205,17 @@
       }
     },
     "files_changed_by_fix": {
-      "n": 4386,
+      "n": 4385,
       "min": 1,
       "median": 3,
       "p95": 11,
       "max": 93,
-      "mean": 4.09,
-      "over_3": 1583,
-      "over_10": 241,
+      "mean": 4.07,
+      "over_3": 1574,
+      "over_10": 240,
       "over_50": 4
     },
-    "gold_files_mean": 2.18,
+    "gold_files_mean": 2.17,
     "output": "C:\\workplace\\JiraAndLogs\\industry-c7\\data\\benchmark-v2\\hadoop.jsonl"
   },
   "spark": {
@@ -290,47 +226,48 @@
     "funnel": {
       "wolv2_log_fixed_lowuncert_issues": 2314,
       "no_fix_commit": 330,
+      "commits_dropped_span": 25,
       "linked_1_to_10_commits": 1984,
       "no_source_gold": 419,
-      "gold_over_50_files": 1,
-      "final_instances": 1564
+      "gold_files_absent_from_snapshot": 9,
+      "final_instances": 1565
     },
     "dropped_commit_level": {
       "revert_commits": 727,
       "merge_commits": 20
     },
     "strata": {
-      "single_commit": 1394,
+      "single_commit": 1408,
       "trace_present": 791,
-      "easy_gold_named": 992,
-      "hard_gold_not_named": 572,
-      "trace_absent": 773,
-      "multi_commit": 170
+      "easy_gold_named": 991,
+      "hard_gold_not_named": 574,
+      "trace_absent": 774,
+      "multi_commit": 157
     },
     "gold_files_median": 1,
     "query_chars": {
-      "n": 1564,
+      "n": 1565,
       "min": 53,
       "median": 1732,
       "p95": 8139,
       "max": 94651,
-      "mean": 2840.46,
+      "mean": 2838.92,
       "over_20k": 9,
       "truncated_at": null
     },
     "fix_commits_per_issue": {
-      "n": 1564,
+      "n": 1565,
       "min": 1,
       "median": 1,
       "p95": 2,
       "max": 5,
-      "mean": 1.13,
+      "mean": 1.12,
       "cap": 10,
       "hist": {
-        "1": 1394,
-        "2": 148,
-        "3": 17,
-        "4": 4,
+        "1": 1408,
+        "2": 139,
+        "3": 14,
+        "4": 3,
         "5": 1,
         "6": 0,
         "7": 0,
@@ -340,17 +277,17 @@
       }
     },
     "files_changed_by_fix": {
-      "n": 1564,
+      "n": 1565,
       "min": 1,
       "median": 2,
       "p95": 9,
       "max": 214,
-      "mean": 3.53,
-      "over_3": 402,
+      "mean": 3.52,
+      "over_3": 399,
       "over_10": 64,
       "over_50": 3
     },
-    "gold_files_mean": 1.97,
+    "gold_files_mean": 1.96,
     "output": "C:\\workplace\\JiraAndLogs\\industry-c7\\data\\benchmark-v2\\spark.jsonl"
   },
   "flink": {
@@ -362,48 +299,50 @@
       "wolv2_log_fixed_lowuncert_issues": 2076,
       "no_fix_commit": 358,
       "gt10_fix_commits": 1,
+      "commits_dropped_span": 16,
       "linked_1_to_10_commits": 1717,
-      "no_source_gold": 626,
-      "final_instances": 1091
+      "no_source_gold": 630,
+      "gold_files_absent_from_snapshot": 12,
+      "final_instances": 1087
     },
     "dropped_commit_level": {
       "revert_commits": 227,
       "merge_commits": 1
     },
     "strata": {
-      "single_commit": 901,
+      "single_commit": 904,
       "trace_absent": 546,
-      "easy_gold_named": 733,
-      "trace_present": 545,
-      "hard_gold_not_named": 358,
-      "multi_commit": 190
+      "easy_gold_named": 731,
+      "trace_present": 541,
+      "hard_gold_not_named": 356,
+      "multi_commit": 183
     },
     "gold_files_median": 1,
     "query_chars": {
-      "n": 1091,
+      "n": 1087,
       "min": 65,
-      "median": 1755,
+      "median": 1754,
       "p95": 9710,
       "max": 46757,
-      "mean": 2984.96,
+      "mean": 2983.66,
       "over_20k": 7,
       "truncated_at": null
     },
     "fix_commits_per_issue": {
-      "n": 1091,
+      "n": 1087,
       "min": 1,
       "median": 1,
       "p95": 2,
       "max": 10,
-      "mean": 1.28,
+      "mean": 1.27,
       "cap": 10,
       "hist": {
-        "1": 901,
-        "2": 138,
-        "3": 26,
+        "1": 904,
+        "2": 134,
+        "3": 24,
         "4": 10,
         "5": 8,
-        "6": 3,
+        "6": 2,
         "7": 1,
         "8": 1,
         "9": 2,
@@ -411,17 +350,17 @@
       }
     },
     "files_changed_by_fix": {
-      "n": 1091,
+      "n": 1087,
       "min": 1,
       "median": 3,
       "p95": 18,
       "max": 105,
-      "mean": 5.72,
-      "over_3": 495,
-      "over_10": 146,
+      "mean": 5.7,
+      "over_3": 491,
+      "over_10": 145,
       "over_50": 4
     },
-    "gold_files_mean": 2.9,
+    "gold_files_mean": 2.89,
     "output": "C:\\workplace\\JiraAndLogs\\industry-c7\\data\\benchmark-v2\\flink.jsonl"
   },
   "ambari": {
@@ -432,37 +371,39 @@
     "funnel": {
       "wolv2_log_fixed_lowuncert_issues": 5995,
       "no_fix_commit": 340,
+      "commits_dropped_span": 8,
       "gt10_fix_commits": 2,
       "linked_1_to_10_commits": 5653,
-      "no_source_gold": 2352,
+      "no_source_gold": 2360,
+      "gold_files_absent_from_snapshot": 59,
       "gold_over_50_files": 7,
-      "final_instances": 3294
+      "final_instances": 3286
     },
     "dropped_commit_level": {
       "revert_commits": 673,
       "merge_commits": 320
     },
     "strata": {
-      "single_commit": 2744,
-      "trace_absent": 2833,
-      "hard_gold_not_named": 2185,
-      "easy_gold_named": 1109,
-      "trace_present": 461,
-      "multi_commit": 550
+      "single_commit": 2747,
+      "trace_absent": 2826,
+      "hard_gold_not_named": 2180,
+      "easy_gold_named": 1106,
+      "trace_present": 460,
+      "multi_commit": 539
     },
     "gold_files_median": 2,
     "query_chars": {
-      "n": 3294,
+      "n": 3286,
       "min": 23,
       "median": 591,
       "p95": 6503,
       "max": 43887,
-      "mean": 1593.34,
+      "mean": 1594.13,
       "over_20k": 15,
       "truncated_at": null
     },
     "fix_commits_per_issue": {
-      "n": 3294,
+      "n": 3286,
       "min": 1,
       "median": 1,
       "p95": 2,
@@ -470,10 +411,10 @@
       "mean": 1.21,
       "cap": 10,
       "hist": {
-        "1": 2744,
-        "2": 452,
-        "3": 60,
-        "4": 32,
+        "1": 2747,
+        "2": 443,
+        "3": 59,
+        "4": 31,
         "5": 3,
         "6": 2,
         "7": 0,
@@ -483,17 +424,17 @@
       }
     },
     "files_changed_by_fix": {
-      "n": 3294,
+      "n": 3286,
       "min": 1,
       "median": 3,
       "p95": 23,
       "max": 259,
-      "mean": 6.6,
-      "over_3": 1512,
-      "over_10": 484,
+      "mean": 6.59,
+      "over_3": 1506,
+      "over_10": 480,
       "over_50": 33
     },
-    "gold_files_mean": 3.1,
+    "gold_files_mean": 3.09,
     "output": "C:\\workplace\\JiraAndLogs\\industry-c7\\data\\benchmark-v2\\ambari.jsonl"
   },
   "impala": {
@@ -504,47 +445,49 @@
     "funnel": {
       "wolv2_log_fixed_lowuncert_issues": 1492,
       "no_fix_commit": 291,
+      "commits_dropped_span": 11,
       "linked_1_to_10_commits": 1201,
-      "no_source_gold": 398,
+      "no_source_gold": 399,
+      "gold_files_absent_from_snapshot": 3,
       "gold_over_50_files": 2,
-      "final_instances": 801
+      "final_instances": 800
     },
     "dropped_commit_level": {
       "revert_commits": 94
     },
     "strata": {
-      "single_commit": 753,
+      "single_commit": 757,
       "trace_present": 451,
-      "easy_gold_named": 429,
-      "trace_absent": 350,
-      "hard_gold_not_named": 372,
-      "multi_commit": 48
+      "easy_gold_named": 427,
+      "trace_absent": 349,
+      "hard_gold_not_named": 373,
+      "multi_commit": 43
     },
     "gold_files_median": 2,
     "query_chars": {
-      "n": 801,
+      "n": 800,
       "min": 165,
-      "median": 1908,
-      "p95": 9101,
+      "median": 1935,
+      "p95": 9166,
       "max": 84722,
-      "mean": 3300.25,
+      "mean": 3303.07,
       "over_20k": 7,
       "truncated_at": null
     },
     "fix_commits_per_issue": {
-      "n": 801,
+      "n": 800,
       "min": 1,
       "median": 1,
       "p95": 2,
       "max": 7,
-      "mean": 1.08,
+      "mean": 1.07,
       "cap": 10,
       "hist": {
-        "1": 753,
-        "2": 39,
-        "3": 6,
+        "1": 757,
+        "2": 36,
+        "3": 5,
         "4": 1,
-        "5": 1,
+        "5": 0,
         "6": 0,
         "7": 1,
         "8": 0,
@@ -553,17 +496,17 @@
       }
     },
     "files_changed_by_fix": {
-      "n": 801,
+      "n": 800,
       "min": 1,
       "median": 3,
       "p95": 12,
       "max": 69,
-      "mean": 4.35,
-      "over_3": 321,
-      "over_10": 57,
+      "mean": 4.29,
+      "over_3": 319,
+      "over_10": 56,
       "over_50": 1
     },
-    "gold_files_mean": 3.03,
+    "gold_files_mean": 2.99,
     "output": "C:\\workplace\\JiraAndLogs\\industry-c7\\data\\benchmark-v2\\impala.jsonl"
   },
   "geode": {
@@ -574,68 +517,70 @@
     "funnel": {
       "wolv2_log_fixed_lowuncert_issues": 1378,
       "no_fix_commit": 283,
+      "commits_dropped_span": 45,
       "gt10_fix_commits": 2,
       "linked_1_to_10_commits": 1093,
-      "no_source_gold": 441,
+      "no_source_gold": 451,
+      "gold_files_absent_from_snapshot": 18,
       "gold_over_50_files": 4,
-      "final_instances": 648
+      "final_instances": 638
     },
     "dropped_commit_level": {
       "revert_commits": 293,
       "merge_commits": 307
     },
     "strata": {
-      "single_commit": 465,
-      "trace_present": 383,
-      "hard_gold_not_named": 261,
-      "easy_gold_named": 387,
-      "multi_commit": 183,
-      "trace_absent": 265
+      "single_commit": 471,
+      "trace_present": 376,
+      "hard_gold_not_named": 256,
+      "easy_gold_named": 382,
+      "multi_commit": 167,
+      "trace_absent": 262
     },
     "gold_files_median": 1,
     "query_chars": {
-      "n": 648,
+      "n": 638,
       "min": 98,
       "median": 2063,
-      "p95": 8240,
+      "p95": 8200,
       "max": 50870,
-      "mean": 3083.12,
-      "over_20k": 8,
+      "mean": 3058.29,
+      "over_20k": 7,
       "truncated_at": null
     },
     "fix_commits_per_issue": {
-      "n": 648,
+      "n": 638,
       "min": 1,
       "median": 1,
       "p95": 3,
       "max": 7,
-      "mean": 1.42,
+      "mean": 1.38,
       "cap": 10,
       "hist": {
-        "1": 465,
-        "2": 131,
-        "3": 28,
-        "4": 19,
+        "1": 471,
+        "2": 121,
+        "3": 25,
+        "4": 17,
         "5": 1,
         "6": 1,
-        "7": 3,
+        "7": 2,
         "8": 0,
         "9": 0,
         "10": 0
       }
     },
     "files_changed_by_fix": {
-      "n": 648,
+      "n": 638,
       "min": 1,
       "median": 3,
       "p95": 16,
       "max": 133,
-      "mean": 5.49,
-      "over_3": 278,
-      "over_10": 60,
+      "mean": 5.44,
+      "over_3": 268,
+      "over_10": 57,
       "over_50": 6
     },
-    "gold_files_mean": 2.63,
+    "gold_files_mean": 2.6,
     "output": "C:\\workplace\\JiraAndLogs\\industry-c7\\data\\benchmark-v2\\geode.jsonl"
   },
   "ignite": {
@@ -646,10 +591,12 @@
     "funnel": {
       "wolv2_log_fixed_lowuncert_issues": 1244,
       "no_fix_commit": 289,
+      "commits_dropped_span": 6,
       "gt10_fix_commits": 1,
       "linked_1_to_10_commits": 954,
       "no_source_gold": 255,
       "gold_over_50_files": 4,
+      "gold_files_absent_from_snapshot": 6,
       "final_instances": 695
     },
     "dropped_commit_level": {
@@ -657,12 +604,12 @@
       "merge_commits": 47
     },
     "strata": {
-      "single_commit": 636,
+      "single_commit": 637,
       "trace_absent": 320,
       "hard_gold_not_named": 218,
       "easy_gold_named": 477,
       "trace_present": 375,
-      "multi_commit": 59
+      "multi_commit": 58
     },
     "gold_files_median": 2,
     "query_chars": {
@@ -684,10 +631,10 @@
       "mean": 1.14,
       "cap": 10,
       "hist": {
-        "1": 636,
+        "1": 637,
         "2": 39,
         "3": 11,
-        "4": 5,
+        "4": 4,
         "5": 0,
         "6": 2,
         "7": 2,
@@ -702,12 +649,12 @@
       "median": 3,
       "p95": 17,
       "max": 73,
-      "mean": 5.23,
-      "over_3": 313,
-      "over_10": 77,
+      "mean": 5.22,
+      "over_3": 312,
+      "over_10": 76,
       "over_50": 3
     },
-    "gold_files_mean": 2.87,
+    "gold_files_mean": 2.86,
     "output": "C:\\workplace\\JiraAndLogs\\industry-c7\\data\\benchmark-v2\\ignite.jsonl"
   },
   "camel": {
@@ -718,47 +665,49 @@
     "funnel": {
       "wolv2_log_fixed_lowuncert_issues": 1201,
       "no_fix_commit": 168,
+      "commits_dropped_span": 10,
       "gt10_fix_commits": 3,
       "linked_1_to_10_commits": 1030,
-      "no_source_gold": 157,
+      "no_source_gold": 158,
       "gold_over_50_files": 3,
-      "final_instances": 870
+      "gold_files_absent_from_snapshot": 14,
+      "final_instances": 869
     },
     "dropped_commit_level": {
       "revert_commits": 243,
       "merge_commits": 154
     },
     "strata": {
-      "single_commit": 604,
+      "single_commit": 609,
       "trace_absent": 487,
-      "easy_gold_named": 547,
-      "multi_commit": 266,
+      "easy_gold_named": 546,
+      "multi_commit": 260,
       "hard_gold_not_named": 323,
-      "trace_present": 383
+      "trace_present": 382
     },
     "gold_files_median": 1,
     "query_chars": {
-      "n": 870,
+      "n": 869,
       "min": 59,
-      "median": 1548,
+      "median": 1546,
       "p95": 7901,
       "max": 98435,
-      "mean": 2716.05,
+      "mean": 2716.25,
       "over_20k": 7,
       "truncated_at": null
     },
     "fix_commits_per_issue": {
-      "n": 870,
+      "n": 869,
       "min": 1,
       "median": 1,
       "p95": 4,
       "max": 10,
-      "mean": 1.54,
+      "mean": 1.53,
       "cap": 10,
       "hist": {
-        "1": 604,
-        "2": 161,
-        "3": 55,
+        "1": 609,
+        "2": 157,
+        "3": 53,
         "4": 28,
         "5": 13,
         "6": 4,
@@ -769,17 +718,17 @@
       }
     },
     "files_changed_by_fix": {
-      "n": 870,
+      "n": 869,
       "min": 1,
       "median": 3,
       "p95": 11,
       "max": 574,
-      "mean": 4.77,
-      "over_3": 306,
+      "mean": 4.75,
+      "over_3": 303,
       "over_10": 50,
       "over_50": 4
     },
-    "gold_files_mean": 2.08,
+    "gold_files_mean": 2.06,
     "output": "C:\\workplace\\JiraAndLogs\\industry-c7\\data\\benchmark-v2\\camel.jsonl"
   },
   "phoenix": {
@@ -790,46 +739,48 @@
     "funnel": {
       "wolv2_log_fixed_lowuncert_issues": 1059,
       "no_fix_commit": 131,
+      "commits_dropped_span": 7,
       "linked_1_to_10_commits": 928,
-      "no_source_gold": 123,
+      "no_source_gold": 125,
+      "gold_files_absent_from_snapshot": 20,
       "gold_over_50_files": 1,
-      "final_instances": 804
+      "final_instances": 802
     },
     "dropped_commit_level": {
       "revert_commits": 65,
       "merge_commits": 3
     },
     "strata": {
-      "single_commit": 673,
-      "trace_present": 188,
-      "easy_gold_named": 390,
-      "trace_absent": 616,
-      "hard_gold_not_named": 414,
-      "multi_commit": 131
+      "single_commit": 677,
+      "trace_present": 187,
+      "easy_gold_named": 389,
+      "trace_absent": 615,
+      "hard_gold_not_named": 413,
+      "multi_commit": 125
     },
     "gold_files_median": 2,
     "query_chars": {
-      "n": 804,
+      "n": 802,
       "min": 26,
       "median": 629,
-      "p95": 4700,
+      "p95": 4667,
       "max": 48144,
-      "mean": 1435.55,
+      "mean": 1431.88,
       "over_20k": 2,
       "truncated_at": null
     },
     "fix_commits_per_issue": {
-      "n": 804,
+      "n": 802,
       "min": 1,
       "median": 1,
       "p95": 2,
       "max": 4,
-      "mean": 1.22,
+      "mean": 1.21,
       "cap": 10,
       "hist": {
-        "1": 673,
-        "2": 97,
-        "3": 24,
+        "1": 677,
+        "2": 95,
+        "3": 20,
         "4": 10,
         "5": 0,
         "6": 0,
@@ -840,17 +791,17 @@
       }
     },
     "files_changed_by_fix": {
-      "n": 804,
+      "n": 802,
       "min": 1,
       "median": 3,
       "p95": 16,
       "max": 58,
       "mean": 4.81,
-      "over_3": 297,
+      "over_3": 295,
       "over_10": 78,
       "over_50": 1
     },
-    "gold_files_mean": 3.8,
+    "gold_files_mean": 3.77,
     "output": "C:\\workplace\\JiraAndLogs\\industry-c7\\data\\benchmark-v2\\phoenix.jsonl"
   },
   "beam": {
@@ -861,9 +812,11 @@
     "funnel": {
       "wolv2_log_fixed_lowuncert_issues": 923,
       "no_fix_commit": 413,
+      "commits_dropped_span": 11,
       "linked_1_to_10_commits": 510,
       "no_source_gold": 167,
       "gold_over_50_files": 1,
+      "gold_files_absent_from_snapshot": 2,
       "final_instances": 342
     },
     "dropped_commit_level": {
@@ -871,10 +824,10 @@
       "revert_commits": 214
     },
     "strata": {
-      "multi_commit": 69,
+      "multi_commit": 63,
       "trace_absent": 238,
       "hard_gold_not_named": 111,
-      "single_commit": 273,
+      "single_commit": 279,
       "easy_gold_named": 231,
       "trace_present": 104
     },
@@ -895,14 +848,14 @@
       "median": 1,
       "p95": 3,
       "max": 10,
-      "mean": 1.33,
+      "mean": 1.31,
       "cap": 10,
       "hist": {
-        "1": 273,
-        "2": 45,
+        "1": 279,
+        "2": 40,
         "3": 16,
         "4": 3,
-        "5": 2,
+        "5": 1,
         "6": 1,
         "7": 1,
         "8": 0,
@@ -916,12 +869,12 @@
       "median": 2,
       "p95": 11,
       "max": 45,
-      "mean": 3.33,
-      "over_3": 86,
+      "mean": 3.28,
+      "over_3": 84,
       "over_10": 18,
       "over_50": 0
     },
-    "gold_files_mean": 2.25,
+    "gold_files_mean": 2.2,
     "output": "C:\\workplace\\JiraAndLogs\\industry-c7\\data\\benchmark-v2\\beam.jsonl"
   },
   "pig": {
@@ -932,8 +885,10 @@
     "funnel": {
       "wolv2_log_fixed_lowuncert_issues": 868,
       "no_fix_commit": 122,
+      "commits_dropped_span": 3,
       "linked_1_to_10_commits": 746,
       "no_source_gold": 137,
+      "gold_files_absent_from_snapshot": 7,
       "gold_over_50_files": 3,
       "final_instances": 606
     },
@@ -941,10 +896,10 @@
       "revert_commits": 27
     },
     "strata": {
-      "single_commit": 528,
+      "single_commit": 530,
       "trace_absent": 373,
       "hard_gold_not_named": 297,
-      "multi_commit": 78,
+      "multi_commit": 76,
       "easy_gold_named": 309,
       "trace_present": 233
     },
@@ -968,8 +923,8 @@
       "mean": 1.15,
       "cap": 10,
       "hist": {
-        "1": 528,
-        "2": 64,
+        "1": 530,
+        "2": 62,
         "3": 14,
         "4": 0,
         "5": 0,
@@ -987,11 +942,11 @@
       "p95": 12,
       "max": 59,
       "mean": 4.82,
-      "over_3": 280,
+      "over_3": 279,
       "over_10": 42,
       "over_50": 1
     },
-    "gold_files_mean": 2.32,
+    "gold_files_mean": 2.31,
     "output": "C:\\workplace\\JiraAndLogs\\industry-c7\\data\\benchmark-v2\\pig.jsonl"
   },
   "groovy": {
@@ -1002,66 +957,68 @@
     "funnel": {
       "wolv2_log_fixed_lowuncert_issues": 1604,
       "no_fix_commit": 487,
+      "commits_dropped_span": 73,
       "linked_1_to_10_commits": 1117,
-      "no_source_gold": 105,
-      "final_instances": 1012
+      "no_source_gold": 110,
+      "gold_files_absent_from_snapshot": 7,
+      "final_instances": 1007
     },
     "dropped_commit_level": {
       "merge_commits": 158,
       "revert_commits": 68
     },
     "strata": {
-      "multi_commit": 247,
-      "trace_absent": 652,
-      "easy_gold_named": 297,
-      "single_commit": 765,
-      "hard_gold_not_named": 715,
+      "multi_commit": 217,
+      "trace_absent": 647,
+      "easy_gold_named": 295,
+      "single_commit": 790,
+      "hard_gold_not_named": 712,
       "trace_present": 360
     },
     "gold_files_median": 1,
     "query_chars": {
-      "n": 1012,
+      "n": 1007,
       "min": 15,
       "median": 980,
       "p95": 4897,
       "max": 88528,
-      "mean": 1648.22,
+      "mean": 1651.82,
       "over_20k": 3,
       "truncated_at": null
     },
     "fix_commits_per_issue": {
-      "n": 1012,
+      "n": 1007,
       "min": 1,
       "median": 1,
       "p95": 3,
-      "max": 9,
-      "mean": 1.37,
+      "max": 6,
+      "mean": 1.3,
       "cap": 10,
       "hist": {
-        "1": 765,
-        "2": 164,
-        "3": 60,
-        "4": 16,
-        "5": 2,
+        "1": 790,
+        "2": 151,
+        "3": 53,
+        "4": 11,
+        "5": 1,
         "6": 1,
-        "7": 2,
-        "8": 1,
-        "9": 1,
+        "7": 0,
+        "8": 0,
+        "9": 0,
         "10": 0
       }
     },
     "files_changed_by_fix": {
-      "n": 1012,
+      "n": 1007,
       "min": 1,
       "median": 2,
       "p95": 7,
       "max": 70,
-      "mean": 3.13,
-      "over_3": 216,
-      "over_10": 25,
+      "mean": 3.0,
+      "over_3": 195,
+      "over_10": 22,
       "over_50": 2
     },
-    "gold_files_mean": 1.7,
+    "gold_files_mean": 1.64,
     "output": "C:\\workplace\\JiraAndLogs\\industry-c7\\data\\benchmark-v2\\groovy.jsonl"
   },
   "sakai": {
@@ -1073,67 +1030,69 @@
       "wolv2_log_fixed_lowuncert_issues": 3420,
       "no_fix_commit": 1350,
       "gt10_fix_commits": 14,
+      "commits_dropped_span": 47,
       "linked_1_to_10_commits": 2056,
-      "no_source_gold": 603,
+      "no_source_gold": 614,
+      "gold_files_absent_from_snapshot": 167,
       "gold_over_50_files": 2,
-      "final_instances": 1451
+      "final_instances": 1440
     },
     "dropped_commit_level": {
       "revert_commits": 225,
       "merge_commits": 1310
     },
     "strata": {
-      "single_commit": 1079,
-      "trace_absent": 999,
-      "hard_gold_not_named": 793,
-      "multi_commit": 372,
-      "trace_present": 452,
-      "easy_gold_named": 658
+      "single_commit": 1093,
+      "trace_absent": 991,
+      "hard_gold_not_named": 789,
+      "multi_commit": 347,
+      "trace_present": 449,
+      "easy_gold_named": 651
     },
     "gold_files_median": 1,
     "query_chars": {
-      "n": 1451,
+      "n": 1440,
       "min": 77,
       "median": 833,
-      "p95": 9100,
+      "p95": 9039,
       "max": 32830,
-      "mean": 2140.51,
+      "mean": 2131.65,
       "over_20k": 6,
       "truncated_at": null
     },
     "fix_commits_per_issue": {
-      "n": 1451,
+      "n": 1440,
       "min": 1,
       "median": 1,
-      "p95": 4,
+      "p95": 3,
       "max": 9,
-      "mean": 1.48,
+      "mean": 1.44,
       "cap": 10,
       "hist": {
-        "1": 1079,
-        "2": 213,
-        "3": 82,
-        "4": 38,
-        "5": 17,
-        "6": 10,
+        "1": 1093,
+        "2": 204,
+        "3": 77,
+        "4": 33,
+        "5": 12,
+        "6": 11,
         "7": 2,
-        "8": 6,
-        "9": 4,
+        "8": 5,
+        "9": 3,
         "10": 0
       }
     },
     "files_changed_by_fix": {
-      "n": 1451,
+      "n": 1440,
       "min": 1,
       "median": 2,
       "p95": 12,
       "max": 523,
-      "mean": 4.31,
-      "over_3": 385,
-      "over_10": 99,
+      "mean": 4.25,
+      "over_3": 374,
+      "over_10": 93,
       "over_50": 9
     },
-    "gold_files_mean": 2.09,
+    "gold_files_mean": 1.97,
     "output": "C:\\workplace\\JiraAndLogs\\industry-c7\\data\\benchmark-v2\\sakai.jsonl"
   },
   "wildfly": {
@@ -1144,67 +1103,69 @@
     "funnel": {
       "wolv2_log_fixed_lowuncert_issues": 1604,
       "no_fix_commit": 542,
+      "commits_dropped_span": 32,
       "linked_1_to_10_commits": 1062,
-      "no_source_gold": 333,
+      "no_source_gold": 336,
+      "gold_files_absent_from_snapshot": 6,
       "gold_over_50_files": 1,
-      "final_instances": 728
+      "final_instances": 725
     },
     "dropped_commit_level": {
       "merge_commits": 7025,
       "revert_commits": 236
     },
     "strata": {
-      "single_commit": 600,
-      "trace_absent": 372,
-      "easy_gold_named": 318,
-      "multi_commit": 128,
-      "trace_present": 356,
+      "single_commit": 611,
+      "trace_absent": 371,
+      "easy_gold_named": 315,
+      "multi_commit": 114,
+      "trace_present": 354,
       "hard_gold_not_named": 410
     },
     "gold_files_median": 1,
     "query_chars": {
-      "n": 728,
+      "n": 725,
       "min": 48,
       "median": 2110,
       "p95": 11507,
       "max": 208010,
-      "mean": 3927.11,
+      "mean": 3933.86,
       "over_20k": 13,
       "truncated_at": null
     },
     "fix_commits_per_issue": {
-      "n": 728,
+      "n": 725,
       "min": 1,
       "median": 1,
       "p95": 2,
       "max": 7,
-      "mean": 1.25,
+      "mean": 1.23,
       "cap": 10,
       "hist": {
-        "1": 600,
-        "2": 98,
-        "3": 17,
-        "4": 5,
+        "1": 611,
+        "2": 87,
+        "3": 15,
+        "4": 4,
         "5": 5,
-        "6": 1,
-        "7": 2,
+        "6": 2,
+        "7": 1,
         "8": 0,
         "9": 0,
         "10": 0
       }
     },
     "files_changed_by_fix": {
-      "n": 728,
+      "n": 725,
       "min": 1,
       "median": 2,
-      "p95": 14,
+      "p95": 13,
       "max": 84,
-      "mean": 4.0,
-      "over_3": 238,
-      "over_10": 51,
+      "mean": 3.94,
+      "over_3": 235,
+      "over_10": 50,
       "over_50": 1
     },
-    "gold_files_mean": 2.39,
+    "gold_files_mean": 2.36,
     "output": "C:\\workplace\\JiraAndLogs\\industry-c7\\data\\benchmark-v2\\wildfly.jsonl"
   },
   "infinispan": {
@@ -1215,67 +1176,69 @@
     "funnel": {
       "wolv2_log_fixed_lowuncert_issues": 1546,
       "no_fix_commit": 231,
+      "commits_dropped_span": 26,
       "linked_1_to_10_commits": 1315,
-      "no_source_gold": 448,
+      "no_source_gold": 452,
+      "gold_files_absent_from_snapshot": 8,
       "gold_over_50_files": 1,
-      "final_instances": 866
+      "final_instances": 862
     },
     "dropped_commit_level": {
       "revert_commits": 61,
       "merge_commits": 5
     },
     "strata": {
-      "single_commit": 665,
-      "trace_absent": 334,
-      "easy_gold_named": 549,
-      "multi_commit": 201,
-      "hard_gold_not_named": 317,
-      "trace_present": 532
+      "single_commit": 667,
+      "trace_absent": 331,
+      "easy_gold_named": 548,
+      "multi_commit": 195,
+      "hard_gold_not_named": 314,
+      "trace_present": 531
     },
     "gold_files_median": 2,
     "query_chars": {
-      "n": 866,
+      "n": 862,
       "min": 42,
-      "median": 2020,
+      "median": 2039,
       "p95": 10461,
       "max": 102062,
-      "mean": 3751.55,
+      "mean": 3755.51,
       "over_20k": 16,
       "truncated_at": null
     },
     "fix_commits_per_issue": {
-      "n": 866,
+      "n": 862,
       "min": 1,
       "median": 1,
       "p95": 3,
       "max": 10,
-      "mean": 1.38,
+      "mean": 1.36,
       "cap": 10,
       "hist": {
-        "1": 665,
-        "2": 135,
+        "1": 667,
+        "2": 134,
         "3": 35,
-        "4": 16,
-        "5": 9,
+        "4": 14,
+        "5": 7,
         "6": 1,
-        "7": 1,
+        "7": 0,
         "8": 2,
         "9": 1,
         "10": 1
       }
     },
     "files_changed_by_fix": {
-      "n": 866,
+      "n": 862,
       "min": 1,
       "median": 3,
       "p95": 18,
       "max": 64,
-      "mean": 5.44,
-      "over_3": 380,
-      "over_10": 109,
-      "over_50": 4
+      "mean": 5.34,
+      "over_3": 374,
+      "over_10": 106,
+      "over_50": 3
     },
-    "gold_files_mean": 2.88,
+    "gold_files_mean": 2.84,
     "output": "C:\\workplace\\JiraAndLogs\\industry-c7\\data\\benchmark-v2\\infinispan.jsonl"
   },
   "keycloak": {
@@ -1286,10 +1249,12 @@
     "funnel": {
       "wolv2_log_fixed_lowuncert_issues": 940,
       "no_fix_commit": 294,
+      "commits_dropped_span": 2,
       "linked_1_to_10_commits": 646,
-      "no_source_gold": 209,
+      "no_source_gold": 212,
+      "gold_files_absent_from_snapshot": 8,
       "gold_over_50_files": 1,
-      "final_instances": 436
+      "final_instances": 433
     },
     "dropped_commit_level": {
       "revert_commits": 30,
@@ -1297,35 +1262,35 @@
     },
     "strata": {
       "single_commit": 386,
-      "trace_absent": 228,
-      "hard_gold_not_named": 182,
-      "trace_present": 208,
-      "easy_gold_named": 254,
-      "multi_commit": 50
+      "trace_absent": 226,
+      "hard_gold_not_named": 181,
+      "trace_present": 207,
+      "easy_gold_named": 252,
+      "multi_commit": 47
     },
     "gold_files_median": 1,
     "query_chars": {
-      "n": 436,
+      "n": 433,
       "min": 143,
       "median": 1677,
       "p95": 11735,
       "max": 80878,
-      "mean": 3673.82,
+      "mean": 3674.34,
       "over_20k": 4,
       "truncated_at": null
     },
     "fix_commits_per_issue": {
-      "n": 436,
+      "n": 433,
       "min": 1,
       "median": 1,
       "p95": 2,
       "max": 4,
-      "mean": 1.15,
+      "mean": 1.14,
       "cap": 10,
       "hist": {
         "1": 386,
-        "2": 38,
-        "3": 8,
+        "2": 36,
+        "3": 7,
         "4": 4,
         "5": 0,
         "6": 0,
@@ -1336,14 +1301,14 @@
       }
     },
     "files_changed_by_fix": {
-      "n": 436,
+      "n": 433,
       "min": 1,
       "median": 2,
       "p95": 14,
       "max": 121,
-      "mean": 4.84,
-      "over_3": 158,
-      "over_10": 43,
+      "mean": 4.82,
+      "over_3": 156,
+      "over_10": 42,
       "over_50": 2
     },
     "gold_files_mean": 2.64,
@@ -1358,65 +1323,67 @@
       "wolv2_log_fixed_lowuncert_issues": 1192,
       "no_fix_commit": 168,
       "gt10_fix_commits": 5,
+      "commits_dropped_span": 39,
       "linked_1_to_10_commits": 1019,
-      "no_source_gold": 336,
-      "final_instances": 683
+      "no_source_gold": 342,
+      "gold_files_absent_from_snapshot": 7,
+      "final_instances": 677
     },
     "dropped_commit_level": {
       "revert_commits": 19
     },
     "strata": {
-      "single_commit": 467,
-      "trace_absent": 425,
-      "easy_gold_named": 290,
-      "hard_gold_not_named": 393,
-      "multi_commit": 216,
-      "trace_present": 258
+      "single_commit": 475,
+      "trace_absent": 422,
+      "easy_gold_named": 287,
+      "hard_gold_not_named": 390,
+      "multi_commit": 202,
+      "trace_present": 255
     },
     "gold_files_median": 1,
     "query_chars": {
-      "n": 683,
+      "n": 677,
       "min": 59,
       "median": 1280,
-      "p95": 5635,
+      "p95": 5710,
       "max": 67018,
-      "mean": 1997.8,
+      "mean": 2003.35,
       "over_20k": 1,
       "truncated_at": null
     },
     "fix_commits_per_issue": {
-      "n": 683,
+      "n": 677,
       "min": 1,
       "median": 1,
       "p95": 4,
       "max": 10,
-      "mean": 1.62,
+      "mean": 1.57,
       "cap": 10,
       "hist": {
-        "1": 467,
-        "2": 125,
+        "1": 475,
+        "2": 115,
         "3": 44,
         "4": 18,
-        "5": 10,
-        "6": 9,
-        "7": 3,
-        "8": 5,
+        "5": 11,
+        "6": 7,
+        "7": 2,
+        "8": 4,
         "9": 0,
-        "10": 2
+        "10": 1
       }
     },
     "files_changed_by_fix": {
-      "n": 683,
+      "n": 677,
       "min": 1,
       "median": 3,
-      "p95": 17,
+      "p95": 18,
       "max": 193,
-      "mean": 5.67,
-      "over_3": 316,
-      "over_10": 75,
+      "mean": 5.61,
+      "over_3": 309,
+      "over_10": 74,
       "over_50": 2
     },
-    "gold_files_mean": 2.72,
+    "gold_files_mean": 2.66,
     "output": "C:\\workplace\\JiraAndLogs\\industry-c7\\data\\benchmark-v2\\derby.jsonl"
   },
   "solr": {
@@ -1427,68 +1394,70 @@
     "funnel": {
       "wolv2_log_fixed_lowuncert_issues": 1123,
       "no_fix_commit": 150,
+      "commits_dropped_span": 22,
       "gt10_fix_commits": 3,
       "linked_1_to_10_commits": 970,
-      "no_source_gold": 211,
+      "no_source_gold": 213,
+      "gold_files_absent_from_snapshot": 9,
       "gold_over_50_files": 1,
-      "final_instances": 758
+      "final_instances": 756
     },
     "dropped_commit_level": {
       "revert_commits": 226,
       "merge_commits": 45
     },
     "strata": {
-      "multi_commit": 273,
-      "trace_absent": 534,
-      "easy_gold_named": 482,
-      "single_commit": 485,
+      "multi_commit": 267,
+      "trace_absent": 533,
+      "easy_gold_named": 480,
+      "single_commit": 489,
       "hard_gold_not_named": 276,
-      "trace_present": 224
+      "trace_present": 223
     },
     "gold_files_median": 1,
     "query_chars": {
-      "n": 758,
+      "n": 756,
       "min": 48,
       "median": 1142,
       "p95": 5944,
       "max": 105190,
-      "mean": 2031.94,
+      "mean": 2034.97,
       "over_20k": 3,
       "truncated_at": null
     },
     "fix_commits_per_issue": {
-      "n": 758,
+      "n": 756,
       "min": 1,
       "median": 1,
       "p95": 4,
       "max": 10,
-      "mean": 1.67,
+      "mean": 1.65,
       "cap": 10,
       "hist": {
-        "1": 485,
-        "2": 158,
-        "3": 59,
+        "1": 489,
+        "2": 155,
+        "3": 58,
         "4": 24,
-        "5": 19,
+        "5": 18,
         "6": 5,
-        "7": 3,
+        "7": 2,
         "8": 2,
         "9": 1,
         "10": 2
       }
     },
     "files_changed_by_fix": {
-      "n": 758,
+      "n": 756,
       "min": 1,
       "median": 4,
-      "p95": 16,
-      "max": 187,
-      "mean": 5.76,
-      "over_3": 381,
-      "over_10": 62,
+      "p95": 15,
+      "max": 184,
+      "mean": 5.71,
+      "over_3": 378,
+      "over_10": 61,
       "over_50": 5
     },
-    "gold_files_mean": 2.6,
+    "gold_files_mean": 2.57,
     "output": "C:\\workplace\\JiraAndLogs\\industry-c7\\data\\benchmark-v2\\solr.jsonl"
   },
   "drill": {
@@ -1499,8 +1468,10 @@
     "funnel": {
       "wolv2_log_fixed_lowuncert_issues": 1046,
       "no_fix_commit": 375,
+      "commits_dropped_span": 2,
       "linked_1_to_10_commits": 671,
       "no_source_gold": 132,
+      "gold_files_absent_from_snapshot": 2,
       "gold_over_50_files": 3,
       "final_instances": 536
     },
@@ -1509,12 +1480,12 @@
       "merge_commits": 3
     },
     "strata": {
-      "single_commit": 500,
+      "single_commit": 502,
       "trace_absent": 397,
       "hard_gold_not_named": 338,
       "trace_present": 139,
       "easy_gold_named": 198,
-      "multi_commit": 36
+      "multi_commit": 34
     },
     "gold_files_median": 2,
     "query_chars": {
@@ -1536,8 +1507,8 @@
       "mean": 1.07,
       "cap": 10,
       "hist": {
-        "1": 500,
-        "2": 33,
+        "1": 502,
+        "2": 31,
         "3": 3,
         "4": 0,
         "5": 0,
@@ -1554,12 +1525,12 @@
       "median": 3,
       "p95": 20,
       "max": 92,
-      "mean": 6.21,
-      "over_3": 256,
-      "over_10": 77,
+      "mean": 6.17,
+      "over_3": 255,
+      "over_10": 76,
       "over_50": 5
     },
-    "gold_files_mean": 3.78,
+    "gold_files_mean": 3.77,
     "output": "C:\\workplace\\JiraAndLogs\\industry-c7\\data\\benchmark-v2\\drill.jsonl"
   },
   "cassandra": {
@@ -1570,9 +1541,11 @@
     "funnel": {
       "wolv2_log_fixed_lowuncert_issues": 2116,
       "no_fix_commit": 401,
+      "commits_dropped_span": 7,
       "gt10_fix_commits": 1,
       "linked_1_to_10_commits": 1714,
       "no_source_gold": 293,
+      "gold_files_absent_from_snapshot": 38,
       "final_instances": 1421
     },
     "dropped_commit_level": {
@@ -1580,12 +1553,12 @@
       "merge_commits": 31
     },
     "strata": {
-      "single_commit": 1171,
+      "single_commit": 1177,
       "trace_absent": 679,
-      "hard_gold_not_named": 569,
+      "hard_gold_not_named": 570,
       "trace_present": 742,
-      "easy_gold_named": 852,
-      "multi_commit": 250
+      "easy_gold_named": 851,
+      "multi_commit": 244
     },
     "gold_files_median": 1,
     "query_chars": {
@@ -1607,8 +1580,8 @@
       "mean": 1.24,
       "cap": 10,
       "hist": {
-        "1": 1171,
-        "2": 189,
+        "1": 1177,
+        "2": 183,
         "3": 36,
         "4": 16,
         "5": 8,
@@ -1625,12 +1598,12 @@
       "median": 3,
       "p95": 13,
       "max": 164,
-      "mean": 4.63,
-      "over_3": 524,
-      "over_10": 104,
+      "mean": 4.61,
+      "over_3": 523,
+      "over_10": 103,
       "over_50": 5
     },
-    "gold_files_mean": 2.7,
+    "gold_files_mean": 2.66,
     "output": "C:\\workplace\\JiraAndLogs\\industry-c7\\data\\benchmark-v2\\cassandra.jsonl"
   },
   "kafka": {
@@ -1641,45 +1614,47 @@
     "funnel": {
       "wolv2_log_fixed_lowuncert_issues": 1172,
       "no_fix_commit": 340,
+      "commits_dropped_span": 13,
       "linked_1_to_10_commits": 832,
-      "no_source_gold": 148,
-      "final_instances": 684
+      "no_source_gold": 149,
+      "gold_files_absent_from_snapshot": 7,
+      "final_instances": 683
     },
     "dropped_commit_level": {
       "revert_commits": 71,
       "merge_commits": 2
     },
     "strata": {
-      "single_commit": 620,
+      "single_commit": 623,
       "trace_present": 323,
       "easy_gold_named": 489,
-      "trace_absent": 361,
-      "hard_gold_not_named": 195,
-      "multi_commit": 64
+      "trace_absent": 360,
+      "hard_gold_not_named": 194,
+      "multi_commit": 60
     },
     "gold_files_median": 1,
     "query_chars": {
-      "n": 684,
+      "n": 683,
       "min": 62,
       "median": 1662,
       "p95": 6610,
       "max": 20796,
-      "mean": 2265.66,
+      "mean": 2267.99,
       "over_20k": 1,
       "truncated_at": null
     },
     "fix_commits_per_issue": {
-      "n": 684,
+      "n": 683,
       "min": 1,
       "median": 1,
       "p95": 2,
       "max": 5,
-      "mean": 1.12,
+      "mean": 1.11,
       "cap": 10,
       "hist": {
-        "1": 620,
-        "2": 54,
-        "3": 6,
+        "1": 623,
+        "2": 51,
+        "3": 5,
         "4": 3,
         "5": 1,
         "6": 0,
@@ -1690,17 +1665,17 @@
       }
     },
     "files_changed_by_fix": {
-      "n": 684,
+      "n": 683,
       "min": 1,
       "median": 3,
       "p95": 16,
       "max": 74,
-      "mean": 4.95,
-      "over_3": 253,
-      "over_10": 66,
+      "mean": 4.93,
+      "over_3": 250,
+      "over_10": 65,
       "over_50": 3
     },
-    "gold_files_mean": 2.75,
+    "gold_files_mean": 2.73,
     "output": "C:\\workplace\\JiraAndLogs\\industry-c7\\data\\benchmark-v2\\kafka.jsonl"
   },
   "mariadb": {
@@ -1711,48 +1686,50 @@
     "funnel": {
       "wolv2_log_fixed_lowuncert_issues": 3004,
       "no_fix_commit": 955,
+      "commits_dropped_span": 44,
       "linked_1_to_10_commits": 2049,
-      "no_source_gold": 330,
+      "no_source_gold": 333,
+      "gold_files_absent_from_snapshot": 33,
       "gold_over_50_files": 1,
-      "final_instances": 1718
+      "final_instances": 1715
     },
     "dropped_commit_level": {
       "merge_commits": 334,
       "revert_commits": 158
     },
     "strata": {
-      "multi_commit": 314,
-      "trace_absent": 745,
-      "easy_gold_named": 958,
-      "trace_present": 973,
-      "hard_gold_not_named": 760,
-      "single_commit": 1404
+      "multi_commit": 294,
+      "trace_absent": 743,
+      "easy_gold_named": 957,
+      "trace_present": 972,
+      "hard_gold_not_named": 758,
+      "single_commit": 1421
     },
     "gold_files_median": 1,
     "query_chars": {
-      "n": 1718,
+      "n": 1715,
       "min": 191,
       "median": 2253,
       "p95": 7888,
       "max": 66260,
-      "mean": 3166.09,
+      "mean": 3167.61,
       "over_20k": 11,
       "truncated_at": null
     },
     "fix_commits_per_issue": {
-      "n": 1718,
+      "n": 1715,
       "min": 1,
       "median": 1,
       "p95": 2,
       "max": 10,
-      "mean": 1.26,
+      "mean": 1.24,
       "cap": 10,
       "hist": {
-        "1": 1404,
-        "2": 237,
-        "3": 43,
-        "4": 18,
-        "5": 10,
+        "1": 1421,
+        "2": 225,
+        "3": 41,
+        "4": 13,
+        "5": 9,
         "6": 3,
         "7": 2,
         "8": 0,
@@ -1761,17 +1738,17 @@
       }
     },
     "files_changed_by_fix": {
-      "n": 1718,
+      "n": 1715,
       "min": 1,
       "median": 3,
       "p95": 14,
       "max": 120,
-      "mean": 5.08,
-      "over_3": 774,
+      "mean": 5.06,
+      "over_3": 769,
       "over_10": 155,
       "over_50": 5
     },
-    "gold_files_mean": 2.55,
+    "gold_files_mean": 2.52,
     "output": "C:\\workplace\\JiraAndLogs\\industry-c7\\data\\benchmark-v2\\mariadb.jsonl"
   },
   "mongodb": {
@@ -1782,50 +1759,52 @@
     "funnel": {
       "wolv2_log_fixed_lowuncert_issues": 6407,
       "no_fix_commit": 1139,
+      "commits_dropped_span": 72,
       "gt10_fix_commits": 19,
       "linked_1_to_10_commits": 5249,
-      "no_source_gold": 1483,
-      "gold_over_50_files": 20,
-      "final_instances": 3746
+      "no_source_gold": 1494,
+      "gold_files_absent_from_snapshot": 93,
+      "gold_over_50_files": 18,
+      "final_instances": 3737
     },
     "dropped_commit_level": {
       "revert_commits": 3312,
       "merge_commits": 39
     },
     "strata": {
-      "single_commit": 2881,
-      "trace_absent": 3390,
-      "hard_gold_not_named": 2255,
-      "multi_commit": 865,
-      "easy_gold_named": 1491,
+      "single_commit": 2894,
+      "trace_absent": 3381,
+      "hard_gold_not_named": 2253,
+      "multi_commit": 843,
+      "easy_gold_named": 1484,
       "trace_present": 356
     },
     "gold_files_median": 2,
     "query_chars": {
-      "n": 3746,
+      "n": 3737,
       "min": 16,
       "median": 571,
       "p95": 5146,
       "max": 706007,
-      "mean": 1530.06,
+      "mean": 1529.26,
       "over_20k": 11,
       "truncated_at": null
     },
     "fix_commits_per_issue": {
-      "n": 3746,
+      "n": 3737,
       "min": 1,
       "median": 1,
       "p95": 3,
       "max": 10,
-      "mean": 1.4,
+      "mean": 1.38,
       "cap": 10,
       "hist": {
-        "1": 2881,
-        "2": 561,
-        "3": 163,
-        "4": 55,
-        "5": 38,
-        "6": 23,
+        "1": 2894,
+        "2": 556,
+        "3": 154,
+        "4": 52,
+        "5": 35,
+        "6": 21,
         "7": 20,
         "8": 1,
         "9": 1,
@@ -1833,17 +1812,17 @@
       }
     },
     "files_changed_by_fix": {
-      "n": 3746,
+      "n": 3737,
       "min": 1,
       "median": 2,
       "p95": 14,
       "max": 73,
-      "mean": 3.97,
-      "over_3": 1167,
-      "over_10": 280,
-      "over_50": 6
+      "mean": 3.96,
+      "over_3": 1155,
+      "over_10": 275,
+      "over_50": 7
     },
-    "gold_files_mean": 3.09,
+    "gold_files_mean": 3.06,
     "output": "C:\\workplace\\JiraAndLogs\\industry-c7\\data\\benchmark-v2\\mongodb.jsonl"
   },
   "qt": {
@@ -1854,18 +1833,20 @@
     "funnel": {
       "wolv2_log_fixed_lowuncert_issues": 7412,
       "no_fix_commit": 6699,
+      "commits_dropped_span": 4,
       "linked_1_to_10_commits": 713,
       "no_source_gold": 257,
+      "gold_files_absent_from_snapshot": 3,
       "final_instances": 456
     },
     "dropped_commit_level": {
       "revert_commits": 111
     },
     "strata": {
-      "single_commit": 437,
+      "single_commit": 440,
       "trace_absent": 347,
       "hard_gold_not_named": 308,
-      "multi_commit": 19,
+      "multi_commit": 16,
       "easy_gold_named": 148,
       "trace_present": 109
     },
@@ -1886,12 +1867,12 @@
       "median": 1,
       "p95": 1,
       "max": 3,
-      "mean": 1.05,
+      "mean": 1.04,
       "cap": 10,
       "hist": {
-        "1": 437,
-        "2": 16,
-        "3": 3,
+        "1": 440,
+        "2": 14,
+        "3": 2,
         "4": 0,
         "5": 0,
         "6": 0,
@@ -1905,14 +1886,87 @@
       "n": 456,
       "min": 1,
       "median": 1,
-      "p95": 7,
+      "p95": 6,
       "max": 48,
-      "mean": 2.36,
-      "over_3": 67,
+      "mean": 2.34,
+      "over_3": 66,
       "over_10": 8,
       "over_50": 0
     },
-    "gold_files_mean": 1.73,
+    "gold_files_mean": 1.71,
     "output": "C:\\workplace\\JiraAndLogs\\industry-c7\\data\\benchmark-v2\\qt.jsonl"
+  },
+  "pdfbox": {
+    "project": "pdfbox",
+    "git_dir": "C:\\workplace\\JiraAndLogs\\data\\c7-repos\\pdfbox-full.git",
+    "git_head": "a9ae066a942c122c9dded9bfa1b08dfae4078ba4",
+    "branch_scanned": "default branch only (first-parent history not enforced)",
+    "funnel": {
+      "wolv2_log_fixed_lowuncert_issues": 890,
+      "no_fix_commit": 154,
+      "gt10_fix_commits": 4,
+      "commits_dropped_span": 34,
+      "linked_1_to_10_commits": 732,
+      "snapshot_scan_failed": 0,
+      "no_source_gold": 19,
+      "gold_files_absent_from_snapshot": 20,
+      "final_instances": 713
+    },
+    "dropped_commit_level": {
+      "revert_commits": 182
+    },
+    "strata": {
+      "single_commit": 467,
+      "trace_present": 404,
+      "easy_gold_named": 532,
+      "multi_commit": 246,
+      "trace_absent": 309,
+      "hard_gold_not_named": 181
+    },
+    "gold_files_median": 1,
+    "query_chars": {
+      "n": 713,
+      "min": 66,
+      "median": 1038,
+      "p95": 3402,
+      "max": 107981,
+      "mean": 1569.5,
+      "over_20k": 3,
+      "truncated_at": null
+    },
+    "fix_commits_per_issue": {
+      "n": 713,
+      "min": 1,
+      "median": 1,
+      "p95": 5,
+      "max": 10,
+      "mean": 1.79,
+      "cap": 10,
+      "hist": {
+        "1": 467,
+        "2": 130,
+        "3": 53,
+        "4": 26,
+        "5": 6,
+        "6": 6,
+        "7": 4,
+        "8": 7,
+        "9": 3,
+        "10": 11
+      }
+    },
+    "files_changed_by_fix": {
+      "n": 713,
+      "min": 1,
+      "median": 1,
+      "p95": 8,
+      "max": 84,
+      "mean": 2.56,
+      "over_3": 105,
+      "over_10": 28,
+      "over_50": 2
+    },
+    "gold_files_mean": 2.02,
+    "output": "C:\\workplace\\JiraAndLogs\\industry-c7\\data\\benchmark-v2\\pdfbox.jsonl"
   }
 }
