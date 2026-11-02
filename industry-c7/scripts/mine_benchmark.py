@@ -286,17 +286,29 @@ MAX_COMMIT_SPAN_DAYS = 180
 GOLD_MAX_FILES = 50
 
 GIT_SHOW_BATCH = 100
+GIT_WORKERS = 16           # ls-tree is spawn-bound, not CPU-bound, so this
+                           # sits above the core count on purpose
 MAX_FIX_COMMITS = 10       # was 3; cost 1.2% here but 8.3% on PDFBOX, and
                            # a multi-commit fix is a harder instance, not a
                            # worse one. Full distribution is recorded.
 
 
-def run_git(git_dir: Path, *args: str) -> str:
-    r = subprocess.run(["git", "--git-dir", str(git_dir), *args],
-                       capture_output=True, text=True, encoding="utf-8", errors="replace")
-    if r.returncode != 0:
-        raise RuntimeError(f"git {' '.join(args[:3])}...: {r.stderr[:300]}")
-    return r.stdout
+def run_git(git_dir: Path, *args: str, tries: int = 3) -> str:
+    """git, retried. Under concurrency on Windows a spawn fails now and then
+    (process pressure, virus scanner holding a pack file). A caller that
+    swallows that failure writes a plausible wrong number instead of
+    crashing: the first threaded universe pass returned 0 for 99 of PDFBOX's
+    713 snapshots, which read as 'this repo has no source files'. Retry, and
+    let a persistent failure raise so it is counted rather than guessed."""
+    for attempt in range(tries):
+        r = subprocess.run(["git", "--git-dir", str(git_dir), *args],
+                           capture_output=True, text=True, encoding="utf-8",
+                           errors="replace")
+        if r.returncode == 0:
+            return r.stdout
+        if attempt + 1 < tries:
+            time.sleep(0.25 * (attempt + 1))
+    raise RuntimeError(f"git {' '.join(args[:3])}...: {r.stderr[:300]}")
 
 
 def load_wol_issues(key_prefix: str) -> dict[str, dict]:
@@ -420,55 +432,62 @@ def load_wolv2_issues(cfg: dict) -> dict[str, dict]:
     return issues
 
 
-def universe_size(git_dir: Path, snapshot_sha: str,
-                  src_ext: tuple[str, ...]) -> int:
-    """Non-test source files in the snapshot: the candidate pool a localizer
-    must rank, and the denominator for 'how hard is this instance'.
+def scan_snapshots(git_dir: Path, tasks: list[tuple[str, frozenset]],
+                   src_ext: tuple[str, ...]) -> dict:
+    """One `ls-tree` per snapshot, answering both questions we ask of it.
 
-    Without it, gold-set size cannot be read: 46 gold files is most of early
-    Kafka (213 source files) but a needle in modern MongoDB (11,095). The
-    clones keep trees (--filter=blob:none drops blobs only), so this is a
-    local call, about 35 ms.
-    """
-    try:
-        out = run_git(git_dir, "ls-tree", "-r", "--name-only", snapshot_sha)
-    except Exception:  # noqa: BLE001
-        return 0
-    return sum(1 for p in out.splitlines()
-               if p.lower().endswith(src_ext) and not TEST_PATH.search(p))
+    Two things are read off a snapshot, and they used to cost two identical
+    `ls-tree -r` calls on the same sha:
 
+      universe_size   non-test source files in the snapshot: the pool a
+                      localizer must rank, and the denominator for 'how hard
+                      is this instance'. Without it, gold-set size cannot be
+                      read: 46 gold files is most of early Kafka (213 source
+                      files) but a needle in modern MongoDB (11,095).
+      gold presence   gold means 'files to find in THIS snapshot', so a gold
+                      file absent from it is an impossible target: every
+                      system misses it, which depresses all scores equally
+                      and measures nothing. Arises when an issue links to
+                      commits spread over time and the later ones touch
+                      files that did not exist yet.
 
-def snapshot_tree(git_dir: Path, sha: str) -> set[str]:
-    """Every path in the snapshot. Gold means 'files to find in THIS
-    snapshot', so a gold file absent from it is an impossible target: every
-    system misses it, which depresses all scores equally and measures
-    nothing. Arises when an issue links to commits spread over time and the
-    later ones touch files that did not exist yet."""
-    if not sha:
-        return set()
-    try:
-        return set(run_git(git_dir, "ls-tree", "-r", "--name-only", sha
-                           ).splitlines())
-    except Exception:  # noqa: BLE001
-        return set()
+    The second call also ran serially inside the row loop, which made it the
+    bottleneck of a mine. Reading the tree once and returning both answers
+    halves the git calls and leaves none of them serial.
 
-
-def universe_sizes(git_dir: Path, shas: list[str],
-                   src_ext: tuple[str, ...]) -> dict[str, int]:
-    """universe_size for many snapshots at once.
-
-    Each call is ~35 ms, almost all of it process spawn, and the calls are
-    independent and local (blob:none clones keep trees). Serially this cost
-    3 minutes on hive alone; threaded it is seconds.
+    Returns {(sha, gold): (universe_count, absent_gold)}. Only the count and
+    the few absent paths are kept, never the tree, so memory stays flat on
+    repos with 50k+ files. Each call is ~35 ms, almost all of it process
+    spawn, and the calls are independent and local (blob:none clones keep
+    trees).
     """
     from concurrent.futures import ThreadPoolExecutor
-    uniq = list(dict.fromkeys(shas))
-    out: dict[str, int] = {}
-    with ThreadPoolExecutor(max_workers=12) as ex:
-        for sha, n in zip(uniq, ex.map(
-                lambda s: universe_size(git_dir, s, src_ext), uniq)):
-            out[sha] = n
-    return out
+    failed: list[str] = []  # list.append is atomic; a Counter here is not
+
+    def one(task: tuple[str, frozenset]) -> tuple[int, frozenset]:
+        sha, gold = task
+        if not sha:
+            return 0, frozenset()
+        try:
+            paths = run_git(git_dir, "ls-tree", "-r", "--name-only",
+                            sha).splitlines()
+        except Exception:  # noqa: BLE001
+            failed.append(sha)
+            return 0, frozenset()  # unreadable: keep gold rather than guess
+        if not paths:
+            failed.append(sha)
+            return 0, frozenset()
+        n = sum(1 for p in paths
+                if p.lower().endswith(src_ext) and not TEST_PATH.search(p))
+        return n, frozenset(gold - set(paths))
+
+    uniq = list(dict.fromkeys(tasks))
+    with ThreadPoolExecutor(max_workers=GIT_WORKERS) as ex:
+        out = dict(zip(uniq, ex.map(one, uniq)))
+    if failed:
+        log.warning("snapshot scan failed for %d of %d snapshots after "
+                    "retries, e.g. %s", len(failed), len(uniq), failed[0])
+    return out, len(failed)
 
 
 def fetch_file_lists(git_dir: Path, shas: list[str], cache_path: Path) -> dict[str, list]:
@@ -539,12 +558,10 @@ def mine_project(name: str) -> dict:
 
     all_shas = [c["sha"] for commits in candidates.values() for c in commits]
     file_cache = fetch_file_lists(cfg["git_dir"], all_shas, REPOS / f"cache-{name}.json")
-    uni_cache = universe_sizes(
-        cfg["git_dir"],
-        [c[0]["parent"] for c in candidates.values() if c and c[0]["parent"]],
-        cfg["src_ext"])
-
-    rows, strata = [], Counter()
+    # Gold comes from the cached file lists, so it costs no git. Computing it
+    # first lets the snapshot scan below answer both of its questions in one
+    # `ls-tree` per row instead of two.
+    prepared = []
     for key, commits in sorted(candidates.items()):
         gold, all_changed = set(), set()
         for c in commits:
@@ -553,13 +570,24 @@ def mine_project(name: str) -> dict:
                 if (status == "M" and path.endswith(cfg["src_ext"])
                         and not TEST_PATH.search(path)):
                     gold.add(path)
+        prepared.append((key, commits, frozenset(gold), len(all_changed)))
+
+    scans, n_scan_failed = scan_snapshots(
+        cfg["git_dir"],
+        [(c[0]["parent"], g) for _, c, g, _ in prepared],
+        cfg["src_ext"])
+    # must stay 0: a failed scan writes n_universe=0, which reads as a repo
+    # with no source files and quietly corrupts the hardness strata
+    funnel["snapshot_scan_failed"] = n_scan_failed
+
+    rows, strata = [], Counter()
+    for key, commits, gold_all, n_all_changed in prepared:
         first = commits[0]
-        snap = snapshot_tree(cfg["git_dir"], first["parent"])
-        if snap:
-            absent = {g for g in gold if g not in snap}
-            if absent:
-                funnel["gold_files_absent_from_snapshot"] += len(absent)
-                gold -= absent
+        n_universe, absent = scans.get((first["parent"], gold_all),
+                                       (0, frozenset()))
+        if absent:
+            funnel["gold_files_absent_from_snapshot"] += len(absent)
+        gold = set(gold_all) - absent
         if not gold:
             funnel["no_source_gold"] += 1
             continue
@@ -592,8 +620,8 @@ def mine_project(name: str) -> dict:
             "snapshot_sha": first["parent"],
             "gold_files": sorted(gold),
             "gold_modules": sorted({f.split("/")[0] for f in gold}),
-            "n_all_changed_files": len(all_changed),
-            "n_universe": uni_cache.get(first["parent"], 0),
+            "n_all_changed_files": n_all_changed,
+            "n_universe": n_universe,
             "has_stack_trace": has_trace,
             "gold_named_in_text": named,
         })

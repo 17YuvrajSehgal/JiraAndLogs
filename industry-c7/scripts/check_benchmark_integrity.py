@@ -54,6 +54,13 @@ def check_project(path: Path) -> tuple[str, int, int, list]:
         if not tree:
             bad.append((r["issue_key"], "snapshot unreadable"))
             continue
+        # a failed git call used to be swallowed and written as 0, which reads
+        # as "this snapshot has no source files" and corrupts the hardness
+        # strata; no real snapshot has an empty universe
+        if r.get("n_universe", 0) <= 0:
+            bad.append((r["issue_key"], "n_universe is 0: the universe scan "
+                                        "failed and was written as a count"))
+            continue
         missing = [f for f in r["gold_files"] if f not in tree]
         if missing:
             bad.append((r["issue_key"],
