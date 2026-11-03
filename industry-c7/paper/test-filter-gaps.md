@@ -17,8 +17,16 @@ sample turned up gold files that are plainly test code.
 The first two overlap heavily; together they are the dominant gap.
 
 **101 instances have a gold set that is entirely such files**: phoenix 72,
-solr 20, mongodb 8, pig 1. On those, no localizer can be right, because the
-answer key contains only test code. That is 0.27% of the benchmark.
+solr 20, mongodb 8, pig 1. That is 0.27% of the benchmark.
+
+An earlier draft of this file said no localizer could be right on those.
+**That was wrong and is corrected below.** The ranking universe is filtered
+by `TEST_PATH`, which is exactly the pattern these files escape, so they sit
+in the universe and are perfectly rankable. Measured, not argued: on v1's
+123 such instances the retrieval layer puts a gold file somewhere in the
+ranking 103 times and inside the top 5 **91 times, Acc@5 74.0%**, against
+68.6% on the instances that are kept. For v2 all 101 likewise have gold in
+the universe. They are not unanswerable. They are easier than average.
 
 For scale: the test filter already removes 1,717 files across 1,166
 instances, so it is catching roughly two thirds of the test code and
@@ -36,8 +44,18 @@ missing this third.
 
 Gold is left exactly as mined. The instances whose gold is entirely test code
 are dropped from the **scored set**, and every system is re-scored on the
-reduced population, so the same-population rule holds. The drop is recorded
-as data, not as a flag inside a script:
+reduced population, so the same-population rule holds.
+
+**Why they are dropped, stated correctly.** Not because they cannot be
+answered, but because answering them is not the task this paper measures. A
+hit on one of these means retrieving the test file that the fix edited, and
+the paper claims to localize the code that holds the defect. Keeping them
+also inflates every system, since they are 5.4 points of Acc@5 easier than
+the rest. So the drop moves our own headline number *down*. That is what
+makes it a defensible exclusion rather than a self-serving one, and it is
+the check to report, not the claim of unanswerability.
+
+The drop is recorded as data, not as a flag inside a script:
 
 - `scripts/scored_set.py` defines `TEST_PATH_EXTRA`, writes the excluded ids
   to `data/benchmark*/excluded-test-only-gold.json`, and is the single place
@@ -101,10 +119,17 @@ Pooled over the four projects on the eval split, before and after the drop:
 | LLM re-rank | 77.24% | 77.16% | -0.08 | 67.47% | 67.42% | -0.05 |
 | REMEMBER (790 study set) | 90.25% | 90.25% | +0.00 | 79.93% | 79.93% | +0.00 |
 
-No system moves more than half a point, and no ordering changes anywhere in
-the table. That is the result to report: the gap was real and worth fixing,
-and fixing it does not change a single conclusion. Per-project and per-stratum
-figures are in `data/results/rescored-test-only-gold.json`.
+No system moves more than half a point, and the ordering of the pooled table
+is unchanged for every metric. Nine orderings do change inside MongoDB's
+per-stratum breakdowns, the only project the drop touches. Most are exact
+ties between firewall-ablation variants that rank identically and so break
+arbitrarily; the largest genuine swap is 0.83 points, `buglocator_leaky_a2`
+against `simiscore_fw` at Acc@10 on MongoDB's easy stratum. Nothing the paper
+claims rests on either. Per-project and per-stratum figures are in
+`data/results/rescored-test-only-gold.json`.
+
+That is the result to report: the gap was real and worth fixing, and fixing
+it does not change a conclusion.
 
 Instances that carry *some* test code in gold are kept, because a localizer
 can still be right on them. In v1 that is 766 instances, in v2 493.

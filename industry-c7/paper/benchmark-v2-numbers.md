@@ -48,8 +48,10 @@ Overall yield 53.5%.
 
 The last row is a scoring-time exclusion, not a mining filter: gold is kept
 exactly as mined, and the 101 instances whose gold is entirely
-test code are dropped from the scored set because no ranking over source
-files can hit them. Every system is scored on the same 37,900.
+test code are dropped from the scored set: a hit there means retrieving the
+test file the fix edited, not localizing a defect. They are rankable, and in
+fact easier than average, so the drop lowers every system's number rather
+than flattering it. Every system is scored on the same 37,900.
 See `paper/test-filter-gaps.md`.
 
 Three filter changes from the current paper, each needing a sentence:

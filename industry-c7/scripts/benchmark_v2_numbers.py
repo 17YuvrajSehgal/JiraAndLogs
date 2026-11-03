@@ -135,8 +135,10 @@ Overall yield {100 * F['final_instances'] / F['wolv2_log_fixed_lowuncert_issues'
 
 The last row is a scoring-time exclusion, not a mining filter: gold is kept
 exactly as mined, and the {SS['n_excluded']} instances whose gold is entirely
-test code are dropped from the scored set because no ranking over source
-files can hit them. Every system is scored on the same {SS['n_scored']:,}.
+test code are dropped from the scored set: a hit there means retrieving the
+test file the fix edited, not localizing a defect. They are rankable, and in
+fact easier than average, so the drop lowers every system's number rather
+than flattering it. Every system is scored on the same {SS['n_scored']:,}.
 See `paper/test-filter-gaps.md`.
 
 Three filter changes from the current paper, each needing a sentence:

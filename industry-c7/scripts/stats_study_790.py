@@ -141,15 +141,30 @@ def main() -> int:
     # Section IV-B claims it is not. Record the evidence in the artifact
     # rather than asserting it: score the retrieval layer on the ten removed
     # instances and on the 790 kept.
+    # The 790 sample dropped 10 such instances before the run; the benchmark
+    # now drops all 123 (scripts/scored_set.py), and their rows live in
+    # data/results/removed-test-only-gold/. Score every one of them, which is
+    # a stronger version of the same evidence than the original ten.
     exc_path = AG / "excluded-test-only-gold.json"
     exc = json.loads(exc_path.read_text(encoding="utf-8"))
     exc_keys = {(r["project"], r["issue_key"]) for r in exc["rows"]}
-    exc_m = []
+    removed_dir = RES / "removed-test-only-gold"
+    exc_m, exc_all_m = [], []
     for p in P:
-        for r in jsonl(RES / f"{p}-instances.jsonl"):
-            if (p, r["issue_key"]) in exc_keys:
-                exc_m.append(metrics_for(r["rankings"]["cond_ours"],
-                                         r["gold_files"]))
+        for src in (RES / f"{p}-instances.jsonl",
+                    removed_dir / f"{p}-instances.jsonl"):
+            if not src.exists():
+                continue
+            for r in jsonl(src):
+                if src.parent == removed_dir:
+                    exc_all_m.append(metrics_for(r["rankings"]["cond_ours"],
+                                                 r["gold_files"]))
+                if (p, r["issue_key"]) in exc_keys:
+                    exc_m.append(metrics_for(r["rankings"]["cond_ours"],
+                                             r["gold_files"]))
+    exc["n_excluded_benchmark_wide"] = len(exc_all_m)
+    exc["retr_acc5_excluded_all"] = (
+        sum(m["acc@5"] for m in exc_all_m) / len(exc_all_m)) if exc_all_m else None
     assert len(exc_m) == exc["n"], (len(exc_m), exc["n"])
     exc["retr_acc5_excluded"] = sum(m["acc@5"] for m in exc_m) / len(exc_m)
     exc["retr_acc5_kept"] = agg("ours", "acc@5")
@@ -157,6 +172,9 @@ def main() -> int:
     print(f"excluded {exc['n']}: retrieval Acc@5 "
           f"{exc['retr_acc5_excluded']:.3f} vs {exc['retr_acc5_kept']:.3f} "
           f"on the kept 790 (exclusion is conservative)")
+    if exc_all_m:
+        print(f"benchmark-wide {len(exc_all_m)} excluded: retrieval Acc@5 "
+              f"{exc['retr_acc5_excluded_all']:.3f}")
 
     # ---- paired bootstrap, shared resample indices ------------------------
     rng = random.Random(SEED)
