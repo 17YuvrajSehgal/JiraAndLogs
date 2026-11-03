@@ -81,6 +81,46 @@ SUBMIT = {"type": "function", "function": {
                                      "the top choice"}},
         "required": ["files"]}}}
 
+# v3. Same mechanism as the evidence field above, applied to the reasoning
+# rather than to the per-file note: a required schema field cannot be
+# skipped, an instruction can. v2 measured callers_of at 0.01 calls/run
+# despite the skill telling the model to walk backwards, so the backward
+# step is made structural here and in run_instance's phase 0.
+CHAIN_STEPS = ("ordered steps from the reported SYMPTOM to the suspected "
+               "CAUSE. Start at what the log or report shows, end at the "
+               "file you rank first. Every step cites a tool result you "
+               "actually saw.")
+SUBMIT_V3 = json.loads(json.dumps(SUBMIT))
+SUBMIT_V3["function"]["parameters"]["properties"]["causal_chain"] = {
+    "type": "array", "minItems": 2, "maxItems": 6,
+    "description": CHAIN_STEPS,
+    "items": {"type": "object", "properties": {
+        "step": {"type": "string",
+                 "description": "what happens at this point in the failure"},
+        "file": {"type": "string",
+                 "description": "the file this step happens in, if known"},
+        "cited_from": {
+            "type": "string",
+            "description": "which tool result shows this step",
+            "enum": ["report", "search_text", "search_symbol", "read_code",
+                     "callers_of", "data_flow_back", "recall_incidents",
+                     "read_skeleton", "list_dir"]}},
+        "required": ["step", "cited_from"]}}
+SUBMIT_V3["function"]["parameters"]["required"] = ["files", "causal_chain"]
+SUBMIT_V3["function"]["description"] = (
+    "Commit the final ranked list, most likely first. Call this exactly "
+    "once, at the end. Every file must carry the evidence that put it on "
+    "the list, and the submission must carry the chain of steps from the "
+    "reported symptom to the cause you are naming.")
+
+SYSTEM_V3_EXTRA = (
+    "\n\n=== BEFORE YOU SUBMIT ===\n"
+    "You must be able to state the chain from symptom to cause: what the "
+    "log shows, what produced that state, and where that came from. If you "
+    "cannot name the step above the symptom, you have not found the cause "
+    "yet -- use callers_of to walk control backwards and data_flow_back to "
+    "walk data backwards, then submit.")
+
 
 def skill_text() -> str:
     raw = SKILL.read_text(encoding="utf-8")
@@ -276,8 +316,13 @@ def fuse(agent_list: list[str], lexical: list[str]) -> list[str]:
 
 def run_instance(ws: T.Workspace, seed: int = 42,
                  max_turns: int = MAX_TURNS,
-                 behaviour_query: str | None = None) -> dict:
-    """Investigate one instance. Returns the ranking plus a transcript."""
+                 behaviour_query: str | None = None,
+                 version: int = 2) -> dict:
+    """Investigate one instance. Returns the ranking plus a transcript.
+
+    version 3 adds the required causal_chain field and runs the backward
+    control-flow hop in phase 0 instead of hoping the model asks for it.
+    """
     # Phase 0a: one call turns the report into retrieval terms. The raw
     # report is symptom-shaped; searching code with it finds the detection
     # site. Falls back to the report's own words if the call fails.
@@ -296,6 +341,18 @@ def run_instance(ws: T.Workspace, seed: int = 42,
     # half of runs. Handing it over as evidence removes that dependence.
     pre = ws.search_text(behaviour, k=8).get("hits", [])
     past = ws.recall_incidents(behaviour, k=5).get("admissible_matches", [])
+    # v3: the backward hop, run for the agent rather than offered to it.
+    # v2 called callers_of once in 168 runs, so "walk backwards from the
+    # frame" was advice the model declined to take. Same fix as the two
+    # searches above: do it in setup and hand over the result.
+    back = []
+    if version >= 3:
+        for s in ws.symbols_in_snapshot(T.frame_symbols(ws.query_text))[:3]:
+            hits = (ws.callers_of(s) or {}).get("callers") or []
+            if hits:
+                back.append((s, hits[:6]))
+            if len(back) == 2:
+                break
     ws.calls.clear()  # pre-searches are harness setup, not agent actions
     user = (
         f"Project: {ws.project}\n\n=== ISSUE REPORT (with logs) ===\n"
@@ -321,15 +378,29 @@ def run_instance(ws: T.Workspace, seed: int = 42,
                                ", ".join(m["fixed_files"][:4]))
                        for m in past[:5])
            if past else "\n\npast incidents: none admissible for this report.")
+        + ("\n\none hop BACK from the stack frames, already walked for you "
+           "(these call the reporting symbol, so the bad state may be "
+           "created here rather than where it was detected):\n"
+           + "\n".join(
+               "  {} is called from:\n".format(sym)
+               + "\n".join("    - {} in {}:{}".format(c["caller"], c["file"],
+                                                      c["line"])
+                           for c in cs)
+               for sym, cs in back)
+           if back else "")
         + "\n\nInvestigate, then submit a ranked list of up to 10 files "
           "that may contain the ROOT CAUSE. A file that a similar past "
           "incident was fixed in is strong evidence, especially when the "
           "report names no file.")
-    messages = [{"role": "system", "content": SYSTEM},
+    system = SYSTEM + (SYSTEM_V3_EXTRA if version >= 3 else "")
+    messages = [{"role": "system", "content": system},
                 {"role": "user", "content": user}]
-    events = [{"type": "system", "content": SYSTEM},
+    events = [{"type": "system", "content": system},
               {"type": "user", "content": user}]
     submitted, rationale, stop = [], "", "max_turns"
+    chain: list = []
+    submit_schema = SUBMIT_V3 if version >= 3 else SUBMIT
+    extra_tools = T.V3_TOOL_SCHEMAS if version >= 3 else []
     usage = {"in": 0, "out": 0, "calls": 0}
 
     for turn in range(max_turns):
@@ -341,10 +412,14 @@ def run_instance(ws: T.Workspace, seed: int = 42,
             messages.append({"role": "user", "content":
                              "3 turns left. Record the files you are "
                              "considering with note_candidate now, then "
-                             "call submit_ranking."})
+                             "call submit_ranking."
+                             + (" Your submission must include the chain "
+                                "from the reported symptom to the cause."
+                                if version >= 3 else "")})
         # Last turn: force the commit rather than hoping for it.
         force = left <= 1
-        tools_arg = [SUBMIT] if force else T.TOOL_SCHEMAS + [SUBMIT]
+        tools_arg = ([submit_schema] if force else
+                     T.TOOL_SCHEMAS + extra_tools + [submit_schema])
         resp = call_llm(trim_history(messages), tools_arg, seed=seed,
                         force_tool="submit_ranking" if force else None)
         if "error" in resp:
@@ -397,8 +472,18 @@ def run_instance(ws: T.Workspace, seed: int = 42,
                         submitted.append(f)
                 ws.notes.extend(evidence)
                 rationale = str(args.get("rationale") or "")[:600]
+                for st in (args.get("causal_chain") or []):
+                    if isinstance(st, dict) and st.get("step"):
+                        chain.append({"step": str(st["step"])[:300],
+                                      "file": str(st.get("file") or "")[:200],
+                                      "cited_from": str(st.get("cited_from")
+                                                        or "")[:40]})
+                    elif isinstance(st, str):
+                        chain.append({"step": st[:300], "file": "",
+                                      "cited_from": ""})
                 stop, done = "submitted", True
-                result = {"accepted": len(submitted)}
+                result = {"accepted": len(submitted),
+                          "chain_steps": len(chain)}
             else:
                 result = T.dispatch(ws, name, args)
             payload = json.dumps(result, default=str)[:MAX_TOOL_CHARS]
@@ -426,7 +511,9 @@ def run_instance(ws: T.Workspace, seed: int = 42,
             "lexical_seed": ws.seed_candidates[:LIST_LEN],
             "notes": ws.notes, "tool_calls": ws.calls,
             "stop_reason": stop, "rationale": rationale, "usage": usage,
-            "resolver": resolver_stats, "events": events, "seed": seed}
+            "resolver": resolver_stats, "events": events, "seed": seed,
+            "version": version, "causal_chain": chain,
+            "prewalk_symbols": [s for s, _ in back]}
 
 
 def _resolve(raw: str, ws: T.Workspace, stats: dict) -> str | None:

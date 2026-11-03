@@ -150,6 +150,29 @@ def raw_report_symbols(text: str, limit: int = 60) -> list[str]:
     return out[:limit]
 
 
+def frame_symbols(text: str, limit: int = 6) -> list[str]:
+    """Stack-frame symbols only, innermost name first.
+
+    Narrower than raw_report_symbols, which also returns any CamelCase or
+    snake_case word in the report. Phase 0 walks backwards from a frame, so
+    it needs the frames and not the prose.
+    """
+    out, seen = [], set()
+
+    def add(s):
+        if s and len(s) >= 4 and s not in seen:
+            seen.add(s)
+            out.append(s)
+
+    for m in FRAME_RE.finditer(text):
+        add(m.group(2))                       # method before its class
+        add(m.group(1).rsplit(".", 1)[-1])
+    for m in CPP_FRAME_RE.finditer(text):
+        add(m.group(2))
+        add(m.group(1))
+    return out[:limit]
+
+
 class Workspace:
     """Everything the agent may touch for ONE instance."""
 
@@ -384,6 +407,47 @@ class Workspace:
         return {"symbol": symbol, "callers": uniq[:MAX_HITS],
                 "n_calling_files": len({o["file"] for o in uniq})}
 
+    def data_flow_back(self, symbol: str) -> dict:
+        """Where this symbol's value is SET. One hop of reverse data flow.
+
+        callers_of walks control backwards; this walks data backwards. A
+        field read with a bad value is usually written somewhere else
+        entirely, and the write site is the defect far more often than the
+        read site that reported it. Grep-shaped like callers_of, and shares
+        its cache, so it costs one grep at most.
+        """
+        symbol = (symbol or "").strip()
+        if len(symbol) < 3:
+            return {"error": "symbol too short"}
+        s = re.escape(symbol)
+        # assignment to the symbol, compound assignment, or a setter named
+        # after it. [^\w] rather than \b so `this->f =` and `obj.f =` count
+        # while `other_f =` does not.
+        write = re.compile(
+            r"(?:^|[^\w])" + s + r"\s*(?:\+|-|\*|/|\||&|\^|%|<<|>>)?=(?!=)"
+            r"|\bset_?" + s + r"\s*\(", re.I)
+        out = []
+        for path, lno, text in self._grep(symbol):
+            if not write.search(text):
+                continue
+            enclosing = None
+            for fn, st, en in self._funcs_of(path):
+                if st <= lno <= en:
+                    enclosing = fn
+                    break
+            out.append({"file": path, "writer": enclosing or "(file scope)",
+                        "line": lno, "code": text[:140]})
+        seen, uniq = set(), []
+        for o in out:
+            k = (o["file"], o["writer"])
+            if k not in seen:
+                seen.add(k)
+                uniq.append(o)
+        return {"symbol": symbol, "writes": uniq[:MAX_HITS],
+                "n_writing_files": len({o["file"] for o in uniq}),
+                "note": "write sites only. callers_of gives the control-flow "
+                        "hop; this gives the data-flow one."}
+
     def search_text(self, query: str, k: int = 12) -> dict:
         """BM25 over file CONTENT. Describe the BEHAVIOUR, not the symptom.
 
@@ -605,11 +669,24 @@ TOOL_SCHEMAS = [
             "required": ["path", "reason"]}}},
 ]
 
+# v3 only, so the v2 tool count stays at the 8 the paper reports.
+V3_TOOL_SCHEMAS = [
+    {"type": "function", "function": {
+        "name": "data_flow_back",
+        "description": ("Where a symbol's value is SET, as opposed to where "
+                        "it is called. Use it when a value is wrong rather "
+                        "than missing: the write site is the defect far more "
+                        "often than the read site that reported it."),
+        "parameters": {"type": "object", "properties": {
+            "symbol": {"type": "string"}}, "required": ["symbol"]}}},
+]
+
 _DISPATCH = {"search_symbol": "search_symbol", "callers_of": "callers_of",
              "search_text": "search_text", "list_dir": "list_dir",
              "read_skeleton": "read_skeleton", "read_code": "read_code",
              "recall_incidents": "recall_incidents",
-             "note_candidate": "note_candidate"}
+             "note_candidate": "note_candidate",
+             "data_flow_back": "data_flow_back"}
 
 
 def dispatch(ws: Workspace, name: str, args: dict) -> dict:

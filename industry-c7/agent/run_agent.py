@@ -121,6 +121,11 @@ def main() -> int:
     ap.add_argument("--full", action="store_true",
                     help="run the whole evaluation split instead of the "
                          "seeded %d/project sample" % SAMPLE_N)
+    ap.add_argument("--version", type=int, default=2, choices=(2, 3),
+                    help="3 requires a causal_chain in the submission and "
+                         "walks the backward hop in phase 0 (T10/T11). "
+                         "Default stays 2 so an unflagged re-run cannot "
+                         "silently change what the reported numbers mean.")
     ap.add_argument("--workers", type=int, default=14)
     ap.add_argument("--seed", type=int, default=42)
     ap.add_argument("--tag", default="main")
@@ -144,7 +149,7 @@ def main() -> int:
             except Exception:  # noqa: BLE001
                 pass
     todo = [x for x in pop if f"{x[0]}:{x[1]['issue_key']}" not in done]
-    print(f"population={len(pop)} full={args.full} "
+    print(f"population={len(pop)} full={args.full} v{args.version} "
           f"done={len(done)} todo={len(todo)} workers={args.workers} "
           f"seed={args.seed} shuffle_seeds={args.shuffle_seeds}", flush=True)
 
@@ -170,7 +175,7 @@ def main() -> int:
                 parse_iso_epoch(b.get("created")) or created.get(b["issue_key"])
                 or b["fix_time"], b["issue_key"], set(b["fix_shas"]),
                 fcaches[proj], seeds)
-            res = A.run_instance(ws, seed=args.seed)
+            res = A.run_instance(ws, seed=args.seed, version=args.version)
             err = None
         except Exception as e:  # noqa: BLE001 - one bad instance must not stop the run
             res, err = None, f"{type(e).__name__}: {e}"
@@ -196,6 +201,9 @@ def main() -> int:
                          "completion_tokens": res["usage"]["out"],
                          "wall_s": wall},
                 "resolver": res.get("resolver", {}),
+                "version": res.get("version", 2),
+                "causal_chain": res.get("causal_chain", []),
+                "prewalk_symbols": res.get("prewalk_symbols", []),
                 "seed": args.seed, "shuffled_seeds": args.shuffle_seeds,
                 "git_commit": commit, "model": A.MODEL, "error": None}
             (AGENT_OUT / "transcripts" /
