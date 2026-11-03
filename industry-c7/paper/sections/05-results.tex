@@ -525,7 +525,13 @@ $r$ times the original line count, interleaved at random positions):
 template infrastructure chatter (timeouts, retries, garbage-collection
 pauses, health checks), and \textsc{foreign} adds lines sampled from
 other issues of the same project. A fourth, \textsc{drop}, deletes every
-line carrying a file mention or stack frame.
+line carrying a file mention or stack frame. Three more are shaped like
+production bundles rather than like synthetic dilution: \textsc{mixed}
+merges $k$ concurrent incidents of the project with each stream keeping
+its own order, \textsc{cascade} appends the downstream consequences of
+the fault naming a symbol the report contains, and \textsc{drop
+decisive} removes the single line whose tokens alone rank a gold file
+highest.
 
 \begin{table}[t]
 \caption{Acc@5 (\%) under noise (200-instance evaluation samples,
@@ -539,37 +545,72 @@ $\times 1$ and $\times 5$ on every project and are in the artifact.}
 \toprule
  & Kafka & MariaDB & MongoDB & Qt \\
 \midrule
-clean                      & 80.0 & 63.5 & 70.0 & 55.5 \\
+clean                      & 80.0 & 63.5 & 68.5 & 55.5 \\
 \midrule
-dup $\times 1$             & 79.0 & 59.0 & 71.0 & 54.5 \\
-dup $\times 5$             & 77.0 & 58.0 & 67.5 & 51.0 \\
-generic $\times 1$         & 78.0 & 59.0 & 59.5 & 47.0 \\
-generic $\times 5$         & 72.5 & 57.5 & 46.5 & 42.0 \\
-foreign $\times 1$         & 53.5 & 28.5 & 55.5 & 42.0 \\
-foreign $\times 5$         & 28.5 & 12.5 & 26.0 & 20.0 \\
-drop mentions              & 73.0 & 47.0 & 56.5 & 40.5 \\
+dup $\times 1$             & 79.0 & 59.0 & 69.0 & 54.5 \\
+dup $\times 5$             & 77.0 & 58.0 & 67.0 & 51.0 \\
+generic $\times 1$         & 78.0 & 58.5 & 63.5 & 47.0 \\
+generic $\times 5$         & 72.5 & 57.0 & 53.0 & 42.0 \\
+foreign $\times 1$         & 53.5 & 29.0 & 55.5 & 42.0 \\
+foreign $\times 5$         & 28.5 & 12.5 & 29.5 & 20.0 \\
+drop mentions              & 73.0 & 47.5 & 59.0 & 40.5 \\
+\midrule
+mixed $k = 2$              & 59.0 & 41.0 & 54.0 & 42.0 \\
+mixed $k = 5$              & 33.0 & 28.5 & 30.0 & 25.5 \\
+cascade $\times 1$         & 77.5 & 60.5 & 60.0 & 46.5 \\
+cascade $\times 5$         & 74.0 & 59.5 & 52.0 & 42.5 \\
+drop decisive line         & 74.0 & 60.5 & 58.0 & 52.0 \\
 \bottomrule
 \end{tabular}
 \end{table}
 
 \Cref{tab:noise} shows a clear split. Volume noise is almost free:
-quintupling the text with repeats costs at most $6$ points of Acc@5,
-because
-BM25's term-frequency saturation absorbs repetition. Generic chatter at
-ratio five costs $6$ to $14$ points on three projects and $23.5$ on
-MongoDB. Deleting every mention and stack frame, which forces every
-instance into the no-mention regime, costs $7$ to $17$ points: the
+quintupling the text with repeats costs at most $5.5$ points of Acc@5,
+because BM25's term-frequency saturation absorbs repetition. Generic
+chatter at ratio five costs $6.5$ to $13.5$ points on three projects and
+$15.5$ on MongoDB. Deleting every mention and stack frame, which forces
+every instance into the no-mention regime, costs $7$ to $16$ points: the
 remaining signals absorb most of the loss. The failure mode is content
 noise. Lines from other incidents cost up to half of clean accuracy
-already at a one-to-one ratio (MariaDB 63.5\% to 28.5\%) and cut
-every project to at most 37\% of clean at ratio five, because foreign
-lines carry other incidents' file mentions: they flip between a third
-and half of the sampled instances into the mention regime at ratio one,
+already at a one-to-one ratio (MariaDB 63.5\% to 29.0\%) and cut
+every project to at most 44\% of clean at ratio five, because foreign
+lines carry other incidents' file mentions: they flip between 27\% and
+52\% of the sampled instances into the mention regime at ratio one,
 and up to 63\% at ratio five, with confidently wrong files, poisoning
-exactly the signal the easy stratum relies on. For deployment the reading is concrete: dedup
-and generic-noise filtering are not the hard part of preprocessing;
-separating interleaved incidents is, and a system that feeds our
-pipeline should segment logs by incident before matching.
+exactly the signal the easy stratum relies on.
+
+Three further arms model bundles the first four do not. \textsc{mixed}
+merges $k$ concurrent incidents of the same project while keeping each
+stream in its own order, which is what a shared log pipeline produces;
+\textsc{foreign} by contrast scatters other issues' lines at independent
+positions. Mixed is consistently the milder of the two at matched volume
+($+4.0$ to $+6.6$ points pooled), and the reason is lexical rather than
+positional: a bag-of-words retriever cannot read order, but drawing
+whole incidents introduces fewer distinct vocabularies than sampling
+lines from every issue in the pool. \textsc{cascade} appends the
+downstream consequences of the fault -- timeouts, retries, circuit
+breakers -- that name a symbol the report already contains. We expected
+on-topic noise to compete with the real evidence and cost more than
+unrelated noise; it does not, landing within $0.9$ points of generic
+noise at every ratio. On-topic lines add no new vocabulary, so they
+barely move a lexical score, while generic chatter introduces fresh
+terms that do. We report this as a negative result for the hypothesis
+that motivated the arm.
+
+\textsc{drop decisive} removes a single line: the one whose tokens
+alone rank a gold file highest. Pooled, that one line costs $5.8$ points
+of Acc@5, against $11.9$ for deleting every mention and frame.
+\textbf{One line is worth $48\%$ of the entire mention-and-frame
+channel.} Log
+evidence is concentrated rather than distributed, which cuts two ways:
+a bundle that truncates before one line, or a logger whose level hides
+it, costs half of what losing the whole channel costs, and our benchmark
+is easier than production partly because that line is reliably present.
+
+For deployment the reading is concrete: dedup and generic-noise
+filtering are not the hard part of preprocessing; separating interleaved
+incidents is, and a system that feeds our pipeline should segment logs
+by incident before matching.
 
 \subsection{Dense retrieval in the same slots}
 \label{sec:results:dense}

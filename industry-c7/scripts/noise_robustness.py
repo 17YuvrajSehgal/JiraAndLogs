@@ -14,6 +14,27 @@ sample of eval instances, fusing with the CLEAN-tuned conditioned weights
 Add conditions run at noise ratios x1, x2, x5 (added lines = ratio x
 original line count), interleaved at seeded random positions.
 
+Three further arms model failures the first four do not (T13-T15). The
+first four are a fair start but none of them is what an on-call engineer
+actually receives:
+
+  mixed    k concurrent incidents of the same project, merged so that
+           each stream KEEPS ITS OWN ORDER. This is the difference from
+           `foreign`, which splices other issues' lines in at random
+           positions and so destroys the ordering a reader relies on.
+           Levels are k = 2, 3, 5 streams.
+  cascade  the downstream consequences of the primary fault: timeouts,
+           retries, circuit breakers and health-check failures that name
+           the SAME symbol as the report. Unlike `generic`, these are
+           lexically close to the real evidence, so they compete with it
+           instead of merely diluting it, and they are appended after the
+           decisive content rather than scattered through it. Levels are
+           the usual x1, x2, x5.
+  decisive remove the SINGLE highest-signal line, the one line whose
+           tokens alone score the gold file highest under BM25. Sharper
+           than `drop`, which removes every file mention and frame at
+           once and therefore cannot say what one line was worth.
+
 Usage:
     python industry-c7/scripts/noise_robustness.py --project kafka
 """
@@ -24,6 +45,7 @@ import argparse
 import json
 import pickle
 import random
+import re
 import sys
 import time
 from collections import Counter, defaultdict
@@ -33,12 +55,34 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 import localize  # noqa: E402
 from localize import (BENCH, FILE_MENTION_RE, FULL_REPOS, JVM_FRAME_RE,  # noqa: E402
                       LIST_LEN, MEM_DEPTH, OUT, PATH_POOL, PROJECTS,
-                      BM25Index, Snapshot, bm25_rank, load_support,
+                      BM25Index, Snapshot, bm25_rank, load_bench,
+                      load_support,
                       parse_iso_epoch, path_tokens, rrf, tokenize, trace_rank)
 
 SEED = 42
 SAMPLE = 200
 RATIOS = (1, 2, 5)
+# How many concurrent incident streams the `mixed` arm merges, the query's
+# own stream included.
+STREAMS = (2, 3, 5)
+# A consequence of the fault, not a random log line: each template names a
+# symbol taken from the report itself, so it survives lexical filtering and
+# competes with the real evidence.
+CASCADE_LINES = [
+    "WARN {s} call timed out after {i} ms, retrying 1/3",
+    "WARN {s} call timed out after {i} ms, retrying 2/3",
+    "ERROR {s} retries exhausted, failing request",
+    "WARN circuit breaker for {s} transitioned CLOSED -> OPEN after {i} failures",
+    "ERROR circuit breaker for {s} is OPEN, rejecting call",
+    "WARN connection pool exhausted waiting for {s} ({i} waiters queued)",
+    "ERROR health check for {s} failed, marking instance unhealthy",
+    "WARN downstream dependency {s} returned 503, backing off {i} ms",
+    "ERROR request aborted: upstream {s} unavailable",
+    "WARN thread pool queue for {s} at {i} entries, rejecting new work",
+]
+# Identifiers worth putting into a cascade line: CamelCase types and
+# dotted/qualified names, which is what a real downstream error would name.
+SYM_RE = re.compile(r"\b([A-Z][a-zA-Z0-9]{2,}(?:\.[a-zA-Z0-9_]+)?)\b")
 GENERIC_LINES = [
     "WARN request timed out after 30000 ms, retrying (attempt {i} of 10)",
     "INFO health check ok latency={i}ms",
@@ -51,8 +95,58 @@ GENERIC_LINES = [
 ]
 
 
+def report_symbol(text: str, rng: random.Random) -> str:
+    """A symbol the report itself names, for the cascade arm to blame.
+
+    Falls back to a neutral component word rather than inventing an
+    identifier: a cascade line naming a symbol that appears nowhere would
+    be `generic` noise under another name."""
+    syms = SYM_RE.findall(text)
+    return rng.choice(syms) if syms else "the upstream service"
+
+
+def merge_streams(streams: list[list[str]], rng: random.Random) -> list[str]:
+    """Interleave k streams, each keeping its own internal order.
+
+    Concurrent incidents produce logs that are shuffled against each other
+    but never against themselves, which is exactly what `foreign` destroys
+    by inserting at independent random positions."""
+    pos = [0] * len(streams)
+    out: list[str] = []
+    live = [i for i, s in enumerate(streams) if s]
+    while live:
+        # Weight by what each stream has left, so a long stream does not
+        # finish early and leave a clean unmixed tail.
+        i = rng.choices(live, weights=[len(streams[j]) - pos[j]
+                                       for j in live])[0]
+        out.append(streams[i][pos[i]])
+        pos[i] += 1
+        live = [j for j in range(len(streams)) if pos[j] < len(streams[j])]
+    return out
+
+
+def decisive_line(lines: list[str], gold_docs: dict) -> int | None:
+    """Index of the line whose tokens alone rank a gold file highest.
+
+    Scored one line at a time against the gold documents only, so the
+    number is "what this line is worth as evidence for the right answer",
+    not its contribution to a ranking it shares with every other line."""
+    if not gold_docs:
+        return None
+    best, best_i = 0.0, None
+    for i, l in enumerate(lines):
+        toks = tokenize(l)
+        if not toks:
+            continue
+        ranked = bm25_rank(toks, gold_docs)
+        if ranked and ranked[0][1] > best:
+            best, best_i = ranked[0][1], i
+    return best_i
+
+
 def perturb(text: str, cond: str, ratio: int, rng: random.Random,
-            foreign_pool: list[str]) -> str:
+            foreign_pool: list[str], stream_pool: list[list[str]] | None = None,
+            drop_idx: int | None = None) -> str:
     lines = text.splitlines() or [text]
     if cond == "clean":
         return text
@@ -60,6 +154,26 @@ def perturb(text: str, cond: str, ratio: int, rng: random.Random,
         kept = [l for l in lines
                 if not (FILE_MENTION_RE.search(l) or JVM_FRAME_RE.search(l))]
         return "\n".join(kept) if kept else ""
+    if cond == "decisive":
+        if drop_idx is None:
+            return text
+        kept = [l for i, l in enumerate(lines) if i != drop_idx]
+        return "\n".join(kept) if kept else ""
+    if cond == "mixed":
+        pool = list(stream_pool or [])
+        rng.shuffle(pool)
+        others = [s for s in pool[:max(0, ratio - 1)] if s]
+        return "\n".join(merge_streams([lines] + others, rng))
+    if cond == "cascade":
+        sym = report_symbol(text, rng)
+        n_add = max(1, int(len(lines) * ratio))
+        add = [rng.choice(CASCADE_LINES).format(s=sym,
+                                                i=rng.randrange(1, 60000))
+               for _ in range(n_add)]
+        # Consequences follow the fault. Appending rather than interleaving
+        # is the point: the decisive line keeps its position and is buried
+        # by what came after it, which is how a real incident reads.
+        return "\n".join(lines + add)
     n_add = max(1, int(len(lines) * ratio))
     if cond == "dup":
         add = [rng.choice(lines) for _ in range(n_add)]
@@ -74,14 +188,65 @@ def perturb(text: str, cond: str, ratio: int, rng: random.Random,
     return "\n".join(out)
 
 
+def selfcheck() -> int:
+    """The properties that make the three new arms different from the old
+    ones. If any of these breaks, the arm is silently measuring something
+    else and the numbers still look plausible."""
+    t = "line A\nline B about FooBar\nline C\nline D"
+
+    # mixed: every stream keeps its own order, and nothing is lost.
+    m = merge_streams([["a1", "a2", "a3"], ["b1", "b2"]], random.Random(7))
+    assert sorted(m) == ["a1", "a2", "a3", "b1", "b2"], m
+    for s in (["a1", "a2", "a3"], ["b1", "b2"]):
+        idx = [m.index(x) for x in s]
+        assert idx == sorted(idx), f"{s} reordered in {m}"
+
+    # mixed at k=1 must be a no-op, so the level axis starts from clean.
+    assert perturb(t, "mixed", 1, random.Random(0), [],
+                   stream_pool=[["x"]]) == t
+
+    # cascade: names a symbol the report actually contains, appends rather
+    # than interleaves, and leaves the original lines untouched and in order.
+    c = perturb(t, "cascade", 1, random.Random(3), []).splitlines()
+    assert c[:4] == t.splitlines(), c[:4]
+    assert all("FooBar" in l for l in c[4:]), c[4:]
+
+    # decisive: removes exactly one line, and is a no-op when none was found.
+    d = perturb(t, "decisive", 0, random.Random(0), [], drop_idx=1).splitlines()
+    assert d == ["line A", "line C", "line D"], d
+    assert perturb(t, "decisive", 0, random.Random(0), [], drop_idx=None) == t
+
+    # decisive picks the line that actually scores the gold file, not line 0.
+    lines = ["unrelated prose here", "NullPointerException in LogCleaner grind"]
+    gold = {"LogCleaner.scala": Counter(tokenize(
+        "class LogCleaner grind NullPointerException cleaner"))}
+    assert decisive_line(lines, gold) == 1
+    assert decisive_line(lines, {}) is None
+
+    print("selfcheck OK")
+    return 0
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__)
-    ap.add_argument("--project", required=True, choices=list(FULL_REPOS))
+    ap.add_argument("--project", choices=list(FULL_REPOS))
+    ap.add_argument("--selfcheck", action="store_true")
     args = ap.parse_args()
+    if args.selfcheck:
+        return selfcheck()
+    if not args.project:
+        ap.error("--project is required unless --selfcheck")
     cfg, git_dir = PROJECTS[args.project], FULL_REPOS[args.project]
 
-    bench = [json.loads(l) for l in
-             (BENCH / f"{args.project}.jsonl").open(encoding="utf-8")]
+    # Through load_bench, NOT the raw file. The scored set drops 123 MongoDB
+    # instances and lowers its n_dev from 1085 to 1061; slicing the unfiltered
+    # 3,618-row file with the lowered boundary yields 2,557 "eval" rows where
+    # the real split has 2,434 -- 24 development instances leaking into eval
+    # and 99 excluded instances being scored. The same defect was fixed in
+    # run_agent.py; this script still had it, and MongoDB is the only project
+    # where the scored set removes anything, which is why the other three
+    # reproduce their published numbers exactly and MongoDB does not.
+    bench = load_bench(args.project)
     bench.sort(key=lambda b: b["fix_time"])
     summ = json.load((OUT / f"{args.project}-summary.json").open())
     n_dev = summ["n_dev"]
@@ -143,19 +308,42 @@ def main() -> int:
         gset = set(b["gold_files"])
         return float(any(f in gset for f in fused[:5])), regime
 
-    conds = [("clean", 0)] + [(c, r) for c in ("dup", "foreign", "generic")
-                              for r in RATIOS] + [("drop", 0)]
+    conds = ([("clean", 0)]
+             + [(c, r) for c in ("dup", "foreign", "generic") for r in RATIOS]
+             + [("drop", 0)]
+             + [("mixed", k) for k in STREAMS]
+             + [("cascade", r) for r in RATIOS]
+             + [("decisive", 0)])
     acc = {f"{c}_x{r}" if r else c: [] for c, r in conds}
     regime_flips = Counter()
+    n_decisive_found = 0
     t0 = time.time()
     for i, b in enumerate(sample_b):
         snap = Snapshot(git_dir, b["snapshot_sha"], cfg["src_ext"])
         pool = [l for k, ls in foreign_all.items()
                 if k != b["issue_key"] for l in ls]
+        # Whole other incidents, each kept in order, for the `mixed` arm.
+        streams = [ls for k, ls in foreign_all.items()
+                   if k != b["issue_key"] and ls]
+        # The one line worth most as evidence, scored against the gold files
+        # only. Gold files absent from the snapshot cannot be scored.
+        #
+        # Deliberately a THROWAWAY cache, not tok_cache. Snapshot.contents
+        # only fetches blobs it does not already hold, so warming the shared
+        # cache here would change which blobs the candidate-pool fetch asks
+        # for, hence its cat-file batch, hence -- on MariaDB -- four of the
+        # pre-existing conditions by one instance each. The new arm must not
+        # be able to move the old numbers.
+        gold_docs = snap.contents([f for f in b["gold_files"]
+                                   if f in snap.blob_of], {})
+        q_lines = b["query_text"].splitlines() or [b["query_text"]]
+        d_idx = decisive_line(q_lines, gold_docs)
+        n_decisive_found += d_idx is not None
         base_regime = None
         for c, r in conds:
             prng = random.Random(f"{SEED}:{b['issue_key']}:{c}:{r}")
-            text = perturb(b["query_text"], c, r, prng, pool)
+            text = perturb(b["query_text"], c, r, prng, pool,
+                           stream_pool=streams, drop_idx=d_idx)
             a5, regime = localize_one(b, snap, text)
             key = f"{c}_x{r}" if r else c
             acc[key].append(a5)
@@ -170,6 +358,11 @@ def main() -> int:
                "weights": "clean-tuned cond (frozen)",
                "acc@5": {k: round(sum(v) / len(v), 4) for k, v in acc.items()},
                "regime_flips": dict(regime_flips),
+               # How often a decisive line could be identified at all. Where
+               # no gold file is in the snapshot, or no line scores above
+               # zero, `decisive` degenerates to `clean` and the arm is
+               # reported over this denominator, not over n_sample.
+               "n_decisive_identified": n_decisive_found,
                "clean_main_run_acc5": summ["eval"]["cond_ours"]["acc@5"]}
     (OUT / f"{args.project}-noise-summary.json").write_text(
         json.dumps(summary, indent=2), encoding="utf-8")

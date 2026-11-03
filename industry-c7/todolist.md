@@ -200,15 +200,71 @@ paper was still reporting a 790-instance sample as its headline.
 The current dup / generic / foreign / drop arms are a fair start but are not
 production bundles. These run on the laptop, so they fill GPU wait time.
 
-- [ ] **T13. Mixed-incident interleaving.** Time-order lines from k concurrent
-      incidents of one project. Different from `foreign`, which splices with
-      no temporal structure. **CPU**
-- [ ] **T14. Cascading failures.** Append downstream timeout, retry and
-      circuit-breaker errors caused by the primary fault, so the decisive line
-      is buried under consequences rather than noise. **CPU**
-- [ ] **T15. Missing decisive evidence.** Delete the single highest-signal
-      line (largest BM25 contribution to a gold file), not every file mention.
-      Sharper than the current `drop` arm. **CPU**
+- [x] **T13. Mixed-incident interleaving.** Done. `mixed` merges k
+      concurrent incidents of the project keeping each stream in its own
+      order (k = 2, 3, 5), which `foreign` destroys by inserting at
+      independent positions. Mixed is **milder** than foreign at matched
+      volume (+4.0, +6.1, +6.6 points pooled). The k=5 pairing uses
+      foreign x5 because there is no x4 level, so it is flagged
+      `mixed_pairing_exact: false` and is conservative in mixed's favour.
+      **The reason is lexical, not positional** — a bag-of-words retriever
+      cannot read order; drawing whole incidents introduces fewer distinct
+      vocabularies than sampling lines from every issue. Say that, not
+      "order matters". **CPU**
+- [x] **T14. Cascading failures.** Done, and it is a **negative result**.
+      `cascade` appends downstream timeouts, retries and circuit-breaker
+      errors naming a symbol the report contains. The hypothesis was that
+      on-topic noise competes with real evidence and costs more than
+      unrelated noise. It does not: cascade lands within **0.9 points** of
+      generic at every ratio. On-topic lines add no new vocabulary so they
+      barely move a lexical score, while generic chatter introduces fresh
+      terms that do. The doc picks its own heading from the sign of the
+      data and ends "Reported as measured, not as hypothesised", which
+      verify_claims asserts, so a later draft cannot restate the
+      hypothesis as a finding. **CPU**
+- [x] **T15. Missing decisive evidence.** Done, and it is the strongest of
+      the three. `decisive` removes the **single** line whose tokens alone
+      rank a gold file highest. Pooled, that one line costs **5.76 points**
+      of Acc@5 against **11.88** for deleting every mention and stack
+      frame: **one line is 48% of the entire mention-and-frame channel**.
+      Log evidence is concentrated, not distributed. Two readings, both
+      worth stating: a bundle that truncates before that line costs half of
+      what losing the whole channel costs, and our benchmark is easier than
+      production partly because the line is reliably present (identified
+      for 200/200 instances in all four projects). Limit: "decisive" means
+      decisive *for a lexical retriever*, since it is found by BM25 against
+      the gold files. **CPU**
+
+---
+
+## P3b — Two defects found while adding the arms above
+
+- [x] **T26. The noise experiment had a dev/eval leak.**
+      `noise_robustness.py` read `data/benchmark/{p}.jsonl` directly
+      instead of `load_bench`, then sliced it with the scored-set-adjusted
+      `n_dev`. For MongoDB that is `3618 - 1061 = 2557` "eval" rows where
+      the real split has 2434 — **24 development instances and 99 excluded
+      instances in the pool it sampled from**. The same defect was found
+      and fixed in `run_agent.py` on 11-02; this script was missed.
+      `function_stage.py` was checked and is clean (it reads
+      `{p}-instances.jsonl`, which localize.py already filters).
+      verify_claims now asserts structurally that the experiment loads
+      through `load_bench`. **CPU**
+- [x] **T27. "Rescore every system" (f5068c9) skipped this experiment.**
+      Every other artifact was regenerated on 11-02 20:59-21:24 when the
+      scored set was applied; the noise summaries kept values computed on
+      10-31 and were never revisited, so the paper's noise table has been a
+      population behind since then. Regenerated all four. MongoDB moved
+      most (the leak plus 123 removed instances), MariaDB by one instance
+      in four conditions (the token caches were rebuilt on 11-02, which
+      changes which blobs each `cat-file` batch fetches), Kafka and Qt not
+      at all. **The pins were not silently refreshed** — the reason is
+      recorded in `verify_claims` beside them.
+
+      **Lesson for the next sweep:** "rescore every system" must mean every
+      script that reads the benchmark, not every script in `data/results/`.
+      Two of them did not route through `load_bench` and only one had been
+      caught. **CPU**
 
 ---
 
@@ -324,7 +380,7 @@ We produce one and never score it.
 **Must land:** T1–T5, T6, T8, T9, T10–T12, T21.
 Done except **T5, T9, T21** — all three are writing, no compute.
 
-**Should:** T13–T15 (CPU), T16 done, T18 blocked behind T17.
+**Should:** T13–T15 done, T16 done, T18 blocked behind T17.
 
 **Nice:** T7, T17, T19 (all GPU), T20 done.
 
@@ -368,5 +424,6 @@ Still owed, not yet scheduled:
 | 2026-11-02 | Review-2 read; plan and this tracker written. Confirmed all four repos are local (4.8 GB, full history), so P0 needs no cluster. Confirmed the vLLM job ended 2026-11-01, so all GPU work is blocked on B2. |
 | 2026-11-02 | P0 closed except T5: T1–T4 done, T2b gives kappa 0.885 on causal-vs-not and the headline reproduces under both raters. Scored set applied, verify_claims 284/284. |
 | 2026-11-03 | Full-split run finished: 4,409/4,409, 0 errors, agent v3, Acc@1 0.6870 / Acc@5 0.8877. T6, T8 and T12 closed; B2 closed. v3 does NOT beat v2 on ranking (790 paired, Acc@1 -0.0215, CI [-0.0456,+0.0013], ns) - its contribution is the guaranteed causal chain, not accuracy. Caught a selection confound that made v3 look +8.3 over v2 on the causal-gold subset: that sample was stratified on v2's own outcome. `data_flow_back` was called **1 time in 4,409 runs** - the third repeat of "instructed-but-optional gets skipped", and the two v3 changes that were structural (required chain, phase-0 prewalk) both fired as designed. verify_claims 320/320. |
+| 2026-11-03 | T13-T15 done, and adding them exposed two defects in the existing noise experiment (T26, T27). `noise_robustness.py` never routed through `load_bench`, so MongoDB's sample was drawn from a pool containing **24 dev instances and 99 excluded ones**; and the 11-02 "rescore every system" sweep skipped this experiment entirely, so its numbers had been a population behind since 10-31. All four projects regenerated, pins updated with the reason recorded rather than silently refreshed. New findings: one decisive line is worth **48% of the whole mention-and-frame channel**, and T14 is a negative result (on-topic noise costs no more than unrelated noise). verify_claims 353/353. |
 | 2026-11-03 | T16 (99.68% of cited paths exist, 99.43% of quoted lines, 83.41% of symbols - the last is a floor on groundedness, not an error rate) and T20 (function Acc@1 0.2152 -> 0.2882; better candidates raise the oracle 0.7367 -> 0.8879 but move Acc@1 only +1.89, while ranking the functions the agent actually read is +5.42). Then T5, T9, T21, and the paper rewrite the full-split run forced: tab:study rebuilt on 4,409, causal-gold and explanation sections written into LaTeX for the first time, a false "roughly three times" claim removed, and §IV-B corrected where it still said the agent used the 790 sample. verify_claims 344/344. |
 | 2026-11-02 | Three defects found in `run_agent.py` while sizing the full-split job, all fixed before any GPU time was spent: the adjusted `n_dev` was being applied to the unfiltered benchmark and pulled 24 MongoDB dev instances into eval; there was no code path for the full split at all (`SAMPLE_N=200` hardcoded); and a second exclusion rule (`TESTY`) had drifted from `scored_set.py`. Also `bridge.sh` still defaulted to a node from a job that ended Nov 1, which would have returned empty for every call of a 15 h run. T10/T11 built behind `--version 3`, default stays 2. |

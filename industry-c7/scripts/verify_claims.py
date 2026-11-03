@@ -352,10 +352,21 @@ def main() -> int:
     # ---- Sec. 5 noise robustness ----------------------------------------------
     nsum = {p: json.loads((RES / f"{p}-noise-summary.json")
                           .read_text(encoding="utf-8")) for p in P}
+    # Regenerated 2026-11-03. These moved, and not because the method
+    # changed. Commit f5068c9 (11-02 21:05) applied the scored set and
+    # "rescored every system" -- but it missed this experiment, so the noise
+    # numbers stayed a population behind until they were re-run. MongoDB
+    # moved most because noise_robustness.py also sliced the UNFILTERED
+    # benchmark with the scored-set-adjusted n_dev, putting 24 development
+    # instances and 99 excluded instances into the pool it sampled from;
+    # it now loads through load_bench like every other system. MariaDB
+    # moved by one instance in four conditions because the token caches
+    # were regenerated on 11-02, which changes which blobs each cat-file
+    # batch fetches. Kafka and Qt are unchanged.
     t5 = {  # (clean, dup1, dup5, gen1, gen5, for1, for5, drop)
         "kafka":   (.800, .790, .770, .780, .725, .535, .285, .730),
-        "mariadb": (.635, .590, .580, .590, .575, .285, .125, .470),
-        "mongodb": (.700, .710, .675, .595, .465, .555, .260, .565),
+        "mariadb": (.635, .590, .580, .585, .570, .290, .125, .475),
+        "mongodb": (.685, .690, .670, .635, .530, .555, .295, .590),
         "qt":      (.555, .545, .510, .470, .420, .420, .200, .405)}
     keys = ("clean", "dup_x1", "dup_x5", "generic_x1", "generic_x5",
             "foreign_x1", "foreign_x5", "drop")
@@ -366,26 +377,75 @@ def main() -> int:
         check(f"NOISE {p} clean anchor within 0.025 of main run",
               abs(a["clean"] - nsum[p]["clean_main_run_acc5"]) <= 0.025,
               f"{a['clean']} vs {nsum[p]['clean_main_run_acc5']}")
-    check("NOISE dup x5 costs at most 0.06",
-          all(nsum[p]["acc@5"]["clean"] - nsum[p]["acc@5"]["dup_x5"] <= 0.06
-              for p in P))
-    check("NOISE drop costs 0.07..0.17",
+    check("NOISE dup x5 costs at most 0.055",
+          all(round(nsum[p]["acc@5"]["clean"]
+                    - nsum[p]["acc@5"]["dup_x5"], 3) <= 0.055 for p in P),
+          str({p: r3(nsum[p]["acc@5"]["clean"] - nsum[p]["acc@5"]["dup_x5"])
+               for p in P}))
+    check("NOISE drop costs 0.07..0.16",
           all(0.07 <= round(nsum[p]["acc@5"]["clean"]
-                            - nsum[p]["acc@5"]["drop"], 3) <= 0.17 for p in P))
-    check("NOISE foreign x5 cuts to at most 37% of clean",
+                            - nsum[p]["acc@5"]["drop"], 3) <= 0.16 for p in P),
+          str({p: r3(nsum[p]["acc@5"]["clean"] - nsum[p]["acc@5"]["drop"])
+               for p in P}))
+    check("NOISE foreign x5 cuts to at most 44% of clean",
           max(nsum[p]["acc@5"]["foreign_x5"] / nsum[p]["acc@5"]["clean"]
-              for p in P) <= 0.375)
+              for p in P) <= 0.435,
+          str({p: r3(nsum[p]["acc@5"]["foreign_x5"]
+                     / nsum[p]["acc@5"]["clean"]) for p in P}))
     f1 = [nsum[p]["regime_flips"]["foreign_x1"] / 200 for p in P]
     f5max = max(nsum[p]["regime_flips"]["foreign_x5"] / 200 for p in P)
-    check("NOISE foreign flips third..half at x1, up to 63% at x5",
-          1 / 3 <= min(f1) and max(f1) <= 0.52 and 0.62 < f5max <= 0.63,
+    check("NOISE foreign flips 27..52% at x1, up to 63% at x5",
+          0.27 <= min(f1) and max(f1) <= 0.52 and 0.62 < f5max <= 0.63,
           f"x1 {min(f1):.3f}..{max(f1):.3f}, x5 max {f5max:.3f}")
-    check("NOISE mongodb generic x5 costs 0.235; others 0.06-0.14",
+    check("NOISE mongodb generic x5 costs 0.155; others 0.065-0.135",
           r3(nsum["mongodb"]["acc@5"]["clean"]
-             - nsum["mongodb"]["acc@5"]["generic_x5"]) == .235
-          and all(0.06 <= r3(nsum[p]["acc@5"]["clean"]
-                             - nsum[p]["acc@5"]["generic_x5"]) <= 0.14
+             - nsum["mongodb"]["acc@5"]["generic_x5"]) == .155
+          and all(0.065 <= r3(nsum[p]["acc@5"]["clean"]
+                              - nsum[p]["acc@5"]["generic_x5"]) <= 0.135
                   for p in ("kafka", "mariadb", "qt")))
+    # ---- T13-T15: the three production-shaped arms ----------------------------
+    na = RES / "noise-arms-compare.json"
+    if na.exists():
+        nad = json.loads(na.read_text(encoding="utf-8"))
+        npl, nct = nad["pooled"], nad["contrasts"]
+        check("T15 one decisive line costs 0.0576 pooled Acc@5",
+              nct["decisive_vs_clean"] == -0.0576,
+              str(nct["decisive_vs_clean"]))
+        check("T15 dropping every mention costs 0.1188 pooled",
+              nct["drop_vs_clean"] == -0.1188, str(nct["drop_vs_clean"]))
+        check("T15 one line is 48.48% of the whole mention channel",
+              nct["one_line_share_of_drop_loss"] == 0.4848,
+              str(nct["one_line_share_of_drop_loss"]))
+        # T14 is a NEGATIVE result: on-topic noise did not cost more than
+        # unrelated noise. Assert the direction so a later draft cannot
+        # quietly restate the original hypothesis as a finding.
+        casc = [nct[f"cascade_x{r}_vs_generic_x{r}"] for r in (1, 2, 5)]
+        check("T14 cascade is within 0.9 points of generic at every ratio",
+              all(abs(c) <= 0.009 for c in casc), str(casc))
+        check("T14 the negative result is stated, not the hypothesis",
+              "Reported as measured, not as hypothesised."
+              in (ROOT / "industry-c7/paper/noise-arms.md")
+              .read_text(encoding="utf-8"))
+        check("T13 mixed is milder than foreign at every matched volume",
+              all(nct[f"mixed_x{k}_vs_{nad['mixed_pairing'][str(k)]}"] > 0
+                  for k in (2, 3, 5)),
+              str({k: nct[f"mixed_x{k}_vs_{nad['mixed_pairing'][str(k)]}"]
+                   for k in (2, 3, 5)}))
+        check("T13 the k=5 pairing is flagged as not volume-matched",
+              nad["mixed_pairing_exact"]["5"] is False)
+        check("T15 a decisive line was identified for every sampled instance",
+              all(nsum[p]["n_decisive_identified"] == nsum[p]["n_sample"]
+                  for p in P),
+              str({p: nsum[p]["n_decisive_identified"] for p in P}))
+
+    # The leak this experiment had until 2026-11-03: it read the raw
+    # benchmark instead of the scored set. Assert the fix structurally so a
+    # future edit cannot reintroduce it silently.
+    nsrc = (ROOT / "industry-c7/scripts/noise_robustness.py").read_text(
+        encoding="utf-8")
+    check("NOISE the experiment loads through load_bench, not the raw file",
+          "bench = load_bench(args.project)" in nsrc
+          and 'BENCH / f"{args.project}.jsonl"' not in nsrc)
 
     # ---- Sec. 5 honest negatives ---------------------------------------------
     tn = stat("kafka", "ours_vs_strongest", "acc@5", "hard")
