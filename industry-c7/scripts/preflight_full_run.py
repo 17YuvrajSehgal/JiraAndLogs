@@ -101,6 +101,11 @@ if out.exists():
 check(f"output path is writable ({out.name})",
       AG.exists() and (AG / "transcripts").exists(), str(AG))
 print(f"      rows already in {out.name}: {done} (run resumes over these)")
+src = (ROOT / "agent/run_agent.py").read_text(encoding="utf-8")
+check("resume retries errored rows instead of counting them done",
+      'if r.get("error"):' in src and "dropped += 1" in src,
+      "a server that dies at walltime would otherwise lose every "
+      "in-flight instance permanently")
 tdir = AG / "transcripts"
 sizes = [f.stat().st_size for f in list(tdir.glob("v2-*.json"))[:200]]
 mean_kb = (sum(sizes) / len(sizes) / 1024) if sizes else 0

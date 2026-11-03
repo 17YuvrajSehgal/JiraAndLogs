@@ -141,13 +141,34 @@ def main() -> int:
 
     pop = build_population(projects, args.limit, args.full)
 
-    done = set()
+    # Resume keeps only instances that SUCCEEDED. An errored row used to
+    # count as done, so anything in flight when the server hit its walltime
+    # was skipped forever on resume -- the one failure mode that a
+    # restart-safe runner exists to prevent. Errored rows are dropped here
+    # (the file is rewritten through a temp + rename, with a .bak kept) so
+    # the ids stay unique and those instances are retried.
+    done, kept, dropped = set(), [], 0
     if out_path.exists():
         for line in out_path.open(encoding="utf-8"):
             try:
-                done.add(json.loads(line)["id"])
+                r = json.loads(line)
             except Exception:  # noqa: BLE001
-                pass
+                continue
+            if r.get("error"):
+                dropped += 1
+                continue
+            if r["id"] in done:        # belt and braces: never double count
+                continue
+            done.add(r["id"])
+            kept.append(line.rstrip("\n"))
+        if dropped:
+            out_path.replace(out_path.with_suffix(".jsonl.bak"))
+            tmp = out_path.with_suffix(".jsonl.tmp")
+            tmp.write_text("\n".join(kept) + ("\n" if kept else ""),
+                           encoding="utf-8")
+            tmp.replace(out_path)
+            print(f"resume: dropped {dropped} errored row(s) for retry; "
+                  f"previous file kept as {out_path.name}.bak", flush=True)
     todo = [x for x in pop if f"{x[0]}:{x[1]['issue_key']}" not in done]
     print(f"population={len(pop)} full={args.full} v{args.version} "
           f"done={len(done)} todo={len(todo)} workers={args.workers} "
