@@ -1,0 +1,38 @@
+{
+ "id": "derby:DERBY-4451",
+ "project": "derby",
+ "issue_key": "DERBY-4451",
+ "annotator": "claude-sonnet-5-5",
+ "pass": 2,
+ "file_roles": [
+  {
+   "path": "java/engine/org/apache/derby/impl/sql/compile/DMLModStatementNode.java",
+   "role": "causal",
+   "evidence": "Deletes forbidGenerationOverrides(targetRCL, forUpdate, ...), whose INSERT path indexed the result list by target position and did not look below the top UnionNode of a multi-row VALUES."
+  },
+  {
+   "path": "java/engine/org/apache/derby/impl/sql/compile/InsertNode.java",
+   "role": "causal",
+   "evidence": "Removes the call 'forbidGenerationOverrides( targetColumnList, false, null )' from the explicit column list branch, so INSERT uses the no-column-list checking instead."
+  },
+  {
+   "path": "java/engine/org/apache/derby/impl/sql/compile/UpdateNode.java",
+   "role": "refactor",
+   "evidence": "Copies the UPDATE-only branch of forbidGenerationOverrides into a private method with the forUpdate flag removed; behaviour for UPDATE is unchanged."
+  }
+ ],
+ "symptom_location": {
+  "file": "java/engine/org/apache/derby/impl/sql/compile/InsertNode.java",
+  "function": "bindStatement",
+  "determinable": true
+ },
+ "log_location": {
+  "file": null,
+  "function": null,
+  "determinable": false
+ },
+ "relation": "caller-callee",
+ "rationale": "Commit message says the old explicit-target-list check failed to look below the top UnionNode, giving ArrayIndexOutOfBounds or the sanity assertion. The INSERT use of the helper is removed in both the callee and its call site. UpdateNode just receives the UPDATE part.",
+ "confidence": "medium",
+ "notes": "The AIOOBE and AssertFailure frames are not in the packet, so log_location is not determinable."
+}

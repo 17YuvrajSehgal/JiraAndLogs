@@ -1,0 +1,28 @@
+{
+ "id": "ignite:IGNITE-13235",
+ "project": "ignite",
+ "issue_key": "IGNITE-13235",
+ "annotator": "claude-sonnet-5-5",
+ "pass": 2,
+ "file_roles": [
+  {
+   "path": "modules/core/src/main/java/org/apache/ignite/internal/processors/service/IgniteServiceProcessor.java",
+   "role": "causal",
+   "evidence": "onDeActivate changes opsLock.writeLock().lock() to lockInterruptibly() with interrupt handling, so the deployment worker blocked at onDeActivate (second thread dump) can be stopped while main waits in GridWorker.join."
+  }
+ ],
+ "symptom_location": {
+  "file": "modules/core/src/main/java/org/apache/ignite/internal/processors/service/IgniteServiceProcessor.java",
+  "function": "onDeActivate",
+  "determinable": true
+ },
+ "log_location": {
+  "file": "modules/core/src/main/java/org/apache/ignite/internal/processors/service/ServiceDeploymentManager.java",
+  "function": "stopProcessing",
+  "determinable": true
+ },
+ "relation": "concurrency",
+ "rationale": "Thread dumps show main joining the worker while the worker waits for opsLock in onDeActivate. The fix only makes the wait interruptible; it does not change who holds the lock, so it could be seen as a defensive workaround.",
+ "confidence": "low",
+ "notes": "Rubric does not clearly separate 'real fix' from 'defensive fix' here. Labelled causal because the uninterruptible lock wait in the worker is the changed logic that closes the deadlock. Seeing why the lock holder never releases would settle it."
+}

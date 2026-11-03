@@ -1,0 +1,28 @@
+{
+ "id": "kafka:KAFKA-12185",
+ "project": "kafka",
+ "issue_key": "KAFKA-12185",
+ "annotator": "claude-sonnet-5-5",
+ "pass": 2,
+ "file_roles": [
+  {
+   "path": "streams/src/main/java/org/apache/kafka/streams/processor/internals/Tasks.java",
+   "role": "causal",
+   "evidence": "Collects keys with .map(Map.Entry::getKey).collect(toSet()) and then removes them, instead of calling activeTasksPerPartition.remove inside forEach over the same map's entrySet stream."
+  }
+ ],
+ "symptom_location": {
+  "file": "streams/src/test/java/org/apache/kafka/streams/integration/StoreQueryIntegrationTest.java",
+  "function": "shouldQueryAllStalePartitionStores",
+  "determinable": true
+ },
+ "log_location": {
+  "file": "streams/src/test/java/org/apache/kafka/streams/integration/utils/IntegrationTestUtils.java",
+  "function": "startApplicationAndWaitUntilRunning",
+  "determinable": true
+ },
+ "relation": "caller-callee",
+ "rationale": "The report only shows a flaky test seeing NOT_RUNNING. The commit message names a ConcurrentModificationException in Tasks, and the diff removes entries from the map while streaming over it, which is wrong logic in the changed file.",
+ "confidence": "medium",
+ "notes": "The CME itself is not in the report text; attribution relies on the diff and commit message."
+}

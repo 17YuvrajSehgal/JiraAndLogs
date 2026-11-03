@@ -1,0 +1,27 @@
+{
+ "id": "mongodb:SERVER-23901",
+ "project": "mongodb",
+ "issue_key": "SERVER-23901",
+ "annotator": "claude-sonnet-5-5",
+ "pass": 2,
+ "file_roles": [
+  {
+   "path": "src/mongo/db/ops/write_ops_parsers.cpp",
+   "role": "causal",
+   "evidence": "parseWriteCommand: checkType(Bool, field) removed and replaced with op->bypassDocumentValidation = field.trueValue(); the strict type check produced the reported 'Expected a bool, got a int'."
+  }
+ ],
+ "symptom_location": {
+  "file": "src/mongo/db/ops/write_ops_parsers.cpp",
+  "function": "parseWriteCommand",
+  "determinable": true
+ },
+ "log_location": {
+  "file": "src/mongo/db/ops/write_ops_parsers.cpp",
+  "function": "parseWriteCommand",
+  "determinable": true
+ },
+ "relation": "same-location",
+ "rationale": "The parser wrongly rejected numeric values that older servers accepted. The fix relaxes the check at the same site.",
+ "confidence": "high"
+}

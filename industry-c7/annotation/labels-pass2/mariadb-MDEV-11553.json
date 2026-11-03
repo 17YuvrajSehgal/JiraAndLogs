@@ -1,0 +1,73 @@
+{
+ "id": "mariadb:MDEV-11553",
+ "project": "mariadb",
+ "issue_key": "MDEV-11553",
+ "annotator": "claude-sonnet-5-5",
+ "pass": 2,
+ "file_roles": [
+  {
+   "path": "sql/item.cc",
+   "role": "refactor",
+   "evidence": "Adds Item::locale_from_val_str(), the locale lookup moved out of Item_func_format::get_locale so the new 3-arg date_format can share it."
+  },
+  {
+   "path": "sql/item.h",
+   "role": "refactor",
+   "evidence": "Declares locale_from_val_str() and a forward class MY_LOCALE; supports the helper move."
+  },
+  {
+   "path": "sql/item_create.cc",
+   "role": "refactor",
+   "evidence": "Removes Create_func_date_format and the DATE_FORMAT registry entry and switches callers to Item_func_date_format(thd, a, b) / Item_func_time_format; plumbing for the parser-level function."
+  },
+  {
+   "path": "sql/item_strfunc.cc",
+   "role": "refactor",
+   "evidence": "Item_func_format::get_locale removed in favour of args[2]->locale_from_val_str(); same behaviour, relocated."
+  },
+  {
+   "path": "sql/item_strfunc.h",
+   "role": "refactor",
+   "evidence": "Drops get_locale declaration and makes locale const MY_LOCALE*; follows the helper move."
+  },
+  {
+   "path": "sql/item_timefunc.cc",
+   "role": "causal",
+   "evidence": "fix_length_and_dec and val_str now take the locale from args[2] when arg_count>=3 (locale_from_val_str), and eq() compares arg_count and args[2]; this makes the 3-arg form explicit-locale and deterministic."
+  },
+  {
+   "path": "sql/item_timefunc.h",
+   "role": "causal",
+   "evidence": "check_vcol_func_processor changed from 'if (is_time_format) return false' to 'if (arg_count > 2) return false', so the generated-column check (the source of ERROR 1901) now accepts DATE_FORMAT with an explicit locale; also adds the 3-arg constructor and Item_func_time_format."
+  },
+  {
+   "path": "sql/lex.h",
+   "role": "refactor",
+   "evidence": "Adds the DATE_FORMAT keyword symbol so DATE_FORMAT can be parsed with special grammar for 2 and 3 args."
+  },
+  {
+   "path": "sql/sql_yacc.yy",
+   "role": "refactor",
+   "evidence": "Adds DATE_FORMAT_SYM grammar rules for 2 and 3 arguments, plus a typo fix in a comment; syntax plumbing."
+  },
+  {
+   "path": "sql/sql_yacc_ora.yy",
+   "role": "refactor",
+   "evidence": "Same DATE_FORMAT_SYM grammar rules and comment typo fix for the Oracle-mode parser."
+  }
+ ],
+ "symptom_location": {
+  "file": "sql/item_timefunc.h",
+  "function": "Item_func_date_format::check_vcol_func_processor",
+  "determinable": true
+ },
+ "log_location": {
+  "file": "sql/item_timefunc.h",
+  "function": "Item_func_date_format::check_vcol_func_processor",
+  "determinable": true
+ },
+ "relation": "unclear",
+ "rationale": "The reported error 1901 comes from the generated-column check, which rejects the 2-arg DATE_FORMAT because it depends on the session locale. The fix does not relax that check for the 2-arg form; it adds a 3-arg form with an explicit locale that is allowed. So this is closer to a new feature than a correction of wrong logic, and the old rejection may have been intended. I marked the evaluation and vcol-check code causal and the parser plumbing refactor, with low confidence.",
+ "confidence": "low",
+ "notes": "A maintainer statement that the 2-arg rejection was intentional would move item_timefunc files toward unclear or preventive."
+}

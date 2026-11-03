@@ -1,0 +1,28 @@
+{
+ "id": "mongodb:SERVER-26259",
+ "project": "mongodb",
+ "issue_key": "SERVER-26259",
+ "annotator": "claude-sonnet-5-5",
+ "pass": 2,
+ "file_roles": [
+  {
+   "path": "src/mongo/db/server_options_helpers.cpp",
+   "role": "causal",
+   "evidence": "Adds, under MONGO_ENTERPRISE_VERSION, options->addOptionChaining('security.redactClientLogData', 'redactClientLogData', ...). The missing option is the reported gap."
+  }
+ ],
+ "symptom_location": {
+  "file": "src/mongo/db/server_options_helpers.cpp",
+  "function": "addGeneralServerOptions",
+  "determinable": true
+ },
+ "log_location": {
+  "file": null,
+  "function": null,
+  "determinable": false
+ },
+ "relation": "same-location",
+ "rationale": "This is a feature request, not a failure report. The rubric does not say how to label the file where a missing feature is added; I used causal since the code lacked the option and the diff adds it.",
+ "confidence": "low",
+ "notes": "Rubric does not decide: no defect exists. A 'no defect' category would fit better."
+}

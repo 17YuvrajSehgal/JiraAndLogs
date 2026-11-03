@@ -1,0 +1,33 @@
+{
+ "id": "mariadb:MDEV-18272",
+ "project": "mariadb",
+ "issue_key": "MDEV-18272",
+ "annotator": "claude-sonnet-5-5",
+ "pass": 2,
+ "file_roles": [
+  {
+   "path": "storage/innobase/row/row0mysql.c",
+   "role": "causal",
+   "evidence": "row_mysql_handle_errors: DB_FOREIGN_EXCEED_MAX_CASCADE (and a second case) did `break` skipping rollback; diff changes to `goto rollback_to_savept`."
+  },
+  {
+   "path": "storage/xtradb/row/row0mysql.c",
+   "role": "causal",
+   "evidence": "row_mysql_handle_errors: DB_FOREIGN_EXCEED_MAX_CASCADE (and a second case) did `break` skipping rollback; diff changes to `goto rollback_to_savept`."
+  }
+ ],
+ "symptom_location": {
+  "file": "storage/innobase/row/row0purge.cc",
+  "function": "row_purge_remove_sec_if_poss_leaf",
+  "determinable": true
+ },
+ "log_location": {
+  "file": "storage/innobase/row/row0mysql.c",
+  "function": "row_mysql_handle_errors",
+  "determinable": true
+ },
+ "relation": "state-producer",
+ "rationale": "The assertions in purge and insert come from rows left un-rolled-back after the error. The cause is the error switch in row_mysql_handle_errors skipping the rollback for DB_FOREIGN_EXCEED_MAX_CASCADE. Both innobase and xtradb copies get the same correction.",
+ "confidence": "high",
+ "notes": "Symptom file row0purge.cc is not in the gold set; chosen from the debug-build backtrace."
+}

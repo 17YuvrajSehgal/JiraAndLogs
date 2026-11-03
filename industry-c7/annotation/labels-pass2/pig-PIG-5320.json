@@ -1,0 +1,27 @@
+{
+ "id": "pig:PIG-5320",
+ "project": "pig",
+ "issue_key": "PIG-5320",
+ "annotator": "claude-sonnet-5-5",
+ "pass": 2,
+ "file_roles": [
+  {
+   "path": "src/org/apache/pig/backend/hadoop/executionengine/spark/JobStatisticCollector.java",
+   "role": "causal",
+   "evidence": "waitForJobToEnd did 'if (finishedJobIds.contains(jobId)) {...return true;} sparkListener.wait(); return false;'; diff changes it to 'while (!finishedJobIds.contains(jobId)) { sparkListener.wait(); }', fixing the spurious-wakeup bug."
+  }
+ ],
+ "symptom_location": {
+  "file": "src/org/apache/pig/tools/pigstats/spark/SparkStatsUtil.java",
+  "function": "isJobSuccess",
+  "determinable": true
+ },
+ "log_location": {
+  "file": "src/org/apache/pig/tools/pigstats/spark/SparkStatsUtil.java",
+  "function": "isJobSuccess",
+  "determinable": true
+ },
+ "relation": "concurrency",
+ "rationale": "The test sees 'Unexpected job execution status RUNNING' because waitForJobToEnd returned before the job finished, after a spurious wakeup from wait(). The reporter's diagnosis and the diff match: a single wait() replaced by a while loop on the finished set. The exception is thrown in SparkStatsUtil, outside the gold file.",
+ "confidence": "high"
+}

@@ -1,0 +1,28 @@
+{
+ "id": "qt:QTBUG-88565",
+ "project": "qt",
+ "issue_key": "QTBUG-88565",
+ "annotator": "claude-sonnet-5-5",
+ "pass": 2,
+ "file_roles": [
+  {
+   "path": "src/plugins/platforms/wayland/qwaylandwindow.cpp",
+   "role": "causal",
+   "evidence": "'QFileInfo fi = QCoreApplication::instance()->applicationFilePath();' becomes 'QFileInfo fi = QFileInfo(...)'; the build error is the implicit QString to QFileInfo conversion."
+  }
+ ],
+ "symptom_location": {
+  "file": "src/plugins/platforms/wayland/qwaylandwindow.cpp",
+  "function": "QWaylandWindow::initWindow",
+  "determinable": true
+ },
+ "log_location": {
+  "file": "src/plugins/platforms/wayland/qwaylandwindow.cpp",
+  "function": "QWaylandWindow::initWindow",
+  "determinable": true
+ },
+ "relation": "caller-callee",
+ "rationale": "The compile error was triggered by QFileInfo constructors becoming explicit in another commit. The only code that had to change is this call site that relied on implicit conversion. It could also be read as an API adaptation.",
+ "confidence": "medium",
+ "notes": "Alternative reading: refactor (adaptation forced by an upstream API change that is not in the gold set)."
+}

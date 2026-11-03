@@ -1,0 +1,33 @@
+{
+ "id": "pdfbox:PDFBOX-2270",
+ "project": "pdfbox",
+ "issue_key": "PDFBOX-2270",
+ "annotator": "claude-sonnet-5-5",
+ "pass": 2,
+ "file_roles": [
+  {
+   "path": "examples/src/main/java/org/apache/pdfbox/examples/fdf/PrintFields.java",
+   "role": "refactor",
+   "evidence": "Adds 'if (partialName != null)' guards and a StringBuilder in the example's printing code, plus changes empty value to 'no value available'. It is an example program, not the API that returned '.null'."
+  },
+  {
+   "path": "pdfbox/src/main/java/org/apache/pdfbox/pdmodel/interactive/form/PDFieldTreeNode.java",
+   "role": "causal",
+   "evidence": "getFullyQualifiedName() built parentName + '.' + finalName even when finalName (partial name) was null; diff adds a null check and returns parentName in that case."
+  }
+ ],
+ "symptom_location": {
+  "file": "pdfbox/src/main/java/org/apache/pdfbox/pdmodel/interactive/form/PDFieldTreeNode.java",
+  "function": "getFullyQualifiedName",
+  "determinable": true
+ },
+ "log_location": {
+  "file": null,
+  "function": null,
+  "determinable": false
+ },
+ "relation": "same-location",
+ "rationale": "The reported '.null' suffix comes directly from getFullyQualifiedName and the diff fixes it there. The example file repeats a similar pattern but is demo code.",
+ "confidence": "medium",
+ "notes": "PrintFields could also be called causal for its own '.null' output; I judged it incidental to the reported API failure."
+}

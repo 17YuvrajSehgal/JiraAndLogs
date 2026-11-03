@@ -1,0 +1,27 @@
+{
+ "id": "kafka:KAFKA-9743",
+ "project": "kafka",
+ "issue_key": "KAFKA-9743",
+ "annotator": "claude-sonnet-5-5",
+ "pass": 2,
+ "file_roles": [
+  {
+   "path": "streams/src/main/java/org/apache/kafka/streams/processor/internals/TaskManager.java",
+   "role": "causal",
+   "evidence": "Diff wraps commitOffsetsOrTransaction in try/catch; on RuntimeException it adds tasks to dirtyTasks and clears checkpointPerTask so they are closed dirty instead of being skipped."
+  }
+ ],
+ "symptom_location": {
+  "file": "streams/src/main/java/org/apache/kafka/streams/state/internals/metrics/RocksDBMetricsRecordingTrigger.java",
+  "function": "addMetricsRecorder",
+  "determinable": true
+ },
+ "log_location": {
+  "file": "streams/src/main/java/org/apache/kafka/streams/state/internals/metrics/RocksDBMetricsRecordingTrigger.java",
+  "function": "addMetricsRecorder",
+  "determinable": true
+ },
+ "relation": "state-producer",
+ "rationale": "The IllegalStateException is thrown later when a store is re-initialised and its metrics recorder was never removed. The reporter says a commit failure during close skipped the close call. TaskManager's close path is changed to always close tasks dirty on commit failure.",
+ "confidence": "medium"
+}

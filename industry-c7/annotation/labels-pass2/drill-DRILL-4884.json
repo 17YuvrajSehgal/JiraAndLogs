@@ -1,0 +1,27 @@
+{
+ "id": "drill:DRILL-4884",
+ "project": "drill",
+ "issue_key": "DRILL-4884",
+ "annotator": "claude-sonnet-5-5",
+ "pass": 2,
+ "file_roles": [
+  {
+   "path": "exec/java-exec/src/main/java/org/apache/drill/exec/physical/impl/limit/LimitRecordBatch.java",
+   "role": "causal",
+   "evidence": "for(char i...) loop changed to for(int i...) with (char) cast at setIndex; char i overflowed from 65535 to 0 so the loop never ended (report explains this exactly)."
+  }
+ ],
+ "symptom_location": {
+  "file": "exec/java-exec/src/main/java/org/apache/drill/exec/physical/impl/limit/LimitRecordBatch.java",
+  "function": "limitWithNoSV",
+  "determinable": true
+ },
+ "log_location": {
+  "file": "exec/java-exec/src/main/java/org/apache/drill/exec/record/selection/SelectionVector2.java",
+  "function": "setIndex",
+  "determinable": true
+ },
+ "relation": "caller-callee",
+ "rationale": "The loop variable type overflowed in limitWithNoSV, which kept calling SelectionVector2.setIndex past the buffer end. The defect is in the loop; the exception is raised in the callee.",
+ "confidence": "high"
+}

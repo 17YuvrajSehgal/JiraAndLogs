@@ -1,0 +1,27 @@
+{
+ "id": "pdfbox:PDFBOX-5046",
+ "project": "pdfbox",
+ "issue_key": "PDFBOX-5046",
+ "annotator": "claude-sonnet-5-5",
+ "pass": 2,
+ "file_roles": [
+  {
+   "path": "pdfbox/src/main/java/org/apache/pdfbox/util/DateConverter.java",
+   "role": "causal",
+   "evidence": "parseDate early return extended to: text == null || text.isEmpty() || \"D:\".equals(text.trim()) so the 'D:   ' input never reaches charAt."
+  }
+ ],
+ "symptom_location": {
+  "file": "pdfbox/src/main/java/org/apache/pdfbox/util/DateConverter.java",
+  "function": "parseDate",
+  "determinable": true
+ },
+ "log_location": {
+  "file": "pdfbox/src/main/java/org/apache/pdfbox/util/DateConverter.java",
+  "function": "parseDate",
+  "determinable": true
+ },
+ "relation": "same-location",
+ "rationale": "StringIndexOutOfBounds at DateConverter.parseDate:656 for input 'D:   '. The fix adds an input guard in the same function. It is an input guard rather than a fix of the charAt logic, so another reading is symptom-handling.",
+ "confidence": "medium"
+}

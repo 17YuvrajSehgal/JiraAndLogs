@@ -1,0 +1,27 @@
+{
+ "id": "groovy:GROOVY-3685",
+ "project": "groovy",
+ "issue_key": "GROOVY-3685",
+ "annotator": "claude-sonnet-5-5",
+ "pass": 2,
+ "file_roles": [
+  {
+   "path": "src/main/groovy/ui/text/TextEditor.java",
+   "role": "causal",
+   "evidence": "Adds PRINT_PANE.setFont(getFont()) when preparing the print pane; the print pane lacked the editor's font, which changed the font on print."
+  }
+ ],
+ "symptom_location": {
+  "file": "src/main/groovy/ui/text/TextEditor.java",
+  "function": "print",
+  "determinable": true
+ },
+ "log_location": {
+  "file": null,
+  "function": null,
+  "determinable": false
+ },
+ "relation": "same-location",
+ "rationale": "The print pane was not given the editor font, and the one-line fix sets it. The stderr printer-plugin message in the report is unrelated native noise.",
+ "confidence": "medium"
+}

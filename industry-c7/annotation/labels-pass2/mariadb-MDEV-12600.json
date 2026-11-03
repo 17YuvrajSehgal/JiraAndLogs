@@ -1,0 +1,153 @@
+{
+ "id": "mariadb:MDEV-12600",
+ "project": "mariadb",
+ "issue_key": "MDEV-12600",
+ "annotator": "claude-sonnet-5-5",
+ "pass": 2,
+ "file_roles": [
+  {
+   "path": "storage/innobase/btr/btr0btr.cc",
+   "role": "symptom-handling",
+   "evidence": "Net diff makes btr_create return FIL_NULL when the ibuf header block or root block allocation fails (`if (ibuf_hdr_block == NULL) return(FIL_NULL)`); a guard at a failure site."
+  },
+  {
+   "path": "storage/innobase/buf/buf0dblwr.cc",
+   "role": "causal",
+   "evidence": "buf_dblwr_create now checks the first data file has >= 3 extents (`fail = ...->size < 3 * FSP_EXTENT_SIZE`) and returns false with an error instead of FATAL/crash."
+  },
+  {
+   "path": "storage/innobase/dict/dict0crea.cc",
+   "role": "refactor",
+   "evidence": "First commit added a fsp_header_init return check, second commit reverted it; net change is nothing."
+  },
+  {
+   "path": "storage/innobase/fil/fil0fil.cc",
+   "role": "symptom-handling",
+   "evidence": "fil_report_invalid_page_access message rewritten (adds hint about ibdata configuration) and ut_error calls dropped; diagnostic change at the detection site."
+  },
+  {
+   "path": "storage/innobase/fsp/fsp0fsp.cc",
+   "role": "refactor",
+   "evidence": "fsp_header_init and fseg_create_general changes from commit 1 are largely reverted in commit 2 (error messages removed, `space_id != TRX_SYS_SPACE` simplification)."
+  },
+  {
+   "path": "storage/innobase/handler/ha_innodb.cc",
+   "role": "refactor",
+   "evidence": "innobase_init min_size check added in the first commit and reverted in the second; net no change."
+  },
+  {
+   "path": "storage/innobase/include/buf0dblwr.h",
+   "role": "refactor",
+   "evidence": "Declaration changes buf_dblwr_create to return bool; signature adaptation forced by buf0dblwr.cc."
+  },
+  {
+   "path": "storage/innobase/include/fsp0fsp.h",
+   "role": "refactor",
+   "evidence": "fsp_header_init prototype/doc churn from commit 1, reverted by commit 2."
+  },
+  {
+   "path": "storage/innobase/include/trx0rseg.h",
+   "role": "refactor",
+   "evidence": "Only documentation and prototype formatting for trx_rseg_create."
+  },
+  {
+   "path": "storage/innobase/log/log0recv.cc",
+   "role": "refactor",
+   "evidence": "Removes redundant log messages (doublewrite restore message, LSN mismatch warning); message cleanup only."
+  },
+  {
+   "path": "storage/innobase/row/row0mysql.cc",
+   "role": "refactor",
+   "evidence": "Truncate-table fsp_header_init return check added then reverted; net no change."
+  },
+  {
+   "path": "storage/innobase/srv/srv0start.cc",
+   "role": "preventive",
+   "evidence": "Net diff makes startup return srv_init_abort(...) when buf_dblwr_create() fails and when ibuf root creation fails, aborting cleanly instead of crashing."
+  },
+  {
+   "path": "storage/innobase/trx/trx0rseg.cc",
+   "role": "preventive",
+   "evidence": "trx_rseg_create replaces `ut_a(page_no != FIL_NULL)` with a graceful return of NULL rseg when allocation fails."
+  },
+  {
+   "path": "storage/xtradb/btr/btr0btr.cc",
+   "role": "symptom-handling",
+   "evidence": "Net diff makes btr_create return FIL_NULL when the ibuf header block or root block allocation fails (`if (ibuf_hdr_block == NULL) return(FIL_NULL)`); a guard at a failure site."
+  },
+  {
+   "path": "storage/xtradb/buf/buf0dblwr.cc",
+   "role": "causal",
+   "evidence": "buf_dblwr_create now checks the first data file has >= 3 extents (`fail = ...->size < 3 * FSP_EXTENT_SIZE`) and returns false with an error instead of FATAL/crash."
+  },
+  {
+   "path": "storage/xtradb/dict/dict0crea.cc",
+   "role": "refactor",
+   "evidence": "First commit added a fsp_header_init return check, second commit reverted it; net change is nothing."
+  },
+  {
+   "path": "storage/xtradb/fil/fil0fil.cc",
+   "role": "symptom-handling",
+   "evidence": "fil_report_invalid_page_access message rewritten (adds hint about ibdata configuration) and ut_error calls dropped; diagnostic change at the detection site."
+  },
+  {
+   "path": "storage/xtradb/fsp/fsp0fsp.cc",
+   "role": "refactor",
+   "evidence": "fsp_header_init and fseg_create_general changes from commit 1 are largely reverted in commit 2 (error messages removed, `space_id != TRX_SYS_SPACE` simplification)."
+  },
+  {
+   "path": "storage/xtradb/handler/ha_innodb.cc",
+   "role": "refactor",
+   "evidence": "innobase_init min_size check added in the first commit and reverted in the second; net no change."
+  },
+  {
+   "path": "storage/xtradb/include/buf0dblwr.h",
+   "role": "refactor",
+   "evidence": "Declaration changes buf_dblwr_create to return bool; signature adaptation forced by buf0dblwr.cc."
+  },
+  {
+   "path": "storage/xtradb/include/fsp0fsp.h",
+   "role": "refactor",
+   "evidence": "fsp_header_init prototype/doc churn from commit 1, reverted by commit 2."
+  },
+  {
+   "path": "storage/xtradb/include/trx0rseg.h",
+   "role": "refactor",
+   "evidence": "Only documentation and prototype formatting for trx_rseg_create."
+  },
+  {
+   "path": "storage/xtradb/log/log0recv.cc",
+   "role": "refactor",
+   "evidence": "Removes redundant log messages (doublewrite restore message, LSN mismatch warning); message cleanup only."
+  },
+  {
+   "path": "storage/xtradb/row/row0mysql.cc",
+   "role": "refactor",
+   "evidence": "Truncate-table fsp_header_init return check added then reverted; net no change."
+  },
+  {
+   "path": "storage/xtradb/srv/srv0start.cc",
+   "role": "preventive",
+   "evidence": "Net diff makes startup return srv_init_abort(...) when buf_dblwr_create() fails and when ibuf root creation fails, aborting cleanly instead of crashing."
+  },
+  {
+   "path": "storage/xtradb/trx/trx0rseg.cc",
+   "role": "preventive",
+   "evidence": "trx_rseg_create replaces `ut_a(page_no != FIL_NULL)` with a graceful return of NULL rseg when allocation fails."
+  }
+ ],
+ "symptom_location": {
+  "file": "storage/innobase/buf/buf0dblwr.cc",
+  "function": "buf_dblwr_create",
+  "determinable": true
+ },
+ "log_location": {
+  "file": null,
+  "function": null,
+  "determinable": false
+ },
+ "relation": "same-location",
+ "rationale": "With a 3M first data file and 32K pages the doublewrite buffer pages do not fit, and buf_dblwr_create could not report this and aborted. The size check and error return in buf_dblwr_create is the corrected logic. Other files add graceful abort paths or log changes, and several hunks were added and reverted between the two commits.",
+ "confidence": "medium",
+ "notes": "Report only has an unresolved stack, so the symptom function is inferred from the diff, not from the stack. Same change is mirrored in xtradb; labelled identically."
+}

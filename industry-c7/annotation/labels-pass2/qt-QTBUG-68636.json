@@ -1,0 +1,32 @@
+{
+ "id": "qt:QTBUG-68636",
+ "project": "qt",
+ "issue_key": "QTBUG-68636",
+ "annotator": "claude-sonnet-5-5",
+ "pass": 2,
+ "file_roles": [
+  {
+   "path": "src/widgets/widgets/qmenu.cpp",
+   "role": "causal",
+   "evidence": "QMenu::event now calls windowHandle()->setTransientParent(d->transientParentWindow()) when the menu is a window with no transient parent; new QMenuPrivate::transientParentWindow() computes it."
+  },
+  {
+   "path": "src/widgets/widgets/qmenu_p.h",
+   "role": "refactor",
+   "evidence": "Only declares QWindow *transientParentWindow() const."
+  }
+ ],
+ "symptom_location": {
+  "file": "src/widgets/widgets/qmenu.cpp",
+  "function": "QMenu::event",
+  "determinable": true
+ },
+ "log_location": {
+  "file": null,
+  "function": null,
+  "determinable": false
+ },
+ "relation": "same-location",
+ "rationale": "Parentless QMenu popups had no transient parent, so gnome-shell placed them at the top-left. The fix sets one in qmenu.cpp.",
+ "confidence": "medium"
+}

@@ -1,0 +1,27 @@
+{
+ "id": "qt:QTBUG-82611",
+ "project": "qt",
+ "issue_key": "QTBUG-82611",
+ "annotator": "claude-sonnet-5-5",
+ "pass": 2,
+ "file_roles": [
+  {
+   "path": "src/corelib/tools/qarraydata.h",
+   "role": "causal",
+   "evidence": "Diff deletes the whole '#ifdef QT_STRICT_ITERATORS' iterator/const_iterator classes (explicit const_iterator(iterator) ctor) leaving 'typedef T* iterator; typedef const T* const_iterator', removing the type that failed to convert."
+  }
+ ],
+ "symptom_location": {
+  "file": "src/corelib/tools/qvector.h",
+  "function": "QVector::removeAll",
+  "determinable": true
+ },
+ "log_location": {
+  "file": "src/corelib/tools/qvector.h",
+  "function": "QVector::removeAll",
+  "determinable": true
+ },
+ "relation": "caller-callee",
+ "rationale": "The MSVC error is raised in qvector.h when erase receives an iterator that is not convertible to const_iterator. The incompatible strict iterator classes live in qarraydata.h and are removed there.",
+ "confidence": "medium"
+}

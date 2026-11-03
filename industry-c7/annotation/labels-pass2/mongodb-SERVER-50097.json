@@ -1,0 +1,28 @@
+{
+ "id": "mongodb:SERVER-50097",
+ "project": "mongodb",
+ "issue_key": "SERVER-50097",
+ "annotator": "claude-sonnet-5-5",
+ "pass": 2,
+ "file_roles": [
+  {
+   "path": "src/mongo/s/commands/strategy.cpp",
+   "role": "causal",
+   "evidence": "The setExhaust / setInExhaustIsMaster block moves from clientCommand (using request.getCommandName() != 'isMaster') into runCommand, which uses the command found in the registry: command->getName() != 'isMaster'."
+  }
+ ],
+ "symptom_location": {
+  "file": "src/mongo/s/commands/strategy.cpp",
+  "function": "Strategy::clientCommand",
+  "determinable": true
+ },
+ "log_location": {
+  "file": null,
+  "function": null,
+  "determinable": false
+ },
+ "relation": "same-location",
+ "rationale": "On mongos the exhaust flag used the raw request command name, so aliases of isMaster were mis-tracked. The diff switches to the registry-resolved name in the same file.",
+ "confidence": "high",
+ "notes": "Wrong metrics, no log line."
+}

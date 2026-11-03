@@ -1,0 +1,53 @@
+{
+ "id": "mariadb:MDEV-21983",
+ "project": "mariadb",
+ "issue_key": "MDEV-21983",
+ "annotator": "claude-sonnet-5-5",
+ "pass": 2,
+ "file_roles": [
+  {
+   "path": "storage/innobase/dict/dict0dict.cc",
+   "role": "symptom-handling",
+   "evidence": "dict_table_rename_in_cache now passes dict_table_is_discarded(table) as if_exists to fil_delete_tablespace, only to suppress the missing-tablespace error."
+  },
+  {
+   "path": "storage/innobase/fil/fil0fil.cc",
+   "role": "symptom-handling",
+   "evidence": "fil_delete_tablespace wraps the 'Cannot delete tablespace ... not found' ib::error in 'if (!if_exists)'; a log change only."
+  },
+  {
+   "path": "storage/innobase/include/fil0fil.h",
+   "role": "refactor",
+   "evidence": "Updates the fil_delete_tablespace declaration and comment (drop_ahi removed, if_exists added) plus a copyright year."
+  },
+  {
+   "path": "storage/innobase/include/row0merge.h",
+   "role": "refactor",
+   "evidence": "Removes the row_make_new_pathname declaration because the function becomes static."
+  },
+  {
+   "path": "storage/innobase/row/row0merge.cc",
+   "role": "refactor",
+   "evidence": "Only adds 'static' before row_make_new_pathname."
+  },
+  {
+   "path": "storage/innobase/row/row0mysql.cc",
+   "role": "causal",
+   "evidence": "row_rename_table_for_mysql now does 'else if (char* old_path = fil_space_get_first_path(...))' and skips when NULL; the old code called row_make_new_pathname unconditionally and crashed for a discarded tablespace. Also relaxes ut_a(table->data_dir_path) in drop."
+  }
+ ],
+ "symptom_location": {
+  "file": "storage/innobase/row/row0merge.cc",
+  "function": "row_make_new_pathname",
+  "determinable": true
+ },
+ "log_location": {
+  "file": "storage/innobase/row/row0merge.cc",
+  "function": "row_make_new_pathname",
+  "determinable": true
+ },
+ "relation": "caller-callee",
+ "rationale": "The segfault is in row_make_new_pathname, called from row_rename_table_for_mysql with a table whose tablespace was discarded. The caller is changed to skip when there is no path, and the drop path stops asserting. The remaining files are message suppression and declarations.",
+ "confidence": "medium",
+ "notes": "row_make_new_pathname itself is not corrected, only hidden; the caller owns the missing check."
+}

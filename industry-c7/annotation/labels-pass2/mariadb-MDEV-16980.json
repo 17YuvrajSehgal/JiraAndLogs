@@ -1,0 +1,32 @@
+{
+ "id": "mariadb:MDEV-16980",
+ "project": "mariadb",
+ "issue_key": "MDEV-16980",
+ "annotator": "claude-sonnet-5-5",
+ "pass": 2,
+ "file_roles": [
+  {
+   "path": "sql/table.h",
+   "role": "symptom-handling",
+   "evidence": "Diff adds DBUG_ASSERTs in TABLE_LIST::init_one_table checking strlen(name)==length; this is the check that fires in the report, it does not change behaviour."
+  },
+  {
+   "path": "storage/innobase/handler/ha_innodb.cc",
+   "role": "causal",
+   "evidence": "table_name_parse truncated tbl_buf at '#' but did not update tblnamelen; diff adds `tblnamelen = is_part - tbl_buf;`."
+  }
+ ],
+ "symptom_location": {
+  "file": "sql/table.h",
+  "function": "TABLE_LIST::init_one_table",
+  "determinable": true
+ },
+ "log_location": {
+  "file": "sql/table.h",
+  "function": "TABLE_LIST::init_one_table",
+  "determinable": true
+ },
+ "relation": "state-producer",
+ "rationale": "The assertion in init_one_table fails because open_purge_table got a table name length that still included the partition suffix. table_name_parse in ha_innodb.cc produced the wrong length and is corrected. table.h only adds assertions at the detection site.",
+ "confidence": "high"
+}

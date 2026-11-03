@@ -1,0 +1,27 @@
+{
+ "id": "qt:QTBUG-96464",
+ "project": "qt",
+ "issue_key": "QTBUG-96464",
+ "annotator": "claude-sonnet-5-5",
+ "pass": 2,
+ "file_roles": [
+  {
+   "path": "src/plugins/platforms/wayland/qwaylandwindow.cpp",
+   "role": "causal",
+   "evidence": "QWaylandWindow::reset() gains 'mWaitingToApplyConfigure = false;' so a stale pending-configure flag is not carried to the new wl_surface."
+  }
+ ],
+ "symptom_location": {
+  "file": "qtwayland/src/plugins/shellintegration/xdg-shell/qwaylandxdgshell.cpp",
+  "function": "QWaylandXdgSurface::applyConfigure",
+  "determinable": true
+ },
+ "log_location": {
+  "file": "qtwayland/src/plugins/shellintegration/xdg-shell/qwaylandxdgshell.cpp",
+  "function": "QWaylandXdgSurface::applyConfigure",
+  "determinable": true
+ },
+ "relation": "state-producer",
+ "rationale": "A configure for a destroyed wl_surface was applied after a new surface was created, hitting Q_ASSERT(m_pendingConfigureSerial != 0) in the xdg-shell plugin. The stale mWaitingToApplyConfigure flag lived in QWaylandWindow and was not cleared in reset(), which the diff fixes. The assert site is in a different file from the changed state.",
+ "confidence": "medium"
+}

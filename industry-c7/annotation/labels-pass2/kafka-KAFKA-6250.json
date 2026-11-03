@@ -1,0 +1,28 @@
+{
+ "id": "kafka:KAFKA-6250",
+ "project": "kafka",
+ "issue_key": "KAFKA-6250",
+ "annotator": "claude-sonnet-5-5",
+ "pass": 2,
+ "file_roles": [
+  {
+   "path": "connect/runtime/src/main/java/org/apache/kafka/connect/util/TopicAdmin.java",
+   "role": "causal",
+   "evidence": "createTopics now catches ClusterAuthorizationException and returns Collections.emptySet() like UnsupportedVersionException; before it fell through and threw ConnectException."
+  }
+ ],
+ "symptom_location": {
+  "file": "connect/runtime/src/main/java/org/apache/kafka/connect/util/TopicAdmin.java",
+  "function": "createTopics",
+  "determinable": true
+ },
+ "log_location": {
+  "file": "connect/runtime/src/main/java/org/apache/kafka/connect/util/TopicAdmin.java",
+  "function": "createTopics",
+  "determinable": true
+ },
+ "relation": "same-location",
+ "rationale": "The ConnectException is thrown from TopicAdmin.createTopics when the broker returns ClusterAuthorizationException. That method owns the policy of which errors mean 'assume topics exist', and the fix adds the missing case there.",
+ "confidence": "medium",
+ "notes": "Could be argued as tolerance of an environment limitation; I treat the missing error-case policy as the wrong logic."
+}

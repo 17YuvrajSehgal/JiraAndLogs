@@ -1,0 +1,27 @@
+{
+ "id": "beam:BEAM-9575",
+ "project": "beam",
+ "issue_key": "BEAM-9575",
+ "annotator": "claude-sonnet-5-5",
+ "pass": 2,
+ "file_roles": [
+  {
+   "path": "runners/java-job-service/src/main/java/org/apache/beam/runners/jobsubmission/PortablePipelineJarCreator.java",
+   "role": "causal",
+   "evidence": "Deletes writeClassPathResources, which required Preconditions.checkArgument(classPathResources.size()==1, 'Expected exactly one jar on ...'), and copies only the jar of mainClass's CodeSource instead."
+  }
+ ],
+ "symptom_location": {
+  "file": "runners/java-job-service/src/main/java/org/apache/beam/runners/jobsubmission/PortablePipelineJarCreator.java",
+  "function": "writeClassPathResources",
+  "determinable": true
+ },
+ "log_location": {
+  "file": "runners/java-job-service/src/main/java/org/apache/beam/runners/jobsubmission/PortablePipelineJarCreator.java",
+  "function": "writeClassPathResources",
+  "determinable": true
+ },
+ "relation": "same-location",
+ "rationale": "The reported error text 'Expected exactly one jar on ...AppClassLoader' is the exact message of the check removed in the diff. The wrong logic (scanning the whole classloader for jars) is replaced in the same method.",
+ "confidence": "high"
+}

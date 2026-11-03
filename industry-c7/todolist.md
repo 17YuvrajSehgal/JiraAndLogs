@@ -42,21 +42,31 @@ review follow from this one gap.
       0 invalid, compiled to `data/causal-gold/`. Conventions that emerged
       while applying the rubric are recorded in `annotation/CONVENTIONS.md`
       and must be disclosed beside the rubric. **One rater.**
-- [ ] **T2b. The agreement number.** Independent second pass with the first
-      labels hidden, Cohen's kappa, reported as model-model agreement under a
-      pre-registered rubric. This is what the reviewer asked for and it is
-      still missing. **CPU** · needs T2
+- [x] **T2b. The agreement number.** Blind second pass by a different model
+      (Claude Sonnet 5.5, six parallel raters, rubric and schema only, no
+      sight of pass 1 or of CONVENTIONS.md). Cohen's kappa **0.885** on
+      causal vs not, 0.793 on the full six-role scheme, 0.504 on `relation`
+      (the weakest field, and not used to build causal-gold). Identical
+      causal set on 136 of 151 instances. T3 is 49.0% under rater 1 and
+      50.1% under rater 2, and the size curve falls monotonically under
+      both. T4 re-scored under rater 2 gives the same gaps to within a tenth
+      of a point. Written up in `paper/annotation-agreement.md`. Reported as
+      model-model agreement, never as human reliability. **Still owed:** the
+      human-verified subset that RUBRIC.md pre-registers.
 - [x] **T3. Headline number.** 49.0% of fix-modified gold files are causal
       (171/349), mean 71.8% per instance, median 100%. The result that
       matters is the curve: 89% causal when the fix touches 1 file, 57% at
       2–3, 30% at 4–7, 21% at 8+. Gold is accurate for small fixes and
       increasingly diluted for large ones. 14 of 151 have no causal file.
-- [~] **T4. Re-score on causal gold.** `scripts/score_causal_gold.py`, no
+- [x] **T4. Re-score on causal gold.** `scripts/score_causal_gold.py`, no
       re-runs needed: 93 of the 151 annotated instances exist in v1 with the
       same gold and the same snapshot, 84 of those have a causal file, and
       every system already stored a ranking for them. Ordering survives;
-      every system loses 1.2 to 4.8 points of Acc@5. IRBL rankings being
-      regenerated for the same 93. **CPU** · needs T3
+      every system loses 1.2 to 4.8 points of Acc@5, and REMEMBER loses least
+      (+1.2) with 95% of its top-1 hits landing on a causal file. Nine pairs
+      change order, all of them already tied on both keys at n=84, so the
+      subset confirms nothing about the top of the table and the paper says
+      so. Written up in `paper/causal-gold-results.md`. **CPU**
 - [ ] **T5. Scope the claim.** Define "root-cause localization" in §1 before
       using it. Say plainly that the ground truth is fix-modified files and
       point to the annotation study. The title keeps "root-cause" (it is the

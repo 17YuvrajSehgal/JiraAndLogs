@@ -1,0 +1,32 @@
+{
+ "id": "mariadb:MDEV-11780",
+ "project": "mariadb",
+ "issue_key": "MDEV-11780",
+ "annotator": "claude-sonnet-5-5",
+ "pass": 2,
+ "file_roles": [
+  {
+   "path": "sql/item.cc",
+   "role": "causal",
+   "evidence": "Constructor sets m_is_settable_routine_parameter(true); set_from_item() sets it from item->get_settable_routine_parameter(); set_default/set_ignore set it false. This tracks settability that was missing."
+  },
+  {
+   "path": "sql/item.h",
+   "role": "causal",
+   "evidence": "get_settable_routine_parameter() changed from 'return this' to 'm_is_settable_routine_parameter ? this : NULL', plus the new member. This is the wrong always-settable answer being corrected."
+  }
+ ],
+ "symptom_location": {
+  "file": "sql/protocol.cc",
+  "function": "Protocol_text::send_out_parameters",
+  "determinable": true
+ },
+ "log_location": {
+  "file": "sql/protocol.cc",
+  "function": "Protocol_text::send_out_parameters",
+  "determinable": true
+ },
+ "relation": "state-producer",
+ "rationale": "A literal bound to an OUT parameter was always reported as settable, so the debug assertion in send_out_parameters fired. The diff fixes where settability is decided (Item_param), not the assertion site.",
+ "confidence": "high"
+}

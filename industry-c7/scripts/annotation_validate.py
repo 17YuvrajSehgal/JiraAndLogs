@@ -127,7 +127,11 @@ def check(lab: dict, v2: dict, sample_ids: set[str]) -> list[str]:
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--annotator", default="")
+    # T2b writes a blind second pass to a separate directory so the two never
+    # mix; everything else about the validation is identical.
+    ap.add_argument("--labels-dir", default=str(LABELS))
     a = ap.parse_args()
+    labels_dir = Path(a.labels_dir)
 
     sample_path = ANN / "sample.json"
     if not sample_path.exists():
@@ -137,9 +141,9 @@ def main() -> int:
     sample_ids = {r["id"] for r in sample["instances"]}
     v2 = load_v2()
 
-    files = sorted(glob.glob(str(LABELS / "*.json")))
+    files = sorted(glob.glob(str(labels_dir / "*.json")))
     if not files:
-        print(f"no labels in {LABELS}")
+        print(f"no labels in {labels_dir}")
         return 0
 
     bad = 0

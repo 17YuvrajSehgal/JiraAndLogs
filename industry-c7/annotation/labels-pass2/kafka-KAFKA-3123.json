@@ -1,0 +1,27 @@
+{
+ "id": "kafka:KAFKA-3123",
+ "project": "kafka",
+ "issue_key": "KAFKA-3123",
+ "annotator": "claude-sonnet-5-5",
+ "pass": 2,
+ "file_roles": [
+  {
+   "path": "core/src/main/scala/kafka/log/LogManager.scala",
+   "role": "causal",
+   "evidence": "log.truncateTo(...) was followed by cleaner.resumeCleaning only on the success path; diff wraps it in try { ... } finally { if (needToStopCleaner) cleaner.resumeCleaning(topicPartition) }."
+  }
+ ],
+ "symptom_location": {
+  "file": "core/src/main/scala/kafka/log/LogCleanerManager.scala",
+  "function": "abortAndPauseCleaning",
+  "determinable": true
+ },
+ "log_location": {
+  "file": "core/src/main/scala/kafka/log/LogCleanerManager.scala",
+  "function": "abortAndPauseCleaning",
+  "determinable": true
+ },
+ "relation": "state-producer",
+ "rationale": "The IllegalStateException is raised in LogCleanerManager when the partition is already in LogCleaningPaused. That state was left behind because an earlier truncateTo in LogManager threw and the resume call was skipped. The fix guarantees the resume in LogManager, so that is where the wrong logic lived. The reporter proposed removing the exception in LogCleanerManager instead, which the real fix did not do.",
+ "confidence": "medium"
+}

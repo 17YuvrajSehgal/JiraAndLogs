@@ -1,0 +1,27 @@
+{
+ "id": "qt:QTBUG-96285",
+ "project": "qt",
+ "issue_key": "QTBUG-96285",
+ "annotator": "claude-sonnet-5-5",
+ "pass": 2,
+ "file_roles": [
+  {
+   "path": "src/corelib/kernel/qwineventnotifier.cpp",
+   "role": "causal",
+   "evidence": "In QWinEventNotifier::event, a QPointer alive(this) is taken before emit activated and the post-emit re-registration is guarded with 'alive &&'; the slot may delete the notifier (QProcess), causing use-after-free."
+  }
+ ],
+ "symptom_location": {
+  "file": "src/corelib/kernel/qwineventnotifier.cpp",
+  "function": "QWinEventNotifier::event",
+  "determinable": true
+ },
+ "log_location": {
+  "file": null,
+  "function": null,
+  "determinable": false
+ },
+ "relation": "same-location",
+ "rationale": "After emit activated, the code touched d and the waitObject even if a slot destroyed the object. The report shows only a crash, but the commit message names the use-after-free and the diff guards it.",
+ "confidence": "high"
+}

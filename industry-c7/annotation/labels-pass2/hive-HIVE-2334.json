@@ -1,0 +1,28 @@
+{
+ "id": "hive:HIVE-2334",
+ "project": "hive",
+ "issue_key": "HIVE-2334",
+ "annotator": "claude-sonnet-5-5",
+ "pass": 2,
+ "file_roles": [
+  {
+   "path": "cli/src/java/org/apache/hadoop/hive/cli/CliDriver.java",
+   "role": "causal",
+   "evidence": "Header printing is moved to printHeader(), which now checks fieldSchemas != null before iterating; the old inline code iterated sc.getFieldSchemas() unguarded, which is null for DESCRIBE."
+  }
+ ],
+ "symptom_location": {
+  "file": "cli/src/java/org/apache/hadoop/hive/cli/CliDriver.java",
+  "function": "processCmd",
+  "determinable": true
+ },
+ "log_location": {
+  "file": null,
+  "function": null,
+  "determinable": false
+ },
+ "relation": "same-location",
+ "rationale": "Old code looped over getSchema().getFieldSchemas() without a null check when print.header was on. Most of the diff is refactor to make it testable; the null guard is the fix. Report has no stack trace.",
+ "confidence": "medium",
+ "notes": "Could be read as symptom-handling if the null schema from Driver was the invariant; no Driver change in gold."
+}

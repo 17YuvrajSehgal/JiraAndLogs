@@ -1,0 +1,32 @@
+{
+ "id": "kafka:KAFKA-5140",
+ "project": "kafka",
+ "issue_key": "KAFKA-5140",
+ "annotator": "claude-sonnet-5-5",
+ "pass": 2,
+ "file_roles": [
+  {
+   "path": "streams/src/main/java/org/apache/kafka/streams/processor/internals/InternalTopicManager.java",
+   "role": "refactor",
+   "evidence": "Swaps the static LoggerFactory logger for a LogContext logger and reformats the constructor; no logic that affects topic handling changes."
+  },
+  {
+   "path": "streams/src/main/java/org/apache/kafka/streams/processor/internals/StreamPartitionAssignor.java",
+   "role": "refactor",
+   "evidence": "Changes the log prefix set up in configure() and a debug message; nothing else in the diff alters behaviour."
+  }
+ ],
+ "symptom_location": {
+  "file": "streams/src/test/java/org/apache/kafka/streams/integration/ResetIntegrationTest.java",
+  "function": "testReprocessingFromScratchAfterResetWithIntermediateUserTopic",
+  "determinable": true
+ },
+ "log_location": {
+  "file": "streams/src/test/java/org/apache/kafka/streams/integration/ResetIntegrationTest.java",
+  "function": "testReprocessingFromScratchAfterResetWithIntermediateUserTopic",
+  "determinable": true
+ },
+ "relation": "unrelated",
+ "rationale": "The commit message gives the root causes as a shared MockTime class rule and a topic-list race in the test, both in test files outside the gold set. The two source files only get logging changes.",
+ "confidence": "high"
+}

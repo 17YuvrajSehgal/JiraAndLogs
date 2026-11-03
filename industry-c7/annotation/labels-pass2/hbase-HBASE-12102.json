@@ -1,0 +1,43 @@
+{
+ "id": "hbase:HBASE-12102",
+ "project": "hbase",
+ "issue_key": "HBASE-12102",
+ "annotator": "claude-sonnet-5-5",
+ "pass": 2,
+ "file_roles": [
+  {
+   "path": "hbase-hadoop2-compat/src/main/java/org/apache/hadoop/hbase/ipc/MetricsHBaseServerSourceImpl.java",
+   "role": "causal",
+   "evidence": "Removes '.setContext(metricsContext)' from metricsCollector.addRecord(metricsName) in getMetrics; the context was already emitted as a tag, giving duplicate tag.Context in the JMX JSON."
+  },
+  {
+   "path": "hbase-hadoop2-compat/src/main/java/org/apache/hadoop/hbase/master/MetricsMasterSourceImpl.java",
+   "role": "causal",
+   "evidence": "Removes '.setContext(metricsContext)' from metricsCollector.addRecord(metricsName) in getMetrics; the context was already emitted as a tag, giving duplicate tag.Context in the JMX JSON."
+  },
+  {
+   "path": "hbase-hadoop2-compat/src/main/java/org/apache/hadoop/hbase/regionserver/MetricsRegionAggregateSourceImpl.java",
+   "role": "causal",
+   "evidence": "Removes '.setContext(metricsContext)' from metricsCollector.addRecord(metricsName) in getMetrics; the context was already emitted as a tag, giving duplicate tag.Context in the JMX JSON."
+  },
+  {
+   "path": "hbase-hadoop2-compat/src/main/java/org/apache/hadoop/hbase/regionserver/MetricsRegionServerSourceImpl.java",
+   "role": "causal",
+   "evidence": "Removes '.setContext(metricsContext)' from metricsCollector.addRecord(metricsName) in getMetrics; the context was already emitted as a tag, giving duplicate tag.Context in the JMX JSON."
+  }
+ ],
+ "symptom_location": {
+  "file": "hbase-hadoop2-compat/src/main/java/org/apache/hadoop/hbase/regionserver/MetricsRegionServerSourceImpl.java",
+  "function": "getMetrics",
+  "determinable": true
+ },
+ "log_location": {
+  "file": null,
+  "function": null,
+  "determinable": false
+ },
+ "relation": "same-location",
+ "rationale": "Each source class adds the context itself via setContext, which duplicates the tag the metrics system already adds. The identical one-line removal in each getMetrics fixes the duplicate key.",
+ "confidence": "medium",
+ "notes": "Output is JMX JSON, not a log line, so log_location is not determinable. The metrics framework side that also adds tag.Context is not in the diff."
+}

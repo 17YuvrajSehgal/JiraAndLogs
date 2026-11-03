@@ -1,0 +1,27 @@
+{
+ "id": "flink:FLINK-11136",
+ "project": "flink",
+ "issue_key": "FLINK-11136",
+ "annotator": "claude-sonnet-5-5",
+ "pass": 2,
+ "file_roles": [
+  {
+   "path": "flink-libraries/flink-table/src/main/scala/org/apache/flink/table/codegen/AggregationCodeGenerator.scala",
+   "role": "causal",
+   "evidence": "Distinct merge code called accumulate(aAcc, k) with the whole Row k; fix adds parametersCodeForDistinctMerge that unpacks fields via k.getField(i) with boxed casts."
+  }
+ ],
+ "symptom_location": {
+  "file": "flink-libraries/flink-table/src/main/scala/org/apache/flink/table/functions/aggfunctions/SumAggFunction.scala",
+  "function": "accumulate",
+  "determinable": true
+ },
+ "log_location": {
+  "file": "flink-libraries/flink-table/src/main/scala/org/apache/flink/table/functions/aggfunctions/SumAggFunction.scala",
+  "function": "accumulate",
+  "determinable": true
+ },
+ "relation": "caller-callee",
+ "rationale": "ClassCastException (Row to Integer) surfaces in SumAggFunction.accumulate, called from generated mergeAccumulatorsPair. The generator passed the Row instead of its fields, and the diff fixes that generated call.",
+ "confidence": "high"
+}

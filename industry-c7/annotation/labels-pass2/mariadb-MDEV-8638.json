@@ -1,0 +1,28 @@
+{
+ "id": "mariadb:MDEV-8638",
+ "project": "mariadb",
+ "issue_key": "MDEV-8638",
+ "annotator": "claude-sonnet-5-5",
+ "pass": 2,
+ "file_roles": [
+  {
+   "path": "sql/log_event.cc",
+   "role": "causal",
+   "evidence": "Query_log_event constructor only copied user/host when length > 0, leaving str uninitialized; diff adds else branches setting str to a NUL terminated empty string."
+  }
+ ],
+ "symptom_location": {
+  "file": "sql/sql_acl.cc",
+  "function": null,
+  "determinable": false
+ },
+ "log_location": {
+  "file": "sql/sql_acl.cc",
+  "function": null,
+  "determinable": false
+ },
+ "relation": "state-producer",
+ "rationale": "Replicated query events left invoker_user and invoker_host with garbage pointers, which the slave later used for REVOKE ... CURRENT_ROLE. The diff fixes the initialization where the bad state is created.",
+ "confidence": "high",
+ "notes": "The 'Can't revoke all privileges' error is raised in the ACL code, not shown in the packet."
+}

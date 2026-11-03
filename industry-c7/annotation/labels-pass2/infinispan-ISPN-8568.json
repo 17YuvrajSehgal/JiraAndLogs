@@ -1,0 +1,42 @@
+{
+ "id": "infinispan:ISPN-8568",
+ "project": "infinispan",
+ "issue_key": "ISPN-8568",
+ "annotator": "claude-sonnet-5-5",
+ "pass": 2,
+ "file_roles": [
+  {
+   "path": "commons/src/main/java/org/infinispan/commons/dataconversion/CompatModeEncoder.java",
+   "role": "causal",
+   "evidence": "'new GenericJBossMarshaller()' replaced by new GenericJBossMarshaller(classLoader); the old default used the commons module classloader that cannot see deployed Pojos."
+  },
+  {
+   "path": "commons/src/main/java/org/infinispan/commons/dataconversion/GenericJbossMarshallerEncoder.java",
+   "role": "causal",
+   "evidence": "super(new GenericJBossMarshaller()) replaced by a constructor taking a ClassLoader; same wrong-classloader marshaller creation."
+  },
+  {
+   "path": "core/src/main/java/org/infinispan/encoding/DataConversion.java",
+   "role": "causal",
+   "evidence": "lookupEncoder now receives gcr.classLoader() and calls new CompatModeEncoder(compatMarshaller, classLoader) instead of the default-classloader encoder."
+  },
+  {
+   "path": "core/src/main/java/org/infinispan/factories/EncoderRegistryFactory.java",
+   "role": "causal",
+   "evidence": "Registers new GenericJbossMarshallerEncoder(classLoader) and new CompatModeEncoder(globalMarshaller, classLoader) using globalConfiguration.classLoader(), replacing the static INSTANCE."
+  }
+ ],
+ "symptom_location": {
+  "file": "commons/src/main/java/org/infinispan/commons/marshall/jboss/GenericJBossMarshaller.java",
+  "function": "objectFromByteBuffer",
+  "determinable": true
+ },
+ "log_location": {
+  "file": null,
+  "function": null,
+  "determinable": false
+ },
+ "relation": "state-producer",
+ "rationale": "The Pojo bytes are deserialized by a GenericJBossMarshaller built with the commons module classloader, so deployed classes are not found. All four files change where that marshaller is created or which classloader is handed to it, so I marked each causal. The two commons changes only add a constructor, so they are close to enabling API, which makes the split with the core wiring uncertain. The marshaller class is cited from the report text, not from the diff.",
+ "confidence": "medium"
+}

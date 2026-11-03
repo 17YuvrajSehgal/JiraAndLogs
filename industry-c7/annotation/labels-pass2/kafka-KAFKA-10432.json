@@ -1,0 +1,27 @@
+{
+ "id": "kafka:KAFKA-10432",
+ "project": "kafka",
+ "issue_key": "KAFKA-10432",
+ "annotator": "claude-sonnet-5-5",
+ "pass": 2,
+ "file_roles": [
+  {
+   "path": "core/src/main/scala/kafka/log/LogSegment.scala",
+   "role": "causal",
+   "evidence": "Condition batch.partitionLeaderEpoch > 0 changed to >= 0 in recover(), so epoch 0 is assigned to the cache."
+  }
+ ],
+ "symptom_location": {
+  "file": "core/src/main/scala/kafka/log/LogSegment.scala",
+  "function": "recover",
+  "determinable": true
+ },
+ "log_location": {
+  "file": null,
+  "function": null,
+  "determinable": false
+ },
+ "relation": "same-location",
+ "rationale": "Report points at the exact line in LogSegment recovery that skips epoch 0. The diff corrects the off-by-one comparison there.",
+ "confidence": "high"
+}

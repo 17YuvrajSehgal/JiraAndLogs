@@ -1,0 +1,37 @@
+{
+ "id": "mongodb:SERVER-29255",
+ "project": "mongodb",
+ "issue_key": "SERVER-29255",
+ "annotator": "claude-sonnet-5-5",
+ "pass": 2,
+ "file_roles": [
+  {
+   "path": "src/mongo/db/catalog/collection_options.cpp",
+   "role": "causal",
+   "evidence": "validate() called `parse(toBSON())` with the default parseForCommand kind, which rejects a UUID; diff renames to validateForStorage and passes ParseKind::parseForStorage."
+  },
+  {
+   "path": "src/mongo/db/catalog/collection_options.h",
+   "role": "refactor",
+   "evidence": "Declaration renamed validate() to validateForStorage(); follows from the .cpp change."
+  },
+  {
+   "path": "src/mongo/db/repl/collection_cloner.cpp",
+   "role": "refactor",
+   "evidence": "Caller updated from options.validate() to options.validateForStorage(); rename adaptation."
+  }
+ ],
+ "symptom_location": {
+  "file": "src/mongo/db/catalog/collection_options.cpp",
+  "function": "CollectionOptions::validate",
+  "determinable": true
+ },
+ "log_location": {
+  "file": null,
+  "function": null,
+  "determinable": false
+ },
+ "relation": "same-location",
+ "rationale": "The issue says validate() fails when a UUID is present because it parses as for a user command. The wrong parse kind is fixed inside the function in collection_options.cpp. The header and cloner only follow the rename.",
+ "confidence": "high"
+}

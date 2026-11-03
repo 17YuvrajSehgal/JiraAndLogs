@@ -1,0 +1,32 @@
+{
+ "id": "qt:QTBUG-89764",
+ "project": "qt",
+ "issue_key": "QTBUG-89764",
+ "annotator": "claude-sonnet-5-5",
+ "pass": 2,
+ "file_roles": [
+  {
+   "path": "src/gui/rhi/qrhivulkan.cpp",
+   "role": "causal",
+   "evidence": "activateTextureRenderTarget now calls new depthStencilExplicitBarrier(cbD, rbD) for the depth-stencil render buffer, replacing the bare 'lastActiveFrameSlot = currentFrameSlot'; the missing barrier caused the WAW hazard."
+  },
+  {
+   "path": "src/gui/rhi/qrhivulkan_p_p.h",
+   "role": "refactor",
+   "evidence": "Only declares 'void depthStencilExplicitBarrier(QVkCommandBuffer *cbD, QVkRenderBuffer *rbD);' for the new function."
+  }
+ ],
+ "symptom_location": {
+  "file": "src/gui/rhi/qrhivulkan.cpp",
+  "function": "QRhiVulkan::activateTextureRenderTarget",
+  "determinable": true
+ },
+ "log_location": {
+  "file": null,
+  "function": null,
+  "determinable": false
+ },
+ "relation": "same-location",
+ "rationale": "Vulkan sync validation reported a write-after-write hazard on the depth-stencil attachment at vkCmdBeginRenderPass. The depth-stencil render buffer is not covered by the resource tracker, and the diff adds an explicit image barrier for it. The validation message comes from the Vulkan layer, not from a repo file, and the symptom function is taken from the commit message.",
+ "confidence": "medium"
+}

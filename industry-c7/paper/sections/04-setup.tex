@@ -34,8 +34,8 @@ evaluating on older data, would be the deployment scenario backwards.
 Two populations carry the results, and no comparison mixes them.
 
 The \emph{evaluation split} is the later 70\% of every project: 476,
-1{,}179, 2{,}533, and 320 instances for Kafka, MariaDB, MongoDB, and Qt,
-4{,}508 in total. It carries every measurement that describes the
+1{,}179, 2{,}434, and 320 instances for Kafka, MariaDB, MongoDB, and Qt,
+4{,}409 in total. It carries every measurement that describes the
 benchmark as a whole, including \cref{tab:files} and the firewall,
 function, noise, and module results.
 
@@ -50,16 +50,29 @@ population would overstate the agent by roughly three points
 (\cref{sec:results:validity}).
 
 The ten removed instances are those whose ground truth consists entirely
-of test files. The benchmark excludes test files from the gold set by a
-path and name rule (\cref{sec:benchmark:linkage}), and the same rule
-defines the candidate files a system may rank. Ten MongoDB instances use
-a naming convention the rule does not catch, so for them the gold set and
-the candidate pool are both test files, and a system scores by ranking
-tests rather than by localizing production code. We remove them from
-every system alike. The removal is not self-serving: on those ten
-instances \retr{} scores 90.0\% Acc@5 against 68.1\% on the 790 we
-keep, so dropping them lowers every reported score rather than raising
-it.
+of test files, and they are part of a benchmark-wide exclusion we apply
+before any system is scored. The benchmark excludes test files from the
+gold set by a path and name rule (\cref{sec:benchmark:linkage}), and the
+same rule defines the candidate files a system may rank. Some projects
+use conventions the rule does not catch, among them Maven Failsafe's
+\texttt{src/it/} source root and its \texttt{*IT.java} naming. Where
+\emph{every} gold file escapes the rule, the gold set and the candidate
+pool are both test code, and a system scores by ranking tests rather
+than by localizing the code that holds the defect. That is not the task
+we claim to measure, so we drop those instances from the scored set
+while leaving the mined gold untouched, and we rescore every system on
+the reduced population so no comparison crosses populations.
+
+This removes 123 of the 6{,}437 instances (1.9\%), all MongoDB, and
+takes the evaluation split from 4{,}508 to 4{,}409. The excluded list is
+published with the benchmark. \textbf{The removal is conservative, and
+we measured the direction rather than asserting it}: those instances are
+\emph{rankable} and in fact easier than average, because the gold files
+sit inside the candidate pool. \retr{} scores 74.0\% Acc@5 on the 123
+removed instances against 68.6\% on the evaluation instances we keep, so
+dropping them lowers every reported score rather than raising it. No
+system moves by more than half a point and the ordering of
+\cref{tab:files} is unchanged.
 
 \subsection{Metrics}
 \label{sec:setup:metrics}

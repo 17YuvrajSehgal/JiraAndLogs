@@ -1,0 +1,33 @@
+{
+ "id": "kafka:KAFKA-9645",
+ "project": "kafka",
+ "issue_key": "KAFKA-9645",
+ "annotator": "claude-sonnet-5-5",
+ "pass": 2,
+ "file_roles": [
+  {
+   "path": "clients/src/main/java/org/apache/kafka/clients/consumer/MockConsumer.java",
+   "role": "refactor",
+   "evidence": "Adds shouldRebalance flag, shouldRebalance() and resetShouldRebalance() so tests can observe enforceRebalance(); test double support only."
+  },
+  {
+   "path": "streams/src/main/java/org/apache/kafka/streams/processor/internals/StreamThread.java",
+   "role": "causal",
+   "evidence": "On fenced thread, mainConsumer.enforceRebalance() replaced by mainConsumer.unsubscribe(); subscribeConsumer(), so the consumer assignment is cleared in sync with the task manager."
+  }
+ ],
+ "symptom_location": {
+  "file": "streams/src/main/java/org/apache/kafka/streams/processor/internals/StreamThread.java",
+  "function": "StreamThread.addRecordsToTasks",
+  "determinable": true
+ },
+ "log_location": {
+  "file": "streams/src/main/java/org/apache/kafka/streams/processor/internals/StreamThread.java",
+  "function": "StreamThread.addRecordsToTasks",
+  "determinable": true
+ },
+ "relation": "state-producer",
+ "rationale": "The NPE appears in addRecordsToTasks because records arrive for tasks already closed. The cause is the fenced handler that closed tasks but kept the consumer assignment. The diff changes that handler. MockConsumer is test-support code in main source.",
+ "confidence": "medium",
+ "notes": "MockConsumer is a test double, label could be test or refactor."
+}

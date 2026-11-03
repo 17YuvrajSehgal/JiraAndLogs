@@ -1,0 +1,33 @@
+{
+ "id": "mongodb:SERVER-15763",
+ "project": "mongodb",
+ "issue_key": "SERVER-15763",
+ "annotator": "claude-sonnet-5-5",
+ "pass": 2,
+ "file_roles": [
+  {
+   "path": "src/mongo/db/repl/repl_coordinator_impl.cpp",
+   "role": "causal",
+   "evidence": "In fillIsMasterForReplSet, 'if (isWaitingForApplierToDrain()) response->setIsMaster(false);' lacked a secondary flag; diff adds response->setIsSecondary(true)."
+  },
+  {
+   "path": "src/mongo/db/repl/repl_coordinator_test_fixture.cpp",
+   "role": "test",
+   "evidence": "Test fixture file: adds ASSERT_FALSE(imResponse.isMaster()) and ASSERT_TRUE(imResponse.isSecondary()) while draining; leaked through the test filter."
+  }
+ ],
+ "symptom_location": {
+  "file": "src/mongo/db/repl/repl_coordinator_impl.cpp",
+  "function": "ReplicationCoordinatorImpl::fillIsMasterForReplSet",
+  "determinable": true
+ },
+ "log_location": {
+  "file": null,
+  "function": null,
+  "determinable": false
+ },
+ "relation": "same-location",
+ "rationale": "The issue asks that isMaster report a readable state while a new primary is draining. The code set ismaster:false but not issecondary:true during drain, and the diff adds exactly that flag in the same function. The second gold file is a test fixture, which should have been filtered out as a test.",
+ "confidence": "high",
+ "notes": "Benchmark defect: repl_coordinator_test_fixture.cpp is test code listed as a gold source file."
+}

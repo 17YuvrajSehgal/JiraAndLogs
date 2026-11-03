@@ -1,0 +1,27 @@
+{
+ "id": "keycloak:KEYCLOAK-2362",
+ "project": "keycloak",
+ "issue_key": "KEYCLOAK-2362",
+ "annotator": "claude-sonnet-5-5",
+ "pass": 2,
+ "file_roles": [
+  {
+   "path": "services/src/main/java/org/keycloak/email/DefaultEmailSenderProvider.java",
+   "role": "causal",
+   "evidence": "setupTruststore now checks 'if (factory != null)' before props.put('mail.smtp.ssl.socketFactory', factory); the old code put a null into Properties (Hashtable.put NPE in the stack trace)."
+  }
+ ],
+ "symptom_location": {
+  "file": "services/src/main/java/org/keycloak/email/DefaultEmailSenderProvider.java",
+  "function": "setupTruststore",
+  "determinable": true
+ },
+ "log_location": {
+  "file": "services/src/main/java/org/keycloak/email/DefaultEmailSenderProvider.java",
+  "function": "setupTruststore",
+  "determinable": true
+ },
+ "relation": "same-location",
+ "rationale": "The NPE frame is Hashtable.put called from setupTruststore line 116. Only this file changed, and it is where the unchecked null result of getSSLSocketFactory was stored, so it owns the fix.",
+ "confidence": "medium"
+}

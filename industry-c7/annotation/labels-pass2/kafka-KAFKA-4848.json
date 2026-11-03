@@ -1,0 +1,33 @@
+{
+ "id": "kafka:KAFKA-4848",
+ "project": "kafka",
+ "issue_key": "KAFKA-4848",
+ "annotator": "claude-sonnet-5-5",
+ "pass": 2,
+ "file_roles": [
+  {
+   "path": "streams/src/main/java/org/apache/kafka/streams/StreamsConfig.java",
+   "role": "refactor",
+   "evidence": "Adds MAX_POLL_INTERVAL_MS_CONFIG=300000 to consumer default overrides so StreamThread can read it; supports the fix, no wrong logic corrected."
+  },
+  {
+   "path": "streams/src/main/java/org/apache/kafka/streams/processor/internals/StreamThread.java",
+   "role": "causal",
+   "evidence": "retryWithBackoff loop now breaks when time.milliseconds() - start > rebalanceTimeoutMs, bounding the previously infinite retry; backoff is also reset after success."
+  }
+ ],
+ "symptom_location": {
+  "file": "streams/src/main/java/org/apache/kafka/streams/processor/internals/StreamThread.java",
+  "function": "AbstractTaskCreator.retryWithBackoff",
+  "determinable": true
+ },
+ "log_location": {
+  "file": "streams/src/main/java/org/apache/kafka/streams/processor/internals/StreamThread.java",
+  "function": "AbstractTaskCreator.retryWithBackoff",
+  "determinable": true
+ },
+ "relation": "same-location",
+ "rationale": "The report is an unbounded retry loop. The diff adds the time bound in that loop. The config default only supplies the value the new bound needs.",
+ "confidence": "high",
+ "notes": "StreamsConfig could also be read as preventive (configuration)."
+}

@@ -1,0 +1,27 @@
+{
+ "id": "hadoop:HDFS-10457",
+ "project": "hadoop",
+ "issue_key": "HDFS-10457",
+ "annotator": "claude-sonnet-5-5",
+ "pass": 2,
+ "file_roles": [
+  {
+   "path": "hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/server/datanode/BlockPoolSliceStorage.java",
+   "role": "causal",
+   "evidence": "analyzeStorage(startOpt, this) changed to analyzeStorage(startOpt, this, true) in the block pool load path, so a missing VERSION no longer triggers auto-format."
+  }
+ ],
+ "symptom_location": {
+  "file": "hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/server/datanode/BlockPoolSliceStorage.java",
+  "function": "loadStorageDirectory",
+  "determinable": true
+ },
+ "log_location": {
+  "file": null,
+  "function": null,
+  "determinable": false
+ },
+ "relation": "same-location",
+ "rationale": "Report says the DN still auto-formats a block pool dir when VERSION is missing. The one-line change in this file's call turns on the check for this path, as was done for volumes in HDFS-10360. The Storage.analyzeStorage overload itself is not in the gold set.",
+ "confidence": "medium"
+}

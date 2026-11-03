@@ -1,0 +1,33 @@
+{
+ "id": "mariadb:MDEV-15611",
+ "project": "mariadb",
+ "issue_key": "MDEV-15611",
+ "annotator": "claude-sonnet-5-5",
+ "pass": 2,
+ "file_roles": [
+  {
+   "path": "storage/innobase/row/row0upd.cc",
+   "role": "causal",
+   "evidence": "wsrep_must_process_fk condition is rewritten (returns true unless the parent is a cascade node), and call sites in row_upd_sec_index_entry and row_upd_clust_rec_by_insert now use it, restoring FK keys in the write set."
+  },
+  {
+   "path": "storage/xtradb/row/row0upd.cc",
+   "role": "causal",
+   "evidence": "Same wsrep_must_process_fk definition and call-site changes as the innobase copy (commit c69357d8d459 hunks)."
+  }
+ ],
+ "symptom_location": {
+  "file": "sql/log_event.cc",
+  "function": "Delete_rows_log_event::do_apply_event",
+  "determinable": true
+ },
+ "log_location": {
+  "file": "sql/log_event.cc",
+  "function": "Delete_rows_log_event::do_apply_event",
+  "determinable": true
+ },
+ "relation": "state-producer",
+ "rationale": "The slave fails the parent-row delete because the write set lacked foreign key info, so the two deletes ran in parallel. The diff repairs the FK check condition that decides whether keys are added. The error is raised later, in the apply path.",
+ "confidence": "medium",
+ "notes": "Exact emission site of the 1451 error is not in the packet; sql/log_event.cc is an inference."
+}

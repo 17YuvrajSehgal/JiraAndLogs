@@ -1,0 +1,33 @@
+{
+ "id": "hbase:HBASE-10330",
+ "project": "hbase",
+ "issue_key": "HBASE-10330",
+ "annotator": "claude-sonnet-5-5",
+ "pass": 2,
+ "file_roles": [
+  {
+   "path": "hbase-server/src/main/java/org/apache/hadoop/hbase/mapred/TableRecordReaderImpl.java",
+   "role": "causal",
+   "evidence": "close() only closed the scanner; diff adds `this.htable.close()` in a try/catch, which releases the HConnection reference that was leaked."
+  },
+  {
+   "path": "hbase-server/src/main/java/org/apache/hadoop/hbase/mapreduce/TableRecordReaderImpl.java",
+   "role": "causal",
+   "evidence": "close() only closed the scanner; diff adds `this.htable.close()` in a try/catch, which releases the HConnection reference that was leaked."
+  }
+ ],
+ "symptom_location": {
+  "file": "hbase-server/src/main/java/org/apache/hadoop/hbase/mapreduce/TableRecordReaderImpl.java",
+  "function": "close",
+  "determinable": true
+ },
+ "log_location": {
+  "file": null,
+  "function": null,
+  "determinable": false
+ },
+ "relation": "same-location",
+ "rationale": "The report says TableRecordReaderImpl.close() closes the scanner but not the HTable, leaking HConnection references. Both copies (mapred and mapreduce) of close() are fixed by adding htable.close(). Resource release logic was missing in these methods.",
+ "confidence": "high",
+ "notes": "No log line is quoted in the report; leak is described in prose."
+}

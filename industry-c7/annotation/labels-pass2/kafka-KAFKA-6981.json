@@ -1,0 +1,62 @@
+{
+ "id": "kafka:KAFKA-6981",
+ "project": "kafka",
+ "issue_key": "KAFKA-6981",
+ "annotator": "claude-sonnet-5-5",
+ "pass": 2,
+ "file_roles": [
+  {
+   "path": "connect/runtime/src/main/java/org/apache/kafka/connect/runtime/ConnectorConfig.java",
+   "role": "causal",
+   "evidence": "Adds ERRORS_* ConfigDef definitions (errors.retry.timeout, errors.allowed.max, errors.log.enable ...) and accessors; the report says ConnectorConfig does not define these properties so getString throws ConfigException."
+  },
+  {
+   "path": "connect/runtime/src/main/java/org/apache/kafka/connect/runtime/SinkConnectorConfig.java",
+   "role": "causal",
+   "evidence": "Adds DLQ_TOPIC_NAME_CONFIG = 'errors.deadletterqueue.topic.name' to the ConfigDef plus dlqTopicName(); this is the exact property the stack trace says is 'Unknown configuration'."
+  },
+  {
+   "path": "connect/runtime/src/main/java/org/apache/kafka/connect/runtime/Worker.java",
+   "role": "symptom-handling",
+   "evidence": "sinkTaskReporters changed from connConfig.getString(DeadLetterQueueReporter.PREFIX + '.' + DLQ_TOPIC_NAME) to connConfig.dlqTopicName() on a SinkConnectorConfig; this is the frame (Worker.sinkTaskReporters) where the exception surfaced, adapted to the new config."
+  },
+  {
+   "path": "connect/runtime/src/main/java/org/apache/kafka/connect/runtime/errors/DeadLetterQueueReporter.java",
+   "role": "refactor",
+   "evidence": "Removes its private ConfigDef and DeadLetterQueueReporterConfig, takes SinkConnectorConfig instead; moves config ownership, forced by the config move."
+  },
+  {
+   "path": "connect/runtime/src/main/java/org/apache/kafka/connect/runtime/errors/ErrorReporter.java",
+   "role": "refactor",
+   "evidence": "ErrorReporter no longer extends Configurable; interface adaptation after the configure() methods were removed."
+  },
+  {
+   "path": "connect/runtime/src/main/java/org/apache/kafka/connect/runtime/errors/LogReporter.java",
+   "role": "refactor",
+   "evidence": "Drops its own ConfigDef/LogReporterConfig and reads connConfig.enableErrorLog(); relocation of config definitions."
+  },
+  {
+   "path": "connect/runtime/src/main/java/org/apache/kafka/connect/runtime/errors/RetryWithToleranceOperator.java",
+   "role": "refactor",
+   "evidence": "Removes its own ConfigDef and takes retry/tolerance values by constructor from ConnectorConfig; relocation."
+  },
+  {
+   "path": "connect/runtime/src/main/java/org/apache/kafka/connect/runtime/errors/ToleranceType.java",
+   "role": "refactor",
+   "evidence": "Replaces fromString with value(); small helper change to support the config definition in ConnectorConfig."
+  }
+ ],
+ "symptom_location": {
+  "file": "connect/runtime/src/main/java/org/apache/kafka/connect/runtime/Worker.java",
+  "function": "sinkTaskReporters",
+  "determinable": true
+ },
+ "log_location": {
+  "file": "connect/runtime/src/main/java/org/apache/kafka/connect/runtime/Worker.java",
+  "function": "sinkTaskReporters",
+  "determinable": true
+ },
+ "relation": "caller-callee",
+ "rationale": "The DLQ topic property was read through a ConnectorConfig whose ConfigDef did not define it, so AbstractConfig.get threw. The fix defines the properties in ConnectorConfig and SinkConnectorConfig and rewires readers.",
+ "confidence": "high"
+}

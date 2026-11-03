@@ -1,0 +1,33 @@
+{
+ "id": "pig:PIG-1871",
+ "project": "pig",
+ "issue_key": "PIG-1871",
+ "annotator": "claude-sonnet-5-5",
+ "pass": 2,
+ "file_roles": [
+  {
+   "path": "src/org/apache/pig/newplan/PColFilterExtractor.java",
+   "role": "causal",
+   "evidence": "Every 'throw new FrontendException(\"Unsupported query...\")' in the extractor is replaced by LOG.warn plus canPushDown = false, and getPColCondition/isFilterRemovable honour the flag; this is the behaviour the issue asks to change."
+  },
+  {
+   "path": "src/org/apache/pig/newplan/logical/rules/PartitionFilterOptimizer.java",
+   "role": "preventive",
+   "evidence": "transform() now runs the extractor on filterExpr.deepCopy() and restores it with loFilter.setFilterPlan(filterExprCopy) when not pushable, so a failed push-down cannot leave the plan half modified."
+  }
+ ],
+ "symptom_location": {
+  "file": "src/org/apache/pig/newplan/PColFilterExtractor.java",
+  "function": "visit",
+  "determinable": true
+ },
+ "log_location": {
+  "file": "src/org/apache/pig/newplan/PColFilterExtractor.java",
+  "function": "visit",
+  "determinable": true
+ },
+ "relation": "same-location",
+ "rationale": "The issue is a policy change (do not throw when filters cannot be pushed up). The throwing code is in the extractor; the optimizer change protects the plan from partial edits that the new non-throwing path would allow.",
+ "confidence": "medium",
+ "notes": "Not a crash bug, so what counts as the defect is partly a matter of reading the issue as a bug."
+}

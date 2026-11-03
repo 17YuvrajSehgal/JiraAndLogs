@@ -1,0 +1,32 @@
+{
+ "id": "mongodb:SERVER-34125",
+ "project": "mongodb",
+ "issue_key": "SERVER-34125",
+ "annotator": "claude-sonnet-5-5",
+ "pass": 2,
+ "file_roles": [
+  {
+   "path": "src/mongo/db/storage/wiredtiger/wiredtiger_record_store.cpp",
+   "role": "causal",
+   "evidence": "reclaimOplog(opCtx) always called _kvEngine->getLastStableCheckpointTimestamp(); the fix adds an early branch using Timestamp::max() when !supportsRecoverToStableTimestamp(), matching the report that only RTT engines may call it."
+  },
+  {
+   "path": "src/mongo/db/storage/wiredtiger/wiredtiger_record_store.h",
+   "role": "refactor",
+   "evidence": "Only adds a doc comment on reclaimOplog(opCtx, persistedTimestamp)."
+  }
+ ],
+ "symptom_location": {
+  "file": "src/mongo/db/storage/wiredtiger/wiredtiger_record_store.cpp",
+  "function": "WiredTigerRecordStore::reclaimOplog",
+  "determinable": true
+ },
+ "log_location": {
+  "file": null,
+  "function": null,
+  "determinable": false
+ },
+ "relation": "same-location",
+ "rationale": "inMemory does not take checkpoints, yet oplog reclamation depended on the last stable checkpoint. The fix handles the non-RTT case in reclaimOplog.",
+ "confidence": "medium"
+}

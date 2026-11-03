@@ -1,0 +1,27 @@
+{
+ "id": "mariadb:MDEV-21063",
+ "project": "mariadb",
+ "issue_key": "MDEV-21063",
+ "annotator": "claude-sonnet-5-5",
+ "pass": 2,
+ "file_roles": [
+  {
+   "path": "sql/log_event_server.cc",
+   "role": "causal",
+   "evidence": "memcpy(&m_field_metadata[index], &info->m_metadata, size) replaced by int2store(...), because memcpy of an integer is endian dependent."
+  }
+ ],
+ "symptom_location": {
+  "file": "sql/log_event_server.cc",
+  "function": "Table_map_log_event::save_field_metadata",
+  "determinable": true
+ },
+ "log_location": {
+  "file": null,
+  "function": null,
+  "determinable": false
+ },
+ "relation": "same-location",
+ "rationale": "Tests fail only on big-endian PowerPC. The diff replaces an endian-dependent memcpy with int2store at the place the metadata is written.",
+ "confidence": "high"
+}

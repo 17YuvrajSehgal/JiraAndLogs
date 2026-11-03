@@ -28,6 +28,14 @@ def check(claim: str, ok: bool, detail: str = "") -> None:
     checks.append((claim, ok, detail))
 
 
+def evaluate_local(ranking: list, gold: list) -> dict:
+    """Acc@K over a stored ranking. Same rule as localize.evaluate, kept
+    local so this script depends on data files only."""
+    g = set(gold)
+    return {f"acc@{k}": float(bool(g.intersection(ranking[:k])))
+            for k in (1, 5, 10)}
+
+
 def r3(x: float) -> float:
     return round(x, 3)
 
@@ -84,21 +92,21 @@ def main() -> int:
     # ---- Sec. 5, Table 2 (file-level eval) ------------------------------------
     t2 = {  # system -> project -> (acc@5, mrr)
         "trace_grep":      {"kafka": (.658, .477), "mariadb": (.442, .327),
-                            "mongodb": (.354, .319), "qt": (.263, .226)},
+                            "mongodb": (.347, .314), "qt": (.263, .226)},
         "path_bm25":       {"kafka": (.481, .379), "mariadb": (.259, .198),
-                            "mongodb": (.370, .268), "qt": (.266, .195)},
+                            "mongodb": (.360, .259), "qt": (.266, .195)},
         "content_bm25":    {"kafka": (.708, .545), "mariadb": (.471, .330),
-                            "mongodb": (.644, .473), "qt": (.456, .350)},
+                            "mongodb": (.643, .472), "qt": (.456, .350)},
         "memory_bm25":     {"kafka": (.483, .361), "mariadb": (.461, .342),
-                            "mongodb": (.377, .296), "qt": (.278, .211)},
+                            "mongodb": (.380, .299), "qt": (.278, .211)},
         "fused_no_memory": {"kafka": (.767, .611), "mariadb": (.443, .342),
-                            "mongodb": (.530, .420), "qt": (.353, .292)},
+                            "mongodb": (.522, .410), "qt": (.353, .292)},
         "fused_ours":      {"kafka": (.790, .600), "mariadb": (.562, .408),
-                            "mongodb": (.629, .499), "qt": (.463, .351)},
+                            "mongodb": (.623, .496), "qt": (.463, .351)},
         "cond_no_memory":  {"kafka": (.792, .625), "mariadb": (.642, .479),
-                            "mongodb": (.693, .566), "qt": (.456, .350)},
+                            "mongodb": (.690, .562), "qt": (.456, .350)},
         "cond_ours":       {"kafka": (.794, .625), "mariadb": (.658, .479),
-                            "mongodb": (.700, .552), "qt": (.541, .408)},
+                            "mongodb": (.698, .550), "qt": (.541, .408)},
     }
     for sysname, per in t2.items():
         for p, (a5, mrr) in per.items():
@@ -107,10 +115,12 @@ def main() -> int:
                   r3(got["acc@5"]) == a5 and r3(got["mrr"]) == mrr,
                   f"got {r3(got['acc@5'])}/{r3(got['mrr'])}")
 
-    check("S5 eval sizes 476/1179/2533/320",
-          tuple(summ[p]["n_eval"] for p in P) == (476, 1179, 2533, 320))
+    # mongodb lost 99 eval instances to the test-only-gold exclusion
+    # (scripts/scored_set.py); the other three projects are untouched.
+    check("S5 eval sizes 476/1179/2434/320",
+          tuple(summ[p]["n_eval"] for p in P) == (476, 1179, 2434, 320))
     n_hard = sum(stat(p, "ours_vs_strongest", "acc@5", "hard")["n"] for p in P)
-    check("S5 2,318 hard eval instances", n_hard == 2318, str(n_hard))
+    check("S5 2,278 hard eval instances", n_hard == 2278, str(n_hard))
 
     # ---- Sec. 1/5 RQ1 deltas, CIs, significance -------------------------------
     # Per-project strongest baseline: S3 on kafka/mongodb/qt, BRTracer on mariadb.
@@ -124,7 +134,7 @@ def main() -> int:
         raise KeyError((project, comparison, metric, population))
 
     rq1 = {"kafka": (+0.086, +0.055, +0.118),
-           "mongodb": (+0.057, +0.046, +0.067), "qt": (+0.084, +0.053, +0.119)}
+           "mongodb": (+0.055, +0.044, +0.066), "qt": (+0.084, +0.053, +0.119)}
     for p, (d, lo, hi) in rq1.items():
         t = stat(p, "ours_vs_strongest", "acc@5", "overall")
         check(f"RQ1 {p} acc@5 {d:+.3f} [{lo:+.3f},{hi:+.3f}] SIG",
@@ -150,15 +160,17 @@ def main() -> int:
     # abstract/intro range: per-project strongest acc@5 deltas
     strongest_d = [stat(p, "ours_vs_strongest", "acc@5", "overall")["delta"]
                    for p in ("kafka", "mongodb", "qt")] + [tb["delta"]]
-    check("ABS acc@5 +0.057..+0.142",
-          r3(min(strongest_d)) == .057 and r3(max(strongest_d)) == .142,
+    check("ABS acc@5 +0.055..+0.142",
+          r3(min(strongest_d)) == .055 and r3(max(strongest_d)) == .142,
           f"{min(strongest_d):.3f}..{max(strongest_d):.3f}")
     grep_d = [stat(p, "ours_vs_tracegrep", "acc@5", "overall")["delta"] for p in P]
-    check("S5 grep margins +0.137..+0.347",
-          r3(min(grep_d)) == .137 and r3(max(grep_d)) == .347)
+    check("S5 grep margins +0.137..+0.351",
+          r3(min(grep_d)) == .137 and r3(max(grep_d)) == .351,
+          f"{min(grep_d):.3f}..{max(grep_d):.3f}")
     hard_ours = [summ[p]["eval_hard"]["cond_ours"]["acc@5"] for p in P]
-    check("S5 hard ours 0.361..0.544",
-          r3(min(hard_ours)) == .361 and r3(max(hard_ours)) == .544)
+    check("S5 hard ours 0.361..0.545",
+          r3(min(hard_ours)) == .361 and r3(max(hard_ours)) == .545,
+          f"{min(hard_ours):.3f}..{max(hard_ours):.3f}")
     check("S5 S1 zero on hard",
           all(summ[p]["eval_hard"]["trace_grep"]["acc@5"] == 0.0 for p in P))
 
@@ -166,7 +178,7 @@ def main() -> int:
     check("RQ2 mariadb-hard memory .442 beats content .406",
           r3(summ["mariadb"]["eval_hard"]["memory_bm25"]["acc@5"]) == .442
           and r3(summ["mariadb"]["eval_hard"]["content_bm25"]["acc@5"]) == .406)
-    for p, d in (("mariadb", .209), ("mongodb", .165), ("qt", .153)):
+    for p, d in (("mariadb", .209), ("mongodb", .166), ("qt", .153)):
         t = stat(p, "memory_unweighted", "acc@5", "hard")
         check(f"RQ2 {p} hard unweighted +{d} SIG",
               r3(t["delta"]) == d and t["significant"], f"got {t['delta']:+.3f}")
@@ -206,29 +218,40 @@ def main() -> int:
 
     # ---- Sec. 5 Table 3 + module claims ---------------------------------------
     t3 = {"kafka": (.830, .861, .998), "mariadb": (.771, .843, .983),
-          "mongodb": (.808, .841, .979), "qt": (.613, .669, .925)}
+          "mongodb": (.810, .842, .979), "qt": (.613, .669, .925)}
     for p, (c1, o1, o5) in t3.items():
         m = mods[p]["systems"]
         check(f"T3 {p} content@1={c1} ours@1={o1} ours@5={o5}",
               r3(m["content_bm25"]["acc@1"]) == c1
               and r3(m["cond_ours"]["acc@1"]) == o1
-              and r3(m["cond_ours"]["acc@5"]) == o5)
+              and r3(m["cond_ours"]["acc@5"]) == o5,
+              f"got {r3(m['content_bm25']['acc@1'])}/"
+              f"{r3(m['cond_ours']['acc@1'])}/{r3(m['cond_ours']['acc@5'])}")
     # module sanity baselines (reviewer W5): random/frequency vs ours
     mb = json.loads((RES / "module-baselines.json").read_text(encoding="utf-8"))
     mb_expected = {  # (median modules, random@5, frequent@1, frequent@5)
-        "kafka": (8, .610, .361, .763), "mariadb": (79, .076, .612, .905),
-        "mongodb": (36, .153, .756, .894), "qt": (116, .099, .334, .809)}
+        "kafka": (8, .610, .361, .763), "mariadb": (78, .077, .612, .905),
+        "mongodb": (35, .155, .765, .918), "qt": (116, .099, .334, .809)}
     for p, (med, r5, f1, f5) in mb_expected.items():
         check(f"T3 {p} module baselines med={med} rnd5={r5} frq1={f1} frq5={f5}",
               mb[p]["modules_per_snapshot"]["median"] == med
               and r3(mb[p]["random"]["acc@5"]) == r5
               and r3(mb[p]["most_frequent"]["acc@1"]) == f1
-              and r3(mb[p]["most_frequent"]["acc@5"]) == f5)
-    check("S1/S5 module Acc@1 67-86% beats frequency by +0.08..+0.50",
-          all(mods[p]["systems"]["cond_ours"]["acc@1"]
-              - mb[p]["most_frequent"]["acc@1"] >= 0.08 for p in P)
-          and 0.66 <= min(mods[p]["systems"]["cond_ours"]["acc@1"] for p in P)
-          and max(mods[p]["systems"]["cond_ours"]["acc@1"] for p in P) <= 0.87)
+              and r3(mb[p]["most_frequent"]["acc@5"]) == f5,
+              f"got {mb[p]['modules_per_snapshot']['median']}/"
+              f"{r3(mb[p]['random']['acc@5'])}/"
+              f"{r3(mb[p]['most_frequent']['acc@1'])}/"
+              f"{r3(mb[p]['most_frequent']['acc@5'])}")
+    # pinned to exact endpoints, not a range: a loose bound is how a wrong
+    # number reached a reviewer once already
+    mod_a1 = [mods[p]["systems"]["cond_ours"]["acc@1"] for p in P]
+    mod_gain = [mods[p]["systems"]["cond_ours"]["acc@1"]
+                - mb[p]["most_frequent"]["acc@1"] for p in P]
+    check("S1/S5 module Acc@1 0.669..0.861, beats frequency by +0.077..+0.500",
+          r3(min(mod_a1)) == .669 and r3(max(mod_a1)) == .861
+          and r3(min(mod_gain)) == .077 and r3(max(mod_gain)) == .500,
+          f"{min(mod_a1):.3f}..{max(mod_a1):.3f} "
+          f"gain {min(mod_gain):.3f}..{max(mod_gain):.3f}")
     check("S5 ours clears frequency baseline at K=5 on every project",
           all(mods[p]["systems"]["cond_ours"]["acc@5"]
               > mb[p]["most_frequent"]["acc@5"] for p in P))
@@ -238,11 +261,11 @@ def main() -> int:
              for p in P}
     t2b = {  # Table 2 baseline rows: system -> project -> (acc@5, mrr)
         "rvsm":             {"kafka": (.214, .192), "mariadb": (.239, .188),
-                             "mongodb": (.127, .097), "qt": (.122, .101)},
+                             "mongodb": (.124, .095), "qt": (.122, .101)},
         "buglocator_fw_a3": {"kafka": (.267, .199), "mariadb": (.300, .250),
-                             "mongodb": (.245, .152), "qt": (.166, .131)},
+                             "mongodb": (.245, .151), "qt": (.166, .131)},
         "brtracer_fw":      {"kafka": (.599, .479), "mariadb": (.516, .382),
-                             "mongodb": (.456, .380), "qt": (.316, .284)},
+                             "mongodb": (.449, .375), "qt": (.316, .284)},
     }
     for sysname, per in t2b.items():
         for p, (a5, mrr) in per.items():
@@ -257,15 +280,19 @@ def main() -> int:
                   > isumm[p]["eval"]["brtracer_fw"]["acc@5"]
                   for p in ("kafka", "mongodb", "qt")))
     brt_o = [istat(p, "ours_vs_brtracer", "acc@5", "overall") for p in P]
-    check("RQ1 vs brtracer +0.142..+0.245 all SIG",
+    check("RQ1 vs brtracer +0.142..+0.249 all SIG",
           r3(min(t["delta"] for t in brt_o)) == .142
-          and r3(max(t["delta"] for t in brt_o)) == .245
-          and all(t["significant"] for t in brt_o))
+          and r3(max(t["delta"] for t in brt_o)) == .249
+          and all(t["significant"] for t in brt_o),
+          f"{min(t['delta'] for t in brt_o):.3f}.."
+          f"{max(t['delta'] for t in brt_o):.3f}")
     brt_h = [istat(p, "ours_vs_brtracer", "acc@5", "hard") for p in P]
-    check("RQ1 vs brtracer hard +0.133..+0.371 all SIG",
+    check("RQ1 vs brtracer hard +0.133..+0.374 all SIG",
           r3(min(t["delta"] for t in brt_h)) == .133
-          and r3(max(t["delta"] for t in brt_h)) == .371
-          and all(t["significant"] for t in brt_h))
+          and r3(max(t["delta"] for t in brt_h)) == .374
+          and all(t["significant"] for t in brt_h),
+          f"{min(t['delta'] for t in brt_h):.3f}.."
+          f"{max(t['delta'] for t in brt_h):.3f}")
 
     leak = {"kafka": .044, "mariadb": .031, "mongodb": .058, "qt": .094}
     rels = []
@@ -296,7 +323,7 @@ def main() -> int:
               f"{'+' + format(d, '.3f') + ' SIG' if sig else 'ns'}", ok,
               f"got {t['delta']:+.3f} {'SIG' if t['significant'] else 'ns'}")
     for p, d in (("kafka", .160), ("mariadb", .122),
-                 ("mongodb", .109), ("qt", .059)):
+                 ("mongodb", .104), ("qt", .059)):
         t = istat(p, "s4_vs_simiscore", "acc@5", "overall")
         check(f"LEAK {p} S4 vs simiscore +{d} SIG",
               r3(t["delta"]) == d and t["significant"], f"got {t['delta']:+.3f}")
@@ -307,7 +334,7 @@ def main() -> int:
     t4 = {  # (eligible, acc@1, acc@5, acc@10, mrr, oracle)
         "kafka":   (.954, .240, .478, .600, .357, .856),
         "mariadb": (.919, .132, .274, .348, .199, .718),
-        "mongodb": (.944, .259, .467, .550, .355, .747),
+        "mongodb": (.944, .258, .464, .549, .353, .742),
         "qt":      (.868, .140, .288, .345, .211, .576)}
     for p, (el, a1, a5, a10, mrr, orc) in t4.items():
         f, e = fsum[p], fsum[p]["eval_eligible"]
@@ -421,9 +448,10 @@ def main() -> int:
               cites == hits, f"{cites}/{hits}")
         m_pct.append(men / hits)
         v_pct.append(vot / hits)
-    check("S6 mention 52-86%, voters 63-80%",
-          .515 <= min(m_pct) and max(m_pct) <= .86
-          and .625 <= min(v_pct) and max(v_pct) <= .80,
+    # pinned to exact endpoints, not a straddling range
+    check("S6 mention 50.7-86.0%, voters 63.0-79.6%",
+          r3(min(m_pct)) == .507 and r3(max(m_pct)) == .860
+          and r3(min(v_pct)) == .630 and r3(max(v_pct)) == .796,
           f"mention {min(m_pct):.3f}..{max(m_pct):.3f} "
           f"voters {min(v_pct):.3f}..{max(v_pct):.3f}")
 
@@ -695,8 +723,89 @@ def main() -> int:
         else:
             funnel_f += 1
     share = rank_f / max(rank_f + funnel_f, 1)
-    check("S4 72.9% of the plain model's misses are ranking failures",
-          round(share, 3) == .729, f"{share:.3f}")
+    check("S4 73.2% of the plain model's misses are ranking failures",
+          round(share, 3) == .732, f"{share:.3f}")
+
+    # ---- T2b: annotation agreement, and T4 under either rater ----------------
+    agr_p = ROOT / "industry-c7/data/causal-gold/agreement.json"
+    if agr_p.exists():
+        ag = json.loads(agr_p.read_text(encoding="utf-8"))
+        check("T2b raters are two different models, 151 instances, 349 files",
+              (ag["pass1_annotator"], ag["pass2_annotator"])
+              == ("claude-opus-5", "claude-sonnet-5-5")
+              and (ag["n_instances"], ag["n_files"]) == (151, 349),
+              f"{ag['pass1_annotator']}/{ag['pass2_annotator']} "
+              f"{ag['n_instances']}/{ag['n_files']}")
+        check("T2b role kappa 0.793 raw 87.4%",
+              r3(ag["role_6cat"]["kappa"]) == .793
+              and round(ag["role_6cat"]["raw"] * 100, 1) == 87.4,
+              f"{ag['role_6cat']['kappa']:.3f} / "
+              f"{ag['role_6cat']['raw']*100:.1f}%")
+        check("T2b causal-vs-not kappa 0.885 raw 94.3%",
+              r3(ag["causal_binary"]["kappa"]) == .885
+              and round(ag["causal_binary"]["raw"] * 100, 1) == 94.3,
+              f"{ag['causal_binary']['kappa']:.3f} / "
+              f"{ag['causal_binary']['raw']*100:.1f}%")
+        check("T2b relation kappa 0.504, the weakest field",
+              r3(ag["relation"]["kappa"]) == .504
+              and ag["relation"]["kappa"] < ag["causal_binary"]["kappa"],
+              f"{ag['relation']['kappa']:.3f}")
+        check("T2b identical causal set on 136 of 151 instances",
+              ag["instance_causal_set_identical"] == 136,
+              str(ag["instance_causal_set_identical"]))
+        check("T2b T3 is 49.0% under rater 1 and 50.1% under rater 2",
+              ag["t3_pass1"] == [171, 349] and ag["t3_pass2"] == [175, 349],
+              f"{ag['t3_pass1']} {ag['t3_pass2']}")
+        for tag, cu in (("rater 1", ag["curve_pass1"]),
+                        ("rater 2", ag["curve_pass2"])):
+            sh = [cu[k][0] / cu[k][1] for k in ("1", "2-3", "4-7", "8+")]
+            check(f"T2b curve falls monotonically with fix size, {tag}",
+                  all(sh[i] > sh[i + 1] for i in range(3)),
+                  " ".join(f"{x*100:.0f}%" for x in sh))
+    cg1 = RES / "causal-gold-scores.json"
+    cg2 = RES / "causal-gold-scores-pass2.json"
+    if cg1.exists() and cg2.exists():
+        s1 = json.loads(cg1.read_text(encoding="utf-8"))["systems"]
+        s2 = json.loads(cg2.read_text(encoding="utf-8"))["systems"]
+        gaps = {s: (s1[s]["gap"]["acc@5"]["delta"], s2[s]["gap"]["acc@5"]["delta"])
+                for s in ("cond_ours", "llm_rerank", "llm_twostage", "remember")}
+        check("T4 the fix-to-causal gap is the same under either rater "
+              "(within 0.2 points)",
+              all(abs(a - b) <= 0.002 for a, b in gaps.values()),
+              str({k: (round(a, 4), round(b, 4)) for k, (a, b) in gaps.items()}))
+        check("T4 REMEMBER has the smallest gap under both raters",
+              gaps["remember"][0] == min(a for a, _ in gaps.values())
+              and gaps["remember"][1] == min(b for _, b in gaps.values()))
+
+    # ---- Sec. 4 setup: the scored set -----------------------------------------
+    # Sec. IV-B claims the test-only-gold removal is conservative. Record the
+    # measurement, do not assert it: a previous draft said these instances
+    # were unanswerable, which the data contradicts.
+    ex1 = json.loads((ROOT / "industry-c7/data/benchmark"
+                      / "excluded-test-only-gold.json").read_text(encoding="utf-8"))
+    ex2 = json.loads((ROOT / "industry-c7/data/benchmark-v2"
+                      / "excluded-test-only-gold.json").read_text(encoding="utf-8"))
+    check("S4 scored set: 123 of 6,437 removed, 6,314 scored, all mongodb",
+          (ex1["n_excluded"], ex1["n_total"], ex1["n_scored"]) == (123, 6437, 6314)
+          and list(ex1["per_project"]) == ["mongodb"],
+          f"{ex1['n_excluded']}/{ex1['n_total']} {list(ex1['per_project'])}")
+    check("S2 benchmark-v2 scored set: 101 of 38,001 removed",
+          (ex2["n_excluded"], ex2["n_total"]) == (101, 38001),
+          f"{ex2['n_excluded']}/{ex2['n_total']}")
+    removed = ROOT / "industry-c7/data/results/removed-test-only-gold"
+    rm_m = [evaluate_local(r["rankings"]["cond_ours"], r["gold_files"])
+            for p in P for r in
+            (json.loads(l) for l in
+             (removed / f"{p}-instances.jsonl").open(encoding="utf-8"))]
+    rm_a5 = sum(m["acc@5"] for m in rm_m) / len(rm_m)
+    kept_a5 = (sum(summ[p]["eval"]["cond_ours"]["acc@5"] * summ[p]["n_eval"]
+                   for p in P) / sum(summ[p]["n_eval"] for p in P))
+    check("S4 removal is conservative: 74.0% on the 123 vs 68.6% on the kept",
+          len(rm_m) == 123 and round(rm_a5 * 100, 1) == 74.0
+          and round(kept_a5 * 100, 1) == 68.6,
+          f"n={len(rm_m)} {rm_a5*100:.1f}% vs {kept_a5*100:.1f}%")
+    check("S4 the removed instances were rankable, not unanswerable",
+          rm_a5 > kept_a5, f"{rm_a5:.3f} vs {kept_a5:.3f}")
 
     # ---- Sec. 5: the three validity checks ------------------------------------
     cp = json.loads((RES / "llm-cp-summary.json").read_text(encoding="utf-8"))
@@ -712,8 +821,8 @@ def main() -> int:
     prior = json.loads((RES / "file-prior-baseline.json")
                        .read_text(encoding="utf-8"))
     pv = [prior[p]["metrics"]["acc@5"] for p in P]
-    check("S5 frequency prior .034 to .181, above the probe",
-          r3(min(pv)) == .034 and r3(max(pv)) == .181
+    check("S5 frequency prior .036 to .181, above the probe",
+          r3(min(pv)) == .036 and r3(max(pv)) == .181
           and min(pv) > bv["key_title"]["all"]["acc@5"],
           f"{min(pv)}..{max(pv)}")
     sh_ids = [i for i in shuf if i in v2]

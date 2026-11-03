@@ -1,0 +1,33 @@
+{
+ "id": "mongodb:SERVER-26389",
+ "project": "mongodb",
+ "issue_key": "SERVER-26389",
+ "annotator": "claude-sonnet-5-5",
+ "pass": 2,
+ "file_roles": [
+  {
+   "path": "src/mongo/scripting/deadline_monitor.cpp",
+   "role": "preventive",
+   "evidence": "MONGO_EXPORT_SERVER_PARAMETER(scriptingEngineInterruptIntervalMS, int, 1000) changed to default 0, a configuration default change."
+  },
+  {
+   "path": "src/mongo/scripting/deadline_monitor.h",
+   "role": "refactor",
+   "evidence": "Adds checks interruptInterval.count() > 0 so that interval 0 means disabled; an adaptation forced by the new default."
+  }
+ ],
+ "symptom_location": {
+  "file": "src/mongo/scripting/deadline_monitor.h",
+  "function": "DeadlineMonitor loop",
+  "determinable": true
+ },
+ "log_location": {
+  "file": null,
+  "function": null,
+  "determinable": false
+ },
+ "relation": "config-build",
+ "rationale": "This is a request to change a default, not a defect report. The default change is a configuration change and the header change only makes the value 0 mean disabled. No code here was shown to be wrong logic.",
+ "confidence": "low",
+ "notes": "Not a bug report; the rubric has no clear role for a requested behaviour change. Alternative reading: cpp causal."
+}

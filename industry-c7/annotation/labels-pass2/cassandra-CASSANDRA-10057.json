@@ -1,0 +1,28 @@
+{
+ "id": "cassandra:CASSANDRA-10057",
+ "project": "cassandra",
+ "issue_key": "CASSANDRA-10057",
+ "annotator": "claude-sonnet-5-5",
+ "pass": 2,
+ "file_roles": [
+  {
+   "path": "src/java/org/apache/cassandra/repair/RepairMessageVerbHandler.java",
+   "role": "causal",
+   "evidence": "Old code threw RuntimeException on overlapping sstables without replying, so the initiator waited forever (the reported hang). Diff replaces the throw with a FAILURE_RESPONSE_PARAM reply plus cfs.clearSnapshot() and return."
+  }
+ ],
+ "symptom_location": {
+  "file": "src/java/org/apache/cassandra/repair/RepairMessageVerbHandler.java",
+  "function": "doVerb",
+  "determinable": true
+ },
+ "log_location": {
+  "file": "src/java/org/apache/cassandra/repair/RepairMessageVerbHandler.java",
+  "function": "doVerb",
+  "determinable": true
+ },
+ "relation": "same-location",
+ "rationale": "The handler owns the request-reply protocol and failed to answer the SNAPSHOT request on error, which is the hang. Fix also cleans up the snapshot it created. The overlap itself (original error) is not addressed, only its handling.",
+ "confidence": "medium",
+ "notes": "Commit says 'Fix repair hang'; the first error (multiple sessions over same sstables) is still raised as designed."
+}

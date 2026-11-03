@@ -1,0 +1,27 @@
+{
+ "id": "mariadb:MDEV-17354",
+ "project": "mariadb",
+ "issue_key": "MDEV-17354",
+ "annotator": "claude-sonnet-5-5",
+ "pass": 2,
+ "file_roles": [
+  {
+   "path": "sql/item.cc",
+   "role": "causal",
+   "evidence": "Item_direct_view_ref::derived_field_transformer_for_where returns '(*ref)' instead of 'this', so the ref wrapper is stripped; commit says the expression was pushed into the derived table incorrectly."
+  }
+ ],
+ "symptom_location": {
+  "file": "sql/sql_select.cc",
+  "function": "add_key_field",
+  "determinable": true
+ },
+ "log_location": {
+  "file": "sql/sql_select.cc",
+  "function": "add_key_field",
+  "determinable": true
+ },
+ "relation": "state-producer",
+ "rationale": "The crash is in add_key_field during optimization (Bitmap::merge), but the bad pushed-down expression is created by the transformer in item.cc. The one-line change there corrects it.",
+ "confidence": "high"
+}

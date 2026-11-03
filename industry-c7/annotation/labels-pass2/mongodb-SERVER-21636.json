@@ -1,0 +1,28 @@
+{
+ "id": "mongodb:SERVER-21636",
+ "project": "mongodb",
+ "issue_key": "SERVER-21636",
+ "annotator": "claude-sonnet-5-5",
+ "pass": 2,
+ "file_roles": [
+  {
+   "path": "src/mongo/db/dbcommands.cpp",
+   "role": "causal",
+   "evidence": "Diff changes the check to `!testingSnapshotBehaviorInIsolation && !replCoord->isV1ElectionProtocol()` so the protocol-v0 rejection no longer applies in the isolated snapshot test mode."
+  }
+ ],
+ "symptom_location": {
+  "file": "jstests/noPassthrough/read_majority.js",
+  "function": null,
+  "determinable": true
+ },
+ "log_location": {
+  "file": "jstests/noPassthrough/read_majority.js",
+  "function": null,
+  "determinable": true
+ },
+ "relation": "caller-callee",
+ "rationale": "The test fails because its readConcern majority operations are rejected in Command::run for protocol version 0 even in testing-in-isolation mode. The fix corrects that condition in the same function. The reporter guessed a different cause (killing blocked ops), which the diff does not support.",
+ "confidence": "medium",
+ "notes": "Symptom is in a JS test not in the packet; the link between assert.soon failure and the rejected command is inferred."
+}

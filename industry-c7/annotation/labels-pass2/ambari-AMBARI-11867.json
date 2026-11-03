@@ -1,0 +1,37 @@
+{
+ "id": "ambari:AMBARI-11867",
+ "project": "ambari",
+ "issue_key": "AMBARI-11867",
+ "annotator": "claude-sonnet-5-5",
+ "pass": 2,
+ "file_roles": [
+  {
+   "path": "ambari-server/src/main/java/org/apache/ambari/server/state/configgroup/ConfigGroup.java",
+   "role": "refactor",
+   "evidence": "Interface only: drops @Transactional from persist()/refresh() and declares persistHostMapping(), needed so AmbariContext can call the new method."
+  },
+  {
+   "path": "ambari-server/src/main/java/org/apache/ambari/server/state/configgroup/ConfigGroupImpl.java",
+   "role": "refactor",
+   "evidence": "Only change is 'void persistHostMapping()' becoming 'public void persistHostMapping()'; body untouched."
+  },
+  {
+   "path": "ambari-server/src/main/java/org/apache/ambari/server/topology/AmbariContext.java",
+   "role": "causal",
+   "evidence": "Replaces group.addHost(host); group.persist() with a containsKey check plus group.persistHostMapping(); persist() re-saved the whole group and hit the ConcurrentModificationException."
+  }
+ ],
+ "symptom_location": {
+  "file": "ambari-server/src/main/java/org/apache/ambari/server/state/configgroup/ConfigGroupImpl.java",
+  "function": "persistConfigMapping",
+  "determinable": true
+ },
+ "log_location": {
+  "file": "ambari-server/src/main/java/org/apache/ambari/server/state/configgroup/ConfigGroupImpl.java",
+  "function": "persistConfigMapping",
+  "determinable": true
+ },
+ "relation": "caller-callee",
+ "rationale": "The stack shows AmbariContext.addHostToExistingConfigGroups calling ConfigGroupImpl.persist(), which flushes and fails inside EclipseLink. The diff changes the caller to add only the missing host and persist only the host mapping. The other two files only expose that method.",
+ "confidence": "medium"
+}

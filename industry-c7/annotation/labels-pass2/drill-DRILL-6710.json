@@ -1,0 +1,67 @@
+{
+ "id": "drill:DRILL-6710",
+ "project": "drill",
+ "issue_key": "DRILL-6710",
+ "annotator": "claude-sonnet-5-5",
+ "pass": 2,
+ "file_roles": [
+  {
+   "path": "exec/java-exec/src/main/codegen/templates/Decimal/DecimalAggrTypeFunctions1.java",
+   "role": "preventive",
+   "evidence": "Adds DecimalUtility.checkValueOverflow(...) after add and drops the Math.min on scale in output(); an overflow guard, not the negative-scale source."
+  },
+  {
+   "path": "exec/java-exec/src/main/codegen/templates/Decimal/DecimalAggrTypeFunctions3.java",
+   "role": "preventive",
+   "evidence": "Only adds checkValueOverflow(result, out.precision, out.scale) before serializing; a guard."
+  },
+  {
+   "path": "exec/java-exec/src/main/codegen/templates/Decimal/DecimalFunctions.java",
+   "role": "causal",
+   "evidence": "result.scale = right.value changed to Math.max(right.value, 0) in the round/truncate eval(), which could emit a negative scale; also adds an overflow check."
+  },
+  {
+   "path": "exec/java-exec/src/main/java/org/apache/drill/exec/expr/fn/output/DecimalReturnTypeInference.java",
+   "role": "causal",
+   "evidence": "setScale(scale) changed to setScale(Math.max(scale, 0)) in the return type, which clamps the negative scale."
+  },
+  {
+   "path": "exec/java-exec/src/main/java/org/apache/drill/exec/planner/types/decimal/DecimalScalePrecisionAddFunction.java",
+   "role": "refactor",
+   "evidence": "Only renames the call checkPrecisionRange() to adjustScaleAndPrecision(); the clamp logic lives in the base class."
+  },
+  {
+   "path": "exec/java-exec/src/main/java/org/apache/drill/exec/planner/types/decimal/DecimalScalePrecisionDivideFunction.java",
+   "role": "causal",
+   "evidence": "Adds adjustScaleAndPrecision() at the end of computeScalePrecision; divide had no range or negative scale handling before."
+  },
+  {
+   "path": "exec/java-exec/src/main/java/org/apache/drill/exec/planner/types/decimal/DecimalScalePrecisionModFunction.java",
+   "role": "unclear",
+   "evidence": "outputPrecision changed from Math.max to Math.min against input precision, while the comment still says 'at least'. Link to negative scale is not shown; the JIRA discussion or a failing mod test would settle it."
+  },
+  {
+   "path": "exec/java-exec/src/main/java/org/apache/drill/exec/planner/types/decimal/DecimalScalePrecisionMulFunction.java",
+   "role": "refactor",
+   "evidence": "Only renames checkPrecisionRange() to adjustScaleAndPrecision() and removes a blank line."
+  },
+  {
+   "path": "exec/java-exec/src/main/java/org/apache/drill/exec/planner/types/decimal/DrillBaseComputeScalePrecision.java",
+   "role": "causal",
+   "evidence": "New 'if (outputScale < 0) { logger.warn(...); outputScale = 0; }' in adjustScaleAndPrecision(), the place that computed a negative scale."
+  }
+ ],
+ "symptom_location": {
+  "file": "exec/java-exec/src/main/java/org/apache/drill/exec/planner/types/decimal/DrillBaseComputeScalePrecision.java",
+  "function": "adjustScaleAndPrecision",
+  "determinable": true
+ },
+ "log_location": {
+  "file": null,
+  "function": null,
+  "determinable": false
+ },
+ "relation": "state-producer",
+ "rationale": "Adding a 38-digit and an 18-digit decimal gave a result type with a negative scale, and the ODBC client rejected it with 'Scale can't be less than zero'. The scale computation in the planner types and return type inference is where the bad value was produced, so those files are causal. The overflow checks in the aggregate templates are defensive additions. The error text came from the MapR ODBC driver, outside the repo.",
+ "confidence": "medium"
+}

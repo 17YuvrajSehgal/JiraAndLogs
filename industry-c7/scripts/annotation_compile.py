@@ -25,6 +25,7 @@ from __future__ import annotations
 import glob
 import json
 import os
+import sys
 from collections import Counter, defaultdict
 from datetime import date
 from pathlib import Path
@@ -59,15 +60,28 @@ def cohen_kappa(a: list[str], b: list[str]) -> float:
 
 
 def main() -> int:
+    # T2b compiles a second causal-gold from the blind pass-2 labels, so T4
+    # can be re-scored under the other rater and we can say whether the
+    # conclusions depend on which rater you believe.
+    labels_dir = LABELS
+    out_dir = OUT
+    if "--pass2" in sys.argv:
+        labels_dir = ANN / "labels-pass2"
+        out_dir = OUT.parent / "causal-gold-pass2"
+        out_dir.mkdir(parents=True, exist_ok=True)
+    globals()["OUT"] = out_dir
+
     v2 = load_v2()
     by_pass: dict[tuple, dict] = defaultdict(dict)
-    for f in sorted(glob.glob(str(LABELS / "*.json"))):
+    for f in sorted(glob.glob(str(labels_dir / "*.json"))):
         lab = json.loads(Path(f).read_text(encoding="utf-8"))
         by_pass[(lab["annotator"], lab["pass"])][lab["id"]] = lab
 
-    primary = by_pass.get((MODEL_ANNOTATOR, 1), {})
+    annot, passno = ((MODEL_ANNOTATOR, 1) if labels_dir == LABELS
+                     else ("claude-sonnet-5-5", 2))
+    primary = by_pass.get((annot, passno), {})
     if not primary:
-        print(f"no primary labels (annotator={MODEL_ANNOTATOR}, pass=1)")
+        print(f"no primary labels (annotator={annot}, pass={passno})")
         return 2
 
     OUT.mkdir(parents=True, exist_ok=True)
@@ -116,7 +130,9 @@ def main() -> int:
     # --- agreement between passes -----------------------------------------
     agreement = {}
     for (ann, ps), labs in sorted(by_pass.items()):
-        if (ann, ps) == (MODEL_ANNOTATOR, 1):
+        # skip the pass we are compiling FROM: comparing it with itself
+        # produced a bogus kappa of 1.0 in the pass-2 datasheet
+        if (ann, ps) == (annot, passno):
             continue
         shared = sorted(set(labs) & set(primary))
         if not shared:
@@ -155,7 +171,7 @@ def main() -> int:
         "relation_distribution": dict(rel.most_common()),
         "confidence_distribution": dict(conf),
         "annotation": {
-            "primary_annotator": MODEL_ANNOTATOR,
+            "primary_annotator": annot,
             "method": "model-assisted, pre-registered rubric "
                       "(annotation/RUBRIC.md), blind to all system output",
             "human_annotation": False,

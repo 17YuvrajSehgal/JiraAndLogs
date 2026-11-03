@@ -1,0 +1,27 @@
+{
+ "id": "mariadb:MDEV-11817",
+ "project": "mariadb",
+ "issue_key": "MDEV-11817",
+ "annotator": "claude-sonnet-5-5",
+ "pass": 2,
+ "file_roles": [
+  {
+   "path": "sql/handler.cc",
+   "role": "causal",
+   "evidence": "check_wsrep_max_ws_rows() moved out of ha_write_row/ha_update_row/ha_delete_row into binlog_log_row after logging, so rows not written to the binlog (ALTER temp table copies) no longer count."
+  }
+ ],
+ "symptom_location": {
+  "file": "sql/handler.cc",
+  "function": "handler::ha_write_row",
+  "determinable": true
+ },
+ "log_location": {
+  "file": null,
+  "function": null,
+  "determinable": false
+ },
+ "relation": "same-location",
+ "rationale": "ALTER copies rows into a temp table and wrongly counted them against wsrep_max_ws_rows, failing on one node only. The diff changes where the counter is incremented so only binlogged rows count.",
+ "confidence": "high"
+}

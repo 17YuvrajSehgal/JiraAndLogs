@@ -1,0 +1,27 @@
+{
+ "id": "mariadb:MDEV-17725",
+ "project": "mariadb",
+ "issue_key": "MDEV-17725",
+ "annotator": "claude-sonnet-5-5",
+ "pass": 2,
+ "file_roles": [
+  {
+   "path": "sql/sql_table.cc",
+   "role": "causal",
+   "evidence": "In copy_data_between_tables, abort_on_warning is cleared around the push_warning('ORDER BY ignored ...') and restored after; with it set the warning became an error and my_ok then hit the Diagnostics_area assertion."
+  }
+ ],
+ "symptom_location": {
+  "file": "sql/sql_error.cc",
+  "function": "Diagnostics_area::set_ok_status",
+  "determinable": true
+ },
+ "log_location": {
+  "file": "sql/sql_error.cc",
+  "function": "Diagnostics_area::set_ok_status",
+  "determinable": true
+ },
+ "relation": "state-producer",
+ "rationale": "A warning was escalated to an error under abort_on_warning, setting the diagnostics area before mysql_alter_table later called my_ok. The fix prevents that escalation at the push_warning site.",
+ "confidence": "medium"
+}

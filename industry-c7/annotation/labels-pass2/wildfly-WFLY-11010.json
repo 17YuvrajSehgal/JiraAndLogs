@@ -1,0 +1,38 @@
+{
+ "id": "wildfly:WFLY-11010",
+ "project": "wildfly",
+ "issue_key": "WFLY-11010",
+ "annotator": "claude-sonnet-5-5",
+ "pass": 2,
+ "file_roles": [
+  {
+   "path": "jpa/hibernate5_3/src/main/java/org/jboss/as/jpa/hibernate5/HibernatePersistenceProviderAdaptor.java",
+   "role": "unclear",
+   "evidence": "Adds UNSPECIFIED shared cache mode to the disabled condition and sets NONE; the report does not mention this behaviour."
+  },
+  {
+   "path": "jpa/hibernate5_3/src/main/java/org/jboss/as/jpa/hibernate5/service/ServiceContributorImpl.java",
+   "role": "causal",
+   "evidence": "contribute() now skips WildFlyCustomJtaPlatformInitiator when hibernate.transaction.jta.platform is set, and skips the region factory initiator when factory_class contains ehcache."
+  },
+  {
+   "path": "jpa/hibernate5_3/src/main/java/org/jboss/as/jpa/hibernate5/service/WildFlyCustomRegionFactoryInitiator.java",
+   "role": "refactor",
+   "evidence": "Only adds JPA_LOGGER.tracef statements and a regionFactory local; no behaviour change."
+  }
+ ],
+ "symptom_location": {
+  "file": "jpa/hibernate5_3/src/main/java/org/jboss/as/jpa/hibernate5/service/ServiceContributorImpl.java",
+  "function": "contribute",
+  "determinable": true
+ },
+ "log_location": {
+  "file": null,
+  "function": null,
+  "determinable": false
+ },
+ "relation": "same-location",
+ "rationale": "This is an enhancement request, not a crash. The missing detection of ehcache and a configured JTA platform is in ServiceContributorImpl, which the diff changes. The adaptor change is outside what the report asks for, and the initiator change is trace logging.",
+ "confidence": "low",
+ "notes": "Not a defect report. An associated JIRA comment about UNSPECIFIED handling would settle the adaptor file."
+}

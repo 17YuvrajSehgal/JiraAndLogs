@@ -1,0 +1,28 @@
+{
+ "id": "mariadb:MDEV-18163",
+ "project": "mariadb",
+ "issue_key": "MDEV-18163",
+ "annotator": "claude-sonnet-5-5",
+ "pass": 2,
+ "file_roles": [
+  {
+   "path": "sql/sql_yacc.yy",
+   "role": "causal",
+   "evidence": "ALTER ... SET DEFAULT rule now calls check_expression($6, $3.str, VCOL_DEFAULT) and aborts, matching the check CREATE TABLE already had."
+  }
+ ],
+ "symptom_location": {
+  "file": "sql/handler.cc",
+  "function": "handler::ha_rnd_next",
+  "determinable": true
+ },
+ "log_location": {
+  "file": "sql/handler.cc",
+  "function": "handler::ha_rnd_next",
+  "determinable": true
+ },
+ "relation": "state-producer",
+ "rationale": "The assertion fires while a subquery default is evaluated in make_empty_rec. The parser accepted a subselect default for ALTER without the validation CREATE had. The diff adds the missing check at the parse rule.",
+ "confidence": "medium",
+ "notes": "One could argue the parser check is preventive, since the executor also mishandles subqueries; I read the missing validation as the defect."
+}

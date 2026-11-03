@@ -1,0 +1,38 @@
+{
+ "id": "mongodb:SERVER-45007",
+ "project": "mongodb",
+ "issue_key": "SERVER-45007",
+ "annotator": "claude-sonnet-5-5",
+ "pass": 2,
+ "file_roles": [
+  {
+   "path": "src/mongo/db/commands/sleep_command.cpp",
+   "role": "refactor",
+   "evidence": "Call site changed from pbwm.lock(MODE_X) to pbwm.lock(nullptr, MODE_X) after the one-arg overload was removed."
+  },
+  {
+   "path": "src/mongo/db/concurrency/d_concurrency.cpp",
+   "role": "causal",
+   "evidence": "GlobalLock constructor called `_pbwm.lock(opCtx, MODE_IS)` ignoring the deadline; diff passes `deadline`, and ResourceLock::lock now forwards it to _locker->lock(...)."
+  },
+  {
+   "path": "src/mongo/db/concurrency/d_concurrency.h",
+   "role": "refactor",
+   "evidence": "Declaration gains `Date_t deadline = Date_t::max()` and drops the uninterruptible overload; interface change enabling the .cpp fix."
+  }
+ ],
+ "symptom_location": {
+  "file": "src/mongo/db/concurrency/d_concurrency.cpp",
+  "function": "GlobalLock::GlobalLock",
+  "determinable": true
+ },
+ "log_location": {
+  "file": null,
+  "function": null,
+  "determinable": false
+ },
+ "relation": "caller-callee",
+ "rationale": "The report says the PBWM acquisition in the GlobalLock constructor ignores the passed deadline and can hang. The .cpp changes pass the deadline through GlobalLock and ResourceLock::lock. The header and sleep command change only to match the new signature.",
+ "confidence": "medium",
+ "notes": "Header could be argued causal because ResourceLock::lock had no deadline parameter; I kept it as interface plumbing."
+}

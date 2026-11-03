@@ -1,0 +1,28 @@
+{
+ "id": "kafka:KAFKA-8803",
+ "project": "kafka",
+ "issue_key": "KAFKA-8803",
+ "annotator": "claude-sonnet-5-5",
+ "pass": 2,
+ "file_roles": [
+  {
+   "path": "core/src/main/scala/kafka/coordinator/transaction/TransactionMetadata.scala",
+   "role": "causal",
+   "evidence": "completeTransitionTo for Ongoing threw on 'txnStartTimestamp > transitMetadata.txnStartTimestamp'; diff removes that clause because the clock can go backwards."
+  }
+ ],
+ "symptom_location": {
+  "file": "core/src/main/scala/kafka/coordinator/transaction/TransactionMetadata.scala",
+  "function": "completeTransitionTo",
+  "determinable": true
+ },
+ "log_location": {
+  "file": "org.apache.kafka.streams.processor.internals.StreamTask",
+  "function": null,
+  "determinable": false
+ },
+ "relation": "same-location",
+ "rationale": "The commit message explains the check wrongly assumes timestamps never decrease, and the diff removes it. The user-visible log is a client TimeoutException far from the broker code.",
+ "confidence": "medium",
+ "notes": "The link between the reporter's log and this bug is only in the commit message, not in the report."
+}

@@ -97,7 +97,9 @@ Memory pool            & 4{,}033 & 6{,}014 & 19{,}820 & 2{,}315 \\
 \end{table}
 
 \Cref{tab:datasheet} reports the yield of every condition. The final
-benchmark holds 6{,}437 instances. The largest loss differs by project
+benchmark holds 6{,}437 instances, of which 6{,}314 are scored; the
+123 we leave unscored, and why, are described in
+\cref{sec:setup:populations}. The largest loss differs by project
 and is informative in itself. Qt loses most instances at the linkage
 step, because its tracker covers about forty repositories and we mine
 only \texttt{qtbase}. MongoDB loses most at the source-file step, because

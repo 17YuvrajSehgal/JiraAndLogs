@@ -22,9 +22,9 @@ because it can only reorder files the two already produced. Closing it
 needs a method that can look for evidence rather than rank a fixed list.
 
 A second measurement says what that method should look for. We
-decomposed the plain model's misses on the evaluation split. In $72.9\%$
+decomposed the plain model's misses on the evaluation split. In $73.2\%$
 of them the model had already selected the directory containing the
-faulty file and then chose the wrong file from it. Only $27.1\%$ were
+faulty file and then chose the wrong file from it. Only $26.8\%$ were
 failures to search in the right place at all. The reason is structural:
 prompted with a file tree, the model sees path names and never a line of
 code. The useful addition is therefore evidence about candidates, not

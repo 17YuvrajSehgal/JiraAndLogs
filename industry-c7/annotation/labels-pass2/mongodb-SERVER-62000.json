@@ -1,0 +1,32 @@
+{
+ "id": "mongodb:SERVER-62000",
+ "project": "mongodb",
+ "issue_key": "SERVER-62000",
+ "annotator": "claude-sonnet-5-5",
+ "pass": 2,
+ "file_roles": [
+  {
+   "path": "src/mongo/db/catalog/coll_mod.cpp",
+   "role": "causal",
+   "evidence": "Commit a4387740: 'if (cmrIndex->idx->unique()) indexObjForOplog = indexObjForOplog.removeField(kUniqueFieldName)' so a no-op unique request is dropped from the oplog entry; commit 5e5230ee is a parsing refactor to the CollModIndex getters in the same file."
+  },
+  {
+   "path": "src/mongo/db/catalog/coll_mod_index.cpp",
+   "role": "refactor",
+   "evidence": "The silent 'if (idx->infoObj().getField(\"unique\").trueValue()) return;' becomes invariant(!idx->unique()), because parseCollModRequest now filters this case; adaptation to the real fix."
+  }
+ ],
+ "symptom_location": {
+  "file": "src/mongo/db/catalog/coll_mod.cpp",
+  "function": "parseCollModRequest",
+  "determinable": true
+ },
+ "log_location": {
+  "file": null,
+  "function": null,
+  "determinable": false
+ },
+ "relation": "state-producer",
+ "rationale": "The primary wrote {collMod, index:{name, unique:false}} to the oplog for a unique request on an already unique index, and the secondary failed applying it. The oplog entry is built in parseCollModRequest, where the diff now strips the no-op unique field, so that file is causal. The index file only swaps a silent return for an invariant that depends on the new filtering. The symptom is on the secondary and no log line is in the report.",
+ "confidence": "medium"
+}

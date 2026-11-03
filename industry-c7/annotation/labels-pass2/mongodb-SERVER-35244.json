@@ -1,0 +1,27 @@
+{
+ "id": "mongodb:SERVER-35244",
+ "project": "mongodb",
+ "issue_key": "SERVER-35244",
+ "annotator": "claude-sonnet-5-5",
+ "pass": 2,
+ "file_roles": [
+  {
+   "path": "src/mongo/db/session_catalog.cpp",
+   "role": "causal",
+   "evidence": "The uassert(40528, 'Direct writes against config.transactions cannot be performed...', !opCtx->getLogicalSessionId()) was unconditional; diff wraps it in 'if (isReplSet)' using getReplicationMode() == modeReplSet."
+  }
+ ],
+ "symptom_location": {
+  "file": "src/mongo/db/session_catalog.cpp",
+  "function": "SessionCatalog::invalidateSessions",
+  "determinable": true
+ },
+ "log_location": {
+  "file": "src/mongo/db/session_catalog.cpp",
+  "function": "SessionCatalog::invalidateSessions",
+  "determinable": true
+ },
+ "relation": "same-location",
+ "rationale": "Dropping the config db on a standalone failed with error 40528 from the uassert in invalidateSessions. The diff limits that assertion to replica set mode, so the check itself applied too broadly and the owner of the check is the file that changed. The commit message gives no explanation, so scope of intent is read from the diff only.",
+ "confidence": "medium"
+}

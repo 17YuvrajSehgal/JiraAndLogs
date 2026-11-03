@@ -1,0 +1,43 @@
+{
+ "id": "cassandra:CASSANDRA-16095",
+ "project": "cassandra",
+ "issue_key": "CASSANDRA-16095",
+ "annotator": "claude-sonnet-5-5",
+ "pass": 2,
+ "file_roles": [
+  {
+   "path": "src/java/org/apache/cassandra/config/CassandraRelevantProperties.java",
+   "role": "refactor",
+   "evidence": "Adds MBEAN_REGISTRATION_CLASS property and getString/setString helpers; configuration plumbing."
+  },
+  {
+   "path": "src/java/org/apache/cassandra/db/ColumnFamilyStore.java",
+   "role": "refactor",
+   "evidence": "Extracts getTableMBeanName and getColumnFamilieMBeanName static helpers from inline String.format; same names."
+  },
+  {
+   "path": "src/java/org/apache/cassandra/metrics/TableMetrics.java",
+   "role": "causal",
+   "evidence": "'public final static Set<ReleasableMetric> all' became 'private final Set<ReleasableMetric> all', so one table's release no longer releases every table's metrics."
+  },
+  {
+   "path": "src/java/org/apache/cassandra/utils/MBeanWrapper.java",
+   "role": "refactor",
+   "evidence": "MBeanWrapper gets a pluggable implementation class via MBEAN_REGISTRATION_CLASS and default string-name methods; no change to registration logic."
+  }
+ ],
+ "symptom_location": {
+  "file": null,
+  "function": null,
+  "determinable": false
+ },
+ "log_location": {
+  "file": null,
+  "function": null,
+  "determinable": false
+ },
+ "relation": "state-producer",
+ "rationale": "nodetool tablestats fails with InstanceNotFoundException because a table cleanup removed metrics of other tables. The shared static set in TableMetrics is the defect and is made per instance. The other files add test hooks and helpers. Other renames in TableMetrics are cosmetic.",
+ "confidence": "medium",
+ "notes": "The stack trace is a JMX client error; origin file not in packet. Role of the three non-TableMetrics files inferred from the diff, which looks like test support."
+}

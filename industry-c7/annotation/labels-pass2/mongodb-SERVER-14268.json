@@ -1,0 +1,68 @@
+{
+ "id": "mongodb:SERVER-14268",
+ "project": "mongodb",
+ "issue_key": "SERVER-14268",
+ "annotator": "claude-sonnet-5-5",
+ "pass": 2,
+ "file_roles": [
+  {
+   "path": "src/mongo/db/catalog/collection_cursor_cache.cpp",
+   "role": "refactor",
+   "evidence": "eraseCursorGlobalIfAuthorized takes `const long long* ids` now; signature adaptation plus line wrapping."
+  },
+  {
+   "path": "src/mongo/db/catalog/collection_cursor_cache.h",
+   "role": "refactor",
+   "evidence": "Header declaration changed to `const long long* ids`; adaptation to new getArray() return type."
+  },
+  {
+   "path": "src/mongo/db/dbmessage.cpp",
+   "role": "causal",
+   "evidence": "New bounds-checked DbMessage: ns read with strnlen limit and uassert 18633, checkRead<T> uassert 18634 'Not enough data to read' on every read; replaces unchecked reads."
+  },
+  {
+   "path": "src/mongo/db/dbmessage.h",
+   "role": "causal",
+   "evidence": "Removes inline unchecked accessors (pullInt via raw pointer, getInt, getInt64, getOID, afterNS using strlen) and replaces them with checked methods."
+  },
+  {
+   "path": "src/mongo/db/instance.cpp",
+   "role": "causal",
+   "evidence": "receivedKillCursors read n and a long long array via raw `x++` pointer arithmetic with no length check; diff uses dbmessage.pullInt() and getArray(n) with checks; ns read goes through DbMessage."
+  },
+  {
+   "path": "src/mongo/s/cursors.cpp",
+   "role": "causal",
+   "evidence": "gotKillCursors read cursor ids by casting message data with no size check; diff adds `massert(18632, bad kill cursors size ...)` and uses dbmessage.getArray(n)."
+  },
+  {
+   "path": "src/mongo/s/request.cpp",
+   "role": "refactor",
+   "evidence": "Removes verify(_d.getns()) and uses _d.messageShouldHaveNs() in reset(); adaptation to the new DbMessage API."
+  },
+  {
+   "path": "src/mongo/tools/sniffer.cpp",
+   "role": "refactor",
+   "evidence": "Uses d.pullInt() and by-value pullInt64() in place of raw casts; API adaptation."
+  },
+  {
+   "path": "src/mongo/util/net/message.h",
+   "role": "preventive",
+   "evidence": "MsgData becomes a class with `_data` private and friend access; blocks direct raw access to message bytes, hardening without being the parse logic."
+  }
+ ],
+ "symptom_location": {
+  "file": "src/mongo/db/instance.cpp",
+  "function": "receivedKillCursors",
+  "determinable": true
+ },
+ "log_location": {
+  "file": null,
+  "function": null,
+  "determinable": false
+ },
+ "relation": "same-location",
+ "rationale": "The report has no code, only that a crafted message can leak heap memory. The diff shows several message-parsing sites reading past the buffer without length checks (DbMessage, receivedKillCursors, gotKillCursors), and these are replaced with bounds-checked reads. Other files adapt to the new API.",
+ "confidence": "medium",
+ "notes": "Issue text gives no location, so symptom location is inferred from the diff."
+}

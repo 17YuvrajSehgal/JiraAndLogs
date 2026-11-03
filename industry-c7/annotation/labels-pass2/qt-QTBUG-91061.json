@@ -1,0 +1,43 @@
+{
+ "id": "qt:QTBUG-91061",
+ "project": "qt",
+ "issue_key": "QTBUG-91061",
+ "annotator": "claude-sonnet-5-5",
+ "pass": 2,
+ "file_roles": [
+  {
+   "path": "src/network/kernel/qnetworkinformation.cpp",
+   "role": "refactor",
+   "evidence": "Direct access to backend->m_reachability replaced by reachability() accessor and unused m_isOnline member removed; no link-related logic."
+  },
+  {
+   "path": "src/network/kernel/qnetworkinformation.h",
+   "role": "refactor",
+   "evidence": "~QNetworkInformation() marked override; style only."
+  },
+  {
+   "path": "src/network/kernel/qnetworkinformation_p.h",
+   "role": "refactor",
+   "evidence": "Adds reachability() accessor and override on destructor; no effect on plugin linking."
+  },
+  {
+   "path": "src/plugins/networkinformationbackends/networkmanager/qnetworkmanagernetworkinformationbackend.cpp",
+   "role": "refactor",
+   "evidence": "Adds Q_DISABLE_COPY_MOVE to backend and factory; no effect on the undefined symbol."
+  }
+ ],
+ "symptom_location": {
+  "file": null,
+  "function": null,
+  "determinable": false
+ },
+ "log_location": {
+  "file": null,
+  "function": null,
+  "determinable": false
+ },
+ "relation": "config-build",
+ "rationale": "The link error is a missing static plugin import symbol. The commit message says the fix is CLASS_NAME in the plugin CMakeLists files, which are not in the gold set. All four gold files carry only cleanup from the same commit.",
+ "confidence": "medium",
+ "notes": "The real fix is in CMake files outside the gold set; evidence for that is the commit message only."
+}

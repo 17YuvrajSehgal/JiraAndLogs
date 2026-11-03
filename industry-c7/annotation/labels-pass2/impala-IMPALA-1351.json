@@ -1,0 +1,37 @@
+{
+ "id": "impala:IMPALA-1351",
+ "project": "impala",
+ "issue_key": "IMPALA-1351",
+ "annotator": "claude-sonnet-5-5",
+ "pass": 2,
+ "file_roles": [
+  {
+   "path": "be/src/exec/partitioned-hash-join-node-ir.cc",
+   "role": "causal",
+   "evidence": "In ProcessProbeBatch, each 'return -1' after a failed AddRow/AppendRow now first sets status_ from the stream's status(); GetNext then did DCHECK(!status_.ok()) on rows_added<0."
+  },
+  {
+   "path": "be/src/exec/partitioned-hash-join-node.cc",
+   "role": "unclear",
+   "evidence": "Mixes a NAAJ stream switch to IO-sized buffers (Partition(..., false)), a moved DCHECK and an eos rewrite. Cannot tell if the buffer change is what made AddRow fail; the AddRow error text or a failing-query status would settle it."
+  },
+  {
+   "path": "be/src/exec/partitioned-hash-join-node.h",
+   "role": "refactor",
+   "evidence": "Only adds the use_small_buffers parameter to the Partition constructor, required by the .cc change."
+  }
+ ],
+ "symptom_location": {
+  "file": "be/src/exec/partitioned-hash-join-node.cc",
+  "function": "GetNext",
+  "determinable": true
+ },
+ "log_location": {
+  "file": "be/src/exec/partitioned-hash-join-node.cc",
+  "function": "GetNext",
+  "determinable": true
+ },
+ "relation": "state-producer",
+ "rationale": "The abort is the DCHECK(!status_.ok()) in GetNext, reached because ProcessProbeBatch returned -1 without setting status_. The ir.cc diff sets status_ at those returns, which is the wrong logic. Why AddRow failed in the first place is not shown.",
+ "confidence": "medium"
+}

@@ -1,0 +1,32 @@
+{
+ "id": "kafka:KAFKA-4893",
+ "project": "kafka",
+ "issue_key": "KAFKA-4893",
+ "annotator": "claude-sonnet-5-5",
+ "pass": 2,
+ "file_roles": [
+  {
+   "path": "core/src/main/scala/kafka/log/Log.scala",
+   "role": "causal",
+   "evidence": "logDeleteDirName now truncates the topic prefix so the whole name stays <=255 chars (`prefixLength = Math.min(topic.size, 255 - suffix.size)`); before, the -delete name could exceed the limit."
+  },
+  {
+   "path": "core/src/main/scala/kafka/server/ReplicaManager.scala",
+   "role": "preventive",
+   "evidence": "alterReplicaLogDirs gets a new check throwing InvalidTopicException when logFutureDirName(...).size > 255, rejecting the request instead of fixing name generation."
+  }
+ ],
+ "symptom_location": {
+  "file": "core/src/main/scala/kafka/log/LogManager.scala",
+  "function": "asyncDelete",
+  "determinable": true
+ },
+ "log_location": {
+  "file": "core/src/main/scala/kafka/log/LogManager.scala",
+  "function": "asyncDelete",
+  "determinable": true
+ },
+ "relation": "state-producer",
+ "rationale": "The rename failure surfaces in LogManager.asyncDelete, but the too-long directory name is produced by Log.logDeleteDirName, which is corrected. ReplicaManager adds a validation for the similar future-dir case, which stops a related failure without fixing name generation.",
+ "confidence": "medium"
+}

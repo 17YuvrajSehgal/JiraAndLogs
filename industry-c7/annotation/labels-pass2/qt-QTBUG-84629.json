@@ -1,0 +1,27 @@
+{
+ "id": "qt:QTBUG-84629",
+ "project": "qt",
+ "issue_key": "QTBUG-84629",
+ "annotator": "claude-sonnet-5-5",
+ "pass": 2,
+ "file_roles": [
+  {
+   "path": "src/platformsupport/fontdatabases/windows/qwindowsfontenginedirectwrite.cpp",
+   "role": "causal",
+   "evidence": "alphaMapBoundingBox now returns glyph_metrics_t() when rect.left == rect.right || rect.top == rect.bottom; before it returned margin-only metrics for empty glyphs so the glyph cache requested an invalid image."
+  }
+ ],
+ "symptom_location": {
+  "file": "src/gui/painting/qpainter.cpp",
+  "function": "QPainter::begin",
+  "determinable": true
+ },
+ "log_location": {
+  "file": "src/gui/painting/qpainter.cpp",
+  "function": "QPainter::begin",
+  "determinable": true
+ },
+ "relation": "caller-callee",
+ "rationale": "The font engine reported a non-empty bounding box for an empty glyph, and the texture glyph cache then tried to paint an invalid image, producing the QPainter warnings. The correction is in the font engine.",
+ "confidence": "high"
+}

@@ -1,0 +1,27 @@
+{
+ "id": "mariadb:MDEV-13352",
+ "project": "mariadb",
+ "issue_key": "MDEV-13352",
+ "annotator": "claude-sonnet-5-5",
+ "pass": 2,
+ "file_roles": [
+  {
+   "path": "sql/sql_select.cc",
+   "role": "causal",
+   "evidence": "In JOIN::exec_inner the condition 'if (select_lex->have_window_funcs())' becomes '... && send_row_on_empty_set()', so the window-function step is skipped when no rows are produced."
+  }
+ ],
+ "symptom_location": {
+  "file": "sql/sql_select.cc",
+  "function": "st_join_table::remove_duplicates",
+  "determinable": true
+ },
+ "log_location": {
+  "file": "sql/sql_select.cc",
+  "function": "st_join_table::remove_duplicates",
+  "determinable": true
+ },
+ "relation": "caller-callee",
+ "rationale": "The crash is in remove_duplicates, reached because exec_inner ran the window-function step on an empty result. The diff changes that decision in exec_inner, both in the same file.",
+ "confidence": "high"
+}

@@ -1,0 +1,73 @@
+{
+ "id": "mongodb:SERVER-16031",
+ "project": "mongodb",
+ "issue_key": "SERVER-16031",
+ "annotator": "claude-sonnet-5-5",
+ "pass": 2,
+ "file_roles": [
+  {
+   "path": "src/mongo/db/storage/devnull/devnull_kv_engine.h",
+   "role": "refactor",
+   "evidence": "Adds an empty override cleanShutdown(OperationContext*) {}, forced by the new pure virtual."
+  },
+  {
+   "path": "src/mongo/db/storage/heap1/heap1_engine.h",
+   "role": "refactor",
+   "evidence": "Adds an empty cleanShutdown override, forced by the new pure virtual."
+  },
+  {
+   "path": "src/mongo/db/storage/kv/kv_engine.h",
+   "role": "refactor",
+   "evidence": "Declares new pure virtual cleanShutdown and moves the virtual destructor; API plumbing for the real change."
+  },
+  {
+   "path": "src/mongo/db/storage/kv/kv_storage_engine.cpp",
+   "role": "causal",
+   "evidence": "'_engine.reset(NULL)' (deleting the engine on shutdown) is replaced by '_engine->cleanShutdown(txn); // intentionally not deleting _engine'."
+  },
+  {
+   "path": "src/mongo/db/storage/kv/kv_storage_engine.h",
+   "role": "refactor",
+   "evidence": "Only a comment added above the _engine member."
+  },
+  {
+   "path": "src/mongo/db/storage/rocks/rocks_engine.h",
+   "role": "refactor",
+   "evidence": "Adds an empty cleanShutdown override."
+  },
+  {
+   "path": "src/mongo/db/storage/wiredtiger/wiredtiger_kv_engine.cpp",
+   "role": "causal",
+   "evidence": "Destructor used to close _conn while sessions could still be released; new cleanShutdown calls _sessionCache->shuttingDown() before _conn->close()."
+  },
+  {
+   "path": "src/mongo/db/storage/wiredtiger/wiredtiger_kv_engine.h",
+   "role": "refactor",
+   "evidence": "Declares cleanShutdown."
+  },
+  {
+   "path": "src/mongo/db/storage/wiredtiger/wiredtiger_session_cache.cpp",
+   "role": "causal",
+   "evidence": "Adds _shuttingDown; releaseSession now takes _sessionLock first and returns ('leak session to avoid race condition'); getSession invariants on !_shuttingDown. This closes the race seen in the stack trace."
+  },
+  {
+   "path": "src/mongo/db/storage/wiredtiger/wiredtiger_session_cache.h",
+   "role": "refactor",
+   "evidence": "Declares shuttingDown() and adds the _shuttingDown field."
+  }
+ ],
+ "symptom_location": {
+  "file": "src/mongo/db/storage/wiredtiger/wiredtiger_session_cache.cpp",
+  "function": "releaseSession",
+  "determinable": true
+ },
+ "log_location": {
+  "file": null,
+  "function": null,
+  "determinable": false
+ },
+ "relation": "concurrency",
+ "rationale": "The segfault is in __wt_free_int reached from releaseSession -> dropAllQueued during shutdown, racing with engine teardown. The fix changes shutdown order and makes releaseSession lock-protected and shutdown-aware.",
+ "confidence": "medium",
+ "notes": "Stack trace has no file names for the signal handler, so log location is not determinable."
+}

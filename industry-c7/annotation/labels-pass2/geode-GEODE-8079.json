@@ -1,0 +1,32 @@
+{
+ "id": "geode:GEODE-8079",
+ "project": "geode",
+ "issue_key": "GEODE-8079",
+ "annotator": "claude-sonnet-5-5",
+ "pass": 2,
+ "file_roles": [
+  {
+   "path": "geode-core/src/main/java/org/apache/geode/internal/cache/DistributedRegion.java",
+   "role": "causal",
+   "evidence": "addGatewaySenderId and addAsyncEventQueueId gain validateAsynchronousEventDispatcher(...); before, the replicate-region/parallel-sender check existed only in preInitialize, so AttributesMutator skipped it."
+  },
+  {
+   "path": "geode-core/src/main/java/org/apache/geode/internal/cache/wan/parallel/ParallelGatewaySenderQueue.java",
+   "role": "refactor",
+   "evidence": "Only reformats the String.format calls (drops new Object[]{...}) and changes 'gateway sender' to 'Gateway Sender' in the message."
+  }
+ ],
+ "symptom_location": {
+  "file": "geode-core/src/main/java/org/apache/geode/internal/cache/DistributedRegion.java",
+  "function": "addGatewaySenderId",
+  "determinable": true
+ },
+ "log_location": {
+  "file": "geode-core/src/main/java/org/apache/geode/internal/cache/DistributedRegion.java",
+  "function": "preInitialize",
+  "determinable": true
+ },
+ "relation": "state-producer",
+ "rationale": "The validation was present on region creation (the stack trace through preInitialize) but missing on the mutator path, so an invalid sender was attached and later events were silently dropped. The diff adds the check at the mutator entry points in DistributedRegion.",
+ "confidence": "high"
+}

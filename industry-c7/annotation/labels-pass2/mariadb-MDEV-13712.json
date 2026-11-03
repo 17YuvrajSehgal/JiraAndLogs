@@ -1,0 +1,28 @@
+{
+ "id": "mariadb:MDEV-13712",
+ "project": "mariadb",
+ "issue_key": "MDEV-13712",
+ "annotator": "claude-sonnet-5-5",
+ "pass": 2,
+ "file_roles": [
+  {
+   "path": "include/my_handler_errors.h",
+   "role": "causal",
+   "evidence": "Message string 'Record was not update. Original values was same as new values' rewritten to 'Record was not updated. New values were the same as original values', plus other wording fixes."
+  }
+ ],
+ "symptom_location": {
+  "file": "include/my_handler_errors.h",
+  "function": "handler_error_messages",
+  "determinable": true
+ },
+ "log_location": {
+  "file": "include/my_handler_errors.h",
+  "function": "handler_error_messages",
+  "determinable": true
+ },
+ "relation": "same-location",
+ "rationale": "The report is about wrong wording in an error message. The wrong text lives in this table and the diff rewrites it. There is no logic defect, the text itself is the defect.",
+ "confidence": "medium",
+ "notes": "Wording fix; whether text counts as logic is a rubric edge. Treated as causal because the reported defect is exactly this text."
+}

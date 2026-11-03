@@ -1,0 +1,27 @@
+{
+ "id": "groovy:GROOVY-8953",
+ "project": "groovy",
+ "issue_key": "GROOVY-8953",
+ "annotator": "claude-sonnet-5-5",
+ "pass": 2,
+ "file_roles": [
+  {
+   "path": "src/main/java/org/codehaus/groovy/vmplugin/v5/Java5.java",
+   "role": "causal",
+   "evidence": "Check 'if (diff > 1) throw GroovyBugError' only allowed one synthetic param; now allows diff up to 2 for enums and pads diff leading elements instead of one."
+  }
+ ],
+ "symptom_location": {
+  "file": "src/main/java/org/codehaus/groovy/vmplugin/v5/Java5.java",
+  "function": "getConstructorParameterAnnotations",
+  "determinable": true
+ },
+ "log_location": {
+  "file": "src/main/java/org/codehaus/groovy/vmplugin/v5/Java5.java",
+  "function": "getConstructorParameterAnnotations",
+  "determinable": true
+ },
+ "relation": "same-location",
+ "rationale": "Enum constructors have two synthetic parameters (name and ordinal) but the code assumed at most one, so it threw GroovyBugError at line 438. The fix corrects exactly that assumption in the same method. The stack trace frame and the fix coincide.",
+ "confidence": "high"
+}

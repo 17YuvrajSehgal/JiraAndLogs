@@ -1,0 +1,27 @@
+{
+ "id": "qt:QTBUG-85683",
+ "project": "qt",
+ "issue_key": "QTBUG-85683",
+ "annotator": "claude-sonnet-5-5",
+ "pass": 2,
+ "file_roles": [
+  {
+   "path": "src/gui/text/windows/qwindowsfontdatabase.cpp",
+   "role": "symptom-handling",
+   "evidence": "qCWarning changed to qCDebug in populateFamily when familyName.size() >= LF_FACESIZE, with a comment; the early return is unchanged."
+  }
+ ],
+ "symptom_location": {
+  "file": "src/gui/text/windows/qwindowsfontdatabase.cpp",
+  "function": "QWindowsFontDatabase::populateFamily",
+  "determinable": true
+ },
+ "log_location": {
+  "file": "src/gui/text/windows/qwindowsfontdatabase.cpp",
+  "function": "QWindowsFontDatabase::populateFamily",
+  "determinable": true
+ },
+ "relation": "same-location",
+ "rationale": "The reported problem is a noisy warning. The fix only lowers the log level at the detection site. The extra-name registration that creates too-long names was not changed.",
+ "confidence": "medium"
+}

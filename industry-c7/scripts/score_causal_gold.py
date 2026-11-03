@@ -26,7 +26,12 @@ from localize import evaluate  # noqa: E402
 ROOT = Path(__file__).resolve().parents[1]
 B1, B2 = ROOT / "data/benchmark", ROOT / "data/benchmark-v2"
 RES, LLM, AG = (ROOT / "data/results", ROOT / "data/llm", ROOT / "data/agent")
-CG = ROOT / "data/causal-gold/causal-gold.jsonl"
+# --pass2 re-scores everything against the blind second rater's labels, so
+# the paper can say whether T4 depends on which rater you believe (T2b).
+PASS2 = "--pass2" in sys.argv
+CG = ROOT / ("data/causal-gold-pass2/causal-gold.jsonl" if PASS2
+             else "data/causal-gold/causal-gold.jsonl")
+TAG = "-pass2" if PASS2 else ""
 P = ("kafka", "mariadb", "mongodb", "qt")
 SEED, N_BOOT = 20261102, 2000
 METRICS = ("acc@1", "acc@5", "acc@10", "mrr")
@@ -358,9 +363,10 @@ def main() -> int:
             "causal_precision_given_fix_hit": precision[s],
         } for s in sorted(full)},
     }
-    dest = RES / "causal-gold-scores.json"
+    dest = RES / f"causal-gold-scores{TAG}.json"
     dest.write_text(json.dumps(out, indent=1) + "\n", encoding="utf-8")
-    write_doc(out, scored, ids)
+    if not PASS2:
+        write_doc(out, scored, ids)
 
     head = ["cond_ours", "fused_ours", "content_bm25", "brtracer_fw", "rvsm",
             "llm_twostage", "llm_rerank", "remember"]

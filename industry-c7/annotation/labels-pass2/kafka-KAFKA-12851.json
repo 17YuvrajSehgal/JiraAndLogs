@@ -1,0 +1,28 @@
+{
+ "id": "kafka:KAFKA-12851",
+ "project": "kafka",
+ "issue_key": "KAFKA-12851",
+ "annotator": "claude-sonnet-5-5",
+ "pass": 2,
+ "file_roles": [
+  {
+   "path": "raft/src/main/java/org/apache/kafka/raft/LeaderState.java",
+   "role": "symptom-handling",
+   "evidence": "Only adds log.trace calls when the high watermark is updated or set; no logic change. The commit message says the real fix is in the test's wait condition."
+  }
+ ],
+ "symptom_location": {
+  "file": "raft/src/test/java/org/apache/kafka/raft/RaftEventSimulationTest.java",
+  "function": "canMakeProgressIfMajorityIsReachable",
+  "determinable": true
+ },
+ "log_location": {
+  "file": "raft/src/test/java/org/apache/kafka/raft/RaftEventSimulationTest.java",
+  "function": "canMakeProgressIfMajorityIsReachable",
+  "determinable": true
+ },
+ "relation": "same-location",
+ "rationale": "Flaky failure was a wrong expectation in the simulation test (wait for hw 20 rather than above the largest log end offset). The only gold file gets diagnostic trace logging, so no gold file is causal.",
+ "confidence": "medium",
+ "notes": "Causal site is the test file, which is outside the gold set."
+}

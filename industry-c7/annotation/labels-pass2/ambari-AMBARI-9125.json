@@ -1,0 +1,32 @@
+{
+ "id": "ambari:AMBARI-9125",
+ "project": "ambari",
+ "issue_key": "AMBARI-9125",
+ "annotator": "claude-sonnet-5-5",
+ "pass": 2,
+ "file_roles": [
+  {
+   "path": "ambari-server/src/main/resources/common-services/HDFS/2.1.0.2.0/package/scripts/hdfs_snamenode.py",
+   "role": "causal",
+   "evidence": "Directory(params.fs_checkpoint_dir,...) created only one dir from the comma-joined string; now loops over params.fs_checkpoint_dirs."
+  },
+  {
+   "path": "ambari-server/src/main/resources/common-services/HDFS/2.1.0.2.0/package/scripts/params.py",
+   "role": "causal",
+   "evidence": "fs_checkpoint_dir = config[...] used raw comma string; now .split(',') into fs_checkpoint_dirs, the list the script consumes."
+  }
+ ],
+ "symptom_location": {
+  "file": "ambari-server/src/main/resources/common-services/HDFS/2.1.0.2.0/package/scripts/hdfs_snamenode.py",
+  "function": "snamenode",
+  "determinable": true
+ },
+ "log_location": {
+  "file": null,
+  "function": null,
+  "determinable": false
+ },
+ "relation": "state-producer",
+ "rationale": "The report says only the first of several comma-separated checkpoint dirs gets created, so SecondaryNameNode fails with a missing dir. params.py produced a single string and hdfs_snamenode.py consumed it as one path; both lines were wrong and both changed. The logged exception comes from Hadoop's SecondaryNameNode, outside the repo.",
+ "confidence": "high"
+}

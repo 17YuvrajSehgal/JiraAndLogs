@@ -1,0 +1,63 @@
+{
+ "id": "mongodb:SERVER-14738",
+ "project": "mongodb",
+ "issue_key": "SERVER-14738",
+ "annotator": "claude-sonnet-5-5",
+ "pass": 2,
+ "file_roles": [
+  {
+   "path": "src/mongo/db/catalog/collection_info_cache.cpp",
+   "role": "causal",
+   "evidence": "computeIndexKeys now handles TEXT indexes via FTSSpec (weights, extraBefore/After, wildcard, language override) instead of adding only the keyPattern fields, which for text indexes are '_fts'/'_ftsx'."
+  },
+  {
+   "path": "src/mongo/db/catalog/collection_info_cache.h",
+   "role": "refactor",
+   "evidence": "Type change IndexPathSet to UpdateIndexData and include swap."
+  },
+  {
+   "path": "src/mongo/db/ops/update.cpp",
+   "role": "refactor",
+   "evidence": "Only swaps '#include index_set.h' for update_index_data.h and reorders includes."
+  },
+  {
+   "path": "src/mongo/db/ops/update_driver.cpp",
+   "role": "refactor",
+   "evidence": "refreshIndexKeys parameter type renamed to const UpdateIndexData*."
+  },
+  {
+   "path": "src/mongo/db/ops/update_driver.h",
+   "role": "refactor",
+   "evidence": "Member and signature type changed from IndexPathSet to UpdateIndexData."
+  },
+  {
+   "path": "src/mongo/db/ops/update_lifecycle.h",
+   "role": "refactor",
+   "evidence": "getIndexKeys return type changed to UpdateIndexData."
+  },
+  {
+   "path": "src/mongo/db/ops/update_lifecycle_impl.cpp",
+   "role": "refactor",
+   "evidence": "getIndexKeys return type changed to UpdateIndexData."
+  },
+  {
+   "path": "src/mongo/db/ops/update_lifecycle_impl.h",
+   "role": "refactor",
+   "evidence": "getIndexKeys return type changed to UpdateIndexData."
+  }
+ ],
+ "symptom_location": {
+  "file": null,
+  "function": null,
+  "determinable": false
+ },
+ "log_location": {
+  "file": null,
+  "function": null,
+  "determinable": false
+ },
+ "relation": "state-producer",
+ "rationale": "The cached set of indexed paths missed the text-indexed fields, so an in-place update was not seen as touching an index and the text index entry went stale. Only computeIndexKeys changes that set; the other files carry the new type. The new UpdateIndexData class is a new file, not in the gold set.",
+ "confidence": "medium",
+ "notes": "Symptom is wrong query results later; no single file or log line is given."
+}

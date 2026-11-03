@@ -1,0 +1,28 @@
+{
+ "id": "phoenix:PHOENIX-1551",
+ "project": "phoenix",
+ "issue_key": "PHOENIX-1551",
+ "annotator": "claude-sonnet-5-5",
+ "pass": 2,
+ "file_roles": [
+  {
+   "path": "phoenix-core/src/main/java/org/apache/phoenix/util/ServerUtil.java",
+   "role": "causal",
+   "evidence": "getTableFromSingletonPool let HTablePool's RuntimeException (wrapping TableNotFoundException) escape; diff catches RuntimeException and rethrows the IOException cause so callers can handle it."
+  }
+ ],
+ "symptom_location": {
+  "file": "phoenix-core/src/main/java/org/apache/phoenix/coprocessor/MetaDataEndpointImpl.java",
+  "function": "createTable",
+  "determinable": true
+ },
+ "log_location": {
+  "file": "phoenix-core/src/main/java/org/apache/phoenix/util/ServerUtil.java",
+  "function": "getTableFromSingletonPool",
+  "determinable": true
+ },
+ "relation": "caller-callee",
+ "rationale": "After upgrade SYSTEM.STATS does not exist, and the trace shows TableNotFoundException wrapped in a RuntimeException from HTablePool reaching createTable. The fix unwraps it to an IOException inside ServerUtil. Whether the callers then handle it correctly is not visible in this diff.",
+ "confidence": "low",
+ "notes": "To settle: MetaDataEndpointImpl.getTable/createTable catch logic for IOException vs TableNotFoundException."
+}

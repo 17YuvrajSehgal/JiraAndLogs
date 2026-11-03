@@ -1,0 +1,28 @@
+{
+ "id": "qt:QTBUG-85529",
+ "project": "qt",
+ "issue_key": "QTBUG-85529",
+ "annotator": "claude-sonnet-5-5",
+ "pass": 2,
+ "file_roles": [
+  {
+   "path": "src/plugins/platforminputcontexts/compose/qcomposeplatforminputcontext.cpp",
+   "role": "causal",
+   "evidence": "setlocale(LC_CTYPE, \"\") replaced by reading LC_ALL, LC_CTYPE, LANG environment variables (default \"C\") before xkb_compose_table_new_from_locale."
+  }
+ ],
+ "symptom_location": {
+  "file": "src/plugins/platforminputcontexts/compose/qcomposeplatforminputcontext.cpp",
+  "function": "QComposeInputContext::ensureInitialized",
+  "determinable": true
+ },
+ "log_location": {
+  "file": null,
+  "function": null,
+  "determinable": false
+ },
+ "relation": "same-location",
+ "rationale": "The wrong locale was passed to the xkb compose table, so some compose sequences were missing. The diff changes how the locale is detected in the same function.",
+ "confidence": "medium",
+ "notes": "Link between the missing Greek sequences and the locale is from the commit message, not the report."
+}

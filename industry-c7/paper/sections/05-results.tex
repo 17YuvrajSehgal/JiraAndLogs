@@ -6,7 +6,7 @@ on the same instances, what \sys{} adds on top of them, and the checks
 that decide whether those numbers can be believed.
 
 Two populations carry these numbers and no comparison mixes them: the
-4{,}508-instance evaluation split and the 790-instance study population
+4{,}409-instance evaluation split and the 790-instance study population
 on which every system is rescored (\cref{sec:setup:populations}).
 Significance always means $q < 0.05$ after Benjamini--Hochberg
 correction within the test family (\cref{sec:setup:stats}).
@@ -60,19 +60,19 @@ layer across the whole benchmark; the agent comparison is
 \toprule
  & Kafka & MariaDB & MongoDB & Qt \\
 \midrule
-S1 trace mentions & 65.8\,/\,.477 & 44.2\,/\,.327 & 35.4\,/\,.319 & 26.3\,/\,.226 \\
-S2 path           & 48.1\,/\,.379 & 25.9\,/\,.198 & 37.0\,/\,.268 & 26.6\,/\,.195 \\
-S3 content        & 70.8\,/\,.545 & 47.1\,/\,.330 & 64.4\,/\,.473 & 45.6\,/\,.350 \\
-S4 memory         & 48.3\,/\,.361 & 46.1\,/\,.342 & 37.7\,/\,.296 & 27.8\,/\,.211 \\
+S1 trace mentions & 65.8\,/\,.477 & 44.2\,/\,.327 & 34.7\,/\,.314 & 26.3\,/\,.226 \\
+S2 path           & 48.1\,/\,.379 & 25.9\,/\,.198 & 36.0\,/\,.259 & 26.6\,/\,.195 \\
+S3 content        & 70.8\,/\,.545 & 47.1\,/\,.330 & 64.3\,/\,.472 & 45.6\,/\,.350 \\
+S4 memory         & 48.3\,/\,.361 & 46.1\,/\,.342 & 38.0\,/\,.299 & 27.8\,/\,.211 \\
 \midrule
-rVSM              & 21.4\,/\,.192 & 23.9\,/\,.188 & 12.7\,/\,.097 & 12.2\,/\,.101 \\
-BugLocator        & 26.7\,/\,.199 & 30.0\,/\,.250 & 24.5\,/\,.152 & 16.6\,/\,.131 \\
-BRTracer-style    & 59.9\,/\,.479 & 51.6\,/\,.382 & 45.6\,/\,.380 & 31.6\,/\,.284 \\
+rVSM              & 21.4\,/\,.192 & 23.9\,/\,.188 & 12.4\,/\,.095 & 12.2\,/\,.101 \\
+BugLocator        & 26.7\,/\,.199 & 30.0\,/\,.250 & 24.5\,/\,.151 & 16.6\,/\,.131 \\
+BRTracer-style    & 59.9\,/\,.479 & 51.6\,/\,.382 & 44.9\,/\,.375 & 31.6\,/\,.284 \\
 \midrule
-fused, no memory  & 76.7\,/\,.611 & 44.3\,/\,.342 & 53.0\,/\,.420 & 35.3\,/\,.292 \\
-fused, +memory    & 79.0\,/\,.600 & 56.2\,/\,.408 & 62.9\,/\,.499 & 46.3\,/\,.351 \\
-cond., no memory  & 79.2\,/\,.625 & 64.2\,/\,.479 & 69.3\,/\,.566 & 45.6\,/\,.350 \\
-retrieval layer & \textbf{79.4}\,/\,.625 & \textbf{65.8}\,/\,.479 & \textbf{70.0}\,/\,.552 & \textbf{54.1}\,/\,.408 \\
+fused, no memory  & 76.7\,/\,.611 & 44.3\,/\,.342 & 52.2\,/\,.410 & 35.3\,/\,.292 \\
+fused, +memory    & 79.0\,/\,.600 & 56.2\,/\,.408 & 62.3\,/\,.496 & 46.3\,/\,.351 \\
+cond., no memory  & 79.2\,/\,.625 & 64.2\,/\,.479 & 69.0\,/\,.562 & 45.6\,/\,.350 \\
+retrieval layer & \textbf{79.4}\,/\,.625 & \textbf{65.8}\,/\,.479 & \textbf{69.8}\,/\,.550 & \textbf{54.1}\,/\,.408 \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -172,11 +172,11 @@ us.
 \textbf{The model does not remember these fixes.} These are public
 projects, and the model may simply have memorised their histories. We
 asked it directly: given only an issue key such as KAFKA-6624 and no
-report text, which files did that fix touch? Over the 4{,}508
+report text, which files did that fix touch? Over the 4{,}409
 evaluation instances it claimed to recall nothing and scored 0.0\%
 Acc@5. Given the issue title as well, it claimed recall for $0.5\%$ of
 instances and scored 0.3\%. For comparison, naming each project's most
-frequently fixed files without reading anything scores 3.4\% to
+frequently fixed files without reading anything scores 3.6\% to
 18.1\%. The model performs an order of magnitude \emph{below} that
 prior, so it is not reciting these fixes; what it contributes is
 inference from the report and the code.
@@ -240,10 +240,10 @@ sample, is worth reporting. \Cref{tab:files} gives it.
 The conditioned retrieval layer beats the per-project strongest
 classical baseline on all four projects: Acc@5 improves by $+8.6$
 points $[+5.5, +11.8]$ on Kafka, $+14.2$ $[+11.9, +16.7]$ on MariaDB,
-$+5.7$ $[+4.6, +6.7]$ on MongoDB, and $+8.4$ $[+5.3, +11.9]$
+$+5.5$ $[+4.4, +6.6]$ on MongoDB, and $+8.4$ $[+5.3, +11.9]$
 on Qt, every test significant. Incident memory is what carries it on the
 hard stratum: adding memory to unweighted fusion lifts hard-stratum
-Acc@5 by $+20.9$ points on MariaDB, $+16.5$ on MongoDB, and $+15.3$ on
+Acc@5 by $+20.9$ points on MariaDB, $+16.6$ on MongoDB, and $+15.3$ on
 Qt, and on MariaDB's hard instances memory alone (44.2\%) beats every
 other standalone signal including content retrieval (40.6\%). A project's
 resolved history can be a better guide to an unnamed faulty file than
@@ -268,15 +268,15 @@ of ranking modules by their defect FREQUENCY on the development split.}
 \toprule
  & Kafka & MariaDB & MongoDB & Qt \\
 \midrule
-modules (median) & 8 & 79 & 36 & 116 \\
+modules (median) & 8 & 78 & 35 & 116 \\
 \midrule
 random, Acc@1 (\%)     & 12.9 & 1.5  & 3.2  & 3.7 \\
-frequency, Acc@1 (\%)  & 36.1 & 61.2 & 75.6 & 33.4 \\
-S3 content, Acc@1 (\%) & 83.0 & 77.1 & 80.8 & 61.3 \\
-\retr{}, Acc@1 (\%) & \textbf{86.1} & \textbf{84.3} & \textbf{84.1} & \textbf{66.9} \\
+frequency, Acc@1 (\%)  & 36.1 & 61.2 & 76.5 & 33.4 \\
+S3 content, Acc@1 (\%) & 83.0 & 77.1 & 81.0 & 61.3 \\
+\retr{}, Acc@1 (\%) & \textbf{86.1} & \textbf{84.3} & \textbf{84.2} & \textbf{66.9} \\
 \midrule
-random, Acc@5 (\%)     & 61.0 & 7.6  & 15.3 & 9.9 \\
-frequency, Acc@5 (\%)  & 76.3 & 90.5 & 89.4 & 80.9 \\
+random, Acc@5 (\%)     & 61.0 & 7.7  & 15.5 & 9.9 \\
+frequency, Acc@5 (\%)  & 76.3 & 90.5 & 91.8 & 80.9 \\
 \retr{}, Acc@5 (\%) & \textbf{99.8} & \textbf{98.3} & \textbf{97.9} & \textbf{92.5} \\
 \bottomrule
 \end{tabular}
@@ -285,11 +285,11 @@ frequency, Acc@5 (\%)  & 76.3 & 90.5 & 89.4 & 80.9 \\
 The module level needs sanity baselines before any claim, because module
 spaces are small and defects concentrate in few modules
 (\cref{tab:modules}). Ranking modules by their past defect frequency
-alone reaches 0.76 to 0.91 Acc@5, and Kafka's eight-module space makes
+alone reaches 76\% to 92\% Acc@5, and Kafka's eight-module space makes
 even a random top five succeed 61\% of the time. The informative number
-is therefore Acc@1: \retr{} places a correct module first for 67\% to 86\%
-of instances, beating the frequency baseline by $+8$ points (MongoDB) to
-$+50$ (Kafka). At $K = 5$ \retr{} still clears the frequency baseline on
+is therefore Acc@1: \retr{} places a correct module first for 66.9\% to
+86.1\% of instances, beating the frequency baseline by $+7.7$ points
+(MongoDB) to $+50.0$ (Kafka). At $K = 5$ \retr{} still clears the frequency baseline on
 every project, but the margin there partly reflects concentration rather
 than localization.
 
@@ -299,7 +299,7 @@ than localization.
 The memory signal's contribution depends on the stratum. On easy
 instances, where the report already names a gold file, trace mentions and
 content retrieval suffice and memory adds little. The decisive case is
-the hard stratum: the 2{,}318 evaluation instances whose reports name no
+the hard stratum: the 2{,}278 evaluation instances whose reports name no
 gold file, where grep returns nothing useful by definition.
 
 Three results describe memory's value there. First, standalone: on
@@ -307,7 +307,7 @@ MariaDB's hard instances, memory alone (Acc@5 44.2\%) beats every other
 standalone signal including content retrieval (40.6\%). A project's
 resolved history can be a better guide to unnamed faulty files than the
 content of the files themselves. Second, in unweighted fusion, adding
-memory lifts hard-stratum Acc@5 by $+20.9$ points on MariaDB, $+16.5$ on
+memory lifts hard-stratum Acc@5 by $+20.9$ points on MariaDB, $+16.6$ on
 MongoDB, and $+15.3$ on Qt, all significant; on Kafka the direction is
 the same ($+8.1$) but the test misses significance ($q = 0.068$,
 $n = 124$, the smallest hard population). Third, in the fully tuned
@@ -363,7 +363,7 @@ Kafka and MariaDB ($+1.9$, $+1.4$ points), not on MongoDB and Qt.
 
 The firewall also does not explain our margin. Under the identical
 firewall, on the same admissible history, our memory signal S4 beats
-classic SimiScore on all four projects ($+16.0$, $+12.2$, $+10.9$,
+classic SimiScore on all four projects ($+16.0$, $+12.2$, $+10.4$,
 and $+5.9$ points of Acc@5, all significant). The two signals share the idea of
 past fixes voting for files; they differ in the similarity function and
 the vote weighting. The practical reading is simple: a deployed system
@@ -400,12 +400,12 @@ candidate set, the ceiling the file stage imposes.}
 \midrule
 eligible instances (\%) & 95.4 & 91.9 & 94.4 & 86.8 \\
 \midrule
-Acc@1 (\%)  & 24.0 & 13.2 & 25.9 & 14.0 \\
-Acc@5 (\%)  & 47.8 & 27.4 & 46.7 & 28.8 \\
-Acc@10 (\%) & 60.0 & 34.8 & 55.0 & 34.5 \\
-MRR         & .357 & .199 & .355 & .211 \\
+Acc@1 (\%)  & 24.0 & 13.2 & 25.8 & 14.0 \\
+Acc@5 (\%)  & 47.8 & 27.4 & 46.4 & 28.8 \\
+Acc@10 (\%) & 60.0 & 34.8 & 54.9 & 34.5 \\
+MRR         & .357 & .199 & .353 & .211 \\
 \midrule
-oracle (file stage, \%) & 85.6 & 71.8 & 74.7 & 57.6 \\
+oracle (file stage, \%) & 85.6 & 71.8 & 74.2 & 57.6 \\
 \bottomrule
 \end{tabular}
 \end{table}

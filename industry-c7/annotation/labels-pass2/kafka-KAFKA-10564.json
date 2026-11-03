@@ -1,0 +1,27 @@
+{
+ "id": "kafka:KAFKA-10564",
+ "project": "kafka",
+ "issue_key": "KAFKA-10564",
+ "annotator": "claude-sonnet-5-5",
+ "pass": 2,
+ "file_roles": [
+  {
+   "path": "streams/src/main/java/org/apache/kafka/streams/processor/internals/StateDirectory.java",
+   "role": "causal",
+   "evidence": "Diff changes cleanRemovedTasksCalledByCleanerThread to iterate listNonEmptyTaskDirectories() instead of listAllTaskDirectories(), so emptied dirs are not revisited."
+  }
+ ],
+ "symptom_location": {
+  "file": "streams/src/main/java/org/apache/kafka/streams/processor/internals/StateDirectory.java",
+  "function": "cleanRemovedTasksCalledByCleanerThread",
+  "determinable": true
+ },
+ "log_location": {
+  "file": "streams/src/main/java/org/apache/kafka/streams/processor/internals/StateDirectory.java",
+  "function": "cleanRemovedTasksCalledByCleanerThread",
+  "determinable": true
+ },
+ "relation": "same-location",
+ "rationale": "The repeated 'Deleting obsolete state directory' message comes from the cleaner re-processing empty task directories. The loop selection in the same method is changed to skip empty ones. The wrong iteration set is the defect.",
+ "confidence": "high"
+}

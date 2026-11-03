@@ -1,0 +1,32 @@
+{
+ "id": "sakai:SAK-5477",
+ "project": "sakai",
+ "issue_key": "SAK-5477",
+ "annotator": "claude-sonnet-5-5",
+ "pass": 2,
+ "file_roles": [
+  {
+   "path": "samigo/samigo-app/src/java/org/sakaiproject/tool/assessment/ui/bean/delivery/DeliveryBeanie.java",
+   "role": "causal",
+   "evidence": "Adds the missing getFeedbackDateString() getter to DeliveryBeanie, which the JSP reads as the property feedbackDateString."
+  },
+  {
+   "path": "samigo/samigo-app/src/java/org/sakaiproject/tool/assessment/ui/bean/delivery/ItemContentsBean.java",
+   "role": "refactor",
+   "evidence": "log.log(...) changed to log.info(...) in a duration catch block; unrelated to the missing bean property."
+  }
+ ],
+ "symptom_location": {
+  "file": "samigo/samigo-app/src/java/org/sakaiproject/tool/assessment/ui/bean/delivery/DeliveryBeanie.java",
+  "function": null,
+  "determinable": true
+ },
+ "log_location": {
+  "file": "samigo/samigo-app/src/java/org/sakaiproject/tool/assessment/ui/bean/delivery/DeliveryBeanie.java",
+  "function": null,
+  "determinable": true
+ },
+ "relation": "same-location",
+ "rationale": "PropertyNotFoundException for feedbackDateString on DeliveryBeanie. The diff adds that getter. The log call change in ItemContentsBean is a small unrelated cleanup.",
+ "confidence": "high"
+}

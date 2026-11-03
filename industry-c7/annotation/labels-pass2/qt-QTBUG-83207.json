@@ -1,0 +1,37 @@
+{
+ "id": "qt:QTBUG-83207",
+ "project": "qt",
+ "issue_key": "QTBUG-83207",
+ "annotator": "claude-sonnet-5-5",
+ "pass": 2,
+ "file_roles": [
+  {
+   "path": "src/corelib/plugin/qlibrary.cpp",
+   "role": "causal",
+   "evidence": "QLibraryPrivate::load() no longer wraps load_sys() in mutex.lock()/unlock(); holding it across dlopen caused the recursive deadlock."
+  },
+  {
+   "path": "src/corelib/plugin/qlibrary_unix.cpp",
+   "role": "causal",
+   "evidence": "load_sys takes QMutexLocker only for setup and does locker.unlock() before dlopen, then relock() for the result."
+  },
+  {
+   "path": "src/corelib/plugin/qlibrary_win.cpp",
+   "role": "causal",
+   "evidence": "Same pattern in Windows load_sys: lock released around LoadLibrary and relocked after."
+  }
+ ],
+ "symptom_location": {
+  "file": "src/corelib/plugin/qlibrary.cpp",
+  "function": "QLibraryPrivate::updatePluginState",
+  "determinable": true
+ },
+ "log_location": {
+  "file": "src/corelib/plugin/qlibrary.cpp",
+  "function": "QLibraryPrivate::updatePluginState",
+  "determinable": true
+ },
+ "relation": "concurrency",
+ "rationale": "Stack trace shows updatePluginState waiting on the mutex held by load_sys during dlopen, whose init code recurses. The three files together change the lock scope so it is not held across dlopen.",
+ "confidence": "high"
+}

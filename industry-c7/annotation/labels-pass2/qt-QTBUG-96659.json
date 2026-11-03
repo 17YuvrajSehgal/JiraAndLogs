@@ -1,0 +1,27 @@
+{
+ "id": "qt:QTBUG-96659",
+ "project": "qt",
+ "issue_key": "QTBUG-96659",
+ "annotator": "claude-sonnet-5-5",
+ "pass": 2,
+ "file_roles": [
+  {
+   "path": "src/corelib/kernel/qproperty_p.h",
+   "role": "causal",
+   "evidence": "'if constexpr (Signal != nullptr)' replaced by 'if constexpr (!std::is_null_pointer_v<decltype(Signal)>)', which GCC 10 accepts as a constant expression."
+  }
+ ],
+ "symptom_location": {
+  "file": "src/corelib/kernel/qproperty_p.h",
+  "function": "QObjectCompatProperty::setValue",
+  "determinable": true
+ },
+ "log_location": {
+  "file": "src/corelib/kernel/qproperty_p.h",
+  "function": "QObjectCompatProperty::setValue",
+  "determinable": true
+ },
+ "relation": "same-location",
+ "rationale": "The compiler error points at the exact line the diff rewrites.",
+ "confidence": "high"
+}

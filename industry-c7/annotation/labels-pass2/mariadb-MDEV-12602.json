@@ -1,0 +1,88 @@
+{
+ "id": "mariadb:MDEV-12602",
+ "project": "mariadb",
+ "issue_key": "MDEV-12602",
+ "annotator": "claude-sonnet-5-5",
+ "pass": 2,
+ "file_roles": [
+  {
+   "path": "storage/innobase/buf/buf0buf.cc",
+   "role": "causal",
+   "evidence": "buf_page_io_complete now takes fil_space_acquire_for_io() and holds it through decrypt/corruption check, replacing unreferenced fil_space_get_by_id and FilSpace lookups."
+  },
+  {
+   "path": "storage/innobase/buf/buf0flu.cc",
+   "role": "refactor",
+   "evidence": "fil_space_acquire(id, true) becomes fil_space_acquire_for_io(id) and the release is renamed; a call-site rename forced by the new API."
+  },
+  {
+   "path": "storage/innobase/fil/fil0crypt.cc",
+   "role": "refactor",
+   "evidence": "Only ut_ad(space->n_pending_ops) becomes ut_ad(space->n_pending_ios > 0) in four asserts."
+  },
+  {
+   "path": "storage/innobase/fil/fil0fil.cc",
+   "role": "causal",
+   "evidence": "Adds n_pending_ios, fil_space_acquire_for_io/release_for_io, and a wait 'while (space->n_pending_ios) os_thread_sleep(100)' before freeing; removes the for_io variant that bumped n_pending_ops after stop_new_ops."
+  },
+  {
+   "path": "storage/innobase/fil/fil0pagecompress.cc",
+   "role": "refactor",
+   "evidence": "FilSpace(space_id, true) replaced by fil_space_acquire_for_io plus release in the error message path; adapts to the removed for_io argument."
+  },
+  {
+   "path": "storage/innobase/include/buf0buf.h",
+   "role": "refactor",
+   "evidence": "Drops the buf_page_check_corrupt declaration and rewrites comments/signatures to match the .cc."
+  },
+  {
+   "path": "storage/innobase/include/fil0fil.h",
+   "role": "refactor",
+   "evidence": "Declares n_pending_ios, the new acquire/release functions and removes the for_io parameter; header side of the fil0fil.cc change."
+  },
+  {
+   "path": "storage/xtradb/buf/buf0buf.cc",
+   "role": "causal",
+   "evidence": "Same change as innobase buf0buf.cc: acquire_for_io held across decrypt and corruption check in buf_page_io_complete."
+  },
+  {
+   "path": "storage/xtradb/buf/buf0flu.cc",
+   "role": "refactor",
+   "evidence": "fil_space_acquire(bpage->space, true) becomes fil_space_acquire_for_io; same rename as innobase."
+  },
+  {
+   "path": "storage/xtradb/fil/fil0crypt.cc",
+   "role": "refactor",
+   "evidence": "Asserts switched from n_pending_ops to n_pending_ios > 0."
+  },
+  {
+   "path": "storage/xtradb/fil/fil0fil.cc",
+   "role": "causal",
+   "evidence": "fil_space_free becomes fil_space_free_and_mutex_exit and waits 'while (space->n_pending_ios)' after releasing the mutex before freeing the space."
+  },
+  {
+   "path": "storage/xtradb/include/buf0buf.h",
+   "role": "refactor",
+   "evidence": "Header declarations and comments updated to match the buf0buf.cc signature changes."
+  },
+  {
+   "path": "storage/xtradb/include/fil0fil.h",
+   "role": "refactor",
+   "evidence": "Header side: n_pending_ios field, acquire/release_for_io declarations, removed for_io parameter."
+  }
+ ],
+ "symptom_location": {
+  "file": "storage/innobase/fil/fil0fil.cc",
+  "function": "fil_check_pending_operations",
+  "determinable": true
+ },
+ "log_location": {
+  "file": "storage/innobase/fil/fil0fil.cc",
+  "function": "fil_check_pending_operations",
+  "determinable": true
+ },
+ "relation": "concurrency",
+ "rationale": "The assertion space->n_pending_ops == 0 fails because I/O threads can raise the counter after the tablespace is marked for dropping. The fix adds a separate I/O counter, makes free wait on it, and makes the buffer pool I/O paths hold it. Roles for innobase and xtradb copies are assigned the same way.",
+ "confidence": "medium",
+ "notes": "Judging buf0buf.cc causal but buf0flu.cc as refactor is a close call; buf0buf adds the new lifetime handling, buf0flu only renames the call."
+}

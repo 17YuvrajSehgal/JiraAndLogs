@@ -1,0 +1,27 @@
+{
+ "id": "kafka:KAFKA-7112",
+ "project": "kafka",
+ "issue_key": "KAFKA-7112",
+ "annotator": "claude-sonnet-5-5",
+ "pass": 2,
+ "file_roles": [
+  {
+   "path": "streams/src/main/java/org/apache/kafka/streams/processor/internals/StreamThread.java",
+   "role": "causal",
+   "evidence": "updateNewAndRestoringTasks() was called right after pollRequests(Duration.ZERO) without rechecking state; diff moves it into a separate 'if (state == State.PARTITIONS_ASSIGNED)' after the poll."
+  }
+ ],
+ "symptom_location": {
+  "file": "streams/src/main/java/org/apache/kafka/streams/processor/internals/StoreChangelogReader.java",
+  "function": "restore",
+  "determinable": true
+ },
+ "log_location": {
+  "file": "clients/src/main/java/org/apache/kafka/clients/consumer/KafkaConsumer.java",
+  "function": "poll",
+  "determinable": true
+ },
+ "relation": "concurrency",
+ "rationale": "A rebalance during poll(Duration.ZERO) can run onPartitionRevoked and unsubscribe the restore consumer, then StreamThread still calls updateNewAndRestoringTasks and the restore poll throws IllegalStateException. The wrong logic is the missing state recheck in StreamThread.runOnce, which the diff adds. The exception surfaces in StoreChangelogReader and KafkaConsumer, outside the gold file.",
+ "confidence": "high"
+}
