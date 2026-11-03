@@ -14,11 +14,11 @@ Needs: **CPU** (laptop, no cluster) · **GPU** (needs vLLM job) · **HUMAN** (us
 
 ## Blockers — decide these first
 
-- [ ] **B1. Second annotator for the causal study?** Gates T2, which gates the
-      paper's most valuable experiment. If no second human is available, the
-      fallback is one human plus an independent model as second rater,
-      reported as exactly that. A single annotator's labels cannot be called
-      ground truth. **HUMAN**
+- [x] **B1. Second annotator for the causal study?** Answered 2026-11-02: no
+      second human is available, so the annotator is Claude Opus 5 against a
+      pre-registered rubric, and the second rater will be an independent model
+      pass. Reported as exactly that, never as human ground truth. Still
+      outstanding: the agreement number itself (see T2b). **HUMAN**
 - [ ] **B2. Fresh vLLM SLURM job.** Job 1211031 ended 2026-11-01 20:05 ET, so
       the server is down. Every GPU task below is blocked until a new job runs
       and the MFA'd SSH tunnel is open. **HUMAN**
@@ -34,20 +34,29 @@ holding the defect, the file that reported the failure, a file changed to stop
 recurrence, and incidental refactoring. Four of the eight weaknesses in the
 review follow from this one gap.
 
-- [ ] **T1. Annotation kit.** Stratified 150 instances: four projects,
-      hard/easy balanced, includes cases REMEMBER gets wrong, includes
-      KAFKA-6624. Renders issue report + logs, fix diff from the local repo,
-      fix commit message, snapshot tree. **CPU**
-- [ ] **T2. Annotate, two raters.** Per instance: causal function, symptom
-      function, logging/trace location, relation between them. Per gold file a
-      role: `causal` / `symptom-handling` / `preventive` / `refactor` / `test`.
-      Report Cohen's kappa. **HUMAN** · needs T1, B1
-- [ ] **T3. Headline number.** What share of fix-modified gold files are
-      actually causal? This either defends the benchmark or measures its
-      limit. Both are publishable. **CPU** · needs T2
-- [ ] **T4. Re-score on causal gold.** Rebuild Table III on the annotated
-      subset, fix-gold beside causal-gold. The real question is whether the
-      system ordering survives. **CPU** · needs T3
+- [x] **T1. Annotation kit.** Done. `annotation_sample.py` (seed 20261102)
+      and `annotation_render.py`. Sample grew to 151 over 27 projects, not 4,
+      because it was drawn from benchmark-v2. Agent outcome deliberately not
+      stored in `sample.json` so it cannot reach the annotator. **CPU**
+- [x] **T2. Annotate.** Done: 151 of 151 labelled against `RUBRIC.md`,
+      0 invalid, compiled to `data/causal-gold/`. Conventions that emerged
+      while applying the rubric are recorded in `annotation/CONVENTIONS.md`
+      and must be disclosed beside the rubric. **One rater.**
+- [ ] **T2b. The agreement number.** Independent second pass with the first
+      labels hidden, Cohen's kappa, reported as model-model agreement under a
+      pre-registered rubric. This is what the reviewer asked for and it is
+      still missing. **CPU** · needs T2
+- [x] **T3. Headline number.** 49.0% of fix-modified gold files are causal
+      (171/349), mean 71.8% per instance, median 100%. The result that
+      matters is the curve: 89% causal when the fix touches 1 file, 57% at
+      2–3, 30% at 4–7, 21% at 8+. Gold is accurate for small fixes and
+      increasingly diluted for large ones. 14 of 151 have no causal file.
+- [~] **T4. Re-score on causal gold.** `scripts/score_causal_gold.py`, no
+      re-runs needed: 93 of the 151 annotated instances exist in v1 with the
+      same gold and the same snapshot, 84 of those have a causal file, and
+      every system already stored a ranking for them. Ordering survives;
+      every system loses 1.2 to 4.8 points of Acc@5. IRBL rankings being
+      regenerated for the same 93. **CPU** · needs T3
 - [ ] **T5. Scope the claim.** Define "root-cause localization" in §1 before
       using it. Say plainly that the ground truth is fix-modified files and
       point to the annotation study. The title keeps "root-cause" (it is the

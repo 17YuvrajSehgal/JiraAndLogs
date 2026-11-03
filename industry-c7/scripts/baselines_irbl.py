@@ -140,11 +140,24 @@ def main() -> int:
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--project", required=True, choices=list(FULL_REPOS))
     ap.add_argument("--limit", type=int, default=0)
+    # T4 needs the IRBL rankings, not just their metrics, so they can be
+    # re-scored against causal gold. Storing rankings for the whole benchmark
+    # would multiply the file size by the number of baselines, so this stores
+    # them only for the issue keys named in the file, into a side artifact.
+    ap.add_argument("--rankings-for", type=Path, default=None,
+                    help="file of issue keys, one per line; run only those "
+                         "and write {project}-irbl-rankings.jsonl")
     args = ap.parse_args()
 
     cfg = PROJECTS[args.project]
     git_dir = FULL_REPOS[args.project]
     bench = load_bench(args.project)
+    want = None
+    if args.rankings_for:
+        want = {k.strip() for k in args.rankings_for.read_text(
+            encoding="utf-8").split() if k.strip()}
+        bench = [b for b in bench if b["issue_key"] in want]
+        log.info("--rankings-for: %d of the requested keys found", len(bench))
     if args.limit:
         bench = bench[:args.limit]
     mem_by_key, dupclusters, created_map, _ = load_support(
@@ -232,6 +245,7 @@ def main() -> int:
             "gold_files": b["gold_files"],
             "metrics": {name: evaluate(rk, b["gold_files"])
                         for name, rk in rankings.items()},
+            **({"rankings": rankings} if want else {}),
         })
         if i % 25 == 0:
             log.info("  %d/%d (%.0fs, blob cache %d)", i, len(bench),
@@ -239,6 +253,14 @@ def main() -> int:
         if i and i % 300 == 0:
             tok_cache_path.write_bytes(pickle.dumps(tok_cache))
     tok_cache_path.write_bytes(pickle.dumps(tok_cache))
+
+    if want:
+        out = OUT / f"{args.project}-irbl-rankings.jsonl"
+        with out.open("w", encoding="utf-8") as f:
+            for r in rows:
+                f.write(json.dumps(r, ensure_ascii=False) + "\n")
+        log.info("wrote %s (%d rows); summary not touched", out, len(rows))
+        return 0
 
     # --- aggregate on the same eval split as the main system ----------------
     rows.sort(key=lambda r: r["fix_time"])
