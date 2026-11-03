@@ -1,0 +1,124 @@
+"""Preflight for the full-split agent run. Everything that can be checked
+without the GPU, checked before the GPU is spent.
+
+The run is one 24 h job against a queue we wait hours for, so a defect
+found here costs minutes and the same defect found at hour 15 costs the
+submission. Exits non-zero if anything fails.
+
+Usage:
+    python industry-c7/scripts/preflight_full_run.py [--tag v3-full]
+"""
+
+from __future__ import annotations
+
+import json
+import shutil
+import sys
+from pathlib import Path
+
+HERE = Path(__file__).resolve().parent
+sys.path.insert(0, str(HERE))
+sys.path.insert(0, str(HERE.parents[0] / "agent"))
+
+ROOT = HERE.parents[0]
+AG = ROOT / "data/agent"
+TAG = "v3-full"
+for i, a in enumerate(sys.argv):
+    if a == "--tag" and i + 1 < len(sys.argv):
+        TAG = sys.argv[i + 1]
+
+ok = fail = 0
+
+
+def check(name: str, cond: bool, detail: str = "") -> bool:
+    global ok, fail
+    print(f"{'PASS' if cond else 'FAIL'}  {name}" + (f"   [{detail}]" if detail else ""))
+    ok += bool(cond)
+    fail += (not cond)
+    return bool(cond)
+
+
+print("=== population ===")
+import agent as A  # noqa: E402
+import run_agent as R  # noqa: E402
+import tools as T  # noqa: E402
+
+P = list(R.P)
+full = R.build_population(P, full=True)
+samp = R.build_population(P)
+ids = lambda pop: {f"{p}:{b['issue_key']}" for p, b, _ in pop}
+check("full split is 4,409 instances", len(full) == 4409, str(len(full)))
+per = {}
+for p, b, _ in full:
+    per[p] = per.get(p, 0) + 1
+check("per-project split matches Sec. 4 (476/1179/2434/320)",
+      per == {"kafka": 476, "mariadb": 1179, "mongodb": 2434, "qt": 320},
+      str(per))
+check("the 790 study sample sits inside the full split",
+      ids(samp) <= ids(full))
+leak = 0
+for p in P:
+    raw = sorted((json.loads(l) for l in
+                  (ROOT / f"data/benchmark/{p}.jsonl").open(encoding="utf-8")),
+                 key=lambda b: b["fix_time"])
+    s = json.load((ROOT / f"data/results/{p}-summary.json").open())
+    nd = (s.get("pre_scored_set") or s)["n_dev"]
+    dev = {b["issue_key"] for b in raw[:nd]}
+    leak += len({b["issue_key"] for q, b, _ in full if q == p} & dev)
+check("no dev instance in the eval population", leak == 0, f"{leak} leaked")
+
+print("\n=== agent v3 ===")
+check("run_instance accepts a version", "version" in
+      A.run_instance.__code__.co_varnames)
+v3p = A.SUBMIT_V3["function"]["parameters"]
+check("v3 requires files AND causal_chain",
+      v3p["required"] == ["files", "causal_chain"], str(v3p["required"]))
+check("v2 schema untouched", A.SUBMIT["function"]["parameters"]["required"]
+      == ["files"])
+check("v3 offers data_flow_back",
+      "data_flow_back" in [t["function"]["name"] for t in T.V3_TOOL_SCHEMAS])
+check("every offered tool dispatches",
+      all(t["function"]["name"] in T._DISPATCH
+          for t in T.TOOL_SCHEMAS + T.V3_TOOL_SCHEMAS))
+check("Workspace defaults to the v2 firewall",
+      T.Workspace.__init__.__defaults__ is not None)
+
+print("\n=== snapshots, memory, repos ===")
+for p in P:
+    g = ROOT.parents[0] / f"data/c7-repos"
+    from localize import FULL_REPOS, PROJECTS, load_support
+    check(f"{p} git dir present", FULL_REPOS[p].exists(), str(FULL_REPOS[p]))
+for p in P:
+    from localize import PROJECTS, load_support
+    mem, dup, created, _ = load_support(p, PROJECTS[p]["key_prefix"])
+    check(f"{p} memory pool loaded", len(mem) > 0, f"{len(mem)} incidents")
+
+print("\n=== output, resume, disk ===")
+out = AG / f"agent-{TAG}.jsonl"
+done = 0
+if out.exists():
+    done = sum(1 for _ in out.open(encoding="utf-8"))
+check(f"output path is writable ({out.name})",
+      AG.exists() and (AG / "transcripts").exists(), str(AG))
+print(f"      rows already in {out.name}: {done} (run resumes over these)")
+tdir = AG / "transcripts"
+sizes = [f.stat().st_size for f in list(tdir.glob("v2-*.json"))[:200]]
+mean_kb = (sum(sizes) / len(sizes) / 1024) if sizes else 0
+need_gb = mean_kb * 4409 / 1024 / 1024
+freeb = shutil.disk_usage(str(AG)).free / 1024 ** 3
+check("free disk covers the transcripts", freeb > need_gb * 2,
+      f"need ~{need_gb:.1f} GB, free {freeb:.0f} GB")
+
+print("\n=== transport ===")
+spool = AG / "spool"
+stale = list(spool.glob("req-*.json")) + list(spool.glob("resp-*.json")) \
+    + list(spool.glob(".busy-*")) if spool.exists() else []
+check("no stale spool files from a previous run", not stale,
+      f"{len(stale)} left over")
+check("model name matches what the server serves",
+      A.MODEL == "qwen3.8-27b", A.MODEL)
+check("agent.py holds no hardcoded compute node",
+      not hasattr(A, "NODE"))
+
+print(f"\n{ok} passed, {fail} failed")
+sys.exit(1 if fail else 0)
