@@ -9,14 +9,21 @@ Cost is recorded per instance (LLM calls, prompt/completion tokens, wall
 seconds, tool calls), because the paper's industrial argument is about
 what accuracy costs, not accuracy alone.
 
-Scoring population: the same seeded 200/project evaluation sample used by
-the dense and noise experiments, minus instances whose gold is ONLY test
-files. Those are mined fixes that touched no implementation file (3.3% of
-MongoDB, 1.9% of the benchmark); no localizer can be right about them in
-any useful sense. Excluded ids are recorded, not silently dropped.
+Scoring population: the evaluation split loaded through
+localize.load_bench, so the agent runs on exactly the scored set every
+baseline is scored on (scripts/scored_set.py owns the rule). Default is
+the seeded 200/project sample used by the dense and noise experiments;
+--full runs the whole split.
+
+Instances whose gold is only test files are already gone by then. They are
+dropped because a hit there means retrieving the test file the fix edited,
+not localizing a defect -- NOT because they are unanswerable. They sit in
+the ranking universe and are in fact easier than average, so removing them
+moves our own numbers down.
 
 Usage:
     python industry-c7/agent/run_agent.py --workers 14
+    python industry-c7/agent/run_agent.py --workers 20 --full
     python industry-c7/agent/run_agent.py --project kafka --limit 20
 """
 
@@ -25,7 +32,6 @@ from __future__ import annotations
 import argparse
 import json
 import random
-import re
 import subprocess
 import sys
 import threading
@@ -38,15 +44,11 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
 import agent as A  # noqa: E402
 import tools as T  # noqa: E402
 from localize import (BENCH, OUT, PROJECTS, evaluate,  # noqa: E402
-                      load_support, parse_iso_epoch)
+                      load_bench, load_support, parse_iso_epoch)
 
 P = ("kafka", "mariadb", "mongodb", "qt")
 AGENT_OUT = Path(__file__).resolve().parents[1] / "data/agent"
 SEED_SAMPLE, SAMPLE_N = 42, 200
-# MongoDB names tests `*_test.cpp` outside any test directory, which the
-# miner's path filter did not catch.
-TESTY = re.compile(r"(^|/)(tests?|testing)/|_test\.|test_|"
-                   r"Test\.java$|Test\.scala$|_test\.cpp$|_test\.cc$", re.I)
 
 _lock = threading.Lock()
 _done = 0
@@ -60,41 +62,65 @@ def git_commit() -> str:
         return "unknown"
 
 
-def build_population(projects, limit=0):
-    """The evaluation sample, with test-only-gold instances removed."""
+def _sample_keys(project, rng):
+    """The seeded 200/project draw, reproduced exactly as first run.
+
+    The draw predates the scored set, so it is taken on the unfiltered
+    benchmark at the original dev boundary and only then intersected with
+    the scored set. Drawing on the filtered list instead would change the
+    list length, hence the indices, hence the sample -- it moves 213 of the
+    790 already-run instances. The sample must not shift under results that
+    are already reported.
+    """
+    raw = sorted((json.loads(l) for l in
+                  (BENCH / f"{project}.jsonl").open(encoding="utf-8")),
+                 key=lambda b: b["fix_time"])
+    summary = json.load((OUT / f"{project}-summary.json").open())
+    n_dev = (summary.get("pre_scored_set") or summary)["n_dev"]
+    ev = raw[n_dev:]
+    idx = sorted(rng.sample(range(len(ev)), min(SAMPLE_N, len(ev))))
+    return {ev[i]["issue_key"] for i in idx}
+
+
+def build_population(projects, limit=0, full=False):
+    """The evaluation split, drawn from the scored set.
+
+    Rows come from localize.load_bench, so the exclusion rule and the
+    dev/eval boundary are the ones every other system uses. Slicing the
+    UNFILTERED benchmark with the adjusted n_dev walks the boundary
+    backwards and pulls dev instances into eval -- 24 of them on mongodb.
+    """
     rng = random.Random(SEED_SAMPLE)
-    pop, excluded = [], []
+    pop = []
     for p in projects:
-        bench = {b["issue_key"]: b for b in
-                 (json.loads(l) for l in
-                  (BENCH / f"{p}.jsonl").open(encoding="utf-8"))}
+        bench = {b["issue_key"]: b for b in load_bench(p)}
         rows = [json.loads(l) for l in
                 (OUT / f"{p}-instances.jsonl").open(encoding="utf-8")]
         rows.sort(key=lambda r: r["fix_time"])
         n_dev = json.load((OUT / f"{p}-summary.json").open())["n_dev"]
         ev_bench = sorted(bench.values(), key=lambda b: b["fix_time"])[n_dev:]
-        idx = sorted(rng.sample(range(len(ev_bench)),
-                                min(SAMPLE_N, len(ev_bench))))
-        keys = {ev_bench[i]["issue_key"] for i in idx}
+        if full:
+            keys = {b["issue_key"] for b in ev_bench}
+        else:
+            keys = _sample_keys(p, rng) & {b["issue_key"] for b in ev_bench}
         by_key = {r["issue_key"]: r for r in rows}
         for k in sorted(keys):
             b, r = bench[k], by_key.get(k)
             if r is None:
                 continue
-            gold = b["gold_files"]
-            if gold and all(TESTY.search(f) for f in gold):
-                excluded.append({"project": p, "issue_key": k, "gold": gold})
-                continue
             pop.append((p, b, r))
     rng2 = random.Random(7)
     rng2.shuffle(pop)          # interleave projects for even partial coverage
-    return (pop[:limit] if limit else pop), excluded
+    return pop[:limit] if limit else pop
 
 
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--project", action="append", choices=list(P))
     ap.add_argument("--limit", type=int, default=0)
+    ap.add_argument("--full", action="store_true",
+                    help="run the whole evaluation split instead of the "
+                         "seeded %d/project sample" % SAMPLE_N)
     ap.add_argument("--workers", type=int, default=14)
     ap.add_argument("--seed", type=int, default=42)
     ap.add_argument("--tag", default="main")
@@ -108,10 +134,7 @@ def main() -> int:
     (AGENT_OUT / "transcripts").mkdir(exist_ok=True)
     out_path = AGENT_OUT / f"agent-{args.tag}.jsonl"
 
-    pop, excluded = build_population(projects, args.limit)
-    (AGENT_OUT / "excluded-test-only-gold.json").write_text(
-        json.dumps({"n": len(excluded), "rows": excluded}, indent=1),
-        encoding="utf-8")
+    pop = build_population(projects, args.limit, args.full)
 
     done = set()
     if out_path.exists():
@@ -121,7 +144,7 @@ def main() -> int:
             except Exception:  # noqa: BLE001
                 pass
     todo = [x for x in pop if f"{x[0]}:{x[1]['issue_key']}" not in done]
-    print(f"population={len(pop)} (excluded test-only-gold={len(excluded)}) "
+    print(f"population={len(pop)} full={args.full} "
           f"done={len(done)} todo={len(todo)} workers={args.workers} "
           f"seed={args.seed} shuffle_seeds={args.shuffle_seeds}", flush=True)
 

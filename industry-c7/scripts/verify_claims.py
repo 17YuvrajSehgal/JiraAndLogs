@@ -807,6 +807,37 @@ def main() -> int:
     check("S4 the removed instances were rankable, not unanswerable",
           rm_a5 > kept_a5, f"{rm_a5:.3f} vs {kept_a5:.3f}")
 
+    # The agent population must come off the scored set at the ORIGINAL dev
+    # boundary. Slicing the unfiltered benchmark with the adjusted n_dev
+    # pulled 24 mongodb dev instances into eval; --full did not exist at all.
+    sys.path.insert(0, str(ROOT / "industry-c7/agent"))
+    import run_agent as _RA
+    _P = list(P)
+    _samp = _RA.build_population(_P)
+    _full = _RA.build_population(_P, full=True)
+    _ids = lambda pop: {f"{p}:{b['issue_key']}" for p, b, _ in pop}
+    _run = {json.loads(l)["id"] for l in
+            (ROOT / "industry-c7/data/agent/agent-v2.jsonl")
+            .open(encoding="utf-8")}
+    check("S4 agent --full is the whole 4,409 eval split",
+          len(_full) == 4409, f"got {len(_full)}")
+    check("S4 agent default sample is exactly the 790 already run",
+          _ids(_samp) == _run, f"{len(_samp)} vs {len(_run)} run")
+    check("S4 the 790 sample sits inside the full split",
+          _ids(_samp) <= _ids(_full))
+    _leak = 0
+    for _p in _P:
+        _raw = sorted((json.loads(l) for l in
+                       (ROOT / f"industry-c7/data/benchmark/{_p}.jsonl")
+                       .open(encoding="utf-8")),
+                      key=lambda b: b["fix_time"])
+        _s = summ[_p]
+        _nd = (_s.get("pre_scored_set") or _s)["n_dev"]
+        _dev = {b["issue_key"] for b in _raw[:_nd]}
+        _leak += len({b["issue_key"] for q, b, _ in _full if q == _p} & _dev)
+    check("S4 no dev instance reaches the agent eval population",
+          _leak == 0, f"{_leak} leaked")
+
     # ---- Sec. 5: the three validity checks ------------------------------------
     cp = json.loads((RES / "llm-cp-summary.json").read_text(encoding="utf-8"))
     bv = cp["by_variant"]

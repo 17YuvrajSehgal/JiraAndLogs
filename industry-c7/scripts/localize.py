@@ -378,8 +378,11 @@ def tune_weights(rows: list[dict], signals: tuple[str, ...]) -> dict[str, float]
 
 
 def load_bench(project: str) -> list[dict]:
-    """Benchmark rows for a project, minus the instances no localizer can
-    answer because every gold file is test code (see scripts/scored_set.py).
+    """Benchmark rows for a project, minus the instances whose gold is only
+    test code (see scripts/scored_set.py). Those are rankable -- the test
+    files sit in the universe -- but a hit there means retrieving the test
+    the fix edited, not localizing a defect. They are easier than average,
+    so dropping them moves our own numbers down.
     Every system loads through here so they are all scored on one population.
     """
     from scored_set import load as _load_excluded
