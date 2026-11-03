@@ -27,7 +27,7 @@ Needs: **CPU** (laptop, no cluster) · **GPU** (needs vLLM job) · **HUMAN** (us
       Total cost of all outages: 38 instances re-run, 0 lost. **HUMAN**
 
 B1 and B2 are both closed. Everything still open is CPU-only except
-T7, T17, T19 and Mahsa's point 3, which need a fresh vLLM job.
+T7, T17, T19 and T25, which need a fresh vLLM job.
 
 ---
 
@@ -239,6 +239,49 @@ We produce one and never score it.
 
 ## P5 — Generalization and leftovers
 
+- [ ] **T25. An agentic baseline (Mahsa's point 3).** Her wording: "Add an
+      existing localization agent with access to the same reports and
+      snapshots, using the same model where supported and a comparable
+      inference budget."
+
+      **Read the scope before building — it is smaller than it looks.**
+      `paper/sections/07-related.tex:42` already states that Agentless "is
+      the design we adopt for the model-alone arm of our study". So the
+      `model alone` row (Acc@1 55.8 / Acc@5 77.8 on the full split) *is*
+      an Agentless-style LLM baseline, and the paper says so. The gap is
+      not "no LLM baseline". It is that Agentless has no agent loop by
+      design, so we have **no agentic baseline** — nothing that navigates
+      code structure the way LocAgent, CoSIL or GenLoc do. All three are
+      already cited in related work, which makes their absence as
+      baselines more visible, not less.
+
+      **Proposed build: a LocAgent-style arm.** Our harness, the same 27B
+      model, the same turn budget, restricted to the tool set an existing
+      agent publishes — symbol/entity resolution, `read_code`, `list_dir`,
+      `read_skeleton` — with **incident memory off and the log-trace
+      signal off**. That isolates what an existing agent gets from what
+      \sys{} adds. Name it "LocAgent-style", exactly as the paper already
+      says "BRTracer-style", and never claim it is LocAgent.
+      Implementation is a restricted tool list plus a memory-off flag in
+      `agent.py`; `tools.py` needs nothing new. **CPU to build, GPU to run.**
+
+      **Why not the alternatives:** CoSIL needs dynamically built call
+      graphs we do not have. Running the real Agentless or LocAgent code
+      is a porting project, not a baseline — both target Python
+      repositories and ours are C, C++, Java and Scala.
+
+      **Open decision before starting — population and cost.** A full
+      4,409-instance run is ~11 h of GPU, the same as the main run. The
+      alternative is a stratified subsample of ~1,000 (~2.5 h) with every
+      system rescored on exactly that subsample. Pick one deliberately;
+      a baseline measured on a different population than \sys{} is the
+      specific mistake `feedback-same-population-comparisons` records.
+
+      **If it does not get built**, say so plainly in threats to validity:
+      the comparison covers IRBL, lexical, retrieval+memory and a strong
+      non-agent LLM pipeline, but no published *agent*. Do not leave it
+      unmentioned. **GPU** · needs a fresh vLLM job
+
 - [ ] **T7. Three seeds** on the 790 sample, mean with CIs. One seed today;
       reviewer severity Medium–high. About 8 h. **GPU** · needs B2
 - [ ] **T19. Second model.** GLM-5.3-Flash was already staged on the cluster.
@@ -292,7 +335,10 @@ no LaTeX toolchain on this machine.
 
 Still owed, not yet scheduled:
 - the human-verified annotation subset that `RUBRIC.md` pre-registers (B1)
-- Mahsa's point 3, an existing-agent baseline (**GPU**)
+- an agentic baseline, Mahsa's point 3 — now written up as **T25** in P5,
+  including why the scope is smaller than it first looks (the model-alone
+  arm is already Agentless-style) and the population decision to settle
+  before any GPU is spent (**GPU**)
 
 ---
 
