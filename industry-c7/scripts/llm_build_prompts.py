@@ -43,7 +43,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from function_stage import list_functions, parser_for, raw_blobs  # noqa: E402
-from localize import (BENCH, FULL_REPOS, OUT, PROJECTS,  # noqa: E402
+from localize import (BENCH, FULL_REPOS, OUT, PROJECTS, load_bench,  # noqa: E402
                       Snapshot, run_git)
 
 P = ("kafka", "mariadb", "mongodb", "qt")
@@ -77,9 +77,7 @@ def ordered_instances() -> list[tuple[str, dict, dict]]:
     rng = random.Random(SEED)
     buckets: dict[str, list] = {"sample": [], "eval": [], "dev": []}
     for p in P:
-        bench = {b["issue_key"]: b for b in
-                 (json.loads(l) for l in
-                  (BENCH / f"{p}.jsonl").open(encoding="utf-8"))}
+        bench = {b["issue_key"]: b for b in load_bench(p)}
         rows = [json.loads(l) for l in
                 (OUT / f"{p}-instances.jsonl").open(encoding="utf-8")]
         rows.sort(key=lambda r: r["fix_time"])

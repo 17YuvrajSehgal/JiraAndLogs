@@ -376,6 +376,20 @@ def tune_weights(rows: list[dict], signals: tuple[str, ...]) -> dict[str, float]
     return best_w
 
 
+
+def load_bench(project: str) -> list[dict]:
+    """Benchmark rows for a project, minus the instances no localizer can
+    answer because every gold file is test code (see scripts/scored_set.py).
+    Every system loads through here so they are all scored on one population.
+    """
+    from scored_set import load as _load_excluded
+    excl = _load_excluded(BENCH)
+    return [b for b in
+            (json.loads(l) for l in
+             (BENCH / f"{project}.jsonl").open(encoding="utf-8"))
+            if f"{project}:{b['issue_key']}" not in excl]
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
@@ -385,8 +399,7 @@ def main() -> int:
 
     cfg = PROJECTS[args.project]
     git_dir = FULL_REPOS[args.project]
-    bench = [json.loads(l) for l in
-             (BENCH / f"{args.project}.jsonl").open(encoding="utf-8")]
+    bench = load_bench(args.project)
     if args.limit:
         bench = bench[:args.limit]
     mem_by_key, dupclusters, created_map, preds = load_support(

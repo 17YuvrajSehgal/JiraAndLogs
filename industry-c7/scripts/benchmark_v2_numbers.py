@@ -30,6 +30,8 @@ def dist(v: list[int]) -> dict:
 
 
 def main() -> int:
+    SS = json.loads((V2 / "excluded-test-only-gold.json")
+                    .read_text(encoding="utf-8"))
     ds = json.loads((V2 / "datasheet.json").read_text(encoding="utf-8"))
     rows, q, nc, nf, gf = [], [], [], [], []
     tot = hard = trace = single = 0
@@ -126,8 +128,16 @@ it much harder to attack.
 | minus no non-test source file modified | -{F['no_source_gold']:,} |
 | minus gold set over 50 files (bulk edit) | -{F['gold_over_50_files']:,} |
 | **= final instances** | **{F['final_instances']:,}** |
+| minus gold entirely test code (scored set, not re-mined) | -{SS['n_excluded']:,} |
+| **= scored instances** | **{SS['n_scored']:,}** |
 
 Overall yield {100 * F['final_instances'] / F['wolv2_log_fixed_lowuncert_issues']:.1f}%.
+
+The last row is a scoring-time exclusion, not a mining filter: gold is kept
+exactly as mined, and the {SS['n_excluded']} instances whose gold is entirely
+test code are dropped from the scored set because no ranking over source
+files can hit them. Every system is scored on the same {SS['n_scored']:,}.
+See `paper/test-filter-gaps.md`.
 
 Three filter changes from the current paper, each needing a sentence:
 

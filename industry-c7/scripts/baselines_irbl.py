@@ -48,7 +48,7 @@ from collections import Counter, defaultdict
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from localize import (BENCH, FULL_REPOS, OUT, Snapshot, evaluate,  # noqa: E402
+from localize import (BENCH, FULL_REPOS, OUT, Snapshot, evaluate, load_bench,  # noqa: E402
                       load_support, parse_iso_epoch, tokenize, trace_rank,
                       DEV_FRACTION)
 from mine_benchmark import PROJECTS  # noqa: E402
@@ -144,8 +144,7 @@ def main() -> int:
 
     cfg = PROJECTS[args.project]
     git_dir = FULL_REPOS[args.project]
-    bench = [json.loads(l) for l in
-             (BENCH / f"{args.project}.jsonl").open(encoding="utf-8")]
+    bench = load_bench(args.project)
     if args.limit:
         bench = bench[:args.limit]
     mem_by_key, dupclusters, created_map, _ = load_support(

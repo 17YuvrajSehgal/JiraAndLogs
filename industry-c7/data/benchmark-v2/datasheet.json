@@ -1,4 +1,77 @@
 {
+  "pdfbox": {
+    "project": "pdfbox",
+    "git_dir": "C:\\workplace\\JiraAndLogs\\data\\c7-repos\\pdfbox-full.git",
+    "git_head": "a9ae066a942c122c9dded9bfa1b08dfae4078ba4",
+    "branch_scanned": "default branch only (first-parent history not enforced)",
+    "funnel": {
+      "wolv2_log_fixed_lowuncert_issues": 890,
+      "no_fix_commit": 154,
+      "gt10_fix_commits": 4,
+      "commits_dropped_span": 34,
+      "linked_1_to_10_commits": 732,
+      "snapshot_scan_failed": 0,
+      "no_source_gold": 19,
+      "gold_files_absent_from_snapshot": 20,
+      "final_instances": 713
+    },
+    "dropped_commit_level": {
+      "revert_commits": 182
+    },
+    "strata": {
+      "single_commit": 467,
+      "trace_present": 404,
+      "easy_gold_named": 532,
+      "multi_commit": 246,
+      "trace_absent": 309,
+      "hard_gold_not_named": 181
+    },
+    "gold_files_median": 1,
+    "query_chars": {
+      "n": 713,
+      "min": 66,
+      "median": 1038,
+      "p95": 3402,
+      "max": 107981,
+      "mean": 1569.5,
+      "over_20k": 3,
+      "truncated_at": null
+    },
+    "fix_commits_per_issue": {
+      "n": 713,
+      "min": 1,
+      "median": 1,
+      "p95": 5,
+      "max": 10,
+      "mean": 1.79,
+      "cap": 10,
+      "hist": {
+        "1": 467,
+        "2": 130,
+        "3": 53,
+        "4": 26,
+        "5": 6,
+        "6": 6,
+        "7": 4,
+        "8": 7,
+        "9": 3,
+        "10": 11
+      }
+    },
+    "files_changed_by_fix": {
+      "n": 713,
+      "min": 1,
+      "median": 1,
+      "p95": 8,
+      "max": 84,
+      "mean": 2.56,
+      "over_3": 105,
+      "over_10": 28,
+      "over_50": 2
+    },
+    "gold_files_mean": 2.02,
+    "output": "C:\\workplace\\JiraAndLogs\\industry-c7\\data\\benchmark-v2\\pdfbox.jsonl"
+  },
   "hive": {
     "project": "hive",
     "git_dir": "C:\\workplace\\JiraAndLogs\\data\\c7-repos\\hive-full.git",
@@ -9,36 +82,38 @@
       "no_fix_commit": 298,
       "commits_dropped_span": 20,
       "linked_1_to_10_commits": 5612,
-      "no_source_gold": 858,
+      "snapshot_reordered_topologically": 1,
+      "snapshot_scan_failed": 0,
+      "no_source_gold": 900,
       "gold_files_absent_from_snapshot": 60,
       "gold_over_50_files": 20,
-      "final_instances": 4734
+      "final_instances": 4692
     },
     "dropped_commit_level": {
       "revert_commits": 237,
       "merge_commits": 151
     },
     "strata": {
-      "single_commit": 4472,
-      "trace_absent": 4039,
-      "hard_gold_not_named": 2793,
-      "easy_gold_named": 1941,
-      "trace_present": 695,
-      "multi_commit": 262
+      "single_commit": 4433,
+      "trace_absent": 3998,
+      "hard_gold_not_named": 2765,
+      "easy_gold_named": 1927,
+      "trace_present": 694,
+      "multi_commit": 259
     },
     "gold_files_median": 1,
     "query_chars": {
-      "n": 4734,
+      "n": 4692,
       "min": 19,
-      "median": 426,
-      "p95": 4363,
+      "median": 429,
+      "p95": 4391,
       "max": 140730,
-      "mean": 1121.41,
-      "over_20k": 8,
+      "mean": 1123.07,
+      "over_20k": 7,
       "truncated_at": null
     },
     "fix_commits_per_issue": {
-      "n": 4734,
+      "n": 4692,
       "min": 1,
       "median": 1,
       "p95": 2,
@@ -46,8 +121,8 @@
       "mean": 1.06,
       "cap": 10,
       "hist": {
-        "1": 4472,
-        "2": 228,
+        "1": 4433,
+        "2": 225,
         "3": 32,
         "4": 1,
         "5": 1,
@@ -59,17 +134,17 @@
       }
     },
     "files_changed_by_fix": {
-      "n": 4734,
+      "n": 4692,
       "min": 1,
       "median": 3,
       "p95": 30,
       "max": 2755,
-      "mean": 12.0,
-      "over_3": 2168,
-      "over_10": 715,
-      "over_50": 129
+      "mean": 12.01,
+      "over_3": 2150,
+      "over_10": 706,
+      "over_50": 127
     },
-    "gold_files_mean": 2.81,
+    "gold_files_mean": 2.79,
     "output": "C:\\workplace\\JiraAndLogs\\industry-c7\\data\\benchmark-v2\\hive.jsonl"
   },
   "hbase": {
@@ -82,6 +157,8 @@
       "no_fix_commit": 700,
       "commits_dropped_span": 35,
       "linked_1_to_10_commits": 4515,
+      "snapshot_reordered_topologically": 1,
+      "snapshot_scan_failed": 0,
       "no_source_gold": 1260,
       "gold_files_absent_from_snapshot": 27,
       "gold_over_50_files": 10,
@@ -155,6 +232,7 @@
       "no_fix_commit": 1653,
       "commits_dropped_span": 54,
       "linked_1_to_10_commits": 6195,
+      "snapshot_scan_failed": 0,
       "no_source_gold": 1809,
       "gold_files_absent_from_snapshot": 32,
       "gold_over_50_files": 1,
@@ -228,6 +306,7 @@
       "no_fix_commit": 330,
       "commits_dropped_span": 25,
       "linked_1_to_10_commits": 1984,
+      "snapshot_scan_failed": 0,
       "no_source_gold": 419,
       "gold_files_absent_from_snapshot": 9,
       "final_instances": 1565
@@ -301,9 +380,11 @@
       "gt10_fix_commits": 1,
       "commits_dropped_span": 16,
       "linked_1_to_10_commits": 1717,
-      "no_source_gold": 630,
-      "gold_files_absent_from_snapshot": 12,
-      "final_instances": 1087
+      "snapshot_reordered_topologically": 106,
+      "snapshot_scan_failed": 0,
+      "no_source_gold": 632,
+      "gold_files_absent_from_snapshot": 24,
+      "final_instances": 1085
     },
     "dropped_commit_level": {
       "revert_commits": 227,
@@ -311,25 +392,25 @@
     },
     "strata": {
       "single_commit": 904,
-      "trace_absent": 546,
+      "trace_absent": 545,
       "easy_gold_named": 731,
-      "trace_present": 541,
-      "hard_gold_not_named": 356,
-      "multi_commit": 183
+      "trace_present": 540,
+      "hard_gold_not_named": 354,
+      "multi_commit": 181
     },
     "gold_files_median": 1,
     "query_chars": {
-      "n": 1087,
+      "n": 1085,
       "min": 65,
-      "median": 1754,
+      "median": 1753,
       "p95": 9710,
       "max": 46757,
-      "mean": 2983.66,
+      "mean": 2983.07,
       "over_20k": 7,
       "truncated_at": null
     },
     "fix_commits_per_issue": {
-      "n": 1087,
+      "n": 1085,
       "min": 1,
       "median": 1,
       "p95": 2,
@@ -338,8 +419,8 @@
       "cap": 10,
       "hist": {
         "1": 904,
-        "2": 134,
-        "3": 24,
+        "2": 133,
+        "3": 23,
         "4": 10,
         "5": 8,
         "6": 2,
@@ -350,17 +431,17 @@
       }
     },
     "files_changed_by_fix": {
-      "n": 1087,
+      "n": 1085,
       "min": 1,
       "median": 3,
       "p95": 18,
       "max": 105,
       "mean": 5.7,
-      "over_3": 491,
+      "over_3": 489,
       "over_10": 145,
       "over_50": 4
     },
-    "gold_files_mean": 2.89,
+    "gold_files_mean": 2.88,
     "output": "C:\\workplace\\JiraAndLogs\\industry-c7\\data\\benchmark-v2\\flink.jsonl"
   },
   "ambari": {
@@ -374,6 +455,8 @@
       "commits_dropped_span": 8,
       "gt10_fix_commits": 2,
       "linked_1_to_10_commits": 5653,
+      "snapshot_reordered_topologically": 18,
+      "snapshot_scan_failed": 0,
       "no_source_gold": 2360,
       "gold_files_absent_from_snapshot": 59,
       "gold_over_50_files": 7,
@@ -447,35 +530,35 @@
       "no_fix_commit": 291,
       "commits_dropped_span": 11,
       "linked_1_to_10_commits": 1201,
-      "no_source_gold": 399,
+      "snapshot_scan_failed": 0,
+      "no_source_gold": 425,
       "gold_files_absent_from_snapshot": 3,
-      "gold_over_50_files": 2,
-      "final_instances": 800
+      "final_instances": 776
     },
     "dropped_commit_level": {
       "revert_commits": 94
     },
     "strata": {
-      "single_commit": 757,
-      "trace_present": 451,
-      "easy_gold_named": 427,
-      "trace_absent": 349,
-      "hard_gold_not_named": 373,
-      "multi_commit": 43
+      "single_commit": 735,
+      "trace_present": 430,
+      "easy_gold_named": 398,
+      "trace_absent": 346,
+      "hard_gold_not_named": 378,
+      "multi_commit": 41
     },
     "gold_files_median": 2,
     "query_chars": {
-      "n": 800,
+      "n": 776,
       "min": 165,
-      "median": 1935,
-      "p95": 9166,
+      "median": 1908,
+      "p95": 9101,
       "max": 84722,
-      "mean": 3303.07,
+      "mean": 3292.12,
       "over_20k": 7,
       "truncated_at": null
     },
     "fix_commits_per_issue": {
-      "n": 800,
+      "n": 776,
       "min": 1,
       "median": 1,
       "p95": 2,
@@ -483,8 +566,8 @@
       "mean": 1.07,
       "cap": 10,
       "hist": {
-        "1": 757,
-        "2": 36,
+        "1": 735,
+        "2": 34,
         "3": 5,
         "4": 1,
         "5": 0,
@@ -496,17 +579,17 @@
       }
     },
     "files_changed_by_fix": {
-      "n": 800,
+      "n": 776,
       "min": 1,
       "median": 3,
-      "p95": 12,
+      "p95": 13,
       "max": 69,
-      "mean": 4.29,
-      "over_3": 319,
-      "over_10": 56,
-      "over_50": 1
+      "mean": 4.54,
+      "over_3": 320,
+      "over_10": 58,
+      "over_50": 3
     },
-    "gold_files_mean": 2.99,
+    "gold_files_mean": 2.98,
     "output": "C:\\workplace\\JiraAndLogs\\industry-c7\\data\\benchmark-v2\\impala.jsonl"
   },
   "geode": {
@@ -520,45 +603,47 @@
       "commits_dropped_span": 45,
       "gt10_fix_commits": 2,
       "linked_1_to_10_commits": 1093,
-      "no_source_gold": 451,
-      "gold_files_absent_from_snapshot": 18,
+      "snapshot_reordered_topologically": 11,
+      "snapshot_scan_failed": 0,
+      "no_source_gold": 461,
+      "gold_files_absent_from_snapshot": 17,
       "gold_over_50_files": 4,
-      "final_instances": 638
+      "final_instances": 628
     },
     "dropped_commit_level": {
       "revert_commits": 293,
       "merge_commits": 307
     },
     "strata": {
-      "single_commit": 471,
-      "trace_present": 376,
-      "hard_gold_not_named": 256,
-      "easy_gold_named": 382,
-      "multi_commit": 167,
-      "trace_absent": 262
+      "single_commit": 462,
+      "trace_present": 370,
+      "easy_gold_named": 374,
+      "multi_commit": 166,
+      "hard_gold_not_named": 254,
+      "trace_absent": 258
     },
     "gold_files_median": 1,
     "query_chars": {
-      "n": 638,
+      "n": 628,
       "min": 98,
-      "median": 2063,
-      "p95": 8200,
+      "median": 1990,
+      "p95": 8173,
       "max": 50870,
-      "mean": 3058.29,
+      "mean": 3037.09,
       "over_20k": 7,
       "truncated_at": null
     },
     "fix_commits_per_issue": {
-      "n": 638,
+      "n": 628,
       "min": 1,
       "median": 1,
       "p95": 3,
       "max": 7,
-      "mean": 1.38,
+      "mean": 1.39,
       "cap": 10,
       "hist": {
-        "1": 471,
-        "2": 121,
+        "1": 462,
+        "2": 120,
         "3": 25,
         "4": 17,
         "5": 1,
@@ -570,17 +655,17 @@
       }
     },
     "files_changed_by_fix": {
-      "n": 638,
+      "n": 628,
       "min": 1,
       "median": 3,
       "p95": 16,
       "max": 133,
-      "mean": 5.44,
-      "over_3": 268,
+      "mean": 5.49,
+      "over_3": 266,
       "over_10": 57,
       "over_50": 6
     },
-    "gold_files_mean": 2.6,
+    "gold_files_mean": 2.58,
     "output": "C:\\workplace\\JiraAndLogs\\industry-c7\\data\\benchmark-v2\\geode.jsonl"
   },
   "ignite": {
@@ -594,6 +679,8 @@
       "commits_dropped_span": 6,
       "gt10_fix_commits": 1,
       "linked_1_to_10_commits": 954,
+      "snapshot_reordered_topologically": 1,
+      "snapshot_scan_failed": 0,
       "no_source_gold": 255,
       "gold_over_50_files": 4,
       "gold_files_absent_from_snapshot": 6,
@@ -668,6 +755,8 @@
       "commits_dropped_span": 10,
       "gt10_fix_commits": 3,
       "linked_1_to_10_commits": 1030,
+      "snapshot_reordered_topologically": 22,
+      "snapshot_scan_failed": 0,
       "no_source_gold": 158,
       "gold_over_50_files": 3,
       "gold_files_absent_from_snapshot": 14,
@@ -741,6 +830,7 @@
       "no_fix_commit": 131,
       "commits_dropped_span": 7,
       "linked_1_to_10_commits": 928,
+      "snapshot_scan_failed": 0,
       "no_source_gold": 125,
       "gold_files_absent_from_snapshot": 20,
       "gold_over_50_files": 1,
@@ -814,45 +904,47 @@
       "no_fix_commit": 413,
       "commits_dropped_span": 11,
       "linked_1_to_10_commits": 510,
-      "no_source_gold": 167,
+      "snapshot_reordered_topologically": 11,
+      "snapshot_scan_failed": 0,
+      "no_source_gold": 193,
       "gold_over_50_files": 1,
-      "gold_files_absent_from_snapshot": 2,
-      "final_instances": 342
+      "gold_files_absent_from_snapshot": 5,
+      "final_instances": 316
     },
     "dropped_commit_level": {
       "merge_commits": 4492,
       "revert_commits": 214
     },
     "strata": {
-      "multi_commit": 63,
-      "trace_absent": 238,
-      "hard_gold_not_named": 111,
-      "single_commit": 279,
-      "easy_gold_named": 231,
-      "trace_present": 104
+      "multi_commit": 59,
+      "trace_absent": 214,
+      "hard_gold_not_named": 105,
+      "single_commit": 257,
+      "easy_gold_named": 211,
+      "trace_present": 102
     },
     "gold_files_median": 1,
     "query_chars": {
-      "n": 342,
-      "min": 37,
-      "median": 1761,
+      "n": 316,
+      "min": 94,
+      "median": 1784,
       "p95": 8001,
       "max": 62386,
-      "mean": 2841.74,
+      "mean": 2867.28,
       "over_20k": 2,
       "truncated_at": null
     },
     "fix_commits_per_issue": {
-      "n": 342,
+      "n": 316,
       "min": 1,
       "median": 1,
       "p95": 3,
       "max": 10,
-      "mean": 1.31,
+      "mean": 1.32,
       "cap": 10,
       "hist": {
-        "1": 279,
-        "2": 40,
+        "1": 257,
+        "2": 36,
         "3": 16,
         "4": 3,
         "5": 1,
@@ -864,17 +956,17 @@
       }
     },
     "files_changed_by_fix": {
-      "n": 342,
+      "n": 316,
       "min": 1,
       "median": 2,
       "p95": 11,
       "max": 45,
-      "mean": 3.28,
-      "over_3": 84,
+      "mean": 3.41,
+      "over_3": 80,
       "over_10": 18,
       "over_50": 0
     },
-    "gold_files_mean": 2.2,
+    "gold_files_mean": 2.01,
     "output": "C:\\workplace\\JiraAndLogs\\industry-c7\\data\\benchmark-v2\\beam.jsonl"
   },
   "pig": {
@@ -887,6 +979,7 @@
       "no_fix_commit": 122,
       "commits_dropped_span": 3,
       "linked_1_to_10_commits": 746,
+      "snapshot_scan_failed": 0,
       "no_source_gold": 137,
       "gold_files_absent_from_snapshot": 7,
       "gold_over_50_files": 3,
@@ -959,6 +1052,8 @@
       "no_fix_commit": 487,
       "commits_dropped_span": 73,
       "linked_1_to_10_commits": 1117,
+      "snapshot_reordered_topologically": 6,
+      "snapshot_scan_failed": 0,
       "no_source_gold": 110,
       "gold_files_absent_from_snapshot": 7,
       "final_instances": 1007
@@ -1032,6 +1127,8 @@
       "gt10_fix_commits": 14,
       "commits_dropped_span": 47,
       "linked_1_to_10_commits": 2056,
+      "snapshot_reordered_topologically": 2,
+      "snapshot_scan_failed": 0,
       "no_source_gold": 614,
       "gold_files_absent_from_snapshot": 167,
       "gold_over_50_files": 2,
@@ -1105,8 +1202,10 @@
       "no_fix_commit": 542,
       "commits_dropped_span": 32,
       "linked_1_to_10_commits": 1062,
+      "snapshot_reordered_topologically": 22,
+      "snapshot_scan_failed": 0,
       "no_source_gold": 336,
-      "gold_files_absent_from_snapshot": 6,
+      "gold_files_absent_from_snapshot": 8,
       "gold_over_50_files": 1,
       "final_instances": 725
     },
@@ -1178,8 +1277,10 @@
       "no_fix_commit": 231,
       "commits_dropped_span": 26,
       "linked_1_to_10_commits": 1315,
+      "snapshot_reordered_topologically": 95,
+      "snapshot_scan_failed": 0,
       "no_source_gold": 452,
-      "gold_files_absent_from_snapshot": 8,
+      "gold_files_absent_from_snapshot": 13,
       "gold_over_50_files": 1,
       "final_instances": 862
     },
@@ -1251,36 +1352,38 @@
       "no_fix_commit": 294,
       "commits_dropped_span": 2,
       "linked_1_to_10_commits": 646,
-      "no_source_gold": 212,
-      "gold_files_absent_from_snapshot": 8,
+      "snapshot_reordered_topologically": 12,
+      "snapshot_scan_failed": 0,
+      "no_source_gold": 214,
+      "gold_files_absent_from_snapshot": 9,
       "gold_over_50_files": 1,
-      "final_instances": 433
+      "final_instances": 431
     },
     "dropped_commit_level": {
       "revert_commits": 30,
       "merge_commits": 1181
     },
     "strata": {
-      "single_commit": 386,
-      "trace_absent": 226,
-      "hard_gold_not_named": 181,
+      "single_commit": 384,
+      "trace_absent": 224,
+      "hard_gold_not_named": 179,
       "trace_present": 207,
       "easy_gold_named": 252,
       "multi_commit": 47
     },
     "gold_files_median": 1,
     "query_chars": {
-      "n": 433,
+      "n": 431,
       "min": 143,
       "median": 1677,
       "p95": 11735,
       "max": 80878,
-      "mean": 3674.34,
+      "mean": 3684.98,
       "over_20k": 4,
       "truncated_at": null
     },
     "fix_commits_per_issue": {
-      "n": 433,
+      "n": 431,
       "min": 1,
       "median": 1,
       "p95": 2,
@@ -1288,7 +1391,7 @@
       "mean": 1.14,
       "cap": 10,
       "hist": {
-        "1": 386,
+        "1": 384,
         "2": 36,
         "3": 7,
         "4": 4,
@@ -1301,17 +1404,17 @@
       }
     },
     "files_changed_by_fix": {
-      "n": 433,
+      "n": 431,
       "min": 1,
       "median": 2,
       "p95": 14,
       "max": 121,
-      "mean": 4.82,
+      "mean": 4.84,
       "over_3": 156,
       "over_10": 42,
       "over_50": 2
     },
-    "gold_files_mean": 2.64,
+    "gold_files_mean": 2.59,
     "output": "C:\\workplace\\JiraAndLogs\\industry-c7\\data\\benchmark-v2\\keycloak.jsonl"
   },
   "derby": {
@@ -1325,6 +1428,7 @@
       "gt10_fix_commits": 5,
       "commits_dropped_span": 39,
       "linked_1_to_10_commits": 1019,
+      "snapshot_scan_failed": 0,
       "no_source_gold": 342,
       "gold_files_absent_from_snapshot": 7,
       "final_instances": 677
@@ -1397,6 +1501,8 @@
       "commits_dropped_span": 22,
       "gt10_fix_commits": 3,
       "linked_1_to_10_commits": 970,
+      "snapshot_reordered_topologically": 1,
+      "snapshot_scan_failed": 0,
       "no_source_gold": 213,
       "gold_files_absent_from_snapshot": 9,
       "gold_over_50_files": 1,
@@ -1470,8 +1576,10 @@
       "no_fix_commit": 375,
       "commits_dropped_span": 2,
       "linked_1_to_10_commits": 671,
+      "snapshot_reordered_topologically": 9,
+      "snapshot_scan_failed": 0,
       "no_source_gold": 132,
-      "gold_files_absent_from_snapshot": 2,
+      "gold_files_absent_from_snapshot": 3,
       "gold_over_50_files": 3,
       "final_instances": 536
     },
@@ -1544,6 +1652,7 @@
       "commits_dropped_span": 7,
       "gt10_fix_commits": 1,
       "linked_1_to_10_commits": 1714,
+      "snapshot_scan_failed": 0,
       "no_source_gold": 293,
       "gold_files_absent_from_snapshot": 38,
       "final_instances": 1421
@@ -1616,6 +1725,7 @@
       "no_fix_commit": 340,
       "commits_dropped_span": 13,
       "linked_1_to_10_commits": 832,
+      "snapshot_scan_failed": 0,
       "no_source_gold": 149,
       "gold_files_absent_from_snapshot": 7,
       "final_instances": 683
@@ -1688,6 +1798,8 @@
       "no_fix_commit": 955,
       "commits_dropped_span": 44,
       "linked_1_to_10_commits": 2049,
+      "snapshot_reordered_topologically": 12,
+      "snapshot_scan_failed": 0,
       "no_source_gold": 333,
       "gold_files_absent_from_snapshot": 33,
       "gold_over_50_files": 1,
@@ -1762,67 +1874,69 @@
       "commits_dropped_span": 72,
       "gt10_fix_commits": 19,
       "linked_1_to_10_commits": 5249,
-      "no_source_gold": 1494,
-      "gold_files_absent_from_snapshot": 93,
-      "gold_over_50_files": 18,
-      "final_instances": 3737
+      "snapshot_reordered_topologically": 129,
+      "snapshot_scan_failed": 0,
+      "no_source_gold": 1609,
+      "gold_files_absent_from_snapshot": 74,
+      "gold_over_50_files": 11,
+      "final_instances": 3629
     },
     "dropped_commit_level": {
       "revert_commits": 3312,
       "merge_commits": 39
     },
     "strata": {
-      "single_commit": 2894,
-      "trace_absent": 3381,
-      "hard_gold_not_named": 2253,
-      "multi_commit": 843,
-      "easy_gold_named": 1484,
-      "trace_present": 356
+      "multi_commit": 833,
+      "trace_absent": 3298,
+      "hard_gold_not_named": 2222,
+      "single_commit": 2796,
+      "easy_gold_named": 1407,
+      "trace_present": 331
     },
-    "gold_files_median": 2,
+    "gold_files_median": 1,
     "query_chars": {
-      "n": 3737,
+      "n": 3629,
       "min": 16,
-      "median": 571,
-      "p95": 5146,
+      "median": 574,
+      "p95": 5278,
       "max": 706007,
-      "mean": 1529.26,
+      "mean": 1551.12,
       "over_20k": 11,
       "truncated_at": null
     },
     "fix_commits_per_issue": {
-      "n": 3737,
+      "n": 3629,
       "min": 1,
       "median": 1,
       "p95": 3,
       "max": 10,
-      "mean": 1.38,
+      "mean": 1.39,
       "cap": 10,
       "hist": {
-        "1": 2894,
-        "2": 556,
-        "3": 154,
+        "1": 2796,
+        "2": 546,
+        "3": 151,
         "4": 52,
         "5": 35,
         "6": 21,
-        "7": 20,
-        "8": 1,
+        "7": 21,
+        "8": 3,
         "9": 1,
         "10": 3
       }
     },
     "files_changed_by_fix": {
-      "n": 3737,
+      "n": 3629,
       "min": 1,
       "median": 2,
       "p95": 14,
-      "max": 73,
-      "mean": 3.96,
+      "max": 99,
+      "mean": 4.15,
       "over_3": 1155,
-      "over_10": 275,
-      "over_50": 7
+      "over_10": 280,
+      "over_50": 13
     },
-    "gold_files_mean": 3.06,
+    "gold_files_mean": 2.84,
     "output": "C:\\workplace\\JiraAndLogs\\industry-c7\\data\\benchmark-v2\\mongodb.jsonl"
   },
   "qt": {
@@ -1835,6 +1949,7 @@
       "no_fix_commit": 6699,
       "commits_dropped_span": 4,
       "linked_1_to_10_commits": 713,
+      "snapshot_scan_failed": 0,
       "no_source_gold": 257,
       "gold_files_absent_from_snapshot": 3,
       "final_instances": 456
@@ -1895,78 +2010,5 @@
     },
     "gold_files_mean": 1.71,
     "output": "C:\\workplace\\JiraAndLogs\\industry-c7\\data\\benchmark-v2\\qt.jsonl"
-  },
-  "pdfbox": {
-    "project": "pdfbox",
-    "git_dir": "C:\\workplace\\JiraAndLogs\\data\\c7-repos\\pdfbox-full.git",
-    "git_head": "a9ae066a942c122c9dded9bfa1b08dfae4078ba4",
-    "branch_scanned": "default branch only (first-parent history not enforced)",
-    "funnel": {
-      "wolv2_log_fixed_lowuncert_issues": 890,
-      "no_fix_commit": 154,
-      "gt10_fix_commits": 4,
-      "commits_dropped_span": 34,
-      "linked_1_to_10_commits": 732,
-      "snapshot_scan_failed": 0,
-      "no_source_gold": 19,
-      "gold_files_absent_from_snapshot": 20,
-      "final_instances": 713
-    },
-    "dropped_commit_level": {
-      "revert_commits": 182
-    },
-    "strata": {
-      "single_commit": 467,
-      "trace_present": 404,
-      "easy_gold_named": 532,
-      "multi_commit": 246,
-      "trace_absent": 309,
-      "hard_gold_not_named": 181
-    },
-    "gold_files_median": 1,
-    "query_chars": {
-      "n": 713,
-      "min": 66,
-      "median": 1038,
-      "p95": 3402,
-      "max": 107981,
-      "mean": 1569.5,
-      "over_20k": 3,
-      "truncated_at": null
-    },
-    "fix_commits_per_issue": {
-      "n": 713,
-      "min": 1,
-      "median": 1,
-      "p95": 5,
-      "max": 10,
-      "mean": 1.79,
-      "cap": 10,
-      "hist": {
-        "1": 467,
-        "2": 130,
-        "3": 53,
-        "4": 26,
-        "5": 6,
-        "6": 6,
-        "7": 4,
-        "8": 7,
-        "9": 3,
-        "10": 11
-      }
-    },
-    "files_changed_by_fix": {
-      "n": 713,
-      "min": 1,
-      "median": 1,
-      "p95": 8,
-      "max": 84,
-      "mean": 2.56,
-      "over_3": 105,
-      "over_10": 28,
-      "over_50": 2
-    },
-    "gold_files_mean": 2.02,
-    "output": "C:\\workplace\\JiraAndLogs\\industry-c7\\data\\benchmark-v2\\pdfbox.jsonl"
   }
 }

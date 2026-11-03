@@ -15,14 +15,14 @@ and the agent have none of them run on v2.
 
 | claim | current paper | benchmark-v2 |
 |---|---|---|
-| instances | 6,437 | **38,295** |
+| instances | 6,437 | **38,001** |
 | projects | 4 | **27** |
 | organizations | 4 | **9+** |
 | hard (report names no gold file) | 53% | **49%** |
 | with stack trace | not stated | 30% |
-| single fix commit | not stated | 84% |
+| single fix commit | not stated | 85% |
 
-In `main.tex`: `\nInstances` becomes **38,295**, `\nHardPct` becomes **49\%**, `\nProjects` becomes **twenty-seven**.
+In `main.tex`: `\nInstances` becomes **38,001**, `\nHardPct` becomes **49\%**, `\nProjects` becomes **twenty-seven**.
 
 The hard fraction moving 53% to 49% should be stated, not quietly
 swapped. The expanded set is marginally easier, not different in kind, and
@@ -38,21 +38,29 @@ it much harder to attack.
 | eligible: log-bearing, fixed Bug, uncertainty at most 0.05 | 70,999 |
 | minus no fix commit found | -18,661 |
 | minus more than 10 fix commits | -55 |
-| minus no non-test source file modified | -13,901 |
-| minus gold set over 50 files (bulk edit) | -87 |
-| **= final instances** | **38,295** |
+| minus no non-test source file modified | -14,207 |
+| minus gold set over 50 files (bulk edit) | -75 |
+| **= final instances** | **38,001** |
+| minus gold entirely test code (scored set, not re-mined) | -101 |
+| **= scored instances** | **37,900** |
 
-Overall yield 53.9%.
+Overall yield 53.5%.
+
+The last row is a scoring-time exclusion, not a mining filter: gold is kept
+exactly as mined, and the 101 instances whose gold is entirely
+test code are dropped from the scored set because no ranking over source
+files can hit them. Every system is scored on the same 37,900.
+See `paper/test-filter-gaps.md`.
 
 Three filter changes from the current paper, each needing a sentence:
 
 - **No query truncation.** The old 20,000-character cap clipped 0.3% of
-  instances, so it bought nothing and invited the question. 163 reports
+  instances, so it bought nothing and invited the question. 161 reports
   are now kept in full.
-- **Fix-commit cap 3 to 10.** Recovers 731 instances with 4 to 10 fix
+- **Fix-commit cap 3 to 10.** Recovers 669 instances with 4 to 10 fix
   commits. The new cap costs only 55 instances, so 10 is
   comfortably above where the distribution ends.
-- **New: gold capped at 50 files.** Removes 87 instances
+- **New: gold capped at 50 files.** Removes 75 instances
   (0.23%). Justification: Acc@K counts a hit if *any* gold file is retrieved,
   so HIVE-17952, a license-header edit touching 3,493 of hive's 4,819 source
   files, is a free point for every system 99.8% of the time. Such instances
@@ -66,33 +74,33 @@ Three filter changes from the current paper, each needing a sentence:
 
 | project | eligible | instances | hard | trace | 1 commit | gold median |
 |---|---|---|---|---|---|---|
-| hive | 5,910 | 4,736 | 59% | 15% | 94% | 1 |
-| hadoop | 7,848 | 4,386 | 42% | 18% | 92% | 1 |
-| mongodb * | 6,407 | 3,746 | 60% | 10% | 77% | 2 |
-| ambari | 5,995 | 3,294 | 66% | 14% | 83% | 2 |
-| hbase | 5,215 | 3,249 | 36% | 22% | 85% | 1 |
-| mariadb * | 3,004 | 1,718 | 44% | 57% | 82% | 1 |
-| spark | 2,314 | 1,564 | 37% | 51% | 89% | 1 |
-| sakai | 3,420 | 1,451 | 55% | 31% | 74% | 1 |
-| cassandra | 2,116 | 1,421 | 40% | 52% | 82% | 1 |
-| flink | 2,076 | 1,091 | 33% | 50% | 83% | 1 |
-| groovy | 1,604 | 1,012 | 71% | 36% | 76% | 1 |
-| camel | 1,201 | 870 | 37% | 44% | 69% | 1 |
-| infinispan | 1,546 | 866 | 37% | 61% | 77% | 2 |
-| phoenix | 1,059 | 804 | 51% | 23% | 84% | 2 |
-| impala | 1,492 | 801 | 46% | 56% | 94% | 2 |
-| solr | 1,123 | 758 | 36% | 30% | 64% | 1 |
-| wildfly | 1,604 | 728 | 56% | 49% | 82% | 1 |
-| pdfbox | 890 | 714 | 25% | 57% | 64% | 1 |
+| hive | 5,910 | 4,692 | 59% | 15% | 94% | 1 |
+| hadoop | 7,848 | 4,385 | 42% | 18% | 93% | 1 |
+| mongodb * | 6,407 | 3,629 | 61% | 9% | 77% | 1 |
+| ambari | 5,995 | 3,286 | 66% | 14% | 84% | 2 |
+| hbase | 5,215 | 3,245 | 36% | 22% | 86% | 1 |
+| mariadb * | 3,004 | 1,715 | 44% | 57% | 83% | 1 |
+| spark | 2,314 | 1,565 | 37% | 51% | 90% | 1 |
+| sakai | 3,420 | 1,440 | 55% | 31% | 76% | 1 |
+| cassandra | 2,116 | 1,421 | 40% | 52% | 83% | 1 |
+| flink | 2,076 | 1,085 | 33% | 50% | 83% | 1 |
+| groovy | 1,604 | 1,007 | 71% | 36% | 78% | 1 |
+| camel | 1,201 | 869 | 37% | 44% | 70% | 1 |
+| infinispan | 1,546 | 862 | 36% | 62% | 77% | 2 |
+| phoenix | 1,059 | 802 | 51% | 23% | 84% | 2 |
+| impala | 1,492 | 776 | 49% | 55% | 95% | 2 |
+| solr | 1,123 | 756 | 37% | 29% | 65% | 1 |
+| wildfly | 1,604 | 725 | 57% | 49% | 84% | 1 |
+| pdfbox | 890 | 713 | 25% | 57% | 65% | 1 |
 | ignite | 1,244 | 695 | 31% | 54% | 92% | 2 |
-| kafka * | 1,172 | 684 | 29% | 47% | 91% | 1 |
-| derby | 1,192 | 683 | 58% | 38% | 68% | 1 |
-| geode | 1,378 | 648 | 40% | 59% | 72% | 1 |
+| kafka * | 1,172 | 683 | 28% | 47% | 91% | 1 |
+| derby | 1,192 | 677 | 58% | 38% | 70% | 1 |
+| geode | 1,378 | 628 | 40% | 59% | 74% | 1 |
 | pig | 868 | 606 | 49% | 38% | 87% | 1 |
-| drill | 1,046 | 536 | 63% | 26% | 93% | 2 |
+| drill | 1,046 | 536 | 63% | 26% | 94% | 2 |
 | qt * | 7,412 | 456 | 68% | 24% | 96% | 1 |
-| keycloak | 940 | 436 | 42% | 48% | 89% | 1 |
-| beam | 923 | 342 | 32% | 30% | 80% | 1 |
+| keycloak | 940 | 431 | 42% | 48% | 89% | 1 |
+| beam | 923 | 316 | 33% | 32% | 81% | 1 |
 
 ---
 
@@ -102,12 +110,12 @@ These answer the two questions a reviewer asks about any capped benchmark.
 
 | | median | p95 | p99 | max |
 |---|---|---|---|---|
-| query characters | 900 | 6,578 | 13,782 | 706,007 |
+| query characters | 902 | 6,577 | 13,782 | 706,007 |
 | fix commits per issue | 1 | 2 | 4 | 10 |
 | files changed by fix | 3 | 16 | 41 | 2755 |
 | gold files per instance | 1 | 8 | 19 | 50 |
 
-Fixes touching more than 3 files: 14,290 (37% of
+Fixes touching more than 3 files: 14,132 (37% of
 instances). Worth saying plainly in §II: large fixes are in, and there has
 never been a files-per-commit filter.
 
