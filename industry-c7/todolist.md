@@ -95,14 +95,29 @@ review follow from this one gap.
 Reviewer: do not add more tools. Add a structured strategy that forces a chain
 of evidence from symptom to suspected cause.
 
-- [ ] **T10. Agent v3: required `causal_chain`.** Ordered steps from symptom
-      to cause in `submit_ranking`, each citing a tool result, enforced by the
-      schema. Same mechanism that made `evidence` required in v2, which was
-      worth +14.0 points of hard Acc@1. Proven on this system. **CPU** (build)
-- [ ] **T11. Backward reachability becomes structural.** `callers_of` sits at
-      0.01 calls per issue because the model never asks. Auto-run it on the
-      top stack-trace symbol in Phase 0, the way incident memory already is.
-      Add `data_flow_back(symbol)`. **CPU** (build)
+- [x] **T10. Agent v3: required `causal_chain`.** Built. `submit_ranking`
+      in v3 requires 2–6 ordered steps from symptom to named cause, each
+      citing the tool result that shows it; per-file `evidence` stays
+      required. `SUBMIT_V3` is a deep copy so v2's schema is untouched.
+      Not yet measured — that is T12. **CPU** (build)
+- [x] **T11. Backward reachability becomes structural.** Built.
+      `callers_of` now runs in phase 0 on the report's stack-frame symbols,
+      before the loop, like incident memory already does. Added
+      `tools.frame_symbols()` (frames only, unlike `raw_report_symbols`
+      which also returns any CamelCase word in the prose) and
+      `data_flow_back(symbol)` — write sites rather than call sites, the
+      data-flow counterpart to `callers_of`, sharing its grep cache.
+      v3-only, so the v2 tool count stays at the 8 the paper reports.
+      **Coverage measured, no GPU** (`scripts/prewalk_coverage.py`, n=160,
+      seed 99 → `data/results/prewalk-coverage.json`): the hop fires on
+      40.6% of the balanced study sample and a gold file is in the returned
+      set on 19.4% (47.7% of the times it fires). Weighted to the real
+      4,409 eval split it is **31.7% fires / 15.2% gold in walk**, because
+      MongoDB is 55% of the split and the worst project for this (16.2%
+      fires vs 52.5% kafka and 53.5% mariadb). Quote the weighted figure
+      for the full run and the sample figure for the 790 study, never one
+      for the other. The hop is a no-op where the report carries no usable
+      frame, and the paper must say so. **CPU** (build)
 - [ ] **T12. Measure causal lift.** Score v3 against causal-gold from T4, not
       just fix-gold. This is the measurement the reviewer asks for. Report it
       either way: a null result here is still a finding.
@@ -181,9 +196,14 @@ B1 decision.
 
 ## Rules that stay in force
 
-- Every new number gets an exact check in `scripts/verify_claims.py` (266
+- Every new number gets an exact check in `scripts/verify_claims.py` (284
   now). No ranges, no `or` fallbacks. A loose `0.3 or 0.4` check is how a
   wrong number reached the reviewer.
+- Verify the justification, not just the number. "No localizer can be right
+  about these" was written twice and was false both times.
+- Agent behaviour that matters goes in the schema, not the prompt. v1 left
+  evidence optional (37% of runs recorded none); v2 asked for backward
+  reachability (0.01 calls/run). Instructed-but-optional gets skipped.
 - Rescore every baseline on the exact instances a new system ran. Never
   compare across populations.
 - Do not `scancel` jobs or kill WSL processes blindly. The SSH control socket
@@ -196,3 +216,5 @@ B1 decision.
 | Date | What moved |
 |---|---|
 | 2026-11-02 | Review-2 read; plan and this tracker written. Confirmed all four repos are local (4.8 GB, full history), so P0 needs no cluster. Confirmed the vLLM job ended 2026-11-01, so all GPU work is blocked on B2. |
+| 2026-11-02 | P0 closed except T5: T1–T4 done, T2b gives kappa 0.885 on causal-vs-not and the headline reproduces under both raters. Scored set applied, verify_claims 284/284. |
+| 2026-11-02 | Three defects found in `run_agent.py` while sizing the full-split job, all fixed before any GPU time was spent: the adjusted `n_dev` was being applied to the unfiltered benchmark and pulled 24 MongoDB dev instances into eval; there was no code path for the full split at all (`SAMPLE_N=200` hardcoded); and a second exclusion rule (`TESTY`) had drifted from `scored_set.py`. Also `bridge.sh` still defaulted to a node from a job that ended Nov 1, which would have returned empty for every call of a 15 h run. T10/T11 built behind `--version 3`, default stays 2. |

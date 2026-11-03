@@ -838,6 +838,34 @@ def main() -> int:
     check("S4 no dev instance reaches the agent eval population",
           _leak == 0, f"{_leak} leaked")
 
+    # T11 coverage. The balanced study sample and the MongoDB-heavy eval
+    # split give different answers and the paper must not quote one for the
+    # other, so both are pinned.
+    pw = json.loads((RES / "prewalk-coverage.json").read_text(encoding="utf-8"))
+    pws, pww = pw["sample"], pw["weighted_to_eval_split"]
+    check("T11 coverage measured on 160 instances, seed 99",
+          pw["n_sampled"] == 160 and pw["seed"] == 99)
+    # Compared against the stored 4dp values, not a re-rounding of them:
+    # 0.3165 sits exactly on the 1dp boundary and lands either side of it
+    # depending on the float, which is not something a check should decide.
+    check("T11 on the balanced sample: fires 40.62%, gold in walk 19.38%",
+          pws["fires"] == 0.4062 and pws["gold_in_walk"] == 0.1938,
+          f"{pws['fires']} / {pws['gold_in_walk']}")
+    check("T11 gold is in the walk 47.69% of the times it fires",
+          pws["gold_given_fired"] == 0.4769, str(pws["gold_given_fired"]))
+    check("T11 weighted to the 4,409 split: fires 31.65%, gold in walk 15.2%",
+          pww["n_eval"] == 4409 and pww["fires"] == 0.3165
+          and pww["gold_in_walk"] == 0.152,
+          f"{pww['fires']} / {pww['gold_in_walk']}")
+    check("T11 mongodb is the worst project for the hop, 16.22% vs 52-53%",
+          pw["per_project"]["mongodb"]["fires"] == 0.1622
+          and pw["per_project"]["kafka"]["fires"] == 0.525
+          and pw["per_project"]["mariadb"]["fires"] == 0.5349,
+          str({k: v["fires"] for k, v in pw["per_project"].items()}))
+    check("T11 the weighted rate is BELOW the sample rate",
+          pww["fires"] < pws["fires"],
+          f"{pww['fires']:.3f} vs {pws['fires']:.3f}")
+
     # ---- Sec. 5: the three validity checks ------------------------------------
     cp = json.loads((RES / "llm-cp-summary.json").read_text(encoding="utf-8"))
     bv = cp["by_variant"]
