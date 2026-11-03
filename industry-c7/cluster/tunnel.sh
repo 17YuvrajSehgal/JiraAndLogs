@@ -40,6 +40,12 @@ for i in $(seq 1 80); do
 done
 
 echo "tunneling localhost:$PORT -> $NODE:$PORT (Ctrl-C to stop)"
-exec ssh -o ProxyJump=trillium -J trillium trig-login01 \
-     -o ExitOnForwardFailure=yes -o ServerAliveInterval=30 \
-     -L "$PORT:$NODE:$PORT" -N
+# Single hop. The trillium login node routes to the GPU nodes directly
+# (verified: curl trig0012:8000 from tri-login05 returns 200), so the
+# forward rides the existing authenticated session. Going through
+# trig-login01 with -J needs credentials for THAT host on this laptop,
+# which only exist on trillium, so the jump form binds nothing and the
+# port stays closed while ssh sits there looking alive.
+exec ssh -o ExitOnForwardFailure=yes -o ServerAliveInterval=30 \
+     -o ServerAliveCountMax=6 \
+     -L "$PORT:$NODE:$PORT" -N trillium
