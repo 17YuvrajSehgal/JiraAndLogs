@@ -64,7 +64,19 @@ For every surviving issue, the \emph{ground truth} (gold) is the set of
 non-test source files that the fix commit modified. The \emph{code
 snapshot} is the repository at the parent of the fix commit. This is the
 code as it existed while the bug was still present, so the fix itself is
-never visible to a localization method. The \emph{query} is the issue
+never visible to a localization method.
+
+We state the consequence plainly, because it bounds what the results
+mean. The parent of the fix commit is a \emph{known-defective} revision,
+not the revision that was deployed when the report was filed; the two
+differ by whatever else landed in between, which for a long-lived issue
+can be substantial. What we measure is therefore localization on a
+revision that contains the defect, which is the setting the challenge
+describes, and not a replay of the exact working tree an engineer faced
+at triage. We make no claim about the latter and do not evaluate it.
+Report-time admissibility is a separate matter and is enforced only
+where we do claim it: the incident memory of
+\cref{sec:approach:memory} admits nothing resolved after the report. The \emph{query} is the issue
 summary and description, truncated at 20{,}000 characters. This matches
 the challenge input: a natural-language report with the logs the reporter
 pasted into it.

@@ -33,7 +33,86 @@ def module_of(path: str, depth: int) -> str:
     return "/".join(parts[:max(1, min(depth, len(parts) - 1))])
 
 
+def metrics_of(ranked_mods: list, gold_mods: set) -> dict:
+    hit = next((i for i, m in enumerate(ranked_mods) if m in gold_mods), None)
+    m = {f"acc@{k}": float(any(x in gold_mods for x in ranked_mods[:k]))
+         for k in KS}
+    m["mrr"] = 1.0 / (hit + 1) if hit is not None else 0.0
+    return m
+
+
+def study_790() -> dict:
+    """Module metrics for EVERY system on the instances REMEMBER ran.
+
+    The table above covers the retrieval layer on the full evaluation
+    split. REMEMBER ran 790 of those, so its module accuracy cannot be
+    read off that table -- the populations differ and comparing across
+    them is the mistake this project has already made once. Here every
+    system is scored on the identical id set, which is the intersection
+    of the ids all of them stored a ranking for.
+    """
+    sys.path.insert(0, str(Path(__file__).resolve().parent))
+    from score_causal_gold import DOC_ORDER, rankings  # noqa: E402
+
+    ag = [json.loads(l) for l in
+          (RES.parent / "agent/agent-v2.jsonl").open(encoding="utf-8")]
+    ag = [r for r in ag if not r.get("error")]
+    gold = {f"{r['project']}:{r['issue_key']}": r["gold_files"] for r in ag}
+    hard = {f"{r['project']}:{r['issue_key']}": bool(r.get("hard")) for r in ag}
+    rk = rankings(set(gold))
+    names = [n for n, _ in DOC_ORDER if n in rk]
+    # The IRBL baselines stored rankings only for the causal-gold subset, so
+    # an intersection over all nine systems collapses to 93 instances. Report
+    # both: the six systems that ran everything, and the nine-way comparison
+    # on the smaller set. Never one population silently standing in for the
+    # other.
+    full = [n for n in names if not set(gold) - set(rk[n])]
+    groups = {"full_790": full, "with_irbl": names}
+
+    out = {"coverage": {n: len(rk[n]) for n in names}, "populations": {}}
+    for gname, gnames in groups.items():
+        ids = sorted(set.intersection(*(set(rk[n]) for n in gnames)))
+        res = {"n": len(ids), "n_hard": sum(hard[i] for i in ids),
+               "systems": {}}
+        for name, label in DOC_ORDER:
+            if name not in gnames:
+                continue
+            acc = {pop: {f"acc@{k}": 0.0 for k in KS} | {"mrr": 0.0}
+                   for pop in ("overall", "hard")}
+            n_pop = {"overall": 0, "hard": 0}
+            for i in ids:
+                depth = DEPTH[i.split(":")[0]]
+                g = {module_of(f, depth) for f in gold[i]}
+                mods = list(dict.fromkeys(
+                    module_of(f, depth) for f in rk[name][i]))
+                m = metrics_of(mods, g)
+                for pop in ("overall", "hard") if hard[i] else ("overall",):
+                    n_pop[pop] += 1
+                    for key, v in m.items():
+                        acc[pop][key] += v
+            res["systems"][name] = {
+                "label": label,
+                **{pop: {k: round(v / max(n_pop[pop], 1), 4)
+                         for k, v in acc[pop].items()} for pop in acc}}
+        out["populations"][gname] = res
+    return out
+
+
 def main() -> int:
+    if "--study790" in sys.argv:
+        res = study_790()
+        (RES / "module-metrics-790.json").write_text(
+            json.dumps(res, indent=2), encoding="utf-8")
+        for gname, g in res["populations"].items():
+            print(f"\n=== {gname}: n={g['n']} ({g['n_hard']} hard) ===")
+            print(f"{'system':<38}{'acc@1':>8}{'acc@5':>8}{'mrr':>8}"
+                  f"{'hard acc@1':>12}")
+            for name, d in g["systems"].items():
+                print(f"{d['label']:<38}{d['overall']['acc@1']:>8.3f}"
+                      f"{d['overall']['acc@5']:>8.3f}"
+                      f"{d['overall']['mrr']:>8.3f}"
+                      f"{d['hard']['acc@1']:>12.3f}")
+        return 0
     out = {}
     for proj, depth in DEPTH.items():
         rows = [json.loads(l) for l in

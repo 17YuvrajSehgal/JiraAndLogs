@@ -136,6 +136,39 @@ else:
 check("v3 changes the system prompt, v2 does not",
       A.SYSTEM + A.SYSTEM_V3_EXTRA != A.SYSTEM)
 
-total = 21
+
+# ---- the memory firewall moves to index construction (supervisor pt. 5) ----
+class FakeMem:
+    """Two incidents, one resolved before the query and one after. In v2 the
+    index holds both and the future one is dropped only after ranking; in v3
+    it is never in the index, so it cannot shift idf or occupy a slot."""
+
+    _admissible = T.Workspace._admissible
+    _memory_index = T.Workspace._memory_index
+
+    def __init__(self, strict, project):
+        from collections import Counter
+        self.strict_memory_firewall = strict
+        self.project = project
+        self.issue_key = "Q-1"
+        self.fix_shas = set()
+        self.dupclusters = {}
+        self.cutoff = 100.0
+        self.memory = {
+            "OLD-1": {"toks": Counter({"alpha": 1}), "resolved": 50.0,
+                      "fix_shas": set(), "gold_files": ["a.java"]},
+            "FUTURE-1": {"toks": Counter({"alpha": 1}), "resolved": 150.0,
+                         "fix_shas": set(), "gold_files": ["b.java"]}}
+
+
+check("v2 indexes incidents resolved AFTER the report",
+      FakeMem(False, "_t_v2")._memory_index().n == 2)
+check("v3 indexes only incidents admissible for this report",
+      FakeMem(True, "_t_v3")._memory_index().n == 1)
+check("v3 index is rebuilt per instance, not cached per project",
+      FakeMem(True, "_t_v3")._memory_index()
+      is not FakeMem(True, "_t_v3")._memory_index())
+
+total = 24
 print(f"\n{ok}/{total} checks passed")
 sys.exit(0 if ok == total else 1)

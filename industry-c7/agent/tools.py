@@ -196,6 +196,9 @@ class Workspace:
                                 if f in self.snap.blob_of]
         self.notes: list[dict] = []
         self.calls: list[dict] = []
+        # v3. False keeps the v2 behaviour byte for byte: rank over the whole
+        # pool, then drop inadmissible hits. See _memory_index.
+        self.strict_memory_firewall = False
         self._blob_text: dict[str, str] = {}
         self._segs: dict[str, list] = {}
         self._mem_index = None
@@ -543,14 +546,29 @@ class Workspace:
                 "code": body[:SNIPPET_CHARS]}
 
     def _memory_index(self):
-        """BM25 over the project's memory pool, built ONCE per project.
+        """BM25 over the project's memory pool.
 
-        The pool is identical for every instance of a project (MongoDB:
-        19,819 incidents); only the firewall differs, and that is applied
-        per instance at vote time. Building it per Workspace made Phase 0b
-        CPU-bound and stalled a 12-worker run to a standstill while the
-        GPU sat idle.
+        v2 built this ONCE per project over the whole pool (MongoDB:
+        19,819 incidents) and applied the firewall afterwards, at vote
+        time. That puts the firewall at the wrong stage twice over:
+        idf, df and avgdl are then computed across documents that did not
+        exist yet, and inadmissible incidents occupy slots in the ranked
+        pool, so admissible ones get crowded out before the filter ever
+        runs. Measured over 500 instances
+        (scripts/memory_index_leak.py): half the ranked pool is
+        inadmissible, 7.4% of instances come back with fewer than k
+        incidents against 1.2% under the correct construction, and the
+        returned top-5 differs on 27.6%.
+
+        v3 builds the index from this instance's admissible incidents
+        alone. The original reason for the shortcut does not survive
+        measurement: filtering and rebuilding costs 0.06-0.12 s even on
+        MongoDB's pool, against 232 s of wall time per instance.
         """
+        if self.strict_memory_firewall:
+            adm = {k: r["toks"] for k, r in self.memory.items()
+                   if self._admissible(k)}
+            return BM25Index(adm) if adm else None
         with _MEM_LOCK:
             idx = _MEM_INDEX.get(self.project)
             if idx is None:
@@ -564,6 +582,11 @@ class Workspace:
         touched. Votes are weighted by similarity / fix size, so a sweeping
         refactor does not outweigh a surgical fix, and by recency."""
         mem_index = self._memory_index()
+        if mem_index is None:          # v3, nothing admissible for this report
+            return {"query": (query or self.query_text)[:120],
+                    "admissible_matches": [],
+                    "note": "no incident in this project was resolved before "
+                            "this report"}
         qtoks = tokenize(query or self.query_text)
         k = max(1, min(int(k or MEM_K), 8))
         out = []

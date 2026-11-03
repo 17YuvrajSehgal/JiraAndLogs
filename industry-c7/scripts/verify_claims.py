@@ -866,6 +866,78 @@ def main() -> int:
           pww["fires"] < pws["fires"],
           f"{pww['fires']:.3f} vs {pws['fires']:.3f}")
 
+    # ---- supervisor comment 2: post-fix content in descriptions ------------
+    dl = json.loads((RES / "description-leak-rescore.json")
+                    .read_text(encoding="utf-8"))
+    dlc = dl["classification"]
+    check("SUP2 364 of 6,314 descriptions carry a post-fix artifact (5.8%)",
+          dlc["n_contaminated"] == 364 and dlc["n_total"] == 6314
+          and dlc["share"] == 0.0576,
+          f"{dlc['n_contaminated']}/{dlc['n_total']} = {dlc['share']}")
+    check("SUP2 a further 793 mention only a bare commit SHA, and are kept",
+          dlc["n_ambiguous_only"] == 793, str(dlc["n_ambiguous_only"]))
+    ev_t = dl["tables"]["eval_split"]["systems"]
+    st_t = dl["tables"]["study_790"]["systems"]
+    check("SUP2 dropping them moves cond_ours by +0.0009 on the eval split",
+          ev_t["cond_ours"]["delta"]["acc@5"] == 0.0009
+          and ev_t["cond_ours"]["n_all"] == 4409
+          and ev_t["cond_ours"]["n_clean"] == 4140,
+          str(ev_t["cond_ours"]["delta"]))
+    check("SUP2 REMEMBER moves +0.0014, the largest move is llm_rerank +0.0117",
+          st_t["remember"]["delta"]["acc@5"] == 0.0014
+          and max(d["delta"]["acc@5"] for d in st_t.values()) == 0.0117,
+          f"remember {st_t['remember']['delta']['acc@5']}, "
+          f"max {max(d['delta']['acc@5'] for d in st_t.values())}")
+    # The direction is the whole argument: an answer key in the text would
+    # make those instances EASIER, and on the study population every system
+    # does worse on them.
+    check("SUP2 every system scores LOWER on the contaminated instances",
+          all(d["contaminated_only"]["acc@5"] < d["clean"]["acc@5"]
+              for d in st_t.values()),
+          str({s: (d["contaminated_only"]["acc@5"], d["clean"]["acc@5"])
+               for s, d in st_t.items()
+               if d["contaminated_only"]["acc@5"] >= d["clean"]["acc@5"]}))
+    check("SUP2 REMEMBER 88.52% on contaminated vs 90.40% on clean",
+          st_t["remember"]["contaminated_only"]["acc@5"] == 0.8852
+          and st_t["remember"]["clean"]["acc@5"] == 0.904,
+          f"{st_t['remember']['contaminated_only']['acc@5']} vs "
+          f"{st_t['remember']['clean']['acc@5']}")
+
+    # ---- supervisor comment 4: module accuracy for REMEMBER ----------------
+    mm = json.loads((RES / "module-metrics-790.json").read_text(encoding="utf-8"))
+    f790 = mm["populations"]["full_790"]
+    check("SUP4 module table covers all 790, 375 hard",
+          f790["n"] == 790 and f790["n_hard"] == 375,
+          f"{f790['n']}/{f790['n_hard']}")
+    check("SUP4 REMEMBER module Acc@1 94.2%, hard 90.4%",
+          f790["systems"]["remember"]["overall"]["acc@1"] == 0.9418
+          and f790["systems"]["remember"]["hard"]["acc@1"] == 0.904,
+          f"{f790['systems']['remember']['overall']['acc@1']} / "
+          f"{f790['systems']['remember']['hard']['acc@1']}")
+    check("SUP4 REMEMBER leads every system on module Acc@1",
+          all(f790["systems"]["remember"]["overall"]["acc@1"]
+              > d["overall"]["acc@1"]
+              for s, d in f790["systems"].items() if s != "remember"))
+    check("SUP4 the IRBL baselines cover only 93 of the 790",
+          mm["populations"]["with_irbl"]["n"] == 93,
+          str(mm["populations"]["with_irbl"]["n"]))
+
+    # ---- supervisor comment 5: the memory firewall stage -------------------
+    ml = json.loads((RES / "memory-index-leak.json").read_text(encoding="utf-8"))
+    check("SUP5 half the ranked memory pool is inadmissible",
+          ml["n"] == 500 and ml["mean_crowded_out"] == 0.5042,
+          f"n={ml['n']} {ml['mean_crowded_out']}")
+    check("SUP5 crowding starves 7.4% of instances, 1.2% once fixed",
+          ml["short_of_k_now"] == 0.074 and ml["short_of_k_fixed"] == 0.012,
+          f"{ml['short_of_k_now']} vs {ml['short_of_k_fixed']}")
+    check("SUP5 the returned top-5 differs on 27.6% of instances",
+          ml["identical_top5"] == 0.724, str(ml["identical_top5"]))
+    check("SUP5 but gold reachability is unchanged, 50.4% vs 50.6%",
+          ml["gold_hit_now"] == 0.504 and ml["gold_hit_fixed"] == 0.506,
+          f"{ml['gold_hit_now']} vs {ml['gold_hit_fixed']}")
+    check("SUP5 the correct index is not WORSE than the leaky one",
+          ml["gold_hit_fixed"] >= ml["gold_hit_now"])
+
     # ---- Sec. 5: the three validity checks ------------------------------------
     cp = json.loads((RES / "llm-cp-summary.json").read_text(encoding="utf-8"))
     bv = cp["by_variant"]

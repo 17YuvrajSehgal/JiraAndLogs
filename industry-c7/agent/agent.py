@@ -328,6 +328,8 @@ def run_instance(ws: T.Workspace, seed: int = 42,
     # Phase 0a: one call turns the report into retrieval terms. The raw
     # report is symptom-shaped; searching code with it finds the detection
     # site. Falls back to the report's own words if the call fails.
+    # v3: the memory firewall moves from vote time to index construction.
+    ws.strict_memory_firewall = version >= 3
     rf = {} if behaviour_query else reformulate(ws.query_text, seed=seed)
     behaviour = (behaviour_query or rf.get("behaviour")
                  or " ".join(ws.query_text.split()[:60]))
