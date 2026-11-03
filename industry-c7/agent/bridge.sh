@@ -22,10 +22,30 @@
 
 set -u
 SPOOL="${1:?spool dir required}"
-NODE="${NODE:-trig0051}"
+# The compute node changes with every SLURM job. A hardcoded default here
+# used to outlive the job it named: the bridge then curled a node with no
+# server, every call came back empty, and the harness recorded llm_error
+# per instance rather than failing - a whole batch of nothing that looks
+# like a batch. Discover it from the serve log, same as cluster/tunnel.sh,
+# and refuse to start if there is no server.
+NODE="${NODE:-$(ssh trillium "grep -h '^node: ' \$(ls -t /scratch/yuvraj17/c7-llm/logs/serve-*.out 2>/dev/null | head -3) 2>/dev/null | head -1 | awk '{print \$2}'")}"
+if [ -z "$NODE" ]; then
+  echo "no node found in recent serve logs. Is the vLLM job running?" >&2
+  echo "start one, or run with: NODE=<node> bash bridge.sh $SPOOL" >&2
+  exit 1
+fi
 MAXJOBS="${MAXJOBS:-6}"
 CURL_TIMEOUT="${CURL_TIMEOUT:-300}"
 mkdir -p "$SPOOL"
+
+# Preflight: one real request before accepting work. Catches a dead or
+# still-loading server now instead of 15 hours from now.
+if ! ssh -o ConnectTimeout=20 trillium \
+     "ssh trig-login01 'curl -s -m 15 http://$NODE:8000/v1/models'" \
+     2>/dev/null | grep -q '"id"'; then
+  echo "node $NODE is not serving on :8000 (job ended, or still loading)" >&2
+  exit 1
+fi
 echo "bridge up: spool=$SPOOL node=$NODE maxjobs=$MAXJOBS"
 
 handle () {

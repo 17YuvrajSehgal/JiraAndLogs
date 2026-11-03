@@ -47,7 +47,9 @@ from localize import RRF_K  # noqa: E402
 HERE = Path(__file__).resolve().parent
 SKILL = (HERE / "skills" / "fault-localization.md")
 MODEL = "qwen3.8-27b"
-NODE = "trig0051"
+# No NODE here: the compute node changes with every SLURM job and the
+# bridge discovers it from the serve log. A copy in Python could only go
+# stale and disagree.
 MAX_TURNS = 14
 MAX_TOOL_CHARS = 9000
 LIST_LEN = 10
