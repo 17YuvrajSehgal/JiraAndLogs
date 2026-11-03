@@ -103,9 +103,12 @@ check(f"output path is writable ({out.name})",
 print(f"      rows already in {out.name}: {done} (run resumes over these)")
 src = (ROOT / "agent/run_agent.py").read_text(encoding="utf-8")
 check("resume retries errored rows instead of counting them done",
-      'if r.get("error"):' in src and "dropped += 1" in src,
-      "a server that dies at walltime would otherwise lose every "
-      "in-flight instance permanently")
+      'r.get("error") or r.get("stop_reason") == "llm_error"' in src
+      and "dropped += 1" in src,
+      "a server that dies at walltime would otherwise bank a lexical "
+      "fallback ranking as a finished result")
+check("the run aborts rather than burning the population on a dead server",
+      "_ABORT" in src and "ABORT_AFTER" in src)
 tdir = AG / "transcripts"
 sizes = [f.stat().st_size for f in list(tdir.glob("v2-*.json"))[:200]]
 mean_kb = (sum(sizes) / len(sizes) / 1024) if sizes else 0
@@ -116,10 +119,16 @@ check("free disk covers the transcripts", freeb > need_gb * 2,
 
 print("\n=== transport ===")
 spool = AG / "spool"
-stale = list(spool.glob("req-*.json")) + list(spool.glob("resp-*.json")) \
-    + list(spool.glob(".busy-*")) if spool.exists() else []
-check("no stale spool files from a previous run", not stale,
-      f"{len(stale)} left over")
+import time as _t
+now = _t.time()
+live = [f for f in (list(spool.glob("req-*.json"))
+                    + list(spool.glob("resp-*.json"))
+                    + list(spool.glob(".busy-*")))] if spool.exists() else []
+# Files younger than 10 min belong to a run that is happening right now.
+# Only older ones are leftovers that a new run would trip over.
+stale = [f for f in live if now - f.stat().st_mtime > 600]
+check("no STALE spool files (in-flight ones are fine)", not stale,
+      f"{len(stale)} stale, {len(live) - len(stale)} in flight")
 check("model name matches what the server serves",
       A.MODEL == "qwen3.8-27b", A.MODEL)
 check("agent.py holds no hardcoded compute node",

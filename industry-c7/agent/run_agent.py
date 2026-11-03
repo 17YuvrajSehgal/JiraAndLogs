@@ -52,6 +52,13 @@ SEED_SAMPLE, SAMPLE_N = 42, 200
 
 _lock = threading.Lock()
 _done = 0
+# Circuit breaker. Once the server is gone every instance fails in about a
+# second and writes a lexical-fallback row, so 24 workers can burn through
+# the whole remaining population in minutes. Resume would retry them all,
+# but there is nothing to be gained by producing them: stop instead.
+_consec_llm_err = 0
+_ABORT = threading.Event()
+ABORT_AFTER = 20
 
 
 def git_commit() -> str:
@@ -154,7 +161,15 @@ def main() -> int:
                 r = json.loads(line)
             except Exception:  # noqa: BLE001
                 continue
-            if r.get("error"):
+            # "llm_error" is a DEAD SERVER, not an agent outcome. On that
+            # path run_instance does not raise: it breaks out of the loop
+            # and returns a ranking built from the lexical seed, so the row
+            # carries error=None and looks finished. Keeping it would bank
+            # a fallback ranking as a real result and never retry it --
+            # exactly what happens to everything in flight when the vLLM
+            # job hits its walltime. max_turns and no_tool_call are real
+            # agent outcomes and are kept.
+            if r.get("error") or r.get("stop_reason") == "llm_error":
                 dropped += 1
                 continue
             if r["id"] in done:        # belt and braces: never double count
@@ -182,7 +197,9 @@ def main() -> int:
     agg = {"calls": 0, "in": 0, "out": 0}
 
     def work(item):
-        global _done
+        global _done, _consec_llm_err
+        if _ABORT.is_set():
+            return
         proj, b, row = item
         rid = f"{proj}:{b['issue_key']}"
         mem, dup, created, _preds = support[proj]
@@ -201,6 +218,21 @@ def main() -> int:
         except Exception as e:  # noqa: BLE001 - one bad instance must not stop the run
             res, err = None, f"{type(e).__name__}: {e}"
         wall = round(time.time() - started, 1)
+        with _lock:
+            if res is not None and res.get("stop_reason") == "llm_error":
+                _consec_llm_err += 1
+                if _consec_llm_err >= ABORT_AFTER and not _ABORT.is_set():
+                    _ABORT.set()
+                    print(f"\nABORT: {_consec_llm_err} consecutive LLM "
+                          f"failures. The server is gone (walltime, or the "
+                          f"tunnel dropped). Completed work is safe; rerun "
+                          f"the same command against a new job to resume.",
+                          flush=True)
+            elif res is not None:
+                _consec_llm_err = 0
+        if _ABORT.is_set() and res is not None \
+                and res.get("stop_reason") == "llm_error":
+            return                      # do not bank a fallback ranking
         gold = b["gold_files"]
         if res is None:
             rowout = {"id": rid, "project": proj, "issue_key": b["issue_key"],
