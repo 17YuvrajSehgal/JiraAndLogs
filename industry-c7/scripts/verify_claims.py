@@ -567,29 +567,37 @@ def main() -> int:
     res_tex = (ROOT / "industry-c7/paper/sections/05-results.tex").read_text(
         encoding="utf-8")
     tab = res_tex.split("\\label{tab:study}")[1].split("\\end{tabular}")[0]
-    for name, row in (("rVSM", "rVSM"), ("BugLocator", "BugLocator"),
-                      ("BRTracer-style", "BRTracer-style"),
-                      ("ours", "retrieval + memory"),
-                      ("llm_rerank", "model as re-ranker"),
-                      ("llm", "model alone"),
-                      ("fusion", "fusion (best non-agent)"),
-                      ("agent", "\\sys{}")):
+    # tab:study now prints the FULL evaluation split, not the 790 sample, so
+    # it is verified against full-split-breakdown.json. final-table-790.json
+    # is still checked above: it remains the artifact for the experiments
+    # that stayed on the sample.
+    FSB = json.loads((RES / "full-split-breakdown.json")
+                     .read_text(encoding="utf-8"))["scores"]
+    for key, row in (("rvsm", "rVSM"), ("buglocator_fw_a3", "BugLocator"),
+                     ("brtracer_fw", "BRTracer-style"),
+                     ("cond_ours", "retrieval + memory"),
+                     ("llm_rerank", "model as re-ranker"),
+                     ("llm_twostage", "model alone"),
+                     ("fusion", "fusion (best non-agent)"),
+                     ("remember_v3", "\\sys{}")):
         line = next((l for l in tab.split("\n")
                      if l.strip().startswith(row)), "")
         cells = [c.replace("\\\\", "").replace("\\textbf{", "")
                  .replace("}", "").strip()
                  for c in line.split("&")[1:]]
-        want = [f"{100 * S[name][k]:.1f}"
+        want = [f"{100 * FSB[key]['all'][k]:.1f}"
                 for k in ("acc@1", "acc@5")] + [
-            f"{100 * S[name]['hard@5']:.1f}"]
+            f"{100 * FSB[key]['hard']['acc@5']:.1f}"]
         got = [cells[0], cells[1], cells[3]] if len(cells) >= 4 else cells
         check(f"T-study {row} printed as percent {'/'.join(want)}",
               got == want, f"tex shows {got}, data says {want}")
     # MRR is a mean reciprocal rank, not a proportion, so it must NOT be
     # rendered as a percentage anywhere.
     check("T-study MRR column still a decimal (not a percentage)",
-          ".799" in tab and "79.9" not in tab,
+          ".773" in tab and "77.3" not in tab,
           "MRR appears to have been converted to a percentage")
+    check("T-study table is labelled as the full split, not the sample",
+          "790" not in tab)
 
     check("ABS/S5 study range .180 to .839 for non-agent systems",
           r3(min(S[k]["acc@5"] for k in t_study if k != "agent")) == .180
@@ -807,6 +815,35 @@ def main() -> int:
         check("T8 Acc@1 rises with fix size (answer key loosens)",
               sz[0] < sz[-1] and sz == sorted(sz),
               " ".join(f"{x:.4f}" for x in sz))
+        # The deltas the abstract, intro and conclusion actually print. These
+        # replaced the 790-sample deltas when the headline moved to the full
+        # split; the old ones are still checked above against
+        # final-table-790.json, which is a different population.
+        H = fsd["headline"]
+        for base, stratum, a5d, a1d in (
+                ("llm_twostage", "all", 0.1093, 0.1293),
+                ("llm_twostage", "hard", 0.1694, 0.2072),
+                ("fusion", "all", 0.0828, 0.1497),
+                ("fusion", "hard", 0.1387, 0.2489),
+                ("cond_ours", "all", 0.2014, 0.2785)):
+            t = H[f"remember_v3_vs_{base}"][stratum]
+            check(f"ABS agent vs {base} ({stratum}): "
+                  f"{a5d * 100:+.1f} Acc@5, {a1d * 100:+.1f} Acc@1, significant",
+                  t["acc@5"]["delta"] == a5d and t["acc@1"]["delta"] == a1d
+                  and t["acc@5"]["significant"] and t["acc@1"]["significant"],
+                  f"got {t['acc@5']['delta']}/{t['acc@1']['delta']}")
+        main_tex = (ROOT / "industry-c7/paper/main.tex").read_text(
+            encoding="utf-8")
+        for macro, val in (("accFive", "88.8"), ("accOne", "68.7"),
+                           ("nEval", "4{,}409")):
+            check(f"macro {macro} is {val} and matches the data",
+                  ("\\newcommand{\\" + macro + "}{" + val) in main_tex)
+        check("macros match full-split-breakdown.json",
+              f"{FS['remember_v3']['all']['acc@5'] * 100:.1f}" == "88.8"
+              and f"{FS['remember_v3']['all']['acc@1'] * 100:.1f}" == "68.7")
+        check("the abstract no longer claims the snapshot is issue-creation time",
+              "as it stood when the issue was filed" not in main_tex)
+
         check("T8 ARISE is reported inactive, never as a 0.000 baseline",
               fsd["systems_inactive"] == ["memory_arise"]
               and "memory_arise" not in fsd["systems_scored"],

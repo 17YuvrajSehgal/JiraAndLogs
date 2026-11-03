@@ -60,8 +60,8 @@ issue.
 \textbf{Commitment.} The run ends when the model submits a ranked list.
 Every file in that list must carry the evidence that put it there; the
 submission is rejected by the tool schema otherwise. If the model has
-not submitted by the final turn, the submission tool is forced. All 790
-runs in our evaluation ended in a submission.
+not submitted by the final turn, the submission tool is forced. All
+\nEval{} runs in our evaluation ended in a submission, with no errors.
 
 A deterministic backstop sits behind the result: if the agent returns
 fewer than ten files, the retrieval layer's ranking fills the remaining
@@ -73,7 +73,7 @@ the lexical votes displaced correct answers the agent had ranked highly.
 
 \begin{table}[t]
 \caption{What the agent can ask, and how often it asks. Usage is the
-mean number of calls per issue over the 790 study instances. Incident
+mean number of calls per issue over the \nEval{} evaluation instances. Incident
 memory is also queried once for every issue before the loop begins, so
 it is consulted on every run regardless of the figure shown here.}
 \label{tab:tools}
@@ -84,13 +84,13 @@ it is consulted on every run regardless of the figure shown here.}
 \toprule
 tool & question it answers & uses \\
 \midrule
-\texttt{read\_code}        & what does this code actually do?      & 7.28 \\
-\texttt{search\_symbol}    & where is this defined, used, called?  & 3.42 \\
-\texttt{search\_text}      & which file's code matches this?       & 2.61 \\
-\texttt{note\_candidate}   & record a suspect and the evidence     & 2.38 \\
-\texttt{recall\_incidents} & which past fixes resemble this?       & 0.28 \\
-\texttt{list\_dir}         & what is in this directory?            & 0.13 \\
-\texttt{read\_skeleton}    & what does this file declare?          & 0.10 \\
+\texttt{read\_code}        & what does this code actually do?      & 7.08 \\
+\texttt{search\_symbol}    & where is this defined, used, called?  & 3.18 \\
+\texttt{search\_text}      & which file's code matches this?       & 2.62 \\
+\texttt{note\_candidate}   & record a suspect and the evidence     & 2.31 \\
+\texttt{recall\_incidents} & which past fixes resemble this?       & 0.23 \\
+\texttt{read\_skeleton}    & what does this file declare?          & 0.14 \\
+\texttt{list\_dir}         & what is in this directory?            & 0.07 \\
 \texttt{callers\_of}       & who calls this symbol?                & 0.01 \\
 \bottomrule
 \end{tabular}

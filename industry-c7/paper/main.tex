@@ -21,6 +21,18 @@
 \newcommand{\nInstances}{6{,}437\xspace}
 \newcommand{\nProjects}{four\xspace}
 \newcommand{\nHardPct}{53\%\xspace}
+% The agent is evaluated on the WHOLE evaluation split, not a sample. Every
+% delta below is paired on these same instances; see
+% data/results/full-split-breakdown.json.
+\newcommand{\nEval}{4{,}409\xspace}
+\newcommand{\accFive}{88.8\%\xspace}
+\newcommand{\accOne}{68.7\%\xspace}
+% Causal annotation (data/causal-gold/datasheet.json). The curve matters more
+% than the headline: gold is accurate for small fixes, diluted for large ones.
+\newcommand{\nAnnotated}{151\xspace}
+\newcommand{\nCausalPct}{49.0\%\xspace}
+\newcommand{\nCausalOne}{89\%\xspace}
+\newcommand{\nCausalEight}{21\%\xspace}
 
 \begin{document}
 
@@ -38,9 +50,9 @@ show where the failure was detected, not where it was caused. In 53\% of
 the real reports we study, no file touched by the eventual fix is named
 anywhere in the report text.
 To study this we mined a benchmark that pairs issue reports, their logs,
-the code as it stood when the issue was filed, and the files the fix
-later changed: \nInstances{} real incidents from Apache Kafka, MariaDB,
-MongoDB, and Qt.
+the code at a revision where the defect is still present, and the files
+the fix later changed: \nInstances{} real incidents from Apache Kafka,
+MariaDB, MongoDB, and Qt.
 We use it for a comparative study of what different families of method
 achieve on the same instances, under one protocol and one temporal
 firewall. The families are classic information-retrieval bug
@@ -56,18 +68,21 @@ retrieval and the incident memory as tools, and adds tools that read
 code, resolve a symbol from a stack trace to the file that defines it,
 and consult past incidents behind the same firewall. \sys{} uses the
 same 27B model as the study, so the gain is attributable to the
-architecture rather than to a stronger model. It reaches Acc@5 90.3\%
-and Acc@1 72.3\%. That is $+7.1$ and $+12.9$ points of Acc@5 and
-Acc@1 over the same model prompted directly, and $+6.3$ and $+18.5$
-points over the best
-combination of non-agent systems. \sys{} improves on every family in
-the study, and every comparison is significant under a paired bootstrap
-with multiple-test correction. The margins are widest on the reports
-that name no faulty file, which the challenge identifies as the core
-difficulty: there \sys{} gains $+9.1$ and $+18.1$ points of Acc@5 and
-Acc@1 over the same model prompted directly, and $+9.9$ and $+27.5$
-points over the
+architecture rather than to a stronger model. Evaluated on the entire
+\nEval{}-instance evaluation split rather than a sample, \sys{} reaches
+Acc@5 \accFive{} and Acc@1 \accOne{}. That is $+10.9$ and $+12.9$
+points of Acc@5 and Acc@1 over the same model prompted directly, and
+$+8.3$ and $+15.0$ points over the best combination of non-agent
+systems. \sys{} improves on every family in the study, and every
+comparison is significant under a paired bootstrap with multiple-test
+correction. The margins are widest on the reports that name no faulty
+file, which the challenge identifies as the core difficulty: there
+\sys{} gains $+16.9$ and $+20.7$ points of Acc@5 and Acc@1 over the
+same model prompted directly, and $+13.9$ and $+24.9$ points over the
 best non-agent combination.
+Every prediction carries a causal chain from symptom to named cause;
+\textbf{99.7\%} of the files those explanations cite exist in the
+snapshot the agent was given.
 Three checks support these numbers. The model cannot recall these public
 fixes from the issue key alone, scoring below a defect-frequency prior.
 Shuffling the order of the retrieved candidates changes no result.

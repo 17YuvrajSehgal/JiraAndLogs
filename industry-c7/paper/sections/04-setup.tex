@@ -35,18 +35,39 @@ Two populations carry the results, and no comparison mixes them.
 
 The \emph{evaluation split} is the later 70\% of every project: 476,
 1{,}179, 2{,}434, and 320 instances for Kafka, MariaDB, MongoDB, and Qt,
-4{,}409 in total. It carries every measurement that describes the
-benchmark as a whole, including \cref{tab:files} and the firewall,
-function, noise, and module results.
+\nEval{} in total. It carries every measurement that describes the
+benchmark as a whole, including \cref{tab:files}, the firewall,
+function, noise, and module results, \textbf{and the headline agent
+result}: \sys{} is evaluated on all \nEval{} instances, and every system
+it is compared against is scored on exactly those instances.
 
 The \emph{study population} is a seeded sample of 200 instances per
-project, drawn before any system was run, minus ten described below.
-That leaves 790 instances, 375 of them hard. Running an agent on every
-instance is expensive, so the agent, the dense-retrieval experiment, and
-the noise experiment use this sample. Every system compared against them
-is rescored on exactly these 790 instances. This matters: the sample is
-easier than the full split, and a baseline measured on the other
-population would overstate the agent by roughly three points
+project, minus ten described below, leaving 790 instances, 375 of them
+hard. It survives for the experiments that need many runs rather than
+one: the dense-retrieval arm, the noise arms, and the agent ablations
+that compare successive agent designs against each other. Every system
+compared within it is rescored on exactly these 790.
+
+\textbf{How the sample was drawn, and when.} The draw is
+\texttt{random.sample} over the time-ordered evaluation split with seed
+$42$, taken \emph{before any system had been run}, so no instance could
+be selected for being one a system got right or wrong. The seed, the
+draw, and the resulting key list are in the released harness, and the
+draw is reproduced exactly rather than re-derived: filtering the
+benchmark before sampling would change the list length, hence the
+indices, hence the sample, so the code samples on the unfiltered list at
+the original split boundary and intersects with the scored set
+afterwards.
+
+\textbf{The sample is easier than the split it came from, and both
+numbers are reported.} It is close to balanced across projects at
+roughly 200 each, whereas the real split is MongoDB-heavy (55\%) and
+MariaDB-heavy (27\%), and MariaDB is the weakest project for every
+system. \sys{} scores $70.1\%$ Acc@1 on the 790 and \accOne{} on the
+full \nEval{}. Any figure quoted from the sample is therefore optimistic
+relative to the benchmark, which is why the headline moved to the full
+split and why a baseline measured on the other population would
+overstate the agent by roughly three points
 (\cref{sec:results:validity}).
 
 The ten removed instances are those whose ground truth consists entirely

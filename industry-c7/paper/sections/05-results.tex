@@ -5,9 +5,11 @@ This section reports three things: what each family of method achieves
 on the same instances, what \sys{} adds on top of them, and the checks
 that decide whether those numbers can be believed.
 
-Two populations carry these numbers and no comparison mixes them: the
-4{,}409-instance evaluation split and the 790-instance study population
-on which every system is rescored (\cref{sec:setup:populations}).
+Every headline number is on the full \nEval{}-instance evaluation
+split, with every system scored on those same instances. The
+790-instance study population survives only for the experiments that
+need repeated runs rather than one, and wherever it is used it is named
+(\cref{sec:setup:populations}).
 Significance always means $q < 0.05$ after Benjamini--Hochberg
 correction within the test family (\cref{sec:setup:stats}).
 
@@ -15,8 +17,8 @@ correction within the test family (\cref{sec:setup:stats}).
 \caption{The comparative study, and \sys{}. Accuracy is the percentage
 of instances with a faulty file in the top $K$; MRR is a mean
 reciprocal rank and stays on its own scale. All systems scored on the
-same 790 study instances (375 of them hard, meaning the report names no
-faulty file). The classic methods use the firewalled SimiScore of
+full \nEval{}-instance evaluation split ($2{,}278$ of them hard,
+meaning the report names no faulty file). The classic methods use the firewalled SimiScore of
 \cref{sec:setup:systems}; ``fusion'' is reciprocal-rank fusion of the
 retrieval layer with the model used alone. \sys{} and the two model rows
 use the same 27B model.}
@@ -29,16 +31,16 @@ use the same 27B model.}
  & Acc@1 & Acc@5 & MRR & Acc@5 \\
  & (\%) & (\%) & & hard (\%) \\
 \midrule
-rVSM                        & 7.1  & 18.0 & .143 & 16.5 \\
-BugLocator                  & 9.7  & 25.1 & .183 & 23.2 \\
-BRTracer-style              & 30.1 & 48.1 & .395 & 17.1 \\
+rVSM                        & 5.8  & 16.4 & .131 & 15.9 \\
+BugLocator                  & 9.2  & 25.7 & .181 & 25.1 \\
+BRTracer-style              & 28.3 & 47.3 & .381 & 18.6 \\
 \midrule
-retrieval + memory          & 39.9 & 68.1 & .522 & 42.4 \\
-model as re-ranker          & 60.4 & 78.0 & .678 & 57.6 \\
-model alone                 & 59.4 & 83.2 & .692 & 72.5 \\
-fusion (best non-agent)     & 53.8 & 83.9 & .667 & 71.7 \\
+retrieval + memory          & 40.8 & 68.6 & .528 & 48.3 \\
+model as re-ranker          & 60.3 & 77.2 & .674 & 59.5 \\
+model alone                 & 55.8 & 77.8 & .649 & 63.3 \\
+fusion (best non-agent)     & 53.7 & 80.5 & .652 & 66.4 \\
 \midrule
-\sys{}                      & \textbf{72.3} & \textbf{90.3} & \textbf{.799} & \textbf{81.6} \\
+\sys{}                      & \textbf{68.7} & \textbf{88.8} & \textbf{.773} & \textbf{80.3} \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -110,56 +112,62 @@ Fusing them with reciprocal-rank fusion captures part of that, reaching
 \subsection{\sys{}}
 \label{sec:results:agent}
 
-\sys{} reaches Acc@5 90.3\% and Acc@1 72.3\% on the same instances. It
-improves on every family in \cref{tab:study}, and all 42 comparisons in
-the family are significant. Against the model used alone it gains
-$+7.1$ points of Acc@5 $[+4.6, +9.5]$ and $+12.9$ points of Acc@1.
-Against the best non-agent combination it gains $+6.3$ points of
-Acc@5 $[+4.2, +8.5]$ and $+18.5$ points of Acc@1 $[+14.9, +22.3]$.
-Against the retrieval layer it gains $+22.2$ points of Acc@5
-$[+19.4, +25.2]$. Because \sys{} runs on the same 27B
-model as those two model rows, the difference is the architecture rather
-than the model.
+\sys{} is evaluated on the \emph{entire} evaluation split, all \nEval{}
+instances, not on a sample, and every system it is compared against is
+scored on exactly those instances. It reaches Acc@5 \accFive{} and
+Acc@1 \accOne{}, improving on every family in \cref{tab:study}. Against
+the model used alone it gains $+10.9$ points of Acc@5 $[+9.8, +12.2]$
+and $+12.9$ points of Acc@1 $[+11.5, +14.4]$. Against the best
+non-agent combination it gains $+8.3$ points of Acc@5 $[+7.3, +9.3]$
+and $+15.0$ points of Acc@1 $[+13.4, +16.5]$. Against the retrieval
+layer it gains $+20.1$ points of Acc@5 $[+18.9, +21.4]$. Every interval
+is a paired bootstrap on the same instances and every one excludes
+zero. Because \sys{} runs on the same 27B model as those two model
+rows, the difference is the architecture rather than the model.
 
-The shape of the gain is as informative as its size. The Acc@1 margin is
-roughly three times the Acc@5 margin in every comparison. \sys{} is not
-mainly finding files that the other systems miss; it is deciding which
-of the candidates is actually at fault. That is the behaviour the tools
-were built for, because the plain model, which sees only path names,
-loses most of its instances by choosing wrongly from a list that
+The shape of the gain is as informative as its size. The Acc@1 margin
+exceeds the Acc@5 margin in every comparison --- by $1.2\times$ against
+the model alone, $1.4\times$ against the retrieval layer and
+$1.8\times$ against the best non-agent combination. \sys{} is not
+mainly finding files the other systems miss; it is deciding which
+candidate is actually at fault. That is the behaviour the tools were
+built for, because the plain model, which sees only path names, loses
+most of its instances by choosing wrongly from a list that already
 contains the answer.
 
 It also passes the ceiling that fusion cannot. A perfect selector
 choosing among the ten files in the two systems' top-five lists would
-reach 89.2\%; \sys{} reaches 90.3\% using five. It finds files that
-appear in neither system's shortlist, which is what having tools rather
-than a fixed candidate set buys.
+reach $86.5\%$; \sys{} reaches \accFive{} using five. It finds files
+that appear in neither system's shortlist, which is what having tools
+rather than a fixed candidate set buys.
 
 The margins are widest where the challenge locates the difficulty. On
-the 375 hard reports, \sys{} reaches 81.6\% Acc@5 and 60.8\% Acc@1,
-against 71.7\% and 33.3\% for the best non-agent combination
-($+9.9$ and $+27.5$ points) and 72.5\% and 42.7\% for the model alone
-($+9.1$ and $+18.1$ points). The retrieval layer reaches 42.4\% there. On
-105 of those 375 instances \sys{} ranks the faulty file first when
+the $2{,}278$ hard reports --- those naming no gold file anywhere in
+their text --- \sys{} reaches $80.3\%$ Acc@5 and $59.5\%$ Acc@1,
+against $66.4\%$ and $34.6\%$ for the best non-agent combination
+($+13.9$ $[+12.1, +15.8]$ and $+24.9$ $[+22.6, +27.2]$) and $63.3\%$
+and $38.8\%$ for the model alone ($+16.9$ $[+14.9, +18.9]$ and $+20.7$
+$[+18.5, +23.0]$). The retrieval layer reaches $48.3\%$ there. On $530$
+of those $2{,}278$ instances \sys{} ranks the faulty file first when
 retrieval does not place it in the top five at all.
 
 \subsection{What the result costs}
 \label{sec:results:cost}
 
 Accuracy without cost is not an industrial result. \sys{} spends a mean
-of $12.2$ model calls and $90$k prompt tokens per issue, and makes
-$16.2$ tool calls. On a shared H100 a single issue takes $232$ seconds
+of $12.1$ model calls and $94$k prompt tokens per issue, and makes
+$15.7$ tool calls. On a shared H100 a single issue takes $319$ seconds
 of wall time at the concurrency we ran. The retrieval layer, by
 contrast, answers from one CPU core with no model at all, in a median
 of $0.07$ to $0.41$ seconds per issue depending on the project, with the
 95th percentile under $0.7$ seconds.
 
-The gap is four orders of magnitude in compute for $+22.2$ points of
+The gap is four orders of magnitude in compute for $+20.1$ points of
 Acc@5. Which
 side of that trade is right depends on the deployment. A team that can
 host a 27B model, or send reports and source to an external one, should
 prefer the agent. A team that cannot, because source code and production
-logs may not leave the building, still gets 68.1\% Acc@5 from a
+logs may not leave the building, still gets 68.6\% Acc@5 from a
 pipeline that needs no GPU, no training, and no network.
 
 \subsection{Three checks on the result}
@@ -417,9 +425,91 @@ stage is the limit: the gold function reaches the candidate set for only
 58\% of instances, so no function ranker could pass that. On MariaDB the
 candidate set contains the gold function for 72\% of instances but
 Acc@5 is 0.27: its large C++ files hold hundreds of functions each, and
-ranking inside them is the open problem. We report this stage as a
-baseline for the region-level question rather than a solved component;
-a learned or semantic function ranker drops into the same slot.
+ranking inside them is the open problem. \textbf{Two changes fix most of this, and only one of them is about
+ranking.} Both are free once \sys{} has run on the full split. First,
+take the candidate functions from \sys{}'s top ten files instead of the
+retrieval layer's. The file stage is far stronger (\accFive{} Acc@5
+against 68.6\%), and the oracle rises accordingly, from 73.7\% to
+88.8\% pooled over the 4{,}132 eligible evaluation instances --- but
+Acc@1 moves only $+1.9$ points $[+1.2, +2.7]$. BM25 over function bodies
+cannot exploit the better pool it is handed. Second, promote the
+functions the agent actually opened. \texttt{read\_code} takes a symbol,
+so a region the agent read is already identified the same way a
+candidate is, and ranking those first is $+5.4$ points $[+4.3, +6.5]$
+on the same candidate set. Together they take pooled function-level
+Acc@1 from 21.5\% to 28.8\% and Acc@5 from 40.4\% to 52.9\%, every
+comparison significant under a paired bootstrap on identical instances.
+
+The second signal is \emph{attention}, not relevance: it records that
+the agent looked at a function while forming its answer, and it leaks
+nothing, because \texttt{read\_code} targets are chosen from the report
+and the tools under the same firewall as everything else, while gold
+functions come from a fix diff the agent never sees. We still report
+this stage as a baseline rather than a solved component --- the ceiling
+is 88.8\%, not 100\%, and a function-level miss caused by a file-stage
+miss counts as a miss here --- but the open problem is narrower than it
+looked: the candidate set was never the main bottleneck, the ranker
+inside it was.
+
+\subsection{Do the explanations point at anything real?}
+\label{sec:results:explanations}
+
+The challenge asks for evidence connecting symptom, log event and code.
+\sys{} produces one for every instance, and an explanation that is never
+checked is a liability rather than a contribution. We check it two ways,
+neither of which needs a judge.
+
+\textbf{The chain is the same claim as the ranking.} All \nEval{}
+predictions carry a causal chain, because the submission schema requires
+one: between two and six ordered steps from symptom to named cause, each
+citing the tool result that shows it. Chains average $4.15$ steps.
+$69.6\%$ bind at least one step to a file path, and of those,
+\textbf{$99.9\%$ contain the system's own top-ranked file}. That number
+is what separates an explanation from decoration: a chain that named
+files unrelated to the answer would be text written to satisfy a schema.
+The remaining $30.4\%$ reason over the report and the code they read
+without binding a step to a path, which the schema permits and we do not
+count as a file-level claim.
+
+\textbf{What the explanations cite exists.} Three mechanical checks run
+against the exact snapshot the agent was given, with no model in the
+loop: does the cited file exist, does a quoted line number fall inside
+it, does a quoted identifier occur there.
+
+\begin{center}
+\begin{tabular}{lcc}
+\toprule
+check & count & rate \
+\midrule
+cited paths that exist      & 15{,}050 / 15{,}098 & \textbf{99.68\%} \
+quoted lines inside the file & 16{,}756 / 16{,}852 & \textbf{99.43\%} \
+quoted symbols found there   & 20{,}857 / 25{,}005 & 83.41\% \
+\bottomrule
+\end{tabular}
+\end{center}
+
+\noindent The path check is the strict one: a cited path absent from the
+snapshot is a file the agent could not have opened. Forty-eight of
+$15{,}098$ citations fail it, and they are not noise but plausible paths
+with the wrong directory --- the agent writes
+\texttt{src/widgets/widgets/qwidget.cpp} where Qt keeps that file under
+\texttt{src/widgets/kernel/}. \textbf{The symbol rate is a floor on
+groundedness, not an error rate.} Evidence legitimately names symbols
+declared elsewhere, so the $16.6\%$ not found in the cited file are
+overwhelmingly correct statements about other files, and we do not read
+them as hallucinations.
+
+\textbf{Where an independent causal label exists, the chains point at
+the defect.} On the annotated subset (\cref{sec:results:causal}), every
+chain that named a fix-modified file named one the annotation calls
+causal: $36$ of $36$. We give the count rather than the percentage,
+because the interval around $100\%$ at $n = 36$ is wide.
+
+What none of this shows is that the reasoning is \emph{right}. An
+explanation can cite a file that exists, quote a line that exists, name
+a symbol that occurs there, and still give the wrong cause. Judging that
+needs a rater we do not yet have, and we flag it as the open half of the
+explanation question rather than claiming it.
 
 \subsection{Noise robustness}
 \label{sec:results:noise}
@@ -557,3 +647,70 @@ fusion); Qt's development split holds few mention-regime instances, so
 its tuned weights are noisy. The full system recovers (91.3\%) because
 memory compensates, but small development splits make per-regime tuning
 fragile, which practitioners adopting this design should know.
+
+\subsection{Is the answer key the root cause?}
+\label{sec:results:causal}
+
+Every number above is scored against fix-modified files. That key is a
+proxy, and \cref{sec:intro} promised to measure how good a proxy it is.
+We drew \nAnnotated{} instances and labelled every gold file against a
+pre-registered rubric, assigning each one of six roles: the file held
+the defect (\emph{causal}), it was changed so the failure reports
+better (\emph{symptom-handling}), it was hardened against recurrence
+(\emph{preventive}), it was \emph{refactored} incidentally, it is a
+\emph{test}, or the evidence is \emph{unclear}. The labels, the rubric,
+and the conventions that emerged while applying it are released.
+
+\textbf{The annotator is a model, and we report it as one.} No second
+human was available, so the first pass is one model against the rubric
+and the second is a blind pass by a \emph{different} model family that
+saw the rubric and schema but neither the first pass nor its
+conventions. Agreement on causal-versus-not is Cohen's
+$\kappa = 0.885$, and the two raters produce an identical causal set on
+$136$ of \nAnnotated{} instances. On the full six-role scheme
+$\kappa = 0.793$. This is model--model agreement under a fixed rubric.
+It is evidence that the rubric is applied consistently; it is
+\emph{not} human reliability, and must not be read as such.
+
+\textbf{Half of the answer key is the defect site, and the half depends
+on fix size.} Across the \nAnnotated{} instances, \nCausalPct{} of
+fix-modified gold files are labelled causal ($171$ of $349$). The
+aggregate hides the result that matters:
+
+\begin{center}
+\begin{tabular}{lcccc}
+\toprule
+fix touches & 1 file & 2--3 & 4--7 & 8+ \
+\midrule
+causal share of gold & \nCausalOne{} & 57\% & 30\% & \nCausalEight{} \
+\bottomrule
+\end{tabular}
+\end{center}
+
+\noindent The curve falls monotonically under both raters. A one-file
+fix is almost always the defect itself; a large fix carries bundled
+hardening and refactoring that the key cannot distinguish. Fourteen of
+\nAnnotated{} instances have no causal file at all, and we report those
+rather than score them: ``no file in this fix is causal'' is a finding
+about the benchmark, not a ranking any system can get right.
+
+This interacts directly with \cref{sec:results:agent}. Accuracy
+\emph{rises} with fix size --- \sys{} scores $66.9\%$ Acc@1 where the
+fix touches one file and $73.2\%$ at eight or more --- because a larger
+fix offers more chances to hit one of its files. That is the answer key
+loosening, not better localization, and the two curves run in opposite
+directions. Large-fix instances are the easiest to score and the least
+trustworthy.
+
+\textbf{Re-scoring against causal gold changes little.} On the $84$
+annotated instances that exist in the study with the same gold and the
+same snapshot and have at least one causal file, every system was
+re-scored with the causal subset as the key. No system was re-run: the
+same stored ranking is simply graded against a stricter answer. Every
+system loses between $1.2$ and $4.8$ points of Acc@5, and \sys{} loses
+the least ($1.2$), with $95\%$ of its top-one hits landing on a file the
+annotation calls causal. Nine pairs of systems change order, and all
+nine were already statistically tied on both keys at $n = 84$, so this
+subset confirms nothing about the top of the table and we do not claim
+it does. The subset is also harder than the benchmark by construction,
+so its absolute numbers must not be compared with \cref{tab:study}.

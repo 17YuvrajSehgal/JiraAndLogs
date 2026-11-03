@@ -2,7 +2,7 @@
 
 **Paper:** Log-Guided Root-Cause Code Localization (ICSE 2027 Industry Challenge)
 **Branch:** `v2-industry-track-review-2`
-**Deadline:** 2026-11-13 AoE · **Started:** 2026-11-02 · **Days left: 11**
+**Deadline:** 2026-11-13 AoE · **Started:** 2026-11-02 · **Days left: 10**
 **Now:** Borderline / Weak Reject, 6.8/10, 35–45% accept
 **Design doc:** `paper/review-2-plan.md` (why each task exists)
 **Review:** `paper/review-2.md`
@@ -26,7 +26,8 @@ Needs: **CPU** (laptop, no cluster) · **GPU** (needs vLLM job) · **HUMAN** (us
       stopped the run cleanly each time and resume retried the affected rows.
       Total cost of all outages: 38 instances re-run, 0 lost. **HUMAN**
 
-All of P0 is CPU-only and unblocked. Start there while B2 is pending.
+B1 and B2 are both closed. Everything still open is CPU-only except
+T7, T17, T19 and Mahsa's point 3, which need a fresh vLLM job.
 
 ---
 
@@ -70,11 +71,14 @@ review follow from this one gap.
       change order, all of them already tied on both keys at n=84, so the
       subset confirms nothing about the top of the table and the paper says
       so. Written up in `paper/causal-gold-results.md`. **CPU**
-- [ ] **T5. Scope the claim.** Define "root-cause localization" in §1 before
-      using it. Say plainly that the ground truth is fix-modified files and
-      point to the annotation study. The title keeps "root-cause" (it is the
-      challenge's own name) but the paper states what it has and has not
-      shown. **CPU**
+- [x] **T5. Scope the claim.** Done. New paragraph in §1 ("What
+      'root-cause localization' means here, and what it does not") defines the
+      task, states that the ground truth is fix-modified files and is a proxy
+      for causation rather than a measurement of it, names the four things a
+      fix commit mixes, and gives the annotation result with the size curve.
+      It ends by saying what the evidence does and does not support, and that
+      the title's "root-cause" is the challenge's framing, not a stronger
+      claim. **CPU**
 
 ---
 
@@ -101,10 +105,15 @@ review follow from this one gap.
       votes load only for non-wolv2 projects and all four study projects are
       wolv2, so it is empty on all 6,314 scored instances by construction.
       It appears nowhere in the paper. **CPU**
-- [ ] **T9. Document the sampling.** The seed, that the sample was drawn
-      before any system ran, and the test-only-gold removal with its
-      conservative-direction evidence, made visible from the agent section.
-      **CPU**
+- [x] **T9. Document the sampling.** Done in §IV-B. The section was also
+      **wrong** and is now fixed: it still said the agent used the 790
+      sample. Added the seed (42), that the draw is `random.sample` over the
+      time-ordered split taken before any system ran, why the code samples on
+      the unfiltered list and intersects with the scored set afterwards
+      (filtering first changes the indices, hence the sample), and the
+      direction of the bias: the sample is near-balanced across projects
+      while the real split is 55% MongoDB and 27% MariaDB, so v3 reads 70.1%
+      Acc@1 on the 790 against 68.7% on the full split. **CPU**
 
 ---
 
@@ -154,6 +163,35 @@ of evidence from symptom to suspected cause.
       two are indistinguishable (Acc@5 delta -0.0025, CI [-0.0165, +0.0114]),
       in every stratum including hard. The scorer now prints a warning and
       `paper/causal-lift-v3.md` states it. **CPU**
+
+---
+
+## P2b — Fold the full-split results into the paper
+
+Not in the original plan. It became necessary the moment T6 landed: the
+paper was still reporting a 790-instance sample as its headline.
+
+- [x] **T23. Move every headline number to the full split.** Done.
+      `tab:study` is rebuilt on all 4,409 (REMEMBER 68.7 / 88.8 / .773 /
+      80.3 hard, against 53.7 / 80.5 / .652 / 66.4 for the best non-agent
+      system), and the abstract, §I contributions, §V-B, §V cost, §VI and §VII
+      all follow. `fusion` is now computed on the full split by the same RRF
+      `stats_agent.py` uses, so "best combination of non-agent systems" is a
+      real measured row rather than a sample figure. **One claim was false
+      and is gone:** the old text said the Acc@1 margin is "roughly three
+      times" the Acc@5 margin; on the full split it is 1.2x to 1.8x
+      depending on the comparison, and the paper now says that.
+      verify_claims was repointed at `full-split-breakdown.json` for the
+      rendered table and given exact checks for every delta the abstract
+      prints. **CPU**
+- [x] **T24. Write the P0 and P4 results into LaTeX.** They existed only as
+      markdown. Added §V "Is the answer key the root cause?" (the rubric, the
+      six roles, kappa 0.885 reported as model-model agreement and never as
+      human reliability, the 49.0% headline, the size curve, the 84-instance
+      re-score) and §V "Do the explanations point at anything real?" (chain
+      coverage, the 99.9% chain-contains-top-1 figure, the three mechanical
+      checks, the 36/36 causal result). Also folded T20 into the function
+      section. Cross-reference check: 56 labels, 78 refs, 0 dangling. **CPU**
 
 ---
 
@@ -222,10 +260,17 @@ We produce one and never score it.
       No leak: `read_code` targets are chosen from the report and tools under
       the memory firewall, and gold functions come from the fix diff the
       agent never sees. `paper/function-stage-t20.md`. **CPU**
-- [ ] **T21. Engineer-facing walkthrough.** What an engineer sees at triage,
-      what the ranked list plus evidence gives them, and how it changes the
-      work. Industrial *relevance* is required by the CFP; deployment is not.
-      **CPU**
+- [x] **T21. Engineer-facing walkthrough.** Done: new
+      §VI "What this changes at triage", built on a real run rather than an
+      invented one. KAFKA-9747 is hard (the report names no gold file), the
+      lexical layer ranks no gold file first, and v3's four-step chain walks
+      REST API -> `KafkaConfigBackingStore` -> `DistributedHerder.tick()` ->
+      `processConnectorConfigUpdates()` and ranks the gold file first. The
+      section argues three things the rank alone does not give: the account is
+      checkable without trusting it (99.7% of cited paths exist), it fails
+      visibly (the chain contains the top-1 in 99.9% of cases), and it changes
+      the first hour rather than the fix. States plainly that no developer
+      study was run, so nothing here is measured as time saved. **CPU**
 - [-] **T22. Developer study.** Dropped. Explicitly optional in the CFP and it
       does not fit 11 days.
 
@@ -233,22 +278,30 @@ We produce one and never score it.
 
 ## Cut line for 11 days
 
-**Must land:** T1–T5, T6, T8, T9, T10–T12, T21. Covers every Very-high and
-High row in the review.
+**Must land:** T1–T5, T6, T8, T9, T10–T12, T21.
+Done except **T5, T9, T21** — all three are writing, no compute.
 
-**Should:** T13–T15 (CPU, runs during GPU waits), T16, T18.
+**Should:** T13–T15 (CPU), T16 done, T18 blocked behind T17.
 
-**Nice:** T7, T17, T19, T20.
+**Nice:** T7, T17, T19 (all GPU), T20 done.
 
-The binding constraint is not compute. It is annotation effort in T2 and the
-B1 decision.
+The binding constraint is no longer compute or annotation. It is the four
+paper-writing rows (T5, T9, T21 and folding the new results into the
+sections), plus the fact that **the PDF has never been rebuilt** — there is
+no LaTeX toolchain on this machine.
+
+Still owed, not yet scheduled:
+- the human-verified annotation subset that `RUBRIC.md` pre-registers (B1)
+- Mahsa's point 3, an existing-agent baseline (**GPU**)
 
 ---
 
 ## Rules that stay in force
 
-- Every new number gets an exact check in `scripts/verify_claims.py` (284
-  now). No ranges, no `or` fallbacks. A loose `0.3 or 0.4` check is how a
+- Every new number gets an exact check in `scripts/verify_claims.py` (333
+  now). Pin to the value **stored in the JSON**, not the one printed to the
+  screen: three checks were written from rounded output this session and all
+  three failed. No ranges, no `or` fallbacks. A loose `0.3 or 0.4` check is how a
   wrong number reached the reviewer.
 - Verify the justification, not just the number. "No localizer can be right
   about these" was written twice and was false both times.
@@ -269,4 +322,5 @@ B1 decision.
 | 2026-11-02 | Review-2 read; plan and this tracker written. Confirmed all four repos are local (4.8 GB, full history), so P0 needs no cluster. Confirmed the vLLM job ended 2026-11-01, so all GPU work is blocked on B2. |
 | 2026-11-02 | P0 closed except T5: T1–T4 done, T2b gives kappa 0.885 on causal-vs-not and the headline reproduces under both raters. Scored set applied, verify_claims 284/284. |
 | 2026-11-03 | Full-split run finished: 4,409/4,409, 0 errors, agent v3, Acc@1 0.6870 / Acc@5 0.8877. T6, T8 and T12 closed; B2 closed. v3 does NOT beat v2 on ranking (790 paired, Acc@1 -0.0215, CI [-0.0456,+0.0013], ns) - its contribution is the guaranteed causal chain, not accuracy. Caught a selection confound that made v3 look +8.3 over v2 on the causal-gold subset: that sample was stratified on v2's own outcome. `data_flow_back` was called **1 time in 4,409 runs** - the third repeat of "instructed-but-optional gets skipped", and the two v3 changes that were structural (required chain, phase-0 prewalk) both fired as designed. verify_claims 320/320. |
+| 2026-11-03 | T16 (99.68% of cited paths exist, 99.43% of quoted lines, 83.41% of symbols - the last is a floor on groundedness, not an error rate) and T20 (function Acc@1 0.2152 -> 0.2882; better candidates raise the oracle 0.7367 -> 0.8879 but move Acc@1 only +1.89, while ranking the functions the agent actually read is +5.42). Then T5, T9, T21, and the paper rewrite the full-split run forced: tab:study rebuilt on 4,409, causal-gold and explanation sections written into LaTeX for the first time, a false "roughly three times" claim removed, and §IV-B corrected where it still said the agent used the 790 sample. verify_claims 344/344. |
 | 2026-11-02 | Three defects found in `run_agent.py` while sizing the full-split job, all fixed before any GPU time was spent: the adjusted `n_dev` was being applied to the unfiltered benchmark and pulled 24 MongoDB dev instances into eval; there was no code path for the full split at all (`SAMPLE_N=200` hardcoded); and a second exclusion rule (`TESTY`) had drifted from `scored_set.py`. Also `bridge.sh` still defaulted to a node from a job that ended Nov 1, which would have returned empty for every call of a 15 h run. T10/T11 built behind `--version 3`, default stays 2. |

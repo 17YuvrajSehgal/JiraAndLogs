@@ -20,12 +20,11 @@ reaches 89.2\%, which no reordering of their output can claim.
 \sys{} claims it by investigating instead of ranking. It keeps the
 retrieval and the firewalled incident memory as tools, and adds tools
 that read code, resolve a symbol from a stack trace to the file that
-defines it, and consult past incidents. On the same instances and the
-same 27B model it reaches Acc@5 90.3\% and Acc@1 72.3\%, improving on
-every family in the study, with its widest margins on the reports that
-name no faulty file: $+9.9$ points of Acc@5 and $+27.5$ of Acc@1 over
-the best
-non-agent combination. The gain is concentrated in ranking rather than
+defines it, and consult past incidents. On the whole \nEval{}-instance
+evaluation split and the same 27B model it reaches Acc@5 \accFive{} and
+Acc@1 \accOne{}, improving on every family in the study, with its
+widest margins on the reports that name no faulty file: $+13.9$ points
+of Acc@5 and $+24.9$ of Acc@1 over the best non-agent combination. The gain is concentrated in ranking rather than
 recall, which is what an engineer who opens files in order actually
 needs.
 

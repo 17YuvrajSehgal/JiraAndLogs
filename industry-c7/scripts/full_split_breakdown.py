@@ -29,6 +29,7 @@ from pathlib import Path
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
 from localize import evaluate  # noqa: E402
+from stats_agent import rrf  # noqa: E402
 
 ROOT = HERE.parents[0]
 RES, LLM, AG = ROOT / "data/results", ROOT / "data/llm", ROOT / "data/agent"
@@ -39,6 +40,7 @@ LABEL = {"remember_v3": "REMEMBER (v3)", "llm_twostage": "Model alone",
          "fused_ours": "Retrieval + memory (untuned)",
          "cond_no_memory": "Retrieval, no memory",
          "content_bm25": "Lexical log-to-code", "path_bm25": "Path BM25",
+         "fusion": "Fusion (best non-agent)",
          "trace_grep": "Trace grep", "memory_bm25": "Memory BM25",
          "memory_arise": "ARISE memory", "tuned_ours": "Retrieval + memory (tuned)",
          "tuned_no_memory": "Tuned, no memory",
@@ -100,6 +102,17 @@ def main() -> int:
     # as a 0.000 baseline would misdescribe it. The paper never mentions it.
     DEAD = {"memory_arise"}
 
+    # "fusion" is the paper's best NON-AGENT system: reciprocal-rank fusion of
+    # the retrieval layer and the model alone, exactly as stats_agent.py builds
+    # it on the 790. Both inputs cover the full split, so the abstract's
+    # "best combination of non-agent systems" can be quoted on 4,409 instead
+    # of silently staying on the sample.
+    if {"cond_ours", "llm_twostage"} <= set(rk):
+        rk["fusion"] = {k: rrf([(rk["cond_ours"][k], 1.0),
+                                (rk["llm_twostage"][k], 1.0)])
+                        for k in ids
+                        if k in rk["cond_ours"] and k in rk["llm_twostage"]}
+
     full = {s: m for s, m in rk.items() if set(ids) <= set(m) and s not in DEAD}
     full_pre = {s: m for s, m in pre.items() if set(ids) <= set(m) and s not in full}
     excluded = sorted((set(rk) | set(pre)) - set(full) - set(full_pre) - DEAD)
@@ -152,6 +165,30 @@ def main() -> int:
         out["best_baseline"] = best
         out["vs_best_baseline"] = {m: paired("remember_v3", best, m)
                                    for m in ("acc@1", "acc@5", "mrr")}
+
+    # The comparisons the abstract and intro actually make, so every headline
+    # delta traces to this file instead of being computed by hand. Reported
+    # on the whole split and on the hard stratum, which is the one the
+    # challenge calls the core difficulty.
+    def paired_on(a, b, metric, sel):
+        sub = [i for i, k in enumerate(ids) if sel(k)]
+        if not sub:
+            return None
+        d = [per[a][ids[i]][metric] - per[b][ids[i]][metric] for i in sub]
+        sr = random.Random(SEED)
+        bs = sorted(st.fmean([d[sr.randrange(len(d))] for _ in d])
+                    for _ in range(N_BOOT))
+        lo, hi = bs[int(.025 * N_BOOT)], bs[int(.975 * N_BOOT)]
+        return {"delta": round(st.fmean(d), 4), "lo": round(lo, 4),
+                "hi": round(hi, 4), "significant": lo > 0 or hi < 0}
+
+    out["headline"] = {
+        f"remember_v3_vs_{b}": {
+            stratum: {m: paired_on("remember_v3", b, m, strata[stratum])
+                      for m in ("acc@1", "acc@5")}
+            for stratum in ("all", "hard")}
+        for b in ("llm_twostage", "llm_rerank", "cond_ours", "fusion")
+        if b in full}
     (RES / "full-split-breakdown.json").write_text(json.dumps(out, indent=1) + "\n",
                                                    encoding="utf-8")
 
@@ -186,8 +223,9 @@ def main() -> int:
 def write_doc(out: dict, order: list) -> None:
     """The paper-facing numbers, generated so they cannot drift from the data."""
     S, N = out["scores"], out["strata_n"]
-    top = [s for s in order if s in ("remember_v3", "llm_rerank", "llm_twostage",
-                                     "cond_no_memory", "cond_ours", "content_bm25",
+    top = [s for s in order if s in ("remember_v3", "fusion", "llm_rerank",
+                                     "llm_twostage", "cond_no_memory",
+                                     "cond_ours", "content_bm25",
                                      "brtracer_fw", "buglocator_fw_a5", "rvsm")]
     rows = "\n".join(
         f"| {LABEL.get(s, s)} | {S[s]['all']['acc@1'] * 100:.1f} | "

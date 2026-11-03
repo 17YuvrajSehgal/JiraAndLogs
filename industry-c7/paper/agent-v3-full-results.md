@@ -17,6 +17,7 @@ own text.
 | REMEMBER (v3) | 68.7 | 88.8 | 0.773 | 59.5 | 78.5 |
 | Model re-rank | 60.3 | 77.2 | 0.674 | 41.3 | 80.6 |
 | Model alone | 55.8 | 77.8 | 0.649 | 38.8 | 74.0 |
+| Fusion (best non-agent) | 53.7 | 80.5 | 0.652 | 34.6 | 74.2 |
 | Retrieval, no memory | 42.0 | 67.1 | 0.530 | 22.8 | 62.5 |
 | Retrieval + memory | 40.8 | 68.6 | 0.528 | 22.2 | 60.8 |
 | Lexical log-to-code | 30.2 | 59.1 | 0.431 | 24.1 | 36.7 |

@@ -65,6 +65,30 @@ fix commit modified, and the snapshot is the parent of that commit. The
 benchmark is stratified by exactly the difficulty the challenge names:
 whether the report names any faulty file.
 
+\textbf{What ``root-cause localization'' means here, and what it does
+not.} We use the term for the task the challenge names: given a report,
+its logs, and a snapshot, rank the source files that must be changed to
+resolve the issue. The ground truth is therefore the set of
+\emph{non-test files the fix commit modified}, which is a proxy for
+causation, not a measurement of it. A fix commit mixes four different
+things: the file that held the defect, a file changed so the failure is
+reported better, a file hardened to stop the fault recurring, and
+incidental refactoring carried along. To find out how much of the proxy
+is the first kind, we annotated \nAnnotated{} instances against a
+pre-registered rubric (\cref{sec:results:causal}). Across them
+\nCausalPct{} of fix-modified gold files are the defect site, and the
+share depends sharply on how large the fix is: \nCausalOne{} when the
+fix touches one file, falling to \nCausalEight{} at eight or more. The
+answer key is accurate for small fixes and increasingly diluted for
+large ones. We therefore report every headline number against
+fix-modified gold, re-score the systems against the annotated causal
+subset, and state both. Where this paper says a system localizes the
+root cause, the evidence is that it ranks the files the fix changed, and
+on the annotated subset that those files are predominantly the defect
+site. It is not evidence of a verified causal mechanism for each
+instance, and the title's ``root-cause'' is the challenge's own framing
+rather than a stronger claim than this paragraph supports.
+
 We then use the benchmark to compare four families of method on the same
 instances, under one protocol and one firewall: classic
 information-retrieval bug localization, lexical log-to-code retrieval
@@ -106,10 +130,14 @@ This paper makes four contributions.
   signal, evaluated without report-time admissibility, overstates Acc@5
   by 9\% to 43\% relative (\cref{sec:results:leakage}).
 \item \textbf{\sys{}}, an agent that turns the retrieval, the incident
-  memory, and the code itself into tools (\cref{sec:agent}). It reaches
-  Acc@5 90.3\% and Acc@1 72.3\%, improving on every family in the
+  memory, and the code itself into tools (\cref{sec:agent}). Evaluated
+  on the whole \nEval{}-instance split rather than a sample, it reaches
+  Acc@5 \accFive{} and Acc@1 \accOne{}, improving on every family in the
   study and on the best combination of them, with the widest margins on
-  the reports that name no faulty file. Its cost is reported next to its
+  the reports that name no faulty file. Every prediction carries a
+  causal chain from symptom to named cause, and 99.7\% of the files
+  those explanations cite exist in the snapshot
+  (\cref{sec:results:explanations}). Its cost is reported next to its
   accuracy.
 \item \textbf{Three validity checks} that a reviewer of an
   LLM-based result should expect, each of which could have invalidated

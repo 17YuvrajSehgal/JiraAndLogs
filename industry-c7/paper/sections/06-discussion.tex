@@ -13,10 +13,10 @@ hardest part, and our data agrees in a form that can be quantified: in
 53\% of real reports, no faulty file is named anywhere in the text, and
 on those instances a method that matches the report against the code it
 mentions scores zero by construction. This is where the three approaches
-separate most sharply. The retrieval layer reaches 42.4\% Acc@5 there,
-the model alone 72.5\%, and \sys{} 81.6\%. It is also where \sys{}
-gains most over everything else, $+9.9$ points of Acc@5 and $+27.5$ of
-Acc@1 over
+separate most sharply. Across the $2{,}278$ hard instances of the
+evaluation split, the retrieval layer reaches 48.3\% Acc@5, the model
+alone 63.3\%, and \sys{} 80.3\%. It is also where \sys{} gains most
+over everything else, $+13.9$ points of Acc@5 and $+24.9$ of Acc@1 over
 the best non-agent combination.
 
 Two things recover files that no log line mentions. Incident memory does
@@ -27,7 +27,7 @@ reasoning over control flow or data flow in the sense the challenge
 describes, and we do not claim it. The agent follows one or two hops by
 reading source, which is a shallow substitute for dependency analysis.
 The hard stratum remains where future work on this challenge should be
-judged, and at 81.6\% it is not solved.
+judged, and at 80.3\% it is not solved.
 
 \textbf{Noisy and incomplete log evidence.} Here our benchmark is kinder
 than industrial reality, and we say so. Its logs are the excerpts that
@@ -60,8 +60,8 @@ points.
 What supplies it in our system is a model that can read the code
 directly, paired with tools that fetch the right code to read. That is
 the difference between the model prompted with a file tree, which sees
-only path names and reaches 83.2\%, and the same model able to resolve
-a symbol and read the function behind it, which reaches 90.3\%. The
+only path names and reaches 77.8\%, and the same model able to resolve
+a symbol and read the function behind it, which reaches \accFive{}. The
 semantics are in the source, not in the file names, and a method has to
 open the file to use them.
 
@@ -97,6 +97,66 @@ the ranking is right, so it is a lead to verify and not a finding.
 Neither has been shown to speed engineers up; that is a user study this
 paper does not run.
 
+\subsection{What this changes at triage}
+\label{sec:discussion:walkthrough}
+
+The challenge asks for industrial relevance, so it is worth stating
+plainly what an engineer receives and what it replaces.
+
+Today, an on-call engineer handed a report like Kafka's KAFKA-9747 ---
+``connector created through the REST API reports RUNNING but never
+creates tasks'' --- has the report, the logs, and a repository of
+several thousand source files. The report names none of the three files
+the fix eventually touched, which is the common case rather than the
+hard one: \nHardPct{} of the reports in this benchmark name no gold
+file. Grepping for the words in the report is the natural first move and
+it is the wrong one, because the text points at the REST resource that
+accepted the request, not at the code that failed to act on it. Our
+lexical layer, which is a faithful stand-in for that grep, ranks no gold
+file first on this instance.
+
+What \sys{} returns instead is a ranked list of files and, for each, the
+evidence that put it there, plus one ordered chain from the reported
+symptom to the named cause. On KAFKA-9747 the chain has four steps: the
+REST API persists the new config and reports \texttt{RUNNING};
+\texttt{KafkaConfigBackingStore} observes the config record and notifies
+the herder; \texttt{DistributedHerder.tick()} picks the update up and
+calls \texttt{processConnectorConfigUpdates()}, which skips a connector
+that is not in the expected state; and because no rebalance is
+triggered, the connector stays \texttt{RUNNING} with zero tasks until a
+worker restart forces a fresh one. \texttt{DistributedHerder.java} is
+ranked first and is a gold file.
+
+Three things about that output matter more than the rank.
+
+\textbf{It is checkable without trusting it.} Each step cites the tool
+result that produced it, and the files it names are real: across all
+\nEval{} instances, 99.7\% of cited paths exist in the snapshot and
+99.4\% of quoted line numbers fall inside the file they are attributed
+to (\cref{sec:results:explanations}). An engineer can open the four
+locations in the order given and confirm or reject the account in
+minutes. A ranked list without this requires the same investigation from
+scratch to decide whether to believe it.
+
+\textbf{It fails visibly rather than silently.} The chain is the same
+claim as the ranking --- in 99.9\% of the cases where a chain names
+files at all, it contains the system's own top-ranked file --- so a
+wrong answer comes with the reasoning that produced it. An engineer who
+rejects step three has rejected the ranking, and knows why.
+
+\textbf{It changes the first hour, not the fix.} We make no claim that
+this writes the patch or shortens the repair. What it replaces is the
+part of triage spent deciding where to look, in a situation where the
+log points somewhere else by construction. The honest framing of the
+headline number is that in \accFive{} of cases the file an engineer
+needs is in a list of five, and in \accOne{} it is the first one,
+starting from a report that usually does not name it.
+
+We have not run a developer study, so none of this is measured as time
+saved. It is a description of the artifact and what it affords, which is
+what the call asks for; the quantitative claims above are all on the
+benchmark, not on engineers.
+
 \subsection{Deployment notes}
 \label{sec:discussion:deployment}
 
@@ -108,11 +168,11 @@ GPU, no training and no network. Measured on one laptop CPU core with
 warm caches, the median time per issue is 0.07\,s on Kafka, 0.22\,s on
 Qt, and 0.41\,s on MariaDB and MongoDB, with the 95th percentile below
 0.7\,s and the incident-memory index taking at most 0.1\,s to build.
-\sys{} costs 12.2 model calls and 90k prompt tokens per issue. An
-organization that can host a 27B model should pay that for $+22.2$
+\sys{} costs 12.1 model calls and 94k prompt tokens per issue. An
+organization that can host a 27B model should pay that for $+20.1$
 points of Acc@5. One that cannot, or that may not send source code and
 production logs to an external service, still has a system that
-reaches 68.1\%.
+reaches 68.6\%.
 
 \textbf{Freshness favours both.} The memory pool is append-only, so
 every newly resolved issue with a linked fix commit widens the
@@ -125,7 +185,8 @@ has little history to recall.
 layer degrades gracefully: with an empty memory pool it falls back to
 its log-to-code signals, and memory is additive rather than a
 dependency. \sys{} has the failure modes of any agent. It can return a
-path that does not exist, run out of turns, or be unavailable because
+path that does not exist (it does so for 0.3\% of the files it cites,
+\cref{sec:results:explanations}), run out of turns, or be unavailable because
 the model is. We handle the first two inside the harness and the third
 is an operational matter, but a team adopting it should keep the
 retrieval layer as the fallback rather than as a decommissioned
@@ -175,9 +236,11 @@ with a 27B open-weights model and not how it scales to others. Third, the agent
 is not deterministic, and although every tool is a pure function of the
 snapshot and every run is recorded in full, repeated runs can differ;
 we report a single seed per arm rather than a distribution over seeds.
-Fourth, the agent ran on 790 instances rather than all \nInstances{}, for cost,
-which is why every baseline it is compared against was rescored on those
-same instances. Fifth, the model is prompted with report text and
+Fourth, the agent is evaluated on the full \nEval{}-instance evaluation
+split rather than on all \nInstances{} mined instances, because the
+earlier 30\% of each project is held out as a development split and is
+never scored; every baseline it is compared against is scored on the
+same \nEval{}. Fifth, the model is prompted with report text and
 source code from public projects, so contamination is a live concern; we
 measured it directly (\cref{sec:results:validity}) and found none, but
 that result is specific to this model and these projects and should be
