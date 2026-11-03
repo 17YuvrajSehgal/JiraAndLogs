@@ -1,0 +1,8 @@
+I just skim it and these are GPT+my edits:
+1- State precisely that the snapshot is the parent of the fix commit. Remove claims that it necessarily represents issue-creation time. Explain that the experiment evaluates localization on a known defective revision. If claiming report-time deployment, repeat an evaluation using the appropriate revision available then.
+2- This one is important: Audit descriptions for post-fix edits, patches, commit links, and explicit solution statements. Where available, reconstruct descriptions from issue history at the chosen query time. Otherwise, identify a verified clean subset and rerun the main comparison on it. Report the number excluded and why.
+3- Add an existing localization agent with access to the same reports and snapshots, using the same model where supported and a comparable inference budget (baseline)
+4- fully evaluatedReport REMEMBER’s module accuracy and evaluate function/region localization on the same instances. for this one i thing that we need manual assessing a stratified sample of explanations for factual correctness, evidence support, and whether they connect symptoms to the proposed cause. we can use two independent annotators and report agreement before adjudication.
+5- Build the memory index from only admissible historical incidents for each query. otherwise we will get this commnet that there sia a residual future text leakage.
+
+

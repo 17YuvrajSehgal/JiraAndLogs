@@ -777,6 +777,72 @@ def main() -> int:
               gaps["remember"][0] == min(a for a, _ in gaps.values())
               and gaps["remember"][1] == min(b for _, b in gaps.values()))
 
+    # ---- T6/T8/T12: the full-split run and agent v3 ---------------------------
+    fs = RES / "full-split-breakdown.json"
+    if fs.exists():
+        fsd = json.loads(fs.read_text(encoding="utf-8"))
+        FS = fsd["scores"]
+        check("T6 the agent ran the whole evaluation split", fsd["n"] == 4409,
+              str(fsd["n"]))
+        check("T6 REMEMBER v3 Acc@1 is 0.6870 on the full split",
+              FS["remember_v3"]["all"]["acc@1"] == 0.687,
+              str(FS["remember_v3"]["all"]["acc@1"]))
+        check("T6 REMEMBER v3 Acc@5 is 0.8877 on the full split",
+              FS["remember_v3"]["all"]["acc@5"] == 0.8877,
+              str(FS["remember_v3"]["all"]["acc@5"]))
+        t = fsd["vs_best_baseline"]["acc@1"]
+        check("T8 REMEMBER v3 beats the best baseline by +8.41 Acc@1, significant",
+              t["delta"] == 0.0841 and t["significant"],
+              f"{t['delta']} {t['lo']} {t['hi']}")
+        check("T8 the best full-split baseline is the model re-ranker",
+              fsd["best_baseline"] == "llm_rerank", fsd["best_baseline"])
+        check("T8 mariadb is the weakest project at 0.5802 Acc@1",
+              FS["remember_v3"]["project:mariadb"]["acc@1"] == 0.5802,
+              str(FS["remember_v3"]["project:mariadb"]["acc@1"]))
+        # Accuracy RISES with fix size because the answer key loosens, the
+        # opposite direction to T3's causal share. Assert the direction so a
+        # future draft cannot quote the 8+ number as better localization.
+        sz = [FS["remember_v3"][f"fixsize:{b}"]["acc@1"]
+              for b in ("1", "2-3", "4-7", "8+")]
+        check("T8 Acc@1 rises with fix size (answer key loosens)",
+              sz[0] < sz[-1] and sz == sorted(sz),
+              " ".join(f"{x:.4f}" for x in sz))
+        check("T8 ARISE is reported inactive, never as a 0.000 baseline",
+              fsd["systems_inactive"] == ["memory_arise"]
+              and "memory_arise" not in fsd["systems_scored"],
+              str(fsd["systems_inactive"]))
+
+    cl = RES / "causal-lift-v3.json"
+    if cl.exists():
+        cld = json.loads(cl.read_text(encoding="utf-8"))
+        check("T12 every v3 prediction carries a causal chain",
+              cld["n_with_chain"] == cld["n_instances"] == 4409,
+              f"{cld['n_with_chain']}/{cld['n_instances']}")
+        check("T12 mean causal chain length is 4.15 steps",
+              cld["mean_steps"] == 4.15, str(cld["mean_steps"]))
+        check("T12 69.58% of chains name at least one file",
+              cld["share_chain_names_a_file"] == 0.6958,
+              str(cld["share_chain_names_a_file"]))
+        check("T12 99.90% of file-naming chains contain the ranked top-1",
+              cld["share_chain_contains_ranked_top1"] == 0.999,
+              str(cld["share_chain_contains_ranked_top1"]))
+        lab = cld["labelled"]
+        check("T12 every chain that hits fix gold hits causal gold (36/36)",
+              lab["n_hits_fix"] == 36 and lab["n_hits_causal"] == 36
+              and lab["share_causal_given_fix_hit"] == 1.0,
+              f"{lab['n_hits_causal']}/{lab['n_hits_fix']} of n={lab['n']}")
+
+    cgv3 = RES / "causal-gold-scores-v3.json"
+    if cgv3.exists():
+        sv3 = json.loads(cgv3.read_text(encoding="utf-8"))["systems"]
+        check("T12 v3's fix-to-causal gap is +1.2 points of Acc@5",
+              sv3["remember_v3"]["gap"]["acc@5"]["delta"] == 0.0119,
+              str(sv3["remember_v3"]["gap"]["acc@5"]["delta"]))
+        # The confound that makes the absolute columns unusable for v2 vs v3.
+        check("T12 the v2/v3 confound on the causal subset is documented",
+              "balanced on" in (ROOT / "industry-c7/paper/causal-lift-v3.md")
+              .read_text(encoding="utf-8"))
+
     # ---- Sec. 4 setup: the scored set -----------------------------------------
     # Sec. IV-B claims the test-only-gold removal is conservative. Record the
     # measurement, do not assert it: a previous draft said these instances

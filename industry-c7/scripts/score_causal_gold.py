@@ -29,9 +29,22 @@ RES, LLM, AG = (ROOT / "data/results", ROOT / "data/llm", ROOT / "data/agent")
 # --pass2 re-scores everything against the blind second rater's labels, so
 # the paper can say whether T4 depends on which rater you believe (T2b).
 PASS2 = "--pass2" in sys.argv
+# T12: score agent v3 (full eval split) on the same instances and the same
+# answer keys as T4. v3 is added as an extra system rather than replacing
+# "remember", so v2 and v3 are compared on identical instances.
+V3 = "--v3" in sys.argv
+# WARNING, and it is not a small one. The core stratum of the annotation
+# sample was balanced on (agent right/wrong) x (hard/easy) using
+# agent-v2.jsonl, so half these instances are ones v2 got WRONG. v2's score
+# here is depressed by the selection that built the sample; v3's is not,
+# because v3 did not exist when the sample was drawn. Any v2-vs-v3
+# comparison on this subset is confounded in v3's favour -- v2 reads 0.620
+# Acc@5 here against 0.903 on the full 790. Use the within-system fix-vs-
+# causal gap, which is immune (same ranking, two answer keys), and take
+# cross-system ranking from the full split instead.
 CG = ROOT / ("data/causal-gold-pass2/causal-gold.jsonl" if PASS2
              else "data/causal-gold/causal-gold.jsonl")
-TAG = "-pass2" if PASS2 else ""
+TAG = "-pass2" if PASS2 else ("-v3" if V3 else "")
 P = ("kafka", "mariadb", "mongodb", "qt")
 SEED, N_BOOT = 20261102, 2000
 METRICS = ("acc@1", "acc@5", "acc@10", "mrr")
@@ -85,6 +98,12 @@ def rankings(keys: set) -> dict:
         k = f"{r['project']}:{r['issue_key']}"
         if k in keys:
             out.setdefault("remember", {})[k] = r["ranking"]
+    if V3:
+        f = AG / "agent-v3-full.jsonl"
+        for r in jsonl(f):
+            k = f"{r['project']}:{r['issue_key']}"
+            if k in keys and not r.get("error")                     and r.get("stop_reason") != "llm_error":
+                out.setdefault("remember_v3", {})[k] = r["ranking"]
     return out
 
 
@@ -332,6 +351,9 @@ def main() -> int:
 
     pairs = [("remember", "llm_twostage"), ("remember", "cond_ours"),
              ("llm_twostage", "cond_ours")]
+    if V3:
+        pairs += [("remember_v3", "remember"), ("remember_v3", "llm_twostage"),
+                  ("remember_v3", "cond_ours")]
     gap_tests = {f"{a}_vs_{b}": {m: gap_vs(a, b, m) for m in METRICS}
                  for a, b in pairs if a in full and b in full}
     # Does switching answer keys reorder any pair of systems on Acc@5?
@@ -365,11 +387,16 @@ def main() -> int:
     }
     dest = RES / f"causal-gold-scores{TAG}.json"
     dest.write_text(json.dumps(out, indent=1) + "\n", encoding="utf-8")
-    if not PASS2:
+    if not PASS2 and not V3:
         write_doc(out, scored, ids)
 
     head = ["cond_ours", "fused_ours", "content_bm25", "brtracer_fw", "rvsm",
-            "llm_twostage", "llm_rerank", "remember"]
+            "llm_twostage", "llm_rerank", "remember", "remember_v3"]
+    if V3:
+        print("WARNING: the core stratum was balanced on v2's own outcome, so")
+        print("         remember vs remember_v3 is CONFOUNDED on this subset.")
+        print("         Read only each system's fix-vs-causal gap here.")
+        print()
     print(f"n={len(ids)} scored, {len(no_causal)} annotated as having no "
           f"causal file, {len(elig)} eligible of 151 annotated\n")
     print(f"{'system':16s} {'Acc@5 fix':>10s} {'causal':>8s} {'gap':>7s} "

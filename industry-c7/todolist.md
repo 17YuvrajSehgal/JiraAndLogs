@@ -19,9 +19,12 @@ Needs: **CPU** (laptop, no cluster) · **GPU** (needs vLLM job) · **HUMAN** (us
       pre-registered rubric, and the second rater will be an independent model
       pass. Reported as exactly that, never as human ground truth. Still
       outstanding: the agreement number itself (see T2b). **HUMAN**
-- [ ] **B2. Fresh vLLM SLURM job.** Job 1211031 ended 2026-11-01 20:05 ET, so
-      the server is down. Every GPU task below is blocked until a new job runs
-      and the MFA'd SSH tunnel is open. **HUMAN**
+- [x] **B2. Fresh vLLM SLURM job.** Done 2026-11-03. Job 1225458 (1xH100,
+      TP=1, 12 h) served Qwen3.8-27B on trig0012 and carried the full-split
+      run to completion. The forward dropped three times and the SSH control
+      socket hit its 8 h `ControlPersist` expiry once; the circuit breaker
+      stopped the run cleanly each time and resume retried the affected rows.
+      Total cost of all outages: 38 instances re-run, 0 lost. **HUMAN**
 
 All of P0 is CPU-only and unblocked. Start there while B2 is pending.
 
@@ -77,12 +80,27 @@ review follow from this one gap.
 
 ## P1 — Bigger agent evaluation (Priority 2, severity High)
 
-- [ ] **T6. Full 4,508 evaluation split.** About 15 h at 20 workers, 21 h at
-      14. Fits one 24 h job, and the harness is already restart-safe. Retires
-      the "only 790 instances" objection instead of arguing it.
-      **GPU** · needs B2
-- [ ] **T8. Per-project and per-stratum breakdown.** Re-analysis of T6, no
-      extra GPU. **CPU** · needs T6
+- [x] **T6. Full evaluation split.** Done 2026-11-03: **4,409 / 4,409**,
+      0 hard errors, 0 `llm_error`, every row `version: 3`, 0 duplicates,
+      0 instances outside the population and none missed. Agent v3 scores
+      **Acc@1 0.6870, Acc@5 0.8877**. Ran in ~11 h wall at 40 workers
+      (~6.5/min) on one H100. `paper/agent-v3-full-results.md`. **GPU**
+- [x] **T8. Per-project and per-stratum breakdown.** Done:
+      `scripts/full_split_breakdown.py` scores **36 systems on the identical
+      4,409**, including the IRBL family (their per-instance metrics live in
+      `-irbl-instances.jsonl`; the `-irbl-rankings.jsonl` side files hold only
+      the 93 causal-gold keys, which is why a rankings-only join finds 93).
+      REMEMBER v3 leads the best baseline (model re-rank) by **+8.41 Acc@1,
+      95% CI [+6.9, +9.8], significant**, and the margin widens on hard
+      instances (59.5% vs 41.3%). Two things the paper must say: MariaDB is
+      the weakest project (0.5802) and 27% of the split, so project-balanced
+      samples read optimistic; and **Acc@1 rises with fix size**
+      (0.669 at 1 file to 0.732 at 8+) because the answer key loosens, the
+      mirror image of T3's causal share, so the 8+ figure is not better
+      localization. `memory_arise` is reported **inactive, not 0.000**: ARISE
+      votes load only for non-wolv2 projects and all four study projects are
+      wolv2, so it is empty on all 6,314 scored instances by construction.
+      It appears nowhere in the paper. **CPU**
 - [ ] **T9. Document the sampling.** The seed, that the sample was drawn
       before any system ran, and the test-only-gold removal with its
       conservative-direction evidence, made visible from the agent section.
@@ -118,10 +136,24 @@ of evidence from symptom to suspected cause.
       for the full run and the sample figure for the 790 study, never one
       for the other. The hop is a no-op where the report carries no usable
       frame, and the paper must say so. **CPU** (build)
-- [ ] **T12. Measure causal lift.** Score v3 against causal-gold from T4, not
-      just fix-gold. This is the measurement the reviewer asks for. Report it
-      either way: a null result here is still a finding.
-      **GPU** · needs T4, T10, T11, B2
+- [x] **T12. Measure causal lift.** Done: `scripts/causal_lift_v3.py` plus
+      `score_causal_gold.py --v3`. **The chain is the result, not an accuracy
+      gain.** All 4,409 predictions carry a chain (mean 4.15 steps); 69.6%
+      name at least one file; of those **99.9% contain the system's own ranked
+      top-1**, so the chain is the same claim as the ranking rather than
+      decoration. On the labelled subset every chain that named a fix-gold
+      file named a *causal* one (**36/36**, n=59) - report the count, not the
+      percentage. v3's fix-to-causal gap is **+1.19 points of Acc@5**, the
+      smallest in the table with v2.
+      **A confound that must not reach the paper:** the annotation sample's
+      core stratum was balanced on `(v2 right/wrong) x (hard/easy)` using v2's
+      own output, so half those instances are v2 failures. v2 reads 0.620
+      Acc@5 there against 0.903 on the full 790; v3 takes no equivalent hit
+      because it did not exist when the sample was drawn. v3's apparent +8.3
+      over v2 on that subset is **selection, not skill** - on the full 790 the
+      two are indistinguishable (Acc@5 delta -0.0025, CI [-0.0165, +0.0114]),
+      in every stratum including hard. The scorer now prints a warning and
+      `paper/causal-lift-v3.md` states it. **CPU**
 
 ---
 
@@ -217,4 +249,5 @@ B1 decision.
 |---|---|
 | 2026-11-02 | Review-2 read; plan and this tracker written. Confirmed all four repos are local (4.8 GB, full history), so P0 needs no cluster. Confirmed the vLLM job ended 2026-11-01, so all GPU work is blocked on B2. |
 | 2026-11-02 | P0 closed except T5: T1–T4 done, T2b gives kappa 0.885 on causal-vs-not and the headline reproduces under both raters. Scored set applied, verify_claims 284/284. |
+| 2026-11-03 | Full-split run finished: 4,409/4,409, 0 errors, agent v3, Acc@1 0.6870 / Acc@5 0.8877. T6, T8 and T12 closed; B2 closed. v3 does NOT beat v2 on ranking (790 paired, Acc@1 -0.0215, CI [-0.0456,+0.0013], ns) - its contribution is the guaranteed causal chain, not accuracy. Caught a selection confound that made v3 look +8.3 over v2 on the causal-gold subset: that sample was stratified on v2's own outcome. `data_flow_back` was called **1 time in 4,409 runs** - the third repeat of "instructed-but-optional gets skipped", and the two v3 changes that were structural (required chain, phase-0 prewalk) both fired as designed. verify_claims 320/320. |
 | 2026-11-02 | Three defects found in `run_agent.py` while sizing the full-split job, all fixed before any GPU time was spent: the adjusted `n_dev` was being applied to the unfiltered benchmark and pulled 24 MongoDB dev instances into eval; there was no code path for the full split at all (`SAMPLE_N=200` hardcoded); and a second exclusion rule (`TESTY`) had drifted from `scored_set.py`. Also `bridge.sh` still defaulted to a node from a job that ended Nov 1, which would have returned empty for every call of a 15 h run. T10/T11 built behind `--version 3`, default stays 2. |
