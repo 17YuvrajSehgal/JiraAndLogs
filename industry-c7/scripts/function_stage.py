@@ -41,6 +41,32 @@ from tree_sitter_language_pack import get_parser  # noqa: E402
 
 TOP_FILES = 10
 LIST_LEN = 50
+ROOT_AG = Path(__file__).resolve().parents[1] / "data/agent"
+TRANSCRIPTS = ROOT_AG / "transcripts"
+
+
+def read_functions(project: str, issue_key: str) -> set:
+    """{(path, symbol)} the agent opened by name with read_code.
+
+    read_code takes `around`, a symbol, so an opened region is already
+    identified the same way a function candidate is. Calls without `around`
+    read an offset window and name no function, so they are skipped rather
+    than guessed at."""
+    f = TRANSCRIPTS / f"v3-full-{project}_{issue_key}.json"
+    if not f.exists():
+        return set()
+    try:
+        d = json.loads(f.read_text(encoding="utf-8"))
+    except Exception:  # noqa: BLE001 - a truncated transcript is not a crash
+        return set()
+    out = set()
+    for e in d.get("events") or []:
+        if e.get("type") == "tool" and e.get("name") == "read_code":
+            a = e.get("args") or {}
+            path, around = a.get("path"), a.get("around")
+            if path and around:
+                out.add((str(path), str(around)))
+    return out
 HUNK_RE = re.compile(r"^@@ -(\d+)(?:,(\d+))? \+\d+(?:,\d+)? @@")
 
 # extension -> grammar; .yy/.idl/.qml have no reliable function grammar here
@@ -143,6 +169,21 @@ def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--project", required=True, choices=list(FULL_REPOS))
     ap.add_argument("--limit", type=int, default=0)
+    # T20. The candidate set is whatever the file stage put in its top 10, so
+    # a better file stage should raise the ceiling before any function-level
+    # ranking change can matter. cond_ours scores 0.686 Acc@5 at file level
+    # and agent v3 scores 0.888, so this is the first thing to try.
+    ap.add_argument("--ranking", default="cond_ours",
+                    help="file ranking to take candidates from: a key in "
+                         "rankings (cond_ours), or 'agent' for agent-v3-full")
+    # Functions the agent opened BY NAME via read_code. Attention, not
+    # relevance: it says the agent looked, not that it was right.
+    ap.add_argument("--read-boost", action="store_true",
+                    help="rank functions the agent actually read above the "
+                         "rest, BM25 order preserved inside each group")
+    ap.add_argument("--tag", default="",
+                    help="output suffix, e.g. --tag -agent writes "
+                         "{p}-functions-agent-summary.json")
     args = ap.parse_args()
     git_dir = FULL_REPOS[args.project]
 
@@ -156,6 +197,28 @@ def main() -> int:
     if args.limit:
         rows = rows[:args.limit]
 
+    agent_rank: dict[str, list] = {}
+    agent_read: dict[str, set] = {}
+    if args.ranking == "agent" or args.read_boost:
+        af = ROOT_AG / "agent-v3-full.jsonl"
+        for line in af.open(encoding="utf-8"):
+            if not line.strip():
+                continue
+            a = json.loads(line)
+            if a["project"] != args.project or a.get("error")                     or a.get("stop_reason") == "llm_error":
+                continue
+            agent_rank[a["issue_key"]] = a["ranking"]
+            if args.read_boost:
+                agent_read[a["issue_key"]] = read_functions(
+                    args.project, a["issue_key"])
+        # The agent ran the eval split only, so an instance with no agent
+        # ranking has no candidate set at all. Dropping it here instead of
+        # scoring it as a miss keeps the population honest; the dev rows it
+        # removes were never scored anyway.
+        rows = [r for r in rows if r["issue_key"] in agent_rank]
+        n_dev = 0
+        print(f"agent mode: {len(rows)} instances with a v3 ranking")
+
     cache_path = OUT / f"funcs-{args.project}.pkl"
     fcache: dict[str, list] = (pickle.loads(cache_path.read_bytes())
                                if cache_path.exists() else {})
@@ -163,7 +226,8 @@ def main() -> int:
     out_rows, stats, t0 = [], Counter(), time.time()
     for i, r in enumerate(rows):
         b = bench[r["issue_key"]]
-        snap_files = r["rankings"]["cond_ours"][:TOP_FILES]
+        snap_files = (agent_rank[r["issue_key"]] if args.ranking == "agent"
+                      else r["rankings"][args.ranking])[:TOP_FILES]
         gold_paths = [f for f in b["gold_files"] if parser_for(f)]
         stats["gold_files_unparseable"] += len(b["gold_files"]) - len(gold_paths)
 
@@ -213,7 +277,13 @@ def main() -> int:
                 docs[f"{path}::{name}@{s}"] = Counter(
                     tokenize("\n".join(lines[s - 1:e])))
         qtoks = tokenize(b["query_text"])
-        ranking = [d for d, _ in bm25_rank(qtoks, docs)][:LIST_LEN]
+        ranking = [d for d, _ in bm25_rank(qtoks, docs)]
+        if args.read_boost:
+            read = agent_read.get(r["issue_key"], set())
+            hot = [d for d in ranking if (d.split("::")[0],
+                                          d.split("::")[1].split("@")[0]) in read]
+            ranking = hot + [d for d in ranking if d not in set(hot)]
+        ranking = ranking[:LIST_LEN]
 
         gold_keys = {f"{p_}::{n_}@{s_}" for p_, n_, s_ in gold_funcs}
         metrics = {}
@@ -256,9 +326,12 @@ def main() -> int:
         "eval_eligible_hard": agg([x for x in ev if not x["strata"]["easy"]]),
         "eval_eligible_easy": agg([x for x in ev if x["strata"]["easy"]]),
     }
-    (OUT / f"{args.project}-functions-summary.json").write_text(
+    summary["ranking_source"] = args.ranking
+    summary["read_boost"] = args.read_boost
+    (OUT / f"{args.project}-functions{args.tag}-summary.json").write_text(
         json.dumps(summary, indent=2), encoding="utf-8")
-    with (OUT / f"{args.project}-functions.jsonl").open("w", encoding="utf-8") as f:
+    with (OUT / f"{args.project}-functions{args.tag}.jsonl").open(
+            "w", encoding="utf-8") as f:
         for x in out_rows:
             f.write(json.dumps(x, ensure_ascii=False) + "\n")
     print(json.dumps(summary["eval_eligible"], indent=1))

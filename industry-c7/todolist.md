@@ -179,9 +179,17 @@ production bundles. These run on the laptop, so they fill GPU wait time.
 The challenge asks for an explanation linking symptoms, log events and code.
 We produce one and never score it.
 
-- [ ] **T16. Mechanical checks.** Does the cited path exist in the snapshot,
-      does the cited line exist, does the cited symbol occur there? Fully
-      automatic, no judge needed. **CPU**
+- [x] **T16. Mechanical checks.** Done: `scripts/explanation_checks.py`
+      over all 4,409. **99.68%** of cited paths exist in the snapshot
+      (15,050/15,098), 99.2% of instances have every cited path exist,
+      **99.43%** of quoted line numbers fall inside the file, and 83.41% of
+      quoted symbols occur in the cited file. The 48 bad paths are not noise:
+      they are plausible paths with the wrong directory
+      (`src/widgets/widgets/qwidget.cpp`; Qt keeps it in `kernel/`).
+      **The symbol rate is a floor on groundedness, not an error rate** --
+      evidence may correctly name a symbol declared elsewhere, so it must
+      never be written as "17% hallucinated". verify_claims asserts the doc
+      carries that caveat. `paper/explanation-checks.md`. **CPU**
 - [ ] **T17. Judged correctness.** A different model as judge on whether the
       evidence truly links report symptom to log event to code region,
       calibrated on about 50 human-rated examples. **GPU + HUMAN** · needs B2
@@ -198,11 +206,22 @@ We produce one and never score it.
 - [ ] **T19. Second model.** GLM-5.3-Flash was already staged on the cluster.
       Shows the gain is architectural, not one model's quirk. About 4–6 h.
       **GPU** · needs B2
-- [ ] **T20. Function-level stage.** Acc@1 of 13.2–25.9% is weak, and it is
-      our only "code region" result. Try ranking the functions the agent
-      actually read (nearly free once T6 transcripts exist) before falling
-      back to reframing it as a baseline with the oracle ceiling as the
-      headline. **CPU** · needs T6
+- [x] **T20. Function-level stage.** Done, and it worked. Pooled over the
+      **4,132** eligible eval instances (identical set across all three
+      variants), Acc@1 goes **0.2152 -> 0.2882** and Acc@5 **0.404 -> 0.529**.
+      Two separable effects, and the paper must not conflate them:
+      taking candidates from agent v3's top-10 instead of cond_ours' raises
+      the **oracle ceiling** 0.7367 -> 0.8879 but moves Acc@1 only +1.89
+      [+1.2,+2.7]; **ranking the functions the agent opened by name with
+      `read_code` is the larger half, +5.42 [+4.3,+6.5]**, total +7.31
+      [+6.0,+8.5] over the current stage, all three significant. It is an
+      attention signal, not a relevance model, and it is free because the
+      transcripts already existed. Per project the gain tracks the old
+      ceiling: kafka 0.240 -> 0.421 (ceiling was already good), qt
+      0.140 -> 0.216 (gains mostly from candidates, oracle 0.576 -> 0.853).
+      No leak: `read_code` targets are chosen from the report and tools under
+      the memory firewall, and gold functions come from the fix diff the
+      agent never sees. `paper/function-stage-t20.md`. **CPU**
 - [ ] **T21. Engineer-facing walkthrough.** What an engineer sees at triage,
       what the ranked list plus evidence gives them, and how it changes the
       work. Industrial *relevance* is required by the CFP; deployment is not.

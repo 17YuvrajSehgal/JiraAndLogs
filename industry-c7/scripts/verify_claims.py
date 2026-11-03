@@ -843,6 +843,58 @@ def main() -> int:
               "balanced on" in (ROOT / "industry-c7/paper/causal-lift-v3.md")
               .read_text(encoding="utf-8"))
 
+    # ---- T16: mechanical explanation checks -----------------------------------
+    ec = RES / "explanation-checks.json"
+    if ec.exists():
+        ecd = json.loads(ec.read_text(encoding="utf-8"))
+        check("T16 checked all 4,409 instances", ecd["n_instances"] == 4409,
+              str(ecd["n_instances"]))
+        check("T16 99.68% of cited paths exist in the snapshot",
+              ecd["path_rate"] == 0.9968, str(ecd["path_rate"]))
+        check("T16 48 cited paths do not exist",
+              ecd["cited_paths"] - ecd["cited_paths_that_exist"] == 48,
+              str(ecd["cited_paths"] - ecd["cited_paths_that_exist"]))
+        check("T16 99.43% of quoted line numbers are inside the file",
+              ecd["line_rate"] == 0.9943, str(ecd["line_rate"]))
+        check("T16 83.41% of quoted symbols occur in the cited file",
+              ecd["symbol_rate"] == 0.8341, str(ecd["symbol_rate"]))
+        # The symbol rate is a floor on groundedness, never an error rate:
+        # evidence may correctly name a symbol declared in another file.
+        check("T16 the symbol rate is documented as support, not correctness",
+              "floor on" in (ROOT / "industry-c7/paper/explanation-checks.md")
+              .read_text(encoding="utf-8"))
+
+    # ---- T20: the function-level stage ----------------------------------------
+    fc = RES / "function-stage-compare.json"
+    if fc.exists():
+        fcd = json.loads(fc.read_text(encoding="utf-8"))
+        pl, ts = fcd["pooled"], fcd["tests"]
+        check("T20 paired on 4,132 eligible eval instances", fcd["n"] == 4132,
+              str(fcd["n"]))
+        check("T20 the current function stage is 0.2152 Acc@1",
+              pl[""]["acc@1"] == 0.2152, str(pl[""]["acc@1"]))
+        check("T20 agent candidates plus read-boost is 0.2882 Acc@1",
+              pl["-agentread"]["acc@1"] == 0.2882,
+              str(pl["-agentread"]["acc@1"]))
+        check("T20 read-boost beats the current stage by +7.3 Acc@1, significant",
+              ts["agentread_vs_current"]["acc@1"]["delta"] == 0.0731
+              and ts["agentread_vs_current"]["acc@1"]["significant"],
+              str(ts["agentread_vs_current"]["acc@1"]))
+        # The two effects must not be conflated: better candidates raise the
+        # CEILING, the read signal does the RANKING. A draft that credits the
+        # whole gain to the better file stage would be wrong.
+        check("T20 better candidates raise the oracle from 0.7367 to 0.8879",
+              pl[""]["oracle_in_candidates"] == 0.7367
+              and pl["-agent"]["oracle_in_candidates"] == 0.8879,
+              f"{pl['']['oracle_in_candidates']} {pl['-agent']['oracle_in_candidates']}")
+        check("T20 better candidates alone move Acc@1 only +1.89",
+              ts["agent_vs_current"]["acc@1"]["delta"] == 0.0189,
+              str(ts["agent_vs_current"]["acc@1"]["delta"]))
+        check("T20 the read signal is the larger half, +5.42 Acc@1",
+              ts["agentread_vs_agent"]["acc@1"]["delta"] == 0.0542
+              and ts["agentread_vs_agent"]["acc@1"]["significant"],
+              str(ts["agentread_vs_agent"]["acc@1"]["delta"]))
+
     # ---- Sec. 4 setup: the scored set -----------------------------------------
     # Sec. IV-B claims the test-only-gold removal is conservative. Record the
     # measurement, do not assert it: a previous draft said these instances
