@@ -10,6 +10,7 @@ Usage:
 
 from __future__ import annotations
 
+import hashlib
 import json
 import re
 import sys
@@ -477,6 +478,55 @@ def main() -> int:
           "LOCAGENT_TURNS = A.MAX_TURNS" in bsrc)
     check("T25 every deviation is written down before any GPU is spent",
           (ROOT / "industry-c7/agent/BASELINES.md").exists())
+
+    # The population the baselines will be measured on, fixed on disk before
+    # any GPU time. Pinned to the stored values, not the printed ones.
+    bs = json.loads((RES / "baseline-sample.json").read_text(encoding="utf-8"))
+    bp = json.loads((RES / "baseline-pilot.json").read_text(encoding="utf-8"))
+    check("T25 the measurement sample is 1,000 of the 4,409 eval instances",
+          bs["n"] == 1000 and bs["drawn_from"] == 4409,
+          f"{bs['n']} of {bs['drawn_from']}")
+    check("T25 the pilot is 30 instances, disjoint from the sample",
+          bp["n"] == 30 and not (set(bp["ids"]) & set(bs["ids"])),
+          f"{len(set(bp['ids']) & set(bs['ids']))} overlap")
+    # The sampler must regenerate byte for byte. An earlier version drew the
+    # two files in separate runs, each reading the other to avoid overlap, so
+    # re-running it produced a DIFFERENT 1,000. Pinning the id digests means a
+    # population that silently moves fails here instead of in a reported
+    # number.
+    for name, want in (("sample", "d014dc223d9f9f09047919f83994e574"),
+                       ("pilot", "8bf465c5802e553ba04e54aea6ea98d3")):
+        d = bs if name == "sample" else bp
+        got = hashlib.md5(json.dumps(d["ids"]).encode()).hexdigest()
+        check(f"T25 the {name} population is exactly the one measured on",
+              got == want, f"{got} != {want}")
+    check("T25 sample hard fraction .516 tracks the population's .5167",
+          bs["sample_mix"]["hard_frac"] == .516
+          and bs["population_mix"]["hard_frac"] == .5167)
+    # Stored values, not the ones the sampler prints.
+    for proj, samp, pop in (("kafka", .108, .108), ("mariadb", .267, .2674),
+                            ("mongodb", .552, .5521), ("qt", .073, .0726)):
+        check(f"T25 sample project mix {proj} {samp} tracks population {pop}",
+              bs["sample_mix"]["by_project"][proj] == samp
+              and bs["population_mix"]["by_project"][proj] == pop)
+    sub = json.loads((RES / "full-split-breakdown-sample1000.json")
+                     .read_text(encoding="utf-8"))
+    # loaded locally: the shared FSB is not bound until later in main()
+    fsb_all = json.loads((RES / "full-split-breakdown.json")
+                         .read_text(encoding="utf-8"))
+    check("T25 the restricted rescore covers the same 37 systems",
+          len(sub["systems_scored"]) == len(fsb_all["systems_scored"]) == 37,
+          f"{len(sub['systems_scored'])} vs {len(fsb_all['systems_scored'])}")
+    check("T25 restricted rescore: REMEMBER .667/.885 vs .687/.8877 full",
+          sub["scores"]["remember_v3"]["all"]["acc@1"] == .667
+          and sub["scores"]["remember_v3"]["all"]["acc@5"] == .885
+          and fsb_all["scores"]["remember_v3"]["all"]["acc@1"] == .687
+          and fsb_all["scores"]["remember_v3"]["all"]["acc@5"] == .8877)
+    check("T25 the best baseline is the same system on both populations",
+          sub["best_baseline"] == fsb_all["best_baseline"] == "llm_rerank",
+          f"{sub['best_baseline']} vs {fsb_all['best_baseline']}")
+    check("T25 the full-split results were not overwritten by the subset run",
+          fsb_all["n"] == 4409 and sub["n"] == 1000)
 
     # ---- Sec. 5 honest negatives ---------------------------------------------
     tn = stat("kafka", "ours_vs_strongest", "acc@5", "hard")

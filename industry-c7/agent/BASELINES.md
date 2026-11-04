@@ -173,3 +173,73 @@ report both arms' measured `cost` block rather than assuming parity.
 
 **Whatever population is chosen, every other system must be rescored on
 exactly those instances** (`feedback-same-population-comparisons`).
+
+## 7. Run plan and cost — measured, not estimated
+
+The anchor is our own full-split run, not a guess. Transcript timestamps
+for the 4,409 `v3-full` runs span **01:13 to 12:25 on 2026-11-03, so 11.2 h
+elapsed**, at 12.1 LLM calls and 94k prompt tokens per instance.
+
+| arm | LLM calls / instance | 4,409 | ~1,000 |
+|---|---|---|---|
+| ours (done) | 12.1 measured | 11.2 h | — |
+| LocAgent-style | ~12–14, same budget | ~11 h | ~2.5 h |
+| CoSIL-style | ~26, but shorter contexts | ~20–28 h | ~5–6 h |
+
+Both arms on the full split is 31–39 h, or three to four overnight jobs.
+Both arms on a stratified 1,000 is about 8 h: **one job**.
+
+**The subsample costs nothing in validity, because the rescore is free.**
+Every system already stores per-instance results keyed by `issue_key`
+(`{project}-instances.jsonl` holds rankings for 11 systems,
+`{project}-irbl-instances.jsonl` holds per-instance metrics, the agent and
+LLM arms hold their own rankings). Restricting to a subsample is therefore
+a metric recomputation, not a re-run. Measured:
+`full_split_breakdown.py --subset=... ` rescores **all 37 systems in 6.4
+seconds**. The argument for running the full split was that a subsample
+would force everything else to be re-run. It does not.
+
+The sample is drawn once by `scripts/baseline_sample.py`, written to
+`data/results/baseline-sample.json`, so the population is fixed before any
+GPU time is spent. It is proportionally allocated over project x hard/easy
+and matches the full split closely on every stratum (hard 0.5160 vs 0.5167;
+mongodb 0.5520 vs 0.5521). Restricted to those 1,000 instances the headline
+barely moves: REMEMBER Acc@1 0.667 / Acc@5 0.885 against 0.687 / 0.888 on
+all 4,409, and the best baseline is the same system. That is evidence the
+subsample is representative, measured before any baseline was run on it.
+
+`baseline-pilot.json` holds a separate 30 instances, **drawn disjoint from
+the 1,000**. A pilot instance is one we will have looked at before fixing
+anything, so leaving it in the measurement sample would let a tuning
+decision leak into the reported number.
+
+Both files come from ONE invocation, pilot first and the sample from what
+is left, so the pair regenerates byte for byte. The first version drew them
+in separate runs, each reading the other to avoid overlap, which made each
+draw depend on what was already on disk: re-running it produced a different
+1,000. `verify_claims` now pins both id digests, so a population that moves
+fails there instead of inside a reported number.
+
+### Order of operations
+
+1. **Pilot, 30 instances, both arms, ~20 min.** Two specific risks it
+   catches. First, the model may not call the baselines' tools at all —
+   the `qwen3_xml` parser failure happened once already, and
+   "instructed-but-optional gets skipped" has now been measured three
+   times. Second, the port's own sanity check from §4: CoSIL-style should
+   show the lower empty rate. Both are worth seeing on 30 instances before
+   spending 8 hours.
+2. Read the pilot. Fix anything the pilot exposes.
+3. **Measurement run, 1,000 instances, both arms, ~8 h.**
+4. `full_split_breakdown.py --subset=data/results/baseline-sample.json
+   --tag=sample1000`, which scores both new arms beside all 37 existing
+   systems on exactly those instances.
+
+```bash
+python industry-c7/scripts/baseline_sample.py     # writes both, already drawn
+
+python industry-c7/agent/run_agent.py --arm locagent --tag locagent-pilot \
+    --subset data/results/baseline-pilot.json --workers 6
+python industry-c7/agent/run_agent.py --arm cosil --tag cosil-pilot \
+    --subset data/results/baseline-pilot.json --workers 6
+```

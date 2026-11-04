@@ -142,6 +142,11 @@ def main() -> int:
                          "released (both are Python-AST only). They get the "
                          "same model, snapshot, report and turn budget, and "
                          "no incident memory. See agent/BASELINES.md.")
+    ap.add_argument("--subset", default="",
+                    help="JSON file with an 'ids' list of project:issue_key, "
+                         "from scripts/baseline_sample.py. Restricts the run "
+                         "to that fixed population so the baselines and every "
+                         "existing system are scored on identical instances.")
     ap.add_argument("--workers", type=int, default=14)
     ap.add_argument("--seed", type=int, default=42)
     ap.add_argument("--tag", default="main")
@@ -156,6 +161,18 @@ def main() -> int:
     out_path = AGENT_OUT / f"agent-{args.tag}.jsonl"
 
     pop = build_population(projects, args.limit, args.full)
+    if args.subset:
+        # The population is fixed on disk before any GPU time is spent, so a
+        # later edit to the sampler cannot silently move the instances a
+        # reported number was measured on.
+        keep = set(json.loads(Path(args.subset).read_text(
+            encoding="utf-8"))["ids"])
+        pop = [x for x in pop if f"{x[0]}:{x[1]['issue_key']}" in keep]
+        missing = len(keep) - len(pop)
+        if missing:
+            print(f"WARNING: {missing} of {len(keep)} subset ids are not in "
+                  f"this population (wrong --project or --full flag?)",
+                  flush=True)
 
     # Resume keeps only instances that SUCCEEDED. An errored row used to
     # count as done, so anything in flight when the server hit its walltime

@@ -35,7 +35,22 @@ ROOT = HERE.parents[0]
 RES, LLM, AG = ROOT / "data/results", ROOT / "data/llm", ROOT / "data/agent"
 P = ("kafka", "mariadb", "mongodb", "qt")
 SEED, N_BOOT = 20261103, 2000
+# T25. Restrict the scored population to a saved subsample, and tag the
+# outputs so a restricted run can never overwrite the full-split ones. Every
+# system here already stores per-instance results keyed by issue_key, so a
+# subsample is a metric recomputation over stored data -- no system is
+# re-run. That is what keeps the agentic-baseline comparison
+# same-population without paying for it twice.
+def _opt(name: str, default: str = "") -> str:
+    return next((a.split("=", 1)[1] for a in sys.argv
+                 if a.startswith(f"--{name}=")), default)
+
+
+SUBSET, TAG = _opt("subset"), _opt("tag")
+SUF = f"-{TAG}" if TAG else ""
 LABEL = {"remember_v3": "REMEMBER (v3)", "llm_twostage": "Model alone",
+         "locagent_style": "LocAgent-style (agentic)",
+         "cosil_style": "CoSIL-style (agentic)",
          "llm_rerank": "Model re-rank", "cond_ours": "Retrieval + memory",
          "fused_ours": "Retrieval + memory (untuned)",
          "cond_no_memory": "Retrieval, no memory",
@@ -58,10 +73,30 @@ def main() -> int:
             continue
         agent[f"{r['project']}:{r['issue_key']}"] = r
     ids = sorted(agent)
+    if SUBSET:
+        keep = set(json.loads(Path(SUBSET).read_text(encoding="utf-8"))["ids"])
+        missing = keep - set(ids)
+        if missing:
+            print(f"ERROR: {len(missing)} subsample ids are not in the scored "
+                  f"agent run, e.g. {sorted(missing)[:3]}", file=sys.stderr)
+            return 1
+        ids = [k for k in ids if k in keep]
+        print(f"subset {Path(SUBSET).name}: scoring {len(ids)} instances")
     meta = {k: {"project": k.split(":")[0], "gold": agent[k]["gold_files"],
                 "hard": bool(agent[k].get("hard"))} for k in ids}
 
     rk = {"remember_v3": {k: agent[k]["ranking"] for k in ids}}
+    # T25 agentic baselines. Any agent-*.jsonl whose rows carry an `arm`
+    # field registers itself as a system, so adding an arm needs no edit
+    # here. A baseline that named nothing keeps its EMPTY ranking: CoSIL
+    # defines that as a miss, and silently backfilling it would overstate it.
+    for f in sorted(AG.glob("agent-*.jsonl")):
+        rows = [r for r in jsonl(f) if not r.get("error") and r.get("arm")
+                and r["arm"] != "ours"]
+        for r in rows:
+            k = f"{r['project']}:{r['issue_key']}"
+            if k in agent:
+                rk.setdefault(f"{r['arm']}_style", {})[k] = r["ranking"]
     for p in P:
         for f in (RES / f"{p}-instances.jsonl", RES / f"{p}-irbl-instances.jsonl",
                   RES / f"{p}-irbl-rankings.jsonl"):
@@ -189,7 +224,7 @@ def main() -> int:
             for stratum in ("all", "hard")}
         for b in ("llm_twostage", "llm_rerank", "cond_ours", "fusion")
         if b in full}
-    (RES / "full-split-breakdown.json").write_text(json.dumps(out, indent=1) + "\n",
+    (RES / f"full-split-breakdown{SUF}.json").write_text(json.dumps(out, indent=1) + "\n",
                                                    encoding="utf-8")
 
     order = sorted(full, key=lambda s: -out["scores"][s]["all"]["acc@1"])
@@ -215,8 +250,8 @@ def main() -> int:
         print(f"  {name:16s} n={out['strata_n'][name]:>5d}  "
               f"acc@1 {v['acc@1']:.3f}  acc@5 {v['acc@5']:.3f}")
     write_doc(out, order)
-    print(f"\nwrote {RES / 'full-split-breakdown.json'} and "
-          f"paper/agent-v3-full-results.md")
+    print(f"\nwrote {RES / f'full-split-breakdown{SUF}.json'} and "
+          f"paper/agent-v3-full-results{SUF}.md")
     return 0
 
 
@@ -298,7 +333,7 @@ as better localization.
   not weak. It is not a baseline and is not reported as one.
 {('- partial coverage: ' + ', '.join(out['systems_excluded'])) if out['systems_excluded'] else '- nothing else; every other system covered all instances.'}
 """
-    (ROOT / "paper" / "agent-v3-full-results.md").write_text(doc, encoding="utf-8")
+    (ROOT / "paper" / f"agent-v3-full-results{SUF}.md").write_text(doc, encoding="utf-8")
 
 
 if __name__ == "__main__":

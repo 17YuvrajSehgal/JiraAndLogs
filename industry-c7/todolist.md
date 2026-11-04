@@ -349,16 +349,41 @@ We produce one and never score it.
       lexical fallback ours gets), so no reviewer can argue the gap is our
       safety net.
 
-      **Open decision -- population and cost. Now measured, not guessed.**
-      CoSIL-style is the expensive arm: ~26 LLM calls per instance (10
-      search iterations each with a pruner call, 4 staged calls, 2
-      reflections) against our 14 turns, plus 8-20 s of CPU per 2-hop
-      traversal on warm caches, MongoDB slowest. Two arms on 4,409 is not
-      an 11 h job, it is roughly two of them. A stratified ~1,000 with
-      every system rescored on exactly that subsample is the recommended
-      call. Decide deliberately: a baseline measured on a different
-      population than \sys{} is the mistake
-      `feedback-same-population-comparisons` records.
+      **Population: SETTLED on a stratified 1,000, with evidence.**
+      Anchored on our own run, not an estimate: the 4,409 `v3-full`
+      transcripts span 01:13-12:25 on 11-03, so **11.2 h elapsed** at 12.1
+      LLM calls and 94k prompt tokens per instance. LocAgent-style is the
+      same shape (~11 h on 4,409); CoSIL-style is the expensive arm at ~26
+      calls per instance (~20-28 h). Both arms on the full split is 31-39 h
+      = three or four overnight jobs. Both on 1,000 is ~8 h = **one job**.
+
+      The argument for the full split was that a subsample forces every
+      other system to be re-run. **It does not.** Every system already
+      stores per-instance results keyed by issue_key, so a restricted score
+      is a recomputation: `full_split_breakdown.py --subset=` rescores
+      **all 37 systems in 6.4 s**. The same-population rule is satisfied
+      for free.
+
+      Population fixed on disk BEFORE any GPU time:
+      `scripts/baseline_sample.py` ->
+      `data/results/baseline-sample.json` (1,000, proportional over project
+      x hard/easy, matching the full split to 3dp on every stratum) and
+      `baseline-pilot.json` (30, drawn **disjoint**, because a pilot instance
+      is one we will have looked at before fixing anything). Both come from
+      ONE invocation so the pair regenerates byte for byte, and
+      verify_claims pins both id digests -- the first version drew them in
+      separate runs reading each other, and re-running it produced a
+      different 1,000. Restricted to the 1,000 the headline barely moves --
+      REMEMBER 0.667/0.885 against 0.687/0.888, same best baseline -- which
+      is evidence the subsample is representative, measured before any
+      baseline ran on it.
+
+      **Order: pilot 30 first (~20 min), then the 1,000 (~8 h).** The pilot
+      catches the two things that would waste the job: the model not
+      calling the baselines' tools at all (the `qwen3_xml` failure, and
+      "instructed-but-optional gets skipped" now measured three times), and
+      the port's own sanity check that CoSIL-style shows the lower empty
+      rate.
 
       **If it does not get run**, say so plainly in threats to validity:
       the comparison covers IRBL, lexical, retrieval+memory and a strong
@@ -448,6 +473,7 @@ Still owed, not yet scheduled:
 
 | Date | What moved |
 |---|---|
+| 2026-11-03 | T25 agentic baselines BUILT (LocAgent-style + CoSIL-style). Read both papers: neither released repo runs here, and not for want of an adapter -- both parse Python with `ast` and say so in print, while all four of our projects are Java/Scala/C/C++. The graph layer IS their contribution, so replacing it is the port. Their strategies on our tree-sitter layer; `agent/BASELINES.md` records every deviation. Kept their weaknesses on purpose: free-text answers, no structured submit, so LocAgent-style can show the 13-22% empty rate CoSIL's Table II reports -- and CoSIL-style showing the LOWER empty rate is a free check that the port is faithful. **Population settled with evidence:** our own 4,409 run took 11.2 h (transcripts 01:13-12:25), so both arms on the full split is 31-39 h = 3-4 jobs, against ~8 h = one job on a stratified 1,000. The case for the full split was that a subsample forces re-runs; it does not -- `--subset` rescores all 37 systems in 6.4 s. Sample fixed on disk before any GPU: 1,000 matching the split to 3dp on every stratum (REMEMBER 0.667/0.885 vs 0.687/0.888, same best baseline), plus a disjoint 30-instance pilot drawn in the same invocation so the pair regenerates byte for byte. **Correction: Trillium login nodes have no GPU** (no nvidia-smi, no /dev/nvidia*, every partition CPU-only); the H100s are on Nibi. test_baselines 35/35 with no server, verify_claims 372/372. |
 | 2026-11-02 | Review-2 read; plan and this tracker written. Confirmed all four repos are local (4.8 GB, full history), so P0 needs no cluster. Confirmed the vLLM job ended 2026-11-01, so all GPU work is blocked on B2. |
 | 2026-11-02 | P0 closed except T5: T1–T4 done, T2b gives kappa 0.885 on causal-vs-not and the headline reproduces under both raters. Scored set applied, verify_claims 284/284. |
 | 2026-11-03 | Full-split run finished: 4,409/4,409, 0 errors, agent v3, Acc@1 0.6870 / Acc@5 0.8877. T6, T8 and T12 closed; B2 closed. v3 does NOT beat v2 on ranking (790 paired, Acc@1 -0.0215, CI [-0.0456,+0.0013], ns) - its contribution is the guaranteed causal chain, not accuracy. Caught a selection confound that made v3 look +8.3 over v2 on the causal-gold subset: that sample was stratified on v2's own outcome. `data_flow_back` was called **1 time in 4,409 runs** - the third repeat of "instructed-but-optional gets skipped", and the two v3 changes that were structural (required chain, phase-0 prewalk) both fired as designed. verify_claims 320/320. |
