@@ -284,9 +284,35 @@ We produce one and never score it.
       evidence may correctly name a symbol declared elsewhere, so it must
       never be written as "17% hallucinated". verify_claims asserts the doc
       carries that caveat. `paper/explanation-checks.md`. **CPU**
-- [ ] **T17. Judged correctness.** A different model as judge on whether the
-      evidence truly links report symptom to log event to code region,
-      calibrated on about 50 human-rated examples. **GPU + HUMAN** · needs B2
+- [ ] **T17. Judged correctness. HARNESS BUILT, needs GPU + ~1 h from
+      Yuvraj.** `scripts/judge_explanations.py`. A model other than the one
+      under test grades whether the chain actually runs from the reported
+      symptom, through the log evidence, to the code region it names, on a
+      three-point rubric (sound / partial / unsound). 400 instances judged,
+      50 of them also rated by a human so the judge is calibrated rather
+      than trusted. Two raters, because the agent is Qwen and a Qwen judge
+      grades its own work; second rater from a different family, same as
+      T2b.
+
+      **The judge is blind, and that is tested rather than asserted.** Not
+      by searching the prompt for gold paths -- a report legitimately names
+      the gold file on the easy stratum, and the agent legitimately names
+      it when it is right. Instead the prompt is rebuilt with the answer
+      key replaced by a sentinel; if the sentinel lands, the run refuses to
+      start. Negative-control checked: it passes clean prompts and catches
+      both an injected gold list and an injected `acc@1`.
+
+      **Two defects found while building it.** The first guard flagged 2 of
+      400 prompts because the REPORT named the gold file, which is not a
+      leak at all. The second is the one that mattered: `query_text` is not
+      on the agent result row, so `r.get("query_text", "")` returned empty
+      and the judge would have graded 400 chains **with no issue report in
+      front of it** -- grading prose, and the blindness guard would never
+      have noticed, because it only looks for leaks and not for
+      completeness. The report is now loaded from the benchmark.
+
+      Packets for the human pass: `data/results/judge/packets/` (50).
+      `--packets` / `--rate` / `--agreement`. **GPU + HUMAN**
 - [ ] **T18. "Right answer, wrong reason" rate.** Of correct top-1 rankings,
       what share carry a correct explanation? Fits the paper's existing
       honest-negatives style. **CPU** · needs T16, T17

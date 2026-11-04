@@ -479,6 +479,22 @@ def main() -> int:
     check("T25 every deviation is written down before any GPU is spent",
           (ROOT / "industry-c7/agent/BASELINES.md").exists())
 
+    # ---- T17 the judge must be blind, and must actually see the report ------
+    jsrc = (ROOT / "industry-c7/scripts/judge_explanations.py").read_text(
+        encoding="utf-8")
+    check("T17 the judge prompt carries the issue report, not just the chain",
+          "rep = report_of(r[\"id\"])" in jsrc and "if not rep:" in jsrc)
+    check("T17 the blindness guard tests injection, not a path search",
+          "__ANSWER_KEY" in jsrc and "probe[\"metrics\"]" in jsrc)
+    check("T17 the run refuses to start if the answer key reaches a prompt",
+          "REFUSING TO RUN" in jsrc)
+    check("T17 the judge grades on a 3-point rubric, not a yes/no",
+          'VERDICTS = ("sound", "partial", "unsound")' in jsrc)
+    check("T17 the sample and calibration set are pinned",
+          "N_JUDGE = 400" in jsrc and "N_HUMAN = 50" in jsrc)
+    check("T17 T18 is computed from correctness joined AFTER judging",
+          'sound_given_correct' in jsrc and 'sound_given_wrong' in jsrc)
+
     # The population the baselines will be measured on, fixed on disk before
     # any GPU time. Pinned to the stored values, not the printed ones.
     bs = json.loads((RES / "baseline-sample.json").read_text(encoding="utf-8"))
