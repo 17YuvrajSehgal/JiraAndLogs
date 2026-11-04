@@ -498,7 +498,20 @@ def main() -> int:
     check("T25 submit.sh uses the GPU account and gres form Nibi requires",
           "def-naser2_gpu" in sub and "h100:1" in sub)
     check("T25 submit.sh omits --mem on Trillium, which rejects it",
-          "--mem is rejected here" in sub)
+          "--mem is rejected" in sub)
+    # The bug that cost a restart: `ENV=x sbatch` did not carry the variable
+    # into the job, the script defaulted, and two jobs ran the same arm into
+    # one output file. --export is the documented mechanism; the default is
+    # gone so an unset stage fails loudly instead.
+    check("T25 the stage is passed with --export, not an env prefix",
+          "--export=ALL,C7_STAGE=" in sub
+          and 'env "$@" sbatch' not in sub)
+    check("T25 the job REFUSES to run without an explicit stage",
+          "REFUSING: C7_STAGE is not set" in jb
+          and 'STAGE="${C7_STAGE:-}"' in jb)
+    check("T25 one job per stage is enforced by a lock, not by convention",
+          "LOCK=$C7/data/agent/.lock-$STAGE" in jb
+          and "is already running stage" in jb)
 
     # ---- T17 the judge must be blind, and must actually see the report ------
     jsrc = (ROOT / "industry-c7/scripts/judge_explanations.py").read_text(
