@@ -267,8 +267,39 @@ would have corrupted the measurement run rather than failing it loudly.
    `search_text` prepends that list to its pool; 15.3% of LocAgent-style's
    `search_entity` calls reached that tier. §3's claim that neither
    baseline gets incident memory was false in practice. Both arms now opt
-   out (`_isolate`). Measured cost to the baseline: **Acc@1 -0.037, Acc@5
-   0.000** -- small, real, and in its favour.
+   out (`_isolate`). The leak is real and was in the baseline's favour.
+   Its SIZE is not measurable at n=30: see the determinism note below.
+
+### The runs are NOT bitwise reproducible, and that sets the noise floor
+
+`temperature=0` and a fixed seed do not make this deterministic. vLLM
+batches continuously, so batch composition varies with concurrency and
+changes floating-point reduction order; prefix caching adds to it.
+
+`run_cosil` never calls `search_text`, so `_isolate` cannot affect
+CoSIL-style at all. That makes its two pilot runs a clean natural
+experiment in pure re-run noise, and the answer is uncomfortable:
+
+| CoSIL-style, identical settings, same 30 instances | Acc@1 | Acc@5 |
+|---|---|---|
+| first run | 0.700 | 0.767 |
+| second run | 0.633 | 0.733 |
+
+**17 of 30 rankings changed between two runs that should have been
+identical**, moving Acc@1 by 0.067. LocAgent-style churned 12 of 27.
+
+Two things follow. First, no difference of a few points at n=30 means
+anything, including the isolation effect above, whose apparent -0.037 on
+LocAgent-style is SMALLER than CoSIL's pure-noise 0.067 -- so it is
+unmeasurable here and must not be quoted as a measured cost. Second, the
+paper's reproducibility claim needs care: the TOOL layer is deterministic
+and a transcript replays to byte-identical tool results, but the MODEL is
+not reproducible under concurrent serving. Say that plainly rather than
+implying end-to-end determinism.
+
+For the measurement run this is an argument for n=1,000 and for reporting
+paired bootstrap intervals rather than point estimates, which is what the
+rest of the paper already does.
 
 **Transport limit, for the measurement run.** The bridge opens one nested
 SSH per request. At `MAXJOBS=16` with 12 workers it exceeded the control
@@ -283,19 +314,33 @@ watch progress from the local output files.
 n=30, so every interval is roughly +/-0.15 and **nothing here is
 significant**. This is a smoke test, not a result. Do not quote it.
 
+Final isolated runs, n=27 instances all three systems scored:
+
 | system | Acc@1 | Acc@5 | empty | LLM calls | wall |
 |---|---|---|---|---|---|
-| REMEMBER (ours, v3) | 0.767 | 0.933 | 0 | 12.3 | 324 s |
-| LocAgent-style | 0.800 | 0.867 | 1 | 13.7 | 104 s |
-| CoSIL-style | 0.700 | 0.767 | 1 | 19.8 | 143 s |
+| REMEMBER (ours, v3) | 0.778 | 0.926 | 0 | 12.4 | 325 s |
+| LocAgent-style | 0.778 | 0.889 | 1 | 13.6 | 125 s |
+| CoSIL-style | 0.593 | 0.704 | 1 | 18.2 | 141 s |
 
-On the 27 instances where the isolated LocAgent-style run also scored,
-**Acc@1 is an exact tie at 0.778** (head to head 3 wins / 3 losses / 21
-ties), and our Acc@5 lead, 0.926 against 0.889, is one instance: 1 win, 0
-losses, 26 ties. The honest reading at this sample size is that a
-reimplemented published agentic localizer **matches \sys{} on ranking**
-and does it at **roughly a third of the wall time**. Whether the Acc@5
-margin is real is precisely what n=1,000 is for.
+Hard stratum (n=15): ours 0.667 / 0.867, LocAgent-style 0.733 / 0.800,
+CoSIL-style 0.333 / 0.467.
+
+**Acc@1 against LocAgent-style is an exact tie** (3 wins / 3 losses / 21
+ties head to head), our Acc@5 lead of 0.926 against 0.889 is one
+instance, and LocAgent-style gets there in **about a third of the wall
+time**. Against the noise floor above, every one of those gaps is inside
+re-run variance. The only defensible reading at n=30 is that a
+reimplemented published agentic localizer is **competitive with \sys{} on
+ranking at a fraction of the cost**, and that n=1,000 has to settle it.
+
+**The port's own sanity check is inconclusive, not passed.** §4 predicted
+CoSIL-style would show the lower empty rate, because reflective alignment
+exists to fix unparseable output. Both came in at 1/27 = 3.7%. With one
+empty answer each the test has no power, so it neither confirms nor
+refutes the port. Both are also far below the 13-22% CoSIL's Table II
+reports for LocAgent under Qwen, which is worth noting rather than
+explaining away: a different model, a different language and a fenced
+output format all plausibly contribute.
 
 **Behaviour worth reporting either way:** LocAgent-style called
 `traverse_graph` **zero times** across 30 runs (404 `search_entity`, 98
