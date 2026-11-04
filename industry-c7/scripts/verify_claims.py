@@ -447,6 +447,37 @@ def main() -> int:
           "bench = load_bench(args.project)" in nsrc
           and 'BENCH / f"{args.project}.jsonl"' not in nsrc)
 
+    # ---- T25 agentic baselines: the fairness controls, asserted in code ------
+    # No numbers yet; these guard the comparison itself. If a later edit hands
+    # the baselines incident memory or our structured submission, the arms
+    # stop isolating anything and every number built on them is wrong, with
+    # nothing failing loudly. So the isolation is checked, not trusted.
+    bsrc = (ROOT / "industry-c7/agent/baselines.py").read_text(encoding="utf-8")
+    bl_tools = re.findall(r'"name": "([a-z_]+)"', bsrc)
+    check("T25 LocAgent-style offers exactly its three published APIs",
+          [t for t in bl_tools if t in
+           ("search_entity", "traverse_graph", "retrieve_entity")]
+          == ["search_entity", "traverse_graph", "retrieve_entity"],
+          str(bl_tools))
+    check("T25 CoSIL-style offers exactly its four published search tools",
+          [t for t in bl_tools if t in
+           ("search_class_node", "search_class_function_node",
+            "search_file_function_node", "exit")]
+          == ["search_class_node", "search_class_function_node",
+              "search_file_function_node", "exit"])
+    check("T25 no baseline is given incident memory",
+          "recall_incidents" not in bl_tools)
+    check("T25 no baseline is given our structured submission tool",
+          not any("submit" in t for t in bl_tools))
+    check("T25 the baselines' headline ranking is their own, not the fusion",
+          '"ranking": agent_list' in bsrc and '"ranking_fused": fused' in bsrc)
+    check("T25 CoSIL-style keeps the paper's maxIter of 10",
+          "COSIL_MAX_ITER = 10" in bsrc)
+    check("T25 LocAgent-style gets our full turn budget, not a smaller one",
+          "LOCAGENT_TURNS = A.MAX_TURNS" in bsrc)
+    check("T25 every deviation is written down before any GPU is spent",
+          (ROOT / "industry-c7/agent/BASELINES.md").exists())
+
     # ---- Sec. 5 honest negatives ---------------------------------------------
     tn = stat("kafka", "ours_vs_strongest", "acc@5", "hard")
     check("NEG kafka hard -0.065 [-0.113,-0.024] SIG",

@@ -43,6 +43,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
 import agent as A  # noqa: E402
 import tools as T  # noqa: E402
+from baselines import ARMS  # noqa: E402
 from localize import (BENCH, OUT, PROJECTS, evaluate,  # noqa: E402
                       load_bench, load_support, parse_iso_epoch)
 
@@ -133,6 +134,14 @@ def main() -> int:
                          "walks the backward hop in phase 0 (T10/T11). "
                          "Default stays 2 so an unflagged re-run cannot "
                          "silently change what the reported numbers mean.")
+    ap.add_argument("--arm", default="ours",
+                    choices=["ours"] + sorted(ARMS),
+                    help="T25. 'locagent' and 'cosil' are reimplementations "
+                         "of the two published agentic localizers on our "
+                         "graph layer; neither runs on this benchmark as "
+                         "released (both are Python-AST only). They get the "
+                         "same model, snapshot, report and turn budget, and "
+                         "no incident memory. See agent/BASELINES.md.")
     ap.add_argument("--workers", type=int, default=14)
     ap.add_argument("--seed", type=int, default=42)
     ap.add_argument("--tag", default="main")
@@ -185,7 +194,8 @@ def main() -> int:
             print(f"resume: dropped {dropped} errored row(s) for retry; "
                   f"previous file kept as {out_path.name}.bak", flush=True)
     todo = [x for x in pop if f"{x[0]}:{x[1]['issue_key']}" not in done]
-    print(f"population={len(pop)} full={args.full} v{args.version} "
+    print(f"population={len(pop)} full={args.full} arm={args.arm} "
+          f"v{args.version} "
           f"done={len(done)} todo={len(todo)} workers={args.workers} "
           f"seed={args.seed} shuffle_seeds={args.shuffle_seeds}", flush=True)
 
@@ -213,7 +223,9 @@ def main() -> int:
                 parse_iso_epoch(b.get("created")) or created.get(b["issue_key"])
                 or b["fix_time"], b["issue_key"], set(b["fix_shas"]),
                 fcaches[proj], seeds)
-            res = A.run_instance(ws, seed=args.seed, version=args.version)
+            res = (A.run_instance(ws, seed=args.seed, version=args.version)
+                   if args.arm == "ours"
+                   else ARMS[args.arm](ws, seed=args.seed))
             err = None
         except Exception as e:  # noqa: BLE001 - one bad instance must not stop the run
             res, err = None, f"{type(e).__name__}: {e}"
@@ -254,6 +266,15 @@ def main() -> int:
                          "completion_tokens": res["usage"]["out"],
                          "wall_s": wall},
                 "resolver": res.get("resolver", {}),
+                "arm": res.get("arm", "ours"),
+                # Baselines only. `empty` is CoSIL's own metric: a run that
+                # names no candidate at all. `ranking_fused` applies the
+                # lexical fallback \sys{} gets, so nobody can argue the gap
+                # is our safety net rather than the search strategy.
+                **({"empty": res["empty"],
+                    "ranking_fused": res["ranking_fused"],
+                    "metrics_fused": evaluate(res["ranking_fused"], gold)}
+                   if "empty" in res else {}),
                 "version": res.get("version", 2),
                 "causal_chain": res.get("causal_chain", []),
                 "prewalk_symbols": res.get("prewalk_symbols", []),

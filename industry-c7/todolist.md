@@ -295,45 +295,72 @@ We produce one and never score it.
 
 ## P5 — Generalization and leftovers
 
-- [ ] **T25. An agentic baseline (Mahsa's point 3).** Her wording: "Add an
-      existing localization agent with access to the same reports and
-      snapshots, using the same model where supported and a comparable
-      inference budget."
+- [ ] **T25. An agentic baseline (Mahsa's point 3). CODE DONE, NEEDS GPU.**
+      Her wording: "Add an existing localization agent with access to the
+      same reports and snapshots, using the same model where supported and
+      a comparable inference budget."
 
-      **Read the scope before building — it is smaller than it looks.**
-      `paper/sections/07-related.tex:42` already states that Agentless "is
-      the design we adopt for the model-alone arm of our study". So the
-      `model alone` row (Acc@1 55.8 / Acc@5 77.8 on the full split) *is*
-      an Agentless-style LLM baseline, and the paper says so. The gap is
-      not "no LLM baseline". It is that Agentless has no agent loop by
-      design, so we have **no agentic baseline** — nothing that navigates
-      code structure the way LocAgent, CoSIL or GenLoc do. All three are
-      already cited in related work, which makes their absence as
-      baselines more visible, not less.
+      **Built 2026-11-03: TWO arms, not one.** The user chose LocAgent
+      (ACL 2025) and CoSIL (arXiv 2503.22424v3), the two agentic localizers
+      already cited in related work.
 
-      **Proposed build: a LocAgent-style arm.** Our harness, the same 27B
-      model, the same turn budget, restricted to the tool set an existing
-      agent publishes — symbol/entity resolution, `read_code`, `list_dir`,
-      `read_skeleton` — with **incident memory off and the log-trace
-      signal off**. That isolates what an existing agent gets from what
-      \sys{} adds. Name it "LocAgent-style", exactly as the paper already
-      says "BRTracer-style", and never claim it is LocAgent.
-      Implementation is a restricted tool list plus a memory-off flag in
-      `agent.py`; `tools.py` needs nothing new. **CPU to build, GPU to run.**
+      **Neither released repo runs on this benchmark, and the reason is
+      not an input adapter.** Both build their code graph with Python's
+      `ast` module, and both say so in print: LocAgent §3.1 ("we focus our
+      study on Python repositories and leave codebases with other
+      programming languages as future work", repeated in its Limitations),
+      CoSIL's External Validity threat ("it remains uncertain whether CoSIL
+      can generalize to other programming languages"). Our four projects
+      are Java, Scala, C and C++ -- not one Python repo. The graph layer
+      *is* the contribution in both papers, so replacing it is the port.
+      Run as released they would localize nothing, on every instance.
 
-      **Why not the alternatives:** CoSIL needs dynamically built call
-      graphs we do not have. Running the real Agentless or LocAgent code
-      is a porting project, not a baseline — both target Python
-      repositories and ours are C, C++, Java and Scala.
+      **So: their search strategies, our tree-sitter graph layer**, named
+      "LocAgent-style" and "CoSIL-style" exactly as the paper already says
+      "BRTracer-style". Never claimed to be the published systems.
 
-      **Open decision before starting — population and cost.** A full
-      4,409-instance run is ~11 h of GPU, the same as the main run. The
-      alternative is a stratified subsample of ~1,000 (~2.5 h) with every
-      system rescored on exactly that subsample. Pick one deliberately;
-      a baseline measured on a different population than \sys{} is the
-      specific mistake `feedback-same-population-comparisons` records.
+      Files: `agent/codegraph.py` (contain/import/invoke/inherit edges over
+      java, scala, cpp; LocAgent's `path:QualifiedName` entity ids),
+      `agent/baselines.py` (both loops), `agent/BASELINES.md` (every
+      deviation, written to be copied into threats to validity),
+      `agent/test_baselines.py` (**35/35**, runs with no server),
+      `run_agent.py --arm {ours,locagent,cosil}`. verify_claims +8 = 361.
 
-      **If it does not get built**, say so plainly in threats to validity:
+      **Faithful on purpose, including the weaknesses.** Both papers parse
+      a free-text answer, so neither baseline gets our structured
+      `submit_ranking`: CoSIL's Table II reports LocAgent's **empty rate at
+      13-22%** with Qwen models for exactly that reason, and repairing it
+      with our engineering would void the comparison. CoSIL-style keeps its
+      own fix (reflective alignment); LocAgent-style does not, because
+      LocAgent has none. **Free sanity check on the port: CoSIL-style
+      should show the lower empty rate.** If it does not, suspect the port
+      before believing the result.
+
+      Fairness held constant: same served model, temperature 0, same seed,
+      same snapshot, same report *with logs*, same metric. LocAgent-style
+      gets our full 14-turn budget (its Table 5 reports 6-9 rounds), so a
+      loss cannot be blamed on budget. Withheld from both, because neither
+      design has it: `recall_incidents`, our phase-0 pre-searches and
+      pre-walked backward hop. That withholding is the thing being
+      isolated.
+
+      Both arms report `ranking` (their own output, empty allowed, scored
+      as a miss the way CoSIL defines it) AND `ranking_fused` (the same
+      lexical fallback ours gets), so no reviewer can argue the gap is our
+      safety net.
+
+      **Open decision -- population and cost. Now measured, not guessed.**
+      CoSIL-style is the expensive arm: ~26 LLM calls per instance (10
+      search iterations each with a pruner call, 4 staged calls, 2
+      reflections) against our 14 turns, plus 8-20 s of CPU per 2-hop
+      traversal on warm caches, MongoDB slowest. Two arms on 4,409 is not
+      an 11 h job, it is roughly two of them. A stratified ~1,000 with
+      every system rescored on exactly that subsample is the recommended
+      call. Decide deliberately: a baseline measured on a different
+      population than \sys{} is the mistake
+      `feedback-same-population-comparisons` records.
+
+      **If it does not get run**, say so plainly in threats to validity:
       the comparison covers IRBL, lexical, retrieval+memory and a strong
       non-agent LLM pipeline, but no published *agent*. Do not leave it
       unmentioned. **GPU** · needs a fresh vLLM job
