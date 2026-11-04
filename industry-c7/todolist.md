@@ -284,8 +284,8 @@ We produce one and never score it.
       evidence may correctly name a symbol declared elsewhere, so it must
       never be written as "17% hallucinated". verify_claims asserts the doc
       carries that caveat. `paper/explanation-checks.md`. **CPU**
-- [ ] **T17. Judged correctness. HARNESS BUILT, needs GPU + ~1 h from
-      Yuvraj.** `scripts/judge_explanations.py`. A model other than the one
+- [x] **T17. Judged correctness. MODEL RATER DONE 2026-11-04; the
+      human calibration pass is still open.** `scripts/judge_explanations.py`. A model other than the one
       under test grades whether the chain actually runs from the reported
       symptom, through the log evidence, to the code region it names, on a
       three-point rubric (sound / partial / unsound). 400 instances judged,
@@ -313,7 +313,7 @@ We produce one and never score it.
 
       Packets for the human pass: `data/results/judge/packets/` (50).
       `--packets` / `--rate` / `--agreement`. **GPU + HUMAN**
-- [ ] **T18. "Right answer, wrong reason" rate.** Of correct top-1 rankings,
+- [x] **T18. "Right answer, wrong reason" rate. DONE 2026-11-04.** Of correct top-1 rankings,
       what share carry a correct explanation? Fits the paper's existing
       honest-negatives style. **CPU** · needs T16, T17
 
@@ -321,7 +321,7 @@ We produce one and never score it.
 
 ## P5 — Generalization and leftovers
 
-- [ ] **T25. An agentic baseline (Mahsa's point 3). CODE DONE, NEEDS GPU.**
+- [x] **T25. An agentic baseline (Mahsa's point 3). DONE 2026-11-04.**
       Her wording: "Add an existing localization agent with access to the
       same reports and snapshots, using the same model where supported and
       a comparable inference budget."
@@ -499,6 +499,7 @@ Still owed, not yet scheduled:
 
 | Date | What moved |
 |---|---|
+| 2026-11-04 | **T25, T17 and T18 closed.** Both agentic arms ran the full 1,000-instance sample (0 errors) and the judge graded 400 chains. **LocAgent-style is now the STRONGEST baseline in the paper**, ahead of the LLM re-ranker, and at Acc@1 the gap to \sys{} is NOT significant: +0.023 [-0.004,+0.049]. Everything else favours us and is significant -- Acc@5 +0.116, hard Acc@1 +0.050, hard Acc@5 +0.163 -- and the margin is widest on hard instances. But LocAgent-style does it in 90 s/instance against our 321 s, so the cost story goes in the paper rather than being left to a table of accuracies. T18: 64.5% of correct top-1 predictions carry a sound chain against 25.6% of incorrect ones. Two things recorded as limits rather than buried: the judge used `unsound` once in 400 grades, so the rubric is effectively two-way; and the port's own sanity check FAILED -- CoSIL-style was predicted to show the lower empty rate and did not (3.9% vs 3.2%). traverse_graph, LocAgent's signature tool, ran 0.06 times per run. verify_claims 404/404. |
 | 2026-11-03 | T25 agentic baselines BUILT (LocAgent-style + CoSIL-style). Read both papers: neither released repo runs here, and not for want of an adapter -- both parse Python with `ast` and say so in print, while all four of our projects are Java/Scala/C/C++. The graph layer IS their contribution, so replacing it is the port. Their strategies on our tree-sitter layer; `agent/BASELINES.md` records every deviation. Kept their weaknesses on purpose: free-text answers, no structured submit, so LocAgent-style can show the 13-22% empty rate CoSIL's Table II reports -- and CoSIL-style showing the LOWER empty rate is a free check that the port is faithful. **Population settled with evidence:** our own 4,409 run took 11.2 h (transcripts 01:13-12:25), so both arms on the full split is 31-39 h = 3-4 jobs, against ~8 h = one job on a stratified 1,000. The case for the full split was that a subsample forces re-runs; it does not -- `--subset` rescores all 37 systems in 6.4 s. Sample fixed on disk before any GPU: 1,000 matching the split to 3dp on every stratum (REMEMBER 0.667/0.885 vs 0.687/0.888, same best baseline), plus a disjoint 30-instance pilot drawn in the same invocation so the pair regenerates byte for byte. **Correction: Trillium login nodes have no GPU** (no nvidia-smi, no /dev/nvidia*, every partition CPU-only); the H100s are on Nibi. test_baselines 35/35 with no server, verify_claims 372/372. |
 | 2026-11-02 | Review-2 read; plan and this tracker written. Confirmed all four repos are local (4.8 GB, full history), so P0 needs no cluster. Confirmed the vLLM job ended 2026-11-01, so all GPU work is blocked on B2. |
 | 2026-11-02 | P0 closed except T5: T1–T4 done, T2b gives kappa 0.885 on causal-vs-not and the headline reproduces under both raters. Scored set applied, verify_claims 284/284. |

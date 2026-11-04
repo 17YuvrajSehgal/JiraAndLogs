@@ -15,9 +15,11 @@ own text.
 | system | Acc@1 | Acc@5 | MRR | hard Acc@1 | easy Acc@1 |
 |---|---|---|---|---|---|
 | REMEMBER (v3) | 66.7 | 88.5 | 0.761 | 56.2 | 77.9 |
+| LocAgent-style (agentic) | 64.4 | 76.9 | 0.696 | 51.2 | 78.5 |
 | Model re-rank | 59.3 | 77.1 | 0.670 | 41.1 | 78.7 |
 | Model alone | 54.1 | 76.8 | 0.640 | 38.0 | 71.3 |
 | Fusion (best non-agent) | 54.0 | 80.5 | 0.655 | 35.1 | 74.2 |
+| CoSIL-style (agentic) | 50.5 | 66.0 | 0.572 | 29.8 | 72.5 |
 | Retrieval, no memory | 41.6 | 68.4 | 0.527 | 22.7 | 61.8 |
 | Retrieval + memory | 41.2 | 69.9 | 0.532 | 22.5 | 61.2 |
 | Lexical log-to-code | 30.8 | 61.0 | 0.439 | 23.3 | 38.8 |
@@ -25,13 +27,13 @@ own text.
 | buglocator_fw_a5 | 13.7 | 30.2 | 0.227 | 13.2 | 14.3 |
 | rvsm | 6.7 | 16.7 | 0.136 | 5.6 | 7.8 |
 
-REMEMBER v3 beats the strongest baseline (Model re-rank)
-by **+7.4 points of Acc@1**, 95% CI
-[+4.5, +10.4], paired bootstrap over
+REMEMBER v3 beats the strongest baseline (LocAgent-style (agentic))
+by **+2.3 points of Acc@1**, 95% CI
+[-0.5, +5.0], paired bootstrap over
 2,000 resamples at n = 1,000. The margin is widest on
 hard instances, where the report gives the answer away least:
 56.2% against
-41.1%.
+51.2%.
 
 ## By project
 

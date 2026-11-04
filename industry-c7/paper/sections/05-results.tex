@@ -505,11 +505,127 @@ chain that named a fix-modified file named one the annotation calls
 causal: $36$ of $36$. We give the count rather than the percentage,
 because the interval around $100\%$ at $n = 36$ is wide.
 
-What none of this shows is that the reasoning is \emph{right}. An
-explanation can cite a file that exists, quote a line that exists, name
-a symbol that occurs there, and still give the wrong cause. Judging that
-needs a rater we do not yet have, and we flag it as the open half of the
-explanation question rather than claiming it.
+None of that shows the reasoning is \emph{right}. An explanation can
+cite a file that exists, quote a line that exists, name a symbol that
+occurs there, and still give the wrong cause.
+
+\textbf{A judge on $400$ chains.} We sampled $400$ of the \nEval{}
+predictions and had a model grade each chain on a three-point rubric:
+\emph{sound} if every step follows from the one before it and from
+something the report or logs actually say, \emph{partial} if the
+direction is right but a step is asserted rather than supported, and
+\emph{unsound} if the chain does not connect the symptom to the named
+code. The judge never sees the gold files, whether the ranking was
+correct, or which system produced the chain; the prompt is rebuilt with
+the answer key replaced by a sentinel and the run refuses to start if
+the sentinel reaches it. Grades: $211$ sound, $188$ partial, $1$
+unsound.
+
+\textbf{Right answer, wrong reason.} Joining the grades to correctness
+\emph{after} judging, $64.5\%$ of correct top-1 predictions carry a
+sound chain, against $25.6\%$ of incorrect ones. The ratio is the useful
+part: a chain is about two and a half times more likely to be sound when
+the ranking is right, which is evidence the grades track something real
+rather than rewarding fluent prose. It also means roughly a third of our
+correct answers rest on reasoning a careful reader would not accept --
+the honest form of the "right answer, wrong reason" rate, and a caution
+against reading Acc@1 as understanding.
+
+\textbf{Two limits we do not paper over.} The judge used
+\emph{unsound} once in $400$ grades, so in practice it separates
+\emph{sound} from \emph{partial} and the third category carries almost
+no weight; a rubric a rater declines to use is a rubric that needs
+rewriting. And the judge is the same model family as the system under
+test, which is exactly the setting where self-preference is documented.
+A human pass over a $50$-instance calibration subset is pre-registered
+and prepared but not yet run, so these grades are uncalibrated and we
+report them as a single rater's opinion, not as measured correctness.
+
+\subsection{Against published localization agents}
+\label{sec:results:agentic}
+
+Every baseline so far is a retrieval pipeline or a non-agent LLM
+procedure. The obvious question is what an \emph{agent} from the
+literature achieves on the same reports and snapshots. We compare
+against two: LocAgent~\cite{chen2025locagent} and
+CoSIL~\cite{jiang2025cosil}.
+
+\textbf{Neither released system runs on this benchmark, and the reason
+is not an adapter.} Both build their code graph with Python's \texttt{ast}
+module, and both say so: LocAgent states it focuses on Python
+repositories and leaves other languages to future work, and CoSIL lists
+generalisation to other languages as an open threat. Our four projects
+are Java, Scala, C and C++. The graph layer \emph{is} the contribution in
+both papers, so replacing it is the port. We therefore reimplement their
+search strategies on our tree-sitter layer and call the arms
+\textbf{LocAgent-style} and \textbf{CoSIL-style}, the same convention
+this paper already uses for BRTracer-style. They are not the published
+systems and we never claim they are.
+
+Held constant: the same served model, temperature zero, the same seed,
+the same snapshots, the same reports \emph{with} their logs, the same
+context window, and a turn budget at least as large as ours. Withheld
+from both, because neither design has it: incident memory, our phase-0
+pre-searches, and our structured submission schema. Both papers parse a
+free-text answer, and repairing that with our engineering would measure
+our harness rather than their design.
+
+\begin{table}[t]
+\centering
+\caption{Against reimplemented published agents, on the
+$1{,}000$-instance stratified sample all three systems completed.
+Wall time is per instance.}
+\label{tab:agentic}
+\small
+\begin{tabular}{@{}lccccc@{}}
+\toprule
+system & Acc@1 & Acc@5 & hard@1 & hard@5 & wall \\
+\midrule
+\sys{}          & \textbf{0.667} & \textbf{0.885} & \textbf{0.562} & \textbf{0.798} & 321\,s \\
+LocAgent-style  & 0.644 & 0.769 & 0.512 & 0.636 & \textbf{90\,s} \\
+CoSIL-style     & 0.505 & 0.660 & 0.298 & 0.440 & 94\,s \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+On this sample LocAgent-style is the \emph{strongest} baseline we have,
+ahead of the LLM re-ranker that leads every other table in this paper.
+That makes the comparison harder for us, which is the point of running
+it.
+
+\cref{tab:agentic} gives the result, and the honest headline is mixed.
+\textbf{At Acc@1 against LocAgent-style the difference is not
+significant}: $+0.023$, paired bootstrap interval
+$[-0.004, +0.049]$. A reimplemented published agent matches us at
+rank one. Every other contrast favours \sys{} and is significant:
+Acc@5 $+0.116$ $[+0.093, +0.139]$, and on the hard stratum
+$+0.050$ $[+0.012, +0.091]$ at rank one and $+0.163$
+$[+0.124, +0.202]$ at rank five. The margin is widest exactly where the
+report does not name the answer, which is the regime this paper is
+about.
+
+\textbf{What it costs is the other half of the comparison.}
+LocAgent-style reaches its Acc@1 in $90$ seconds per instance against
+our $321$. For a practitioner choosing between them, a tie at rank one
+for a third of the wall time is a real argument, and we would rather
+state it than let a table of accuracies imply otherwise. What \sys{}
+buys for the extra time is the Acc@5 and hard-stratum margins above, and
+a causal chain that neither baseline produces.
+
+\textbf{Two observations about the ported agents.} First, LocAgent-style
+called its graph traversal tool $0.06$ times per run -- $60$ calls
+across $1{,}000$ instances, against $14.45$ keyword searches. Multi-hop
+traversal is the property LocAgent's own comparison table uses to
+separate it from prior graph-based methods, and under this model it goes
+almost unused. That is a fourth instance of a pattern this paper
+measures repeatedly: behaviour that is instructed but optional gets
+skipped. Second, both arms left a final answer with no parseable
+location in $3$--$4\%$ of instances ($3.2\%$ LocAgent-style, $3.9\%$
+CoSIL-style), far below the $13$--$22\%$ empty rate CoSIL reports for
+LocAgent under comparable open models. We expected CoSIL-style to show
+the \emph{lower} rate, since its reflective alignment step exists to
+repair unparseable output; it did not, and we record that as a property
+of our port we cannot explain rather than as a finding about CoSIL.
 
 \subsection{Noise robustness}
 \label{sec:results:noise}

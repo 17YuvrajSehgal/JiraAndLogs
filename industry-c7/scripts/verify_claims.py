@@ -567,16 +567,26 @@ def main() -> int:
     # loaded locally: the shared FSB is not bound until later in main()
     fsb_all = json.loads((RES / "full-split-breakdown.json")
                          .read_text(encoding="utf-8"))
-    check("T25 the restricted rescore covers the same 37 systems",
-          len(sub["systems_scored"]) == len(fsb_all["systems_scored"]) == 37,
+    # 39 on the subsample, 37 on the full split: the two agentic arms ran
+    # only on the 1,000, which is the whole point of fixing that population.
+    check("T25 the subsample scores 39 systems, the full split 37",
+          len(sub["systems_scored"]) == 39
+          and len(fsb_all["systems_scored"]) == 37
+          and {"locagent_style", "cosil_style"} <= set(sub["systems_scored"])
+          and not ({"locagent_style", "cosil_style"}
+                   & set(fsb_all["systems_scored"])),
           f"{len(sub['systems_scored'])} vs {len(fsb_all['systems_scored'])}")
     check("T25 restricted rescore: REMEMBER .667/.885 vs .687/.8877 full",
           sub["scores"]["remember_v3"]["all"]["acc@1"] == .667
           and sub["scores"]["remember_v3"]["all"]["acc@5"] == .885
           and fsb_all["scores"]["remember_v3"]["all"]["acc@1"] == .687
           and fsb_all["scores"]["remember_v3"]["all"]["acc@5"] == .8877)
-    check("T25 the best baseline is the same system on both populations",
-          sub["best_baseline"] == fsb_all["best_baseline"] == "llm_rerank",
+    # On the 1,000 the strongest non-\sys{} system is now the ported agent,
+    # not the LLM re-ranker. That is a result, not a glitch: the comparison
+    # the reviewer asked for turns out to be the hardest baseline we have.
+    check("T25 LocAgent-style is the best baseline on the subsample",
+          sub["best_baseline"] == "locagent_style"
+          and fsb_all["best_baseline"] == "llm_rerank",
           f"{sub['best_baseline']} vs {fsb_all['best_baseline']}")
     check("T25 the full-split results were not overwritten by the subset run",
           fsb_all["n"] == 4409 and sub["n"] == 1000)
@@ -1446,6 +1456,77 @@ def main() -> int:
     check("Figure research.svg hard-codes no check count",
           not re.search(r"\d+\s+checks", research_svg),
           "research.svg prints a check count that will go stale")
+
+
+    # ---- T25 agentic baselines, measured ------------------------------------
+    AB = json.loads((RES / "agentic-baselines.json").read_text(encoding="utf-8"))
+    ABS, ABV = AB["systems"], AB["vs_ours"]
+    check("T25 scored on the full 1,000 all three systems completed",
+          AB["n_common"] == 1000 and AB["n_hard"] == 516,
+          f"{AB['n_common']}/{AB['n_hard']}")
+    check("T25 tab:agentic REMEMBER .667/.885 hard .562/.798",
+          ABS["remember_v3"]["acc@1"] == 0.667
+          and ABS["remember_v3"]["acc@5"] == 0.885
+          and ABS["remember_v3"]["hard_acc@1"] == 0.562
+          and ABS["remember_v3"]["hard_acc@5"] == 0.7984)
+    check("T25 tab:agentic LocAgent-style .644/.769 hard .512/.636",
+          ABS["locagent"]["acc@1"] == 0.644
+          and ABS["locagent"]["acc@5"] == 0.769
+          and ABS["locagent"]["hard_acc@1"] == 0.5116
+          and ABS["locagent"]["hard_acc@5"] == 0.6357)
+    check("T25 tab:agentic CoSIL-style .505/.660 hard .298/.440",
+          ABS["cosil"]["acc@1"] == 0.505
+          and ABS["cosil"]["acc@5"] == 0.66
+          and ABS["cosil"]["hard_acc@1"] == 0.2984
+          and ABS["cosil"]["hard_acc@5"] == 0.4399)
+    check("T25 wall 321s vs 90s vs 94s, as the paper states",
+          round(ABS["remember_v3"]["wall_s"]) == 321
+          and round(ABS["locagent"]["wall_s"]) == 90
+          and round(ABS["cosil"]["wall_s"]) == 94)
+    # The one contrast the paper calls NOT significant. If this ever flips,
+    # the claim "a published agent matches us at rank one" must change.
+    check("T25 Acc@1 vs LocAgent-style is +0.023 and NOT significant",
+          ABV["locagent"]["all"]["acc@1"]["delta"] == 0.023
+          and ABV["locagent"]["all"]["acc@1"]["lo"] == -0.004
+          and ABV["locagent"]["all"]["acc@1"]["hi"] == 0.049
+          and not ABV["locagent"]["all"]["acc@1"]["significant"])
+    check("T25 Acc@5 vs LocAgent-style +0.116 SIG",
+          ABV["locagent"]["all"]["acc@5"]["delta"] == 0.116
+          and ABV["locagent"]["all"]["acc@5"]["lo"] == 0.093
+          and ABV["locagent"]["all"]["acc@5"]["significant"])
+    check("T25 hard Acc@1/@5 vs LocAgent-style +0.050/+0.163 both SIG",
+          ABV["locagent"]["hard"]["acc@1"]["delta"] == 0.0504
+          and ABV["locagent"]["hard"]["acc@5"]["delta"] == 0.1628
+          and ABV["locagent"]["hard"]["acc@1"]["significant"]
+          and ABV["locagent"]["hard"]["acc@5"]["significant"])
+    check("T25 every CoSIL-style contrast is significant",
+          all(ABV["cosil"][s][f"acc@{k}"]["significant"]
+              for s in ("all", "hard") for k in (1, 5)))
+    check("T25 traverse_graph 0.06 calls/run, as the paper states",
+          AB["traverse_graph_calls_per_run"] == 0.06)
+    check("T25 empty rates 3.2% and 3.9%, and the port check did NOT hold",
+          ABS["locagent"]["empty_rate"] == 0.032
+          and ABS["cosil"]["empty_rate"] == 0.039
+          and AB["port_check"]["holds"] is False)
+
+    # ---- T17/T18 judged correctness -----------------------------------------
+    JA = json.loads((RES / "judge-agreement.json").read_text(encoding="utf-8"))
+    JQ = JA["raters"]["qwen"]
+    check("T17 400 chains graded",
+          JQ["n_rated"] == 400)
+    check("T17 grades 211 sound / 188 partial / 1 unsound",
+          JQ["dist"].get("sound") == 211
+          and JQ["dist"].get("partial") == 188
+          and JQ["dist"].get("unsound") == 1)
+    check("T18 sound given correct .6452, given wrong .2562",
+          JQ["t18"]["sound_given_correct"] == 0.6452
+          and JQ["t18"]["sound_given_wrong"] == 0.2562)
+    # The paper says the grades are UNCALIBRATED. If a human pass lands,
+    # that sentence has to change, so the check fails loudly when it does.
+    check("T17 the paper's 'uncalibrated' caveat still matches the data",
+          JA["n_human"] == 0
+          and "not yet run" in (ROOT / "industry-c7/paper/sections/05-results.tex")
+              .read_text(encoding="utf-8"))
 
     # ---- report ---------------------------------------------------------------
     failed = [(c, d) for c, ok, d in checks if not ok]
