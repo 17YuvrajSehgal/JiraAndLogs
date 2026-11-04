@@ -53,8 +53,14 @@ LOCAGENT_TURNS = A.MAX_TURNS
 COSIL_MAX_ITER = 10
 
 CODE_BLOCK_RE = re.compile(r"```(?:\w+)?\s*\n(.*?)```", re.S)
+# Alternation is leftmost-first in Python, NOT longest-match, so a bare `c`
+# ahead of `cpp` truncates "foo.cpp" to "foo.c" -- which then fails to
+# resolve and the whole answer is scored EMPTY. That silently crippled both
+# baselines on mongodb, mariadb and qt, i.e. 89% of the benchmark, and it
+# looked exactly like the empty rate the literature reports. Longest
+# extensions first, and \b so a prefix can never win on its own.
 PATH_RE = re.compile(
-    r"([\w./+-]+\.(?:java|scala|c|cc|cpp|h|hpp|ic|inl|mm|yy|idl|qml))")
+    r"([\w./+-]+\.(?:scala|java|hpp|cpp|qml|idl|inl|yy|mm|cc|ic|h|c)\b)")
 
 
 # ---------------------------------------------------------------------------
@@ -533,7 +539,7 @@ def run_cosil(ws: T.Workspace, seed: int = 42,
             ranked.append(f)
     return _finish(ws, "cosil", ranked, events, usage, stop,
                    {"file_stage": files, "n_iter": len(context) + n_pruned,
-                    "n_pruned": n_pruned})
+                    "n_pruned": n_pruned, "final_text": summary[:2000]})
 
 
 ARMS = {"locagent": run_locagent, "cosil": run_cosil}

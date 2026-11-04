@@ -290,7 +290,14 @@ def main() -> int:
                 # is our safety net rather than the search strategy.
                 **({"empty": res["empty"],
                     "ranking_fused": res["ranking_fused"],
-                    "metrics_fused": evaluate(res["ranking_fused"], gold)}
+                    "metrics_fused": evaluate(res["ranking_fused"], gold),
+                    # Arm-specific diagnostics. Without these a stage that
+                    # silently did nothing is indistinguishable from one
+                    # that ran and found nothing, which is how a crippled
+                    # baseline gets reported as a weak one.
+                    **{k: res[k] for k in
+                       ("file_stage", "n_iter", "n_pruned", "final_text")
+                       if k in res}}
                    if "empty" in res else {}),
                 "version": res.get("version", 2),
                 "causal_chain": res.get("causal_chain", []),

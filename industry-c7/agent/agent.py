@@ -156,10 +156,18 @@ def call_llm(messages: list, tools: list, seed: int = 42,
               if force_tool else "auto")
     messages = [{k: v for k, v in m.items() if not k.startswith("_")}
                 for m in messages]
-    body = json.dumps({"model": MODEL, "messages": messages, "tools": tools,
-                       "tool_choice": choice, "temperature": 0, "seed": seed,
-                       "max_tokens": max_tokens,
-                       "chat_template_kwargs": {"enable_thinking": False}})
+    payload = {"model": MODEL, "messages": messages, "temperature": 0,
+               "seed": seed, "max_tokens": max_tokens,
+               "chat_template_kwargs": {"enable_thinking": False}}
+    # An EMPTY tools list is a 400 from vLLM ("`tools` must not be an empty
+    # array"), not an empty tool set, so the field is omitted instead. The
+    # main agent always passes tools; the CoSIL-style baseline's staged
+    # text calls (preselect, expand, reflect, summarise, prune) pass none,
+    # and every one of them would have failed.
+    if tools:
+        payload["tools"] = tools
+        payload["tool_choice"] = choice
+    body = json.dumps(payload)
     last = ""
     for attempt in range(1, retries + 1):
         try:

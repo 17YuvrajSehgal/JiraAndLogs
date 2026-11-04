@@ -40,6 +40,32 @@ loc = [t["function"]["name"] for t in B.LOCAGENT_TOOLS]
 cos = [t["function"]["name"] for t in B.COSIL_TOOLS]
 check("LocAgent offers exactly its three unified APIs (their Table 2)",
       loc == ["search_entity", "traverse_graph", "retrieve_entity"], str(loc))
+
+# vLLM 400s on `"tools": []` ("must not be an empty array"), so an empty
+# list has to be OMITTED, not sent. CoSIL-style passes no tools on six
+# staged calls (preselect, expand, two reflections, summarise, prune) and
+# every one of them failed until call_llm dropped the field. Caught by a
+# live probe minutes before the pilot; checked here so it cannot come back.
+import json as _json  # noqa: E402
+
+import agent as _A  # noqa: E402
+
+_sent = {}
+_real_bridge = _A._bridge_call
+try:
+    _A._bridge_call = lambda body, timeout: (
+        _sent.update(_json.loads(body)) or '{"choices":[{"message":{}}]}')
+    _A.call_llm([{"role": "user", "content": "x"}], [], retries=1)
+    check("call_llm OMITS tools when the list is empty (vLLM 400s on [])",
+          "tools" not in _sent and "tool_choice" not in _sent,
+          str(sorted(_sent)))
+    _sent.clear()
+    _A.call_llm([{"role": "user", "content": "x"}],
+                [{"type": "function", "function": {"name": "t"}}], retries=1)
+    check("call_llm still sends tools when there are any",
+          _sent.get("tools") and _sent.get("tool_choice") == "auto")
+finally:
+    _A._bridge_call = _real_bridge
 check("CoSIL offers exactly its four search tools (their Table I)",
       cos == ["search_class_node", "search_class_function_node",
               "search_file_function_node", "exit"], str(cos))
@@ -94,6 +120,17 @@ check("parser prefers the fenced block over surrounding prose",
       all("Looking" not in g for g in got))
 check("an answer naming no path parses as EMPTY, not as a silent zero",
       B.parse_locations("I could not determine the location.", fw) == [])
+# Regression: alternation is leftmost-first, so `c` ahead of `cpp` used to
+# truncate every C++ path and score the answer EMPTY. Three of four
+# projects are C/C++, so this quietly made both baselines look far worse
+# than they are -- and it looked just like the empty rate the papers
+# report, which is the way a strawman gets published.
+for ext in ("cpp", "cc", "hpp", "h", "c", "java", "scala", "mm", "inl",
+            "ic", "qml", "idl", "yy"):
+    p = f"src/mongo/db/repl/replication_coordinator_impl.{ext}"
+    check(f"a .{ext} path survives parsing whole",
+          B.parse_locations(f"```\n{p}\nline: 1\n```", _FakeWS([p])) == [p],
+          str(B.parse_locations(f"```\n{p}\n```", _FakeWS([p]))))
 check("prose outside a fence is still parsed when there is no fence",
       B.parse_locations(
           "The bug is in core/src/main/scala/kafka/server/KafkaApis.scala.",
