@@ -30,6 +30,7 @@ Reproducibility, which an agent does not get for free:
 from __future__ import annotations
 
 import json
+import os
 import re
 import subprocess
 import sys
@@ -56,7 +57,11 @@ LIST_LEN = 10
 # Hard cap on concurrent wsl.exe spawns (see call_llm). Independent of the
 # worker count, so --workers can stay high for tool work while transport
 # stays bounded.
-SPOOL = HERE.parents[0] / "data/agent/spool"
+# C7_SPOOL lets a smoke test use its own spool directory. Two runners
+# sharing one spool would steal each other's responses, and a dry run
+# must never be able to corrupt a live batch.
+SPOOL = Path(os.environ.get("C7_SPOOL")
+             or HERE.parents[0] / "data/agent/spool")
 
 # Evidence is a REQUIRED field of the submission rather than a separate
 # optional note_candidate call. Measured on v1: 37% of runs recorded no
