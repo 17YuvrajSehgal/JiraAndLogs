@@ -194,6 +194,14 @@ class Workspace:
         self.fcache = fcache
         self.seed_candidates = [f for f in (seed_candidates or [])
                                 if f in self.snap.blob_of]
+        # T25. The seed ranking is `cond_ours`, which is retrieval PLUS
+        # incident memory, and search_text prepends it to its candidate
+        # pool. For the agentic baselines that silently feeds our memory
+        # signal into arms whose whole point is that they have none, so
+        # they opt out of the seeded pool and keep the list only for the
+        # reported `ranking_fused` diagnostic. Neither published system
+        # has a prior of any kind; both start from the issue text.
+        self.seed_search_pool = True
         self.notes: list[dict] = []
         self.calls: list[dict] = []
         # v3. False keeps the v2 behaviour byte for byte: rank over the whole
@@ -469,7 +477,7 @@ class Workspace:
                     "hint": "describe what went wrong, e.g. 'partition "
                             "assignment returns null for regex subscription'"}
         pool = list(dict.fromkeys(
-            self.seed_candidates
+            (self.seed_candidates if self.seed_search_pool else [])
             + [f for f, _ in bm25_rank(qtoks, {p: path_tokens(p)
                                                for p in self.snap.files})][:120]))
         docs = {}

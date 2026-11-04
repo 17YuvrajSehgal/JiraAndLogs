@@ -238,8 +238,70 @@ fails there instead of inside a reported number.
 ```bash
 python industry-c7/scripts/baseline_sample.py     # writes both, already drawn
 
-python industry-c7/agent/run_agent.py --arm locagent --tag locagent-pilot \
-    --subset data/results/baseline-pilot.json --workers 6
-python industry-c7/agent/run_agent.py --arm cosil --tag cosil-pilot \
-    --subset data/results/baseline-pilot.json --workers 6
+# MAXJOBS<=8 and at most 8 workers ACROSS BOTH ARMS; see the transport note.
+python industry-c7/agent/run_agent.py --arm locagent --tag locagent-eval \
+    --subset data/results/baseline-sample.json --full --workers 4
+python industry-c7/agent/run_agent.py --arm cosil --tag cosil-eval \
+    --subset data/results/baseline-sample.json --full --workers 4
 ```
+
+## 8. What the pilot found (2026-11-04, 30 instances, Trillium trig0023)
+
+The pilot was worth its hour. It found three defects, every one of which
+would have corrupted the measurement run rather than failing it loudly.
+
+1. **vLLM 400s on `"tools": []`** ("must not be an empty array").
+   CoSIL-style passes no tools on six staged calls, so every one failed.
+   `call_llm` now omits the field instead of sending it empty.
+2. **The path regex truncated every C++ path.** Extensions were listed
+   `c|cc|cpp|h|hpp`, and Python alternation is leftmost-first, so `c`
+   matched ahead of `cpp`: `...impl.cpp` became `...impl.c`, which failed
+   to resolve, and the whole answer scored EMPTY. This hit mongodb,
+   mariadb and qt, i.e. 89% of the benchmark. It presented as a **50%
+   empty rate on LocAgent-style** -- a plausible-looking reproduction of
+   the 13-22% empty rate CoSIL's Table II reports, and it would have been
+   written up as a finding. Fixing it moved LocAgent-style from
+   0.500/0.500 to 0.800/0.867.
+3. **Our memory signal was leaking into both baselines.** The Workspace is
+   seeded with `cond_ours`, which is retrieval PLUS incident memory, and
+   `search_text` prepends that list to its pool; 15.3% of LocAgent-style's
+   `search_entity` calls reached that tier. §3's claim that neither
+   baseline gets incident memory was false in practice. Both arms now opt
+   out (`_isolate`). Measured cost to the baseline: **Acc@1 -0.037, Acc@5
+   0.000** -- small, real, and in its favour.
+
+**Transport limit, for the measurement run.** The bridge opens one nested
+SSH per request. At `MAXJOBS=16` with 12 workers it exceeded the control
+master's `MaxSessions` and produced `llm_error` rows
+(`mux_client_request_session: Session open refused by peer`). Monitoring
+over SSH made it worse, because every probe costs a session on the same
+master. **Use `MAXJOBS<=8` and at most 8 workers across all arms**, and
+watch progress from the local output files.
+
+### Pilot numbers, with the health warning attached
+
+n=30, so every interval is roughly +/-0.15 and **nothing here is
+significant**. This is a smoke test, not a result. Do not quote it.
+
+| system | Acc@1 | Acc@5 | empty | LLM calls | wall |
+|---|---|---|---|---|---|
+| REMEMBER (ours, v3) | 0.767 | 0.933 | 0 | 12.3 | 324 s |
+| LocAgent-style | 0.800 | 0.867 | 1 | 13.7 | 104 s |
+| CoSIL-style | 0.700 | 0.767 | 1 | 19.8 | 143 s |
+
+On the 27 instances where the isolated LocAgent-style run also scored,
+**Acc@1 is an exact tie at 0.778** (head to head 3 wins / 3 losses / 21
+ties), and our Acc@5 lead, 0.926 against 0.889, is one instance: 1 win, 0
+losses, 26 ties. The honest reading at this sample size is that a
+reimplemented published agentic localizer **matches \sys{} on ranking**
+and does it at **roughly a third of the wall time**. Whether the Acc@5
+margin is real is precisely what n=1,000 is for.
+
+**Behaviour worth reporting either way:** LocAgent-style called
+`traverse_graph` **zero times** across 30 runs (404 `search_entity`, 98
+`retrieve_entity`). Multi-hop traversal is the property their Table 1 uses
+to distinguish LocAgent from CodexGraph, RepoGraph and OrcaLoca. This is
+the fourth time this project has measured "instructed-but-optional gets
+skipped", now on someone else's design rather than ours. Their own
+ablation puts TraverseGraph at about 2 points, so its absence is not
+catastrophic, but the arm must be described as what it actually did.

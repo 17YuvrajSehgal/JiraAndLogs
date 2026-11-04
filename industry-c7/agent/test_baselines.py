@@ -81,6 +81,17 @@ check("neither baseline is given incident memory",
       and "recall_incidents" not in set(loc) | set(cos))
 check("neither baseline is given a structured submit tool",
       not any("submit" in x for x in loc + cos))
+# The seed ranking is cond_ours = retrieval PLUS memory, and search_text
+# prepends it to its pool. Left on, our memory signal reaches an arm whose
+# entire point is not having one. Measured on the pilot before this was
+# fixed: 15.3% of search_entity calls hit that seeded tier.
+check("both baseline arms opt out of the memory-seeded search pool",
+      bsrc_isolate := ("ws.seed_search_pool = False" in
+                       Path(__file__).with_name("baselines.py")
+                       .read_text(encoding="utf-8")))
+check("the main agent still uses the seeded pool (unchanged behaviour)",
+      "self.seed_search_pool = True" in
+      Path(__file__).with_name("tools.py").read_text(encoding="utf-8"))
 check("both arms are reachable from run_agent --arm",
       set(B.ARMS) == {"locagent", "cosil"}
       and "ours" not in B.ARMS, str(sorted(B.ARMS)))

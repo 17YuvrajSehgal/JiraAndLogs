@@ -104,6 +104,18 @@ def parse_locations(text: str, ws) -> list[str]:
     return out[:LIST_LEN]
 
 
+def _isolate(ws) -> None:
+    """Strip the parts of our pipeline neither published system has.
+
+    The Workspace is seeded with `cond_ours`, which is retrieval PLUS
+    incident memory. search_text prepends that list to its candidate pool,
+    so leaving it on would feed our memory signal into an arm defined by
+    not having one. The list is kept on the Workspace only so the reported
+    `ranking_fused` diagnostic can still be computed.
+    """
+    ws.seed_search_pool = False
+
+
 def _finish(ws, arm, agent_list, events, usage, stop, extra=None):
     """Common return shape. The baseline's OWN ranking is the headline.
 
@@ -284,6 +296,7 @@ def _preview(g: Graph, ws, ent: dict) -> str:
 def run_locagent(ws: T.Workspace, seed: int = 42,
                  max_turns: int = LOCAGENT_TURNS) -> dict:
     """LocAgent's graph-guided loop: three tools, four-step CoT, free text."""
+    _isolate(ws)
     g = Graph(ws)
     usage = {"in": 0, "out": 0, "calls": 0, "seed": seed}
     user = (f"Project: {ws.project}\n\n"
@@ -394,6 +407,7 @@ def run_cosil(ws: T.Workspace, seed: int = 42,
               max_iter: int = COSIL_MAX_ITER) -> dict:
     """CoSIL's two-stage search: file level over the module call graph, then
     iterative function-level search with a pruner, reflection at each end."""
+    _isolate(ws)
     g = Graph(ws)
     usage = {"in": 0, "out": 0, "calls": 0, "seed": seed}
     events: list = []
