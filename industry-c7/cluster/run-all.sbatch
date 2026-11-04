@@ -13,8 +13,10 @@
 # file, so a job that hits its walltime is resumed by resubmitting.
 #
 # Usage (from the GPU login node):
-#   sbatch -t 6:00:00 --gpus-per-node=1 --cpus-per-task=24 --mem=120G \
-#          industry-c7/cluster/run-all.sbatch
+#   sbatch JiraAndLogs/industry-c7/cluster/run-all.sbatch
+#
+# Trillium rejects --mem: memory comes with the GPU allocation, so asking
+# for it is an error rather than a hint.
 #   STAGES=baselines sbatch ... run-all.sbatch     # just T25
 #   STAGES=judge     sbatch ... run-all.sbatch     # just T17
 #
@@ -22,7 +24,6 @@
 #SBATCH --nodes=1
 #SBATCH --gpus-per-node=1
 #SBATCH --cpus-per-task=24
-#SBATCH --mem=120G
 #SBATCH --time=06:00:00
 #SBATCH --job-name=c7-run-all
 #SBATCH --output=/scratch/yuvraj17/JiraAndLogs_scratch/c7run/logs/run-%j.out
