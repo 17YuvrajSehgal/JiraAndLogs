@@ -24,11 +24,13 @@
 #   ARMS=         STAGES=judge sbatch -t 1:00:00 ... run-all.sbatch
 # Resume after a timeout: submit the identical command again.
 #
-# Trillium rejects --mem (memory comes with the GPU allocation), so it is
-# not requested here. Partition is left to the scheduler.
+# Submit it with cluster/submit.sh, which supplies the per-cluster flags:
+# Trillium wants --account=def-naser2 and --gpus-per-node=1 and REJECTS
+# --mem; Nibi wants --account=def-naser2_gpu, --gpus-per-node=h100:1 and
+# --mem=120G. Those cannot both live in #SBATCH lines here, so only the
+# universal ones do.
 #
 #SBATCH --nodes=1
-#SBATCH --gpus-per-node=1
 #SBATCH --cpus-per-task=16
 #SBATCH --time=03:00:00
 #SBATCH --job-name=c7-arm
@@ -42,6 +44,18 @@ ARMS="${ARMS-locagent}"
 STAGES="${STAGES:-}"
 WORKERS="${WORKERS:-12}"
 PORT=${PORT:-8000}
+# MUST match the server that produced the paper's numbers. submit-final.sh
+# on Trillium served the full 4,409-instance run at 65536, and every number
+# in the paper comes from that server. Nibi's submit-qwen.sh used 131072,
+# so serving the baselines there with the Nibi default would compare two
+# systems under different context windows -- a confound that would be
+# invisible in the results and impossible to detect afterwards.
+MAXLEN="${MAXLEN:-65536}"
+if [ "$MAXLEN" != "65536" ]; then
+  echo "REFUSING: max-model-len is $MAXLEN, but the paper's runs used" >&2
+  echo "65536. Set MAXLEN=65536, or knowingly re-run every arm." >&2
+  exit 1
+fi
 SPOOL=$C7/data/agent/spool-$SLURM_JOB_ID
 mkdir -p "$BASE/logs" "$SPOOL"
 
@@ -56,7 +70,7 @@ done
 VLLM_BIN=$S/c7-llm/vllm-venv/bin/vllm
 [ -n "$MODEL_DIR" ] || { echo "no model found" >&2; exit 1; }
 [ -x "$VLLM_BIN" ] || { echo "no vllm at $VLLM_BIN" >&2; exit 1; }
-echo "model=$MODEL_DIR"
+echo "model=$MODEL_DIR  max-model-len=$MAXLEN (matches the paper's runs)"
 
 # ---- what is already done (resume) ---------------------------------------
 for arm in $ARMS; do
@@ -78,7 +92,7 @@ export TRITON_CACHE_DIR=$CACHE/triton TORCHINDUCTOR_CACHE_DIR=$CACHE/inductor
   module load python/3.12.4 >/dev/null 2>&1
   exec "$VLLM_BIN" serve "$MODEL_DIR" \
     --served-model-name qwen3.8-27b \
-    --tensor-parallel-size 1 --max-model-len 65536 --max-num-seqs 32 \
+    --tensor-parallel-size 1 --max-model-len "$MAXLEN" --max-num-seqs 32 \
     --gpu-memory-utilization 0.92 --port "$PORT" \
     --enable-auto-tool-choice --tool-call-parser qwen3_xml \
     --reasoning-parser qwen3 --enable-prefix-caching

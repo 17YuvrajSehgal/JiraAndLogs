@@ -479,6 +479,27 @@ def main() -> int:
     check("T25 every deviation is written down before any GPU is spent",
           (ROOT / "industry-c7/agent/BASELINES.md").exists())
 
+    # The baselines must be served exactly as the paper's own runs were.
+    # submit-final.sh served the 4,409-instance run at 65536; Nibi's
+    # submit-qwen.sh defaults to 131072, so running an arm there without
+    # pinning this would compare two systems under different context
+    # windows, invisibly and irrecoverably.
+    jb = (ROOT / "industry-c7/cluster/run-all.sbatch").read_text(
+        encoding="utf-8")
+    check("T25 the cluster job pins max-model-len to the paper's 65536",
+          'MAXLEN="${MAXLEN:-65536}"' in jb
+          and '--max-model-len "$MAXLEN"' in jb)
+    check("T25 the job REFUSES to serve at any other context length",
+          'REFUSING: max-model-len' in jb and '!= "65536"' in jb)
+    check("T25 per-cluster SLURM flags are not baked into #SBATCH lines",
+          "#SBATCH --gpus-per-node" not in jb
+          and "#SBATCH --account" not in jb)
+    sub = (ROOT / "industry-c7/cluster/submit.sh").read_text(encoding="utf-8")
+    check("T25 submit.sh uses the GPU account and gres form Nibi requires",
+          "def-naser2_gpu" in sub and "h100:1" in sub)
+    check("T25 submit.sh omits --mem on Trillium, which rejects it",
+          "--mem is rejected here" in sub)
+
     # ---- T17 the judge must be blind, and must actually see the report ------
     jsrc = (ROOT / "industry-c7/scripts/judge_explanations.py").read_text(
         encoding="utf-8")
