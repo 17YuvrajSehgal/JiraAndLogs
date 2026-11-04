@@ -90,7 +90,11 @@ def main() -> int:
     # field registers itself as a system, so adding an arm needs no edit
     # here. A baseline that named nothing keeps its EMPTY ranking: CoSIL
     # defines that as a miss, and silently backfilling it would overstate it.
-    for f in sorted(AG.glob("agent-*.jsonl")):
+    # ONLY the -eval tag. agent-*.jsonl also matches the 30-instance pilot
+    # runs, and merging those into the measurement under one system name
+    # would silently mix two populations. The pilot exists to be looked at
+    # before fixing things, so it must never reach a reported number.
+    for f in sorted(AG.glob("agent-*-eval.jsonl")):
         rows = [r for r in jsonl(f) if not r.get("error") and r.get("arm")
                 and r["arm"] != "ours"]
         for r in rows:
@@ -261,7 +265,12 @@ def write_doc(out: dict, order: list) -> None:
     top = [s for s in order if s in ("remember_v3", "fusion", "llm_rerank",
                                      "llm_twostage", "cond_no_memory",
                                      "cond_ours", "content_bm25",
-                                     "brtracer_fw", "buglocator_fw_a5", "rvsm")]
+                                     "brtracer_fw", "buglocator_fw_a5", "rvsm",
+                                     # T25: the agentic baselines belong in
+                                     # the headline table, not only in the
+                                     # scored set -- they are the comparison
+                                     # the reviewer asked for.
+                                     "locagent_style", "cosil_style")]
     rows = "\n".join(
         f"| {LABEL.get(s, s)} | {S[s]['all']['acc@1'] * 100:.1f} | "
         f"{S[s]['all']['acc@5'] * 100:.1f} | {S[s]['all']['mrr']:.3f} | "
