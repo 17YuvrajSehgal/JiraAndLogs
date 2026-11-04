@@ -86,6 +86,21 @@ for arm in locagent cosil; do
       --full --limit 2 --workers 2 2>&1 | tail -4
 done
 
+# ---- 3b. RESUME: a second run must do nothing ------------------------------
+# The short-walltime plan depends on this: a job killed at its time limit is
+# continued by resubmitting the same command. If resume were broken it would
+# silently redo work, or worse, duplicate rows.
+echo "=== resume check: re-running locagent must add no work ==="
+before=$(grep -c . "$C7/data/agent/agent-smoke-locagent.jsonl" 2>/dev/null || echo 0)
+C7_SPOOL="$SPOOL" timeout 900 "$PY" industry-c7/agent/run_agent.py \
+    --arm locagent --tag "smoke-locagent" \
+    --subset industry-c7/data/results/baseline-pilot.json \
+    --full --limit 2 --workers 2 2>&1 | grep -E "todo=|finished" | tail -2
+after=$(grep -c . "$C7/data/agent/agent-smoke-locagent.jsonl" 2>/dev/null || echo 0)
+echo "  rows before=$before after=$after"
+[ "$before" = "$after" ] && echo "  RESUME OK: no duplicates, no repeated work" \
+                         || echo "  RESUME BROKEN: row count changed"
+
 # ---- 4. what actually landed ----------------------------------------------
 echo "=== rows written ==="
 for arm in locagent cosil; do
