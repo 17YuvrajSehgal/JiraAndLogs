@@ -146,7 +146,12 @@ and getting is large enough to measure.
 
 An agent is not deterministic in the way the retrieval layer is, and we
 do not claim otherwise. Four things make its results checkable anyway.
-Every call uses temperature zero and a fixed seed. Every tool is a pure
+Every call uses temperature zero and a fixed seed. That bounds the
+variation but does not remove it: under continuous batching the
+composition of a batch depends on what else is in flight, which changes
+the order of floating-point reductions, so two runs of the same instance
+with the same seed can return different text. Re-running whole batches
+unchanged, we see a minority of rankings move. Every tool is a pure
 function of the snapshot, so a recorded run replays to identical tool
 results, and the only remaining source of variation is the model. Every
 run is persisted in full: the system prompt, each response, each tool

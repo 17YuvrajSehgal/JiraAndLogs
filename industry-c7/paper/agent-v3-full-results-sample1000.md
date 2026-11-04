@@ -14,35 +14,35 @@ own text.
 
 | system | Acc@1 | Acc@5 | MRR | hard Acc@1 | easy Acc@1 |
 |---|---|---|---|---|---|
-| REMEMBER (v3) | 67.6 | 89.0 | 0.769 | 55.6 | 80.4 |
-| Model re-rank | 62.0 | 77.4 | 0.687 | 41.7 | 83.7 |
-| Fusion (best non-agent) | 58.5 | 81.5 | 0.686 | 38.8 | 79.5 |
-| Model alone | 58.1 | 80.5 | 0.674 | 41.7 | 75.6 |
-| Retrieval, no memory | 43.7 | 67.7 | 0.542 | 23.6 | 65.1 |
-| Retrieval + memory | 41.7 | 69.3 | 0.535 | 22.3 | 62.4 |
-| Lexical log-to-code | 30.5 | 60.2 | 0.438 | 25.0 | 36.4 |
-| brtracer_fw | 29.2 | 50.2 | 0.396 | 0.8 | 59.5 |
-| buglocator_fw_a5 | 14.3 | 31.7 | 0.235 | 15.7 | 12.8 |
-| rvsm | 6.5 | 16.2 | 0.136 | 5.0 | 8.1 |
+| REMEMBER (v3) | 66.7 | 88.5 | 0.761 | 56.2 | 77.9 |
+| Model re-rank | 59.3 | 77.1 | 0.670 | 41.1 | 78.7 |
+| Model alone | 54.1 | 76.8 | 0.640 | 38.0 | 71.3 |
+| Fusion (best non-agent) | 54.0 | 80.5 | 0.655 | 35.1 | 74.2 |
+| Retrieval, no memory | 41.6 | 68.4 | 0.527 | 22.7 | 61.8 |
+| Retrieval + memory | 41.2 | 69.9 | 0.532 | 22.5 | 61.2 |
+| Lexical log-to-code | 30.8 | 61.0 | 0.439 | 23.3 | 38.8 |
+| brtracer_fw | 27.9 | 45.6 | 0.374 | 1.2 | 56.4 |
+| buglocator_fw_a5 | 13.7 | 30.2 | 0.227 | 13.2 | 14.3 |
+| rvsm | 6.7 | 16.7 | 0.136 | 5.6 | 7.8 |
 
 REMEMBER v3 beats the strongest baseline (Model re-rank)
-by **+5.6 points of Acc@1**, 95% CI
-[+2.7, +8.7], paired bootstrap over
+by **+7.4 points of Acc@1**, 95% CI
+[+4.5, +10.4], paired bootstrap over
 2,000 resamples at n = 1,000. The margin is widest on
 hard instances, where the report gives the answer away least:
-55.6% against
-41.7%.
+56.2% against
+41.1%.
 
 ## By project
 
 | project | n | Acc@1 | Acc@5 |
 |---|---|---|---|
-| kafka | 108 | 65.7 | 88.0 |
-| mariadb | 267 | 61.1 | 88.8 |
-| mongodb | 552 | 71.0 | 90.0 |
-| qt | 73 | 68.5 | 83.6 |
+| kafka | 108 | 70.4 | 92.6 |
+| mariadb | 267 | 53.2 | 84.6 |
+| mongodb | 552 | 72.1 | 89.9 |
+| qt | 73 | 69.9 | 86.3 |
 
-MariaDB is the weakest at 61.1%
+MariaDB is the weakest at 53.2%
 Acc@1 and is 27% of the split, so it
 pulls the headline down. Any number quoted from a project-balanced sample is
 therefore optimistic relative to this one.
@@ -51,17 +51,17 @@ therefore optimistic relative to this one.
 
 | fix touches | n | Acc@1 | Acc@5 |
 |---|---|---|---|
-| 1 file(s) | 502 | 67.7 | 89.0 |
-| 2-3 file(s) | 291 | 69.4 | 88.7 |
-| 4-7 file(s) | 135 | 65.2 | 89.6 |
-| 8+ file(s) | 72 | 63.9 | 88.9 |
+| 1 file(s) | 511 | 64.8 | 86.3 |
+| 2-3 file(s) | 289 | 68.5 | 91.0 |
+| 4-7 file(s) | 137 | 69.3 | 90.5 |
+| 8+ file(s) | 63 | 68.2 | 90.5 |
 
 **Accuracy rises with fix size, and that is a property of the answer key, not
 of the agent.** A fix touching 8+ files offers 8+ chances for the ranking to
 hit one of them. T3 measured the other side of this: only 21% of gold files
 are causal when the fix touches 8+ files, against 89% at one file. Large-fix
 instances are easier to score and worse to trust, and the paper must not
-present the 63.9% at 8+ files
+present the 68.2% at 8+ files
 as better localization.
 
 ## Excluded

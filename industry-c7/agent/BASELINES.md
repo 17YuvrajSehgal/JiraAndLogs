@@ -238,12 +238,27 @@ fails there instead of inside a reported number.
 ```bash
 python industry-c7/scripts/baseline_sample.py     # writes both, already drawn
 
-# MAXJOBS<=8 and at most 8 workers ACROSS BOTH ARMS; see the transport note.
+# 1. Forward the port ONCE, then the bridge curls locally. A forwarded
+#    connection is a channel, not an ssh session, so it is not bound by
+#    MaxSessions and the worker count can follow the server instead.
+ssh -J trillium trig-login01 -L 8000:<node>:8000 -N          # in WSL
+ENDPOINT=http://localhost:8000 MAXJOBS=24 \
+    bash industry-c7/agent/bridge.sh industry-c7/data/agent/spool &
+
+# 2. Both arms, 1,000 instances each. Keep the two worker counts together
+#    under the server's --max-num-seqs (32).
 python industry-c7/agent/run_agent.py --arm locagent --tag locagent-eval \
-    --subset data/results/baseline-sample.json --full --workers 4
+    --subset data/results/baseline-sample.json --full --workers 12
 python industry-c7/agent/run_agent.py --arm cosil --tag cosil-eval \
-    --subset data/results/baseline-sample.json --full --workers 4
+    --subset data/results/baseline-sample.json --full --workers 12
 ```
+
+Without the forward the bridge opens one nested ssh per request and caps
+out around 8 workers, which is what the pilot hit; with it the limit is
+the server. The pilot ran at about 2.8 instances/min on roughly 6
+workers, so 2,000 instances is of the order of 9 h session-bound and
+closer to 4 h through the forward. Confirm the real rate on the first
+hundred rather than trusting that arithmetic.
 
 ## 8. What the pilot found (2026-11-04, 30 instances, Trillium trig0023)
 
