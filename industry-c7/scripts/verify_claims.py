@@ -506,6 +506,9 @@ def main() -> int:
     check("T25 the stage is passed with --export, not an env prefix",
           "--export=ALL,C7_STAGE=" in sub
           and 'env "$@" sbatch' not in sub)
+    check("T25 the job preflights the parsers ON THE COMPUTE NODE",
+          "PREFLIGHT FAILED: not starting" in jb
+          and "no internet" in jb and "get_parser" in jb)
     check("T25 the job REFUSES to run without an explicit stage",
           "REFUSING: C7_STAGE is not set" in jb
           and 'STAGE="${C7_STAGE:-}"' in jb)

@@ -139,9 +139,41 @@ done
 curl -s -m 5 "http://localhost:$PORT/v1/models" | grep -q qwen3.8-27b \
   || { echo "server never became ready" >&2; exit 1; }
 
-# ---- 2. the local bridge --------------------------------------------------
+# ---- 1b. PREFLIGHT on the compute node ------------------------------------
+# tree_sitter_language_pack fetches its parsers from GitHub at RUNTIME, and
+# compute nodes have no internet. The cache also defaults under /home,
+# which compute nodes do not mount. Both were true on the first real run:
+# 178 of 185 instances died with a DownloadError and the job still looked
+# healthy from the outside -- a server up, a bridge up, rows being written.
+# The parsers now live on /scratch under XDG_CACHE_HOME, and this check
+# runs HERE, on the compute node, where the login node's internet cannot
+# hide the problem. Ten seconds against three wasted hours.
 module load python/3.11 >/dev/null 2>&1
 PY=$BASE/venv/bin/python3
+"$PY" - <<'PREFLIGHT' || { echo "PREFLIGHT FAILED: not starting" >&2; exit 1; }
+import sys
+try:
+    from tree_sitter_language_pack import get_parser, cache_dir
+except Exception as e:
+    print(f"  cannot import the parser pack: {e}", file=sys.stderr); sys.exit(1)
+print(f"  parser cache: {cache_dir()}")
+bad = []
+for lang, code in (("java", b"class A { void m() {} }"),
+                   ("cpp", b"int f(){return 0;}"),
+                   ("scala", b"object A { def m(): Int = 1 }")):
+    try:
+        get_parser(lang).parse(code)
+    except Exception as e:
+        bad.append(f"{lang}: {type(e).__name__}: {str(e)[:120]}")
+if bad:
+    print("  PARSERS UNUSABLE ON THIS NODE:", file=sys.stderr)
+    for b in bad:
+        print(f"    {b}", file=sys.stderr)
+    sys.exit(1)
+print("  preflight ok: java, cpp, scala all parse with no network")
+PREFLIGHT
+
+# ---- 2. the local bridge --------------------------------------------------
 ENDPOINT="http://localhost:$PORT" MAXJOBS=28 \
   bash "$C7/agent/bridge.sh" "$SPOOL" \
   > "$BASE/logs/bridge-${SLURM_JOB_ID:-local}.log" 2>&1 &
