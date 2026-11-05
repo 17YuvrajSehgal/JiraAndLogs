@@ -7,6 +7,12 @@
 
 \usepackage[T1]{fontenc}
 \usepackage[utf8]{inputenc}
+% IEEEtran sets subsection titles in italic, and \sys{} is small caps, so
+% a heading like \subsection{\sys{}} asks Times for small-caps-italic --
+% a shape it does not have. LaTeX already falls back to small caps; this
+% declares that substitution so it stops warning on every build.
+\DeclareFontShape{T1}{ptm}{m}{scit}{<->ssub*ptm/m/sc}{}
+\DeclareFontShape{T1}{ptm}{b}{scit}{<->ssub*ptm/b/sc}{}
 \usepackage{graphicx}
 \usepackage{booktabs}
 \usepackage{amsmath}
