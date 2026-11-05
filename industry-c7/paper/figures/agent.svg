@@ -198,8 +198,8 @@
   <rect x="1396" y="440" width="348" height="180" rx="10" fill="#FFF8E4" stroke="#D9A520" stroke-width="2.4"/>
   <use href="#i-star" x="1412" y="452"/>
   <text x="1458" y="476" font-size="18" font-weight="bold" fill="#8A6A10">Ranked files + evidence</text>
-  <text x="1412" y="512" font-size="16" fill="#444">Acc@5 <tspan font-weight="bold" font-size="19" fill="#8A6A10">90.3%</tspan>   Acc@1 <tspan font-weight="bold" font-size="19" fill="#8A6A10">72.3%</tspan></text>
+  <text x="1412" y="512" font-size="16" fill="#444">Acc@5 <tspan font-weight="bold" font-size="19" fill="#8A6A10">88.8%</tspan>   Acc@1 <tspan font-weight="bold" font-size="19" fill="#8A6A10">68.7%</tspan></text>
   <text x="1412" y="544" font-size="15" fill="#444">on reports naming no faulty file:</text>
-  <text x="1412" y="568" font-size="16" fill="#444">Acc@5 <tspan font-weight="bold" font-size="19" fill="#8A6A10">81.6%</tspan>   Acc@1 <tspan font-weight="bold" font-size="19" fill="#8A6A10">60.8%</tspan></text>
-  <text x="1412" y="598" font-size="13.5" font-style="italic" fill="#8A6A10">best non-agent system: 83.9% / 53.8%</text>
+  <text x="1412" y="568" font-size="16" fill="#444">Acc@5 <tspan font-weight="bold" font-size="19" fill="#8A6A10">80.3%</tspan>   Acc@1 <tspan font-weight="bold" font-size="19" fill="#8A6A10">59.5%</tspan></text>
+  <text x="1412" y="598" font-size="13.5" font-style="italic" fill="#8A6A10">best non-agent system: 80.5% / 53.7%</text>
 </svg>

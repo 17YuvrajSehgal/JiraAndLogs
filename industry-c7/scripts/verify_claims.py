@@ -1435,21 +1435,50 @@ def main() -> int:
         lbl = f"{per:.2f}" if per >= 0.1 else f"{per:.2f}"
         check(f"Figure agent.svg prints {name} rate {lbl}",
               lbl in agent_svg, f"{lbl} missing from agent.svg")
-    # Both figures carry headline numbers. They are percentages now, and a
-    # figure that still shows the old decimals would contradict the tables.
-    fig_pct = {"agent.svg": [("90.3%", "acc@1 is 72.3%"), ("72.3%", ""),
-                             ("81.6%", ""), ("60.8%", ""),
-                             ("83.9%", ""), ("53.8%", "")],
-               "research.svg": [("18.0%", ""), ("68.1%", ""), ("83.2%", ""),
-                                ("83.9%", ""), ("90.3%", ""), ("89.2%", "")]}
-    for fn, wanted in fig_pct.items():
-        svg = agent_svg if fn == "agent.svg" else research_svg
-        missing = [v for v, _ in wanted if v not in svg]
-        stale = [v for v in ("0.903", "0.723", "0.816", "0.608", ">.180<",
-                             ">.681<", ">.832<", ">.903<") if v in svg]
-        check(f"Figure {fn} uses percentages and no stale decimals",
-              not missing and not stale,
-              f"missing {missing}, stale {stale}")
+    # Both figures carry headline numbers, and they are DERIVED from the
+    # result file rather than typed here. The previous version hard-coded
+    # the strings, so when the paper moved from the 790 sample to the 4,409
+    # split the figures and the checker drifted together: all green, and
+    # every number in both figures contradicting the tables beside them. A
+    # check pinned to a literal only proves a figure has not changed.
+    def fpct(sysname, stratum="all", k=5):
+        # FSB is already the "scores" dict, not the whole document.
+        return f"{FSB[sysname][stratum][f'acc@{k}'] * 100:.1f}%"
+
+    agent_wanted = [fpct("remember_v3"), fpct("remember_v3", k=1),
+                    fpct("remember_v3", "hard"), fpct("remember_v3", "hard", 1),
+                    fpct("fusion"), fpct("fusion", k=1)]
+    research_wanted = [fpct("cond_ours"), fpct("llm_twostage"),
+                       fpct("llm_rerank"), fpct("fusion"),
+                       fpct("remember_v3"),
+                       # the classic-IR box shows the BEST of the family;
+                       # the weakest member would understate the baselines
+                       max((fpct(s) for s in ("rvsm", "buglocator_fw_a5",
+                                              "brtracer_fw", "simiscore_fw")
+                            if s in FSB),
+                           key=lambda v: float(v.rstrip("%")))]
+    for fn, svg, wanted in (("agent.svg", agent_svg, agent_wanted),
+                            ("research.svg", research_svg, research_wanted)):
+        missing = [v for v in wanted if v not in svg]
+        check(f"Figure {fn} shows the CURRENT full-split numbers",
+              not missing, f"missing {missing}")
+    # The 790-sample values these figures used to carry. If any reappears,
+    # a figure has been reverted or regenerated from stale data.
+    old790 = ("90.3%", "72.3%", "81.6%", "60.8%", "83.9%", "53.8%",
+              "18.0%", "68.1%", "83.2%", "89.2%", "78.0%")
+    for fn, svg in (("agent.svg", agent_svg), ("research.svg", research_svg)):
+        back = [v for v in old790 if v in svg]
+        check(f"Figure {fn} carries no 790-sample leftovers",
+              not back, f"stale: {back}")
+    # The PDF is what LaTeX includes, so an updated SVG alone changes
+    # nothing in the built paper. Catch the figure that was edited but not
+    # re-exported.
+    for fn in ("agent", "research"):
+        svgp = ROOT / f"industry-c7/paper/figures/{fn}.svg"
+        pdfp = ROOT / f"industry-c7/paper/figures/{fn}.pdf"
+        check(f"Figure {fn}.pdf is at least as new as its .svg",
+              pdfp.exists() and pdfp.stat().st_mtime >= svgp.stat().st_mtime - 2,
+              "svg edited after the pdf was exported; re-run rsvg-convert")
     # The figure must NOT hard-code a check count: the count changes every
     # time a check is added, so any number printed there goes stale the
     # moment this file grows.

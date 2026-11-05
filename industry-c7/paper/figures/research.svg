@@ -119,33 +119,33 @@
 
   <rect x="1046" y="150" width="346" height="60" rx="9" fill="#F4F5F7" stroke="#4B5563" stroke-width="1.8"/>
   <text x="1062" y="174" font-size="15.5" font-weight="bold" fill="#2F3A4A">Classic IR localization</text>
-  <text x="1062" y="196" font-size="13.5" fill="#555">rVSM, BugLocator, BRTracer-style</text>
-  <text x="1376" y="186" font-size="20" font-weight="bold" text-anchor="end" fill="#4B5563">18.0%</text>
+  <text x="1062" y="196" font-size="13.5" fill="#555">best of rVSM, BugLocator, BRTracer-style</text>
+  <text x="1376" y="186" font-size="20" font-weight="bold" text-anchor="end" fill="#4B5563">47.3%</text>
 
   <rect x="1046" y="222" width="346" height="60" rx="9" fill="#FDEEF3" stroke="#D4537E" stroke-width="1.8"/>
   <text x="1062" y="246" font-size="15.5" font-weight="bold" fill="#A32C58">Retrieval + incident memory</text>
   <text x="1062" y="268" font-size="13.5" fill="#555">lexical, deterministic, CPU only</text>
-  <text x="1376" y="258" font-size="20" font-weight="bold" text-anchor="end" fill="#D4537E">68.1%</text>
+  <text x="1376" y="258" font-size="20" font-weight="bold" text-anchor="end" fill="#D4537E">68.6%</text>
 
   <rect x="1046" y="294" width="346" height="60" rx="9" fill="#EAF2FB" stroke="#4A7FC1" stroke-width="1.8"/>
   <text x="1062" y="318" font-size="15.5" font-weight="bold" fill="#2D5A94">A 27B model, given the file tree</text>
-  <text x="1062" y="340" font-size="13.5" fill="#555">Agentless-style; re-ranker variant 78.0%</text>
-  <text x="1376" y="330" font-size="20" font-weight="bold" text-anchor="end" fill="#4A7FC1">83.2%</text>
+  <text x="1062" y="340" font-size="13.5" fill="#555">Agentless-style; re-ranker variant 77.2%</text>
+  <text x="1376" y="330" font-size="20" font-weight="bold" text-anchor="end" fill="#4A7FC1">77.8%</text>
 
   <rect x="1046" y="366" width="346" height="60" rx="9" fill="#EAF6EE" stroke="#3E9B5F" stroke-width="1.8"/>
   <text x="1062" y="390" font-size="15.5" font-weight="bold" fill="#246B40">Fusion of the two above</text>
   <text x="1062" y="412" font-size="13.5" fill="#555">best system that is not an agent</text>
-  <text x="1376" y="402" font-size="20" font-weight="bold" text-anchor="end" fill="#3E9B5F">83.9%</text>
+  <text x="1376" y="402" font-size="20" font-weight="bold" text-anchor="end" fill="#3E9B5F">80.5%</text>
 
   <rect x="1046" y="442" width="346" height="72" rx="9" fill="#FFF8E4" stroke="#D9A520" stroke-width="2.6"/>
   <use href="#i-robot" x="1060" y="458"/>
   <text x="1108" y="478" font-size="17" font-weight="bold" fill="#8A6A10">REMEMBER (this paper)</text>
   <text x="1108" y="500" font-size="13.5" fill="#555">same 27B model, given tools</text>
-  <text x="1376" y="490" font-size="24" font-weight="bold" text-anchor="end" fill="#8A6A10">90.3%</text>
+  <text x="1376" y="490" font-size="24" font-weight="bold" text-anchor="end" fill="#8A6A10">88.8%</text>
 
   <rect x="1046" y="528" width="346" height="58" rx="9" fill="#FFF" stroke="#D9A520" stroke-width="1.8"/>
   <text x="1062" y="550" font-size="14" fill="#555">No family dominates. Retrieval and the</text>
-  <text x="1062" y="570" font-size="14" fill="#555">model solve <tspan font-weight="bold" fill="#8A6A10">different</tspan> instances; union 89.2%</text>
+  <text x="1062" y="570" font-size="14" fill="#555">model solve <tspan font-weight="bold" fill="#8A6A10">different</tspan> instances; union 86.5%</text>
 
   <polygon points="1414,322 1430,322 1430,310 1448,330 1430,350 1430,338 1414,338" fill="#FBE3C9" stroke="#E8794A" stroke-width="2" stroke-linejoin="round"/>
 
