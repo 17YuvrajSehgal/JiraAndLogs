@@ -66,7 +66,8 @@ PATH_RE = re.compile(
 # ---------------------------------------------------------------------------
 # shared plumbing
 # ---------------------------------------------------------------------------
-def _chat(messages, tools, usage, events, seed, label, max_tokens=1500):
+def _chat(messages, tools, usage, events, seed, label,
+          max_tokens=1500 + A.THINK_HEADROOM):
     """One model call, with usage and transcript accounting."""
     resp = A.call_llm(messages, tools, seed=seed, max_tokens=max_tokens)
     if "error" in resp:
@@ -380,7 +381,8 @@ COSIL_TOOLS = [
 ]
 
 
-def _ask_text(messages, usage, events, seed, label, max_tokens=1200):
+def _ask_text(messages, usage, events, seed, label,
+              max_tokens=1200 + A.THINK_HEADROOM):
     msg = _chat(messages, [], usage, events, seed, label, max_tokens)
     return (msg.get("content") or "") if msg else ""
 
@@ -399,7 +401,7 @@ def _reflect(issue: str, last: str, ws, usage, events, seed, label) -> list[str]
           f"Issue:\n{issue[:3000]}\n\nPrevious answer:\n{last[:6000]}\n\n"
           f"Rerank the candidate locations it names and output the file "
           f"paths only."}],
-        usage, events, seed, label, max_tokens=600)
+        usage, events, seed, label, max_tokens=600 + A.THINK_HEADROOM)
     return parse_locations(out, ws)
 
 

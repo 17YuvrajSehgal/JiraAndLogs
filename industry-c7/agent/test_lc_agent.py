@@ -203,8 +203,28 @@ else:
     LA.turn_budget.wrap_model_call(Req(LA.MAX_TURNS), grab)
     chk("at the hard limit every tool is withdrawn",
         seen["tools"] == [], f"{len(seen['tools'])} tools left")
-    chk("and the model is told to answer now",
-        "Answer NOW" in seen["prompt"])
+    # a system-prompt suffix is NOT enough: the conversation still ends on
+    # a tool result, the model has nothing to reply to, and it reasoned to
+    # finish_reason=length writing nothing. The instruction has to be a
+    # turn it can answer.
+    tail = seen["messages"][-1] if seen["messages"] else None
+    chk("the order to answer arrives as a closing USER turn",
+        tail is not None and getattr(tail, "type", "") == "human"
+        and "Answer NOW" in tail.content,
+        f"last message is {getattr(tail, chr(39)+chr(116)+chr(121)+chr(112)+chr(101)+chr(39), None)}")
+    # the structured-output tool must SURVIVE the hard stop. Withdrawing
+    # everything left the model with a history full of tool calls and
+    # nothing it could do, and it reasoned to finish_reason=length three
+    # runs in a row without writing an answer.
+    answer_tool = type("AT", (), {"name": "Localization"})()
+    req = Req(LA.MAX_TURNS)
+    req.tools = list(byname.values()) + [answer_tool]
+    LA.turn_budget.wrap_model_call(req, grab)
+    kept = [getattr(t, "name", None) for t in seen["tools"]]
+    chk("the answer tool survives the hard stop; the others do not",
+        kept == ["Localization"], str(kept))
+    chk("and it is not smuggled into the system prompt instead",
+        "Answer NOW" not in (seen["prompt"] or ""))
 
     # 3. no trimming at all, so context grew 8,005 -> 31,816 chars over
     #    eleven turns and would end in a SILENT server-side truncation.

@@ -64,11 +64,12 @@ sys.path.insert(0, str(HERE))
 sys.path.insert(0, str(HERE.parents[0] / "scripts"))
 
 from langchain.agents import AgentState, create_agent  # noqa: E402
+from langchain.agents.structured_output import ToolStrategy  # noqa: E402
 from langchain.agents.middleware import (  # noqa: E402
     after_model, before_agent, wrap_model_call,
 )
 from langchain.tools import tool  # noqa: E402
-from langchain_core.messages import ToolMessage  # noqa: E402
+from langchain_core.messages import HumanMessage, ToolMessage  # noqa: E402
 
 import tools as T  # noqa: E402
 from lc_store import IncidentStore  # noqa: E402
@@ -78,6 +79,12 @@ TOP_FOR_COMMIT = 3
 # tool results kept verbatim before the older ones are stubbed;
 # the same number agent.py uses, so the two see the same history
 KEEP_FULL = 6
+# the investigation tools by name. The hard stop withdraws exactly these
+# and leaves whatever tool the structured-output strategy injected, so
+# the model is left with one thing it can do: answer.
+AGENT_TOOLS = frozenset({"search_symbol", "search_text", "read_code",
+                         "read_skeleton", "list_dir", "callers_of",
+                         "data_flow_back", "recall_incidents"})
 
 
 # ---------------------------------------------------------------------------
@@ -372,10 +379,22 @@ def turn_budget(request, handler):
     n = len([m for m in request.state.get("messages", [])
              if getattr(m, "type", "") == "ai"])
     if n >= MAX_TURNS:
-        return handler(request.override(tools=[], system_prompt=(
-            (request.system_prompt or "")
-            + "\n\nYour turn budget is spent. Answer NOW from what you "
-              "already read. No further investigation is possible.")))
+        # as a USER turn, not a system-prompt suffix. Measured: with the
+        # same context and the instruction appended to the system prompt,
+        # the conversation still ended on a tool result, the model had
+        # nothing to reply to, and it reasoned to finish_reason=length
+        # twice (3,000 and then 10,000 tokens) writing nothing. Replayed
+        # with the identical text as a closing user message it answered
+        # in 2,255 tokens, finish_reason=stop. The budget was never the
+        # problem; having no turn to speak into was.
+        keep = [t for t in (request.tools or [])
+                if (getattr(t, "name", None) or "") not in AGENT_TOOLS]
+        return handler(request.override(
+            tools=keep,
+            messages=list(request.messages or []) + [HumanMessage(
+                content="Your turn budget is spent. Answer NOW from what "
+                        "you already read. No further investigation is "
+                        "possible.")]))
     if n >= MAX_TURNS - 3:
         request = request.override(system_prompt=(
             (request.system_prompt or "") +
@@ -451,7 +470,13 @@ def build_agent(model, ws: T.Workspace, store: IncidentStore, ctx: dict,
         tools=build_tools(ws),
         system_prompt=SYSTEM,
         state_schema=TriageState,
-        response_format=Localization,
+        # ToolStrategy, not the provider default: it makes the answer a
+        # TOOL the model calls, which is exactly how agent.py forces
+        # submit_ranking and the reason that path never stalls. With a
+        # free-text answer the model, handed a history full of tool calls
+        # and no tools, reasoned to finish_reason=length three times in a
+        # row (3,000 then 10,000 then 4,000 tokens) and wrote nothing.
+        response_format=ToolStrategy(Localization),
         # the recorder goes LAST so it is innermost: it sees the request
         # after turn_budget has trimmed it, i.e. what the model actually got
         middleware=[make_preamble(ws, store, ctx, seed_candidates, repo_tree),

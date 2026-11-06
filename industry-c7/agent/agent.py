@@ -51,11 +51,24 @@ SKILL = (HERE / "skills" / "fault-localization.md")
 # C7_MODEL names the model to the server. The cluster vLLM serves it
 # under the bare name; a local server may use its own id.
 MODEL = os.environ.get("C7_MODEL") or "qwen3.8-27b"
+# Thinking ON. Reasoning tokens are charged to completion_tokens, so
+# every max_tokens below carries headroom for them or the answer is cut
+# off mid-sentence. Measured on this model family: roughly 1,900
+# reasoning tokens before the answer starts.
+ENABLE_THINKING = (os.environ.get("C7_THINK", "1") != "0")
+THINK_HEADROOM = 2500 if ENABLE_THINKING else 0
 # No NODE here: the compute node changes with every SLURM job and the
 # bridge discovers it from the serve log. A copy in Python could only go
 # stale and disagree.
 MAX_TURNS = 14
-MAX_TOOL_CHARS = 9000
+# Measured by replaying real tool calls against the snapshots, because
+# the transcripts cannot show this: agent.py stores payload[:2500], so a
+# scan of them reports no truncation whatever the truth is. At 9,000 the
+# cap bound on 0.55% of results and 8.3% of runs, every one of them
+# search_symbol (max 12,237 chars), and the cut is a raw string slice of
+# JSON -- the model received invalid JSON, not a shortened result. Every
+# other tool stays under 3,000 on its own internal caps.
+MAX_TOOL_CHARS = 16000
 LIST_LEN = 10
 # Hard cap on concurrent wsl.exe spawns (see call_llm). Independent of the
 # worker count, so --workers can stay high for tool work while transport
@@ -153,7 +166,7 @@ SYSTEM = (
 
 # ---- LLM transport ---------------------------------------------------------
 def call_llm(messages: list, tools: list, seed: int = 42,
-             max_tokens: int = 1500, timeout: int = 420,
+             max_tokens: int = 1500 + THINK_HEADROOM, timeout: int = 420,
              retries: int = 3, force_tool: str | None = None) -> dict:
     """One chat completion through the cluster SSH channel.
 
@@ -172,7 +185,7 @@ def call_llm(messages: list, tools: list, seed: int = 42,
                 for m in messages]
     payload = {"model": MODEL, "messages": messages, "temperature": 0,
                "seed": seed, "max_tokens": max_tokens,
-               "chat_template_kwargs": {"enable_thinking": False}}
+               "chat_template_kwargs": {"enable_thinking": ENABLE_THINKING}}
     # An EMPTY tools list is a 400 from vLLM ("`tools` must not be an empty
     # array"), not an empty tool set, so the field is omitted instead. The
     # main agent always passes tools; the CoSIL-style baseline's staged
@@ -276,7 +289,8 @@ def reformulate(query_text: str, seed: int = 42) -> dict:
                         "words the code itself would use."},
             {"role": "user", "content": query_text[:12000]
              + "\n\nCall describe_fault."}]
-    r = call_llm(msgs, [REFORMULATE], seed=seed, max_tokens=500)
+    r = call_llm(msgs, [REFORMULATE], seed=seed,
+                 max_tokens=500 + THINK_HEADROOM)
     if "error" in r:
         return {"error": r["error"]}
     msg = (r.get("choices") or [{}])[0].get("message", {}) or {}
