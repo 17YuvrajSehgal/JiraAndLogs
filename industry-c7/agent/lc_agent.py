@@ -379,7 +379,7 @@ on its own."""
 
 def build_agent(model, ws: T.Workspace, store: IncidentStore, ctx: dict,
                 seed_candidates: list[str], repo_tree: str = "",
-                checkpointer=None):
+                checkpointer=None, recorder=None):
     """The whole design in one call.
 
     Every element is here because something was measured, and the
@@ -394,7 +394,10 @@ def build_agent(model, ws: T.Workspace, store: IncidentStore, ctx: dict,
         system_prompt=SYSTEM,
         state_schema=TriageState,
         response_format=Localization,
+        # the recorder goes LAST so it is innermost: it sees the request
+        # after turn_budget has trimmed it, i.e. what the model actually got
         middleware=[make_preamble(ws, store, ctx, seed_candidates, repo_tree),
-                    turn_budget, commit_check],
+                    turn_budget, commit_check,
+                    *(recorder.middleware() if recorder is not None else [])],
         checkpointer=checkpointer,
     )
