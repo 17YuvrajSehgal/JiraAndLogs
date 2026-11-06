@@ -321,6 +321,45 @@ We produce one and never score it.
 
 ## P5 — Generalization and leftovers
 
+- [x] **T28. Metric definitions (Mahsa, 2026-11-06). Code DONE, paper TODO.**
+      Her point: Top-k only asks whether ONE ground-truth file was found
+      and ignores the rest, so on multi-cause issues it overstates
+      localization. She asked for Hit@k, Precision@k and Recall@k.
+
+      Our `acc@k` was already Hit@k by the same rule, so that is a rename.
+      `recall@k` already existed. Precision@k was the trap: **51.3% of our
+      issues touch exactly one file, so a perfect answer at rank 1 scores
+      1/5 = 0.2 at k=5.** Dataset-wide the Precision@5 ceiling is 0.425.
+      Printing 0.239 bare makes a correct system look broken.
+
+      `scripts/localize.py::evaluate()` now emits `hit@k` (alias of the
+      old `acc@k`, which is kept so the 417 pinned claims still resolve),
+      `recall@k`, `precision@k`, **`precision_ceiling@k`**,
+      **`r_precision`** and **`ap`**. R-Precision and AP reach 1.0 on
+      every instance, so they are the honest precision numbers for a
+      benchmark with a variable number of right answers.
+
+      Measured on the 4,409 run, agent-only ranking:
+      Hit@1 0.687, Hit@5 0.879, Recall@5 0.667, **R-Precision 0.548**,
+      AP 0.635, MRR 0.770, Precision@5 0.239 (ceiling 0.425, 56% of
+      achievable).
+
+      The split that must go in the paper, because Hit@k hides it:
+      single-file (n=2260) Hit@5 0.864 / Recall@5 0.864 / R-Prec 0.669;
+      multi-file (n=2149) Hit@5 **0.895** / Recall@5 **0.460** / R-Prec 0.422.
+      Hit@5 is HIGHER on multi-file issues while recall collapses, because
+      more gold files mean more chances to hit one. State it as a limit.
+
+      STILL TODO: (a) rename acc@k -> hit@k in the LaTeX tables and
+      figures; (b) add a metric-definitions paragraph to the evaluation
+      section saying exactly the above, including the ceiling; (c) add the
+      single/multi-file recall split as a limitation; (d) note that
+      recall@10 has a ceiling of 0.624 on the 4.0% of instances with more
+      than 10 gold files; (e) say gold is a fault LOCATION label (files the
+      fix touched), not a root-cause label -- 89.2% of multi-file fixes
+      stay inside one module, so multi-file usually means one cause with
+      local ripple, and we have no annotation for cause count.
+
 - [x] **T25. An agentic baseline (Mahsa's point 3). DONE 2026-11-04.**
       Her wording: "Add an existing localization agent with access to the
       same reports and snapshots, using the same model where supported and

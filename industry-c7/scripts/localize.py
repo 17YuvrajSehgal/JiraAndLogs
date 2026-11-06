@@ -347,13 +347,59 @@ def load_support(project: str, key_prefix: str):
 
 
 def evaluate(ranking: list[str], gold: list[str]) -> dict:
+    """Score one ranking against the files the fix commit touched.
+
+    Definitions, stated here because the paper has to state them and
+    because one of them is a trap:
+
+      hit@k         at least one fix-touched file in the top k. This is
+                    what the tables used to call acc@k; identical rule,
+                    the name just says what it measures.
+      recall@k      what FRACTION of the fix-touched files are in the
+                    top k. The one that falls when an issue has many.
+      precision@k   |gold & top-k| / k, textbook IR precision. CANNOT
+                    REACH 1.0 on this benchmark: 51.3% of our issues
+                    touched exactly one file, so a perfect answer
+                    ranked first scores 1/5 = 0.2 at k=5. Reporting it
+                    bare understates the system by a factor it has no
+                    way to earn back, so precision_ceiling@k is emitted
+                    beside it and the two must be read together.
+      r_precision   |gold & top-R| / R where R is the number of
+                    fix-touched files. Self-normalising: a one-file
+                    issue is judged on the top 1, a six-file issue on
+                    the top 6, and 1.0 is reachable for every instance.
+                    This is the honest precision number for a benchmark
+                    with a variable number of right answers.
+      ap            average precision over the returned list: the mean
+                    of precision@i at every rank i holding a gold file,
+                    divided by min(len(ranking), |gold|) so the
+                    denominator is what the list length allows. Rewards
+                    putting ALL the fix-touched files high, which is
+                    exactly what hit@k ignores.
+      mrr           1/rank of the first gold file.
+
+    acc@k is kept as an alias of hit@k so older result files, figures
+    and the 417 pinned claims keep resolving.
+    """
     gset = set(gold)
+    n_gold = max(1, len(gset))
     hit_rank = next((i for i, f in enumerate(ranking) if f in gset), None)
     m = {"mrr": 1.0 / (hit_rank + 1) if hit_rank is not None else 0.0}
     for k in KS:
         top = ranking[:k]
+        found = len(gset.intersection(top))
         m[f"acc@{k}"] = float(any(f in gset for f in top))
-        m[f"recall@{k}"] = len(gset.intersection(top)) / len(gset)
+        m[f"hit@{k}"] = m[f"acc@{k}"]
+        m[f"recall@{k}"] = found / n_gold
+        m[f"precision@{k}"] = found / k
+        # the most any system could score here, given how many files
+        # this fix actually touched
+        m[f"precision_ceiling@{k}"] = min(k, n_gold) / k
+    r = len(gset)
+    m["r_precision"] = len(gset.intersection(ranking[:r])) / n_gold
+    hits = [i for i, f in enumerate(ranking, start=1) if f in gset]
+    m["ap"] = (sum((j + 1) / i for j, i in enumerate(hits))
+               / min(len(ranking), n_gold)) if hits and ranking else 0.0
     return m
 
 
