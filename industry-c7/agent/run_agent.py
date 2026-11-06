@@ -31,6 +31,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import random
 import subprocess
 import sys
@@ -52,6 +53,32 @@ P = ("kafka", "mariadb", "mongodb", "qt")
 AGENT_OUT = Path(__file__).resolve().parents[1] / "data/agent"
 ROOT_LLM = Path(__file__).resolve().parents[1] / "data/llm"
 SEED_SAMPLE, SAMPLE_N = 42, 200
+# --arm lc only. Built once and shared: the client is thread-safe and a
+# per-instance one would open a new connection pool for every issue.
+_LC_MODEL = None
+
+
+def lc_model(seed: int):
+    """The chat model for the LangGraph arm, from C7_LLM_URL.
+
+    Any OpenAI-compatible server: the cluster vLLM, or LM Studio on this
+    laptop for a pilot. max_tokens is the per-response cap, NOT the
+    context -- a local server with a large reasoning budget will spend it
+    here, which is why the pilot pins it.
+    """
+    global _LC_MODEL
+    if _LC_MODEL is None:
+        from langchain_openai import ChatOpenAI
+        base = os.environ.get("C7_LLM_URL")
+        if not base:
+            raise SystemExit("--arm lc needs C7_LLM_URL "
+                             "(e.g. http://localhost:1235/v1)")
+        _LC_MODEL = ChatOpenAI(
+            model=A.MODEL, base_url=base,
+            api_key=os.environ.get("C7_LLM_KEY") or "not-needed",
+            temperature=0, seed=seed, timeout=1200, max_retries=2,
+            max_completion_tokens=int(os.environ.get("C7_MAX_TOKENS") or 1500))
+    return _LC_MODEL
 
 _lock = threading.Lock()
 _done = 0
@@ -173,13 +200,15 @@ def main() -> int:
                          "Default stays 2 so an unflagged re-run cannot "
                          "silently change what the reported numbers mean.")
     ap.add_argument("--arm", default="ours",
-                    choices=["ours"] + sorted(ARMS),
+                    choices=["ours", "lc"] + sorted(ARMS),
                     help="T25. 'locagent' and 'cosil' are reimplementations "
                          "of the two published agentic localizers on our "
                          "graph layer; neither runs on this benchmark as "
                          "released (both are Python-AST only). They get the "
                          "same model, snapshot, report and turn budget, and "
-                         "no incident memory. See agent/BASELINES.md.")
+                         "no incident memory. See agent/BASELINES.md. "
+                         "'lc' is our own agent rebuilt on LangGraph, with "
+                         "the full run capture of agent/lc_trace.py.")
     ap.add_argument("--repo-tree", action="store_true",
                     help="Put the repository structure in phase 0. The "
                          "agent calls list_dir 0.07 times per run, so it "
@@ -288,6 +317,12 @@ def main() -> int:
             r = json.loads(line)
             tree_rank[f"{r['project']}:{r['issue_key']}"] = r.get("ranking") or []
         print(f"seed source: fused (file-tree LLM for {len(tree_rank)} instances)")
+    trace_dir = AGENT_OUT / "runs" / args.tag if args.arm == "lc" else None
+    if args.arm == "lc":
+        import lc_agent as LC  # noqa: F841 - local: langchain_openai is
+        globals()["LC"] = LC   # not installed on the cluster side
+        trace_dir.mkdir(parents=True, exist_ok=True)
+        print(f"full run capture -> {trace_dir}")
     fcaches = {p: {} for p in projects}
     commit = git_commit()
     fh = out_path.open("a", encoding="utf-8")
@@ -311,10 +346,14 @@ def main() -> int:
                 parse_iso_epoch(b.get("created")) or created.get(b["issue_key"])
                 or b["fix_time"], b["issue_key"], set(b["fix_shas"]),
                 fcaches[proj], seeds)
-            res = (A.run_instance(ws, seed=args.seed, version=args.version,
-                                  repo_tree=args.repo_tree)
-                   if args.arm == "ours"
-                   else ARMS[args.arm](ws, seed=args.seed))
+            if args.arm == "ours":
+                res = A.run_instance(ws, seed=args.seed, version=args.version,
+                                     repo_tree=args.repo_tree)
+            elif args.arm == "lc":
+                res = LC.run_lc(ws, seed=args.seed, model=lc_model(args.seed),
+                                repo_tree=args.repo_tree, trace_dir=trace_dir)
+            else:
+                res = ARMS[args.arm](ws, seed=args.seed)
             err = None
         except Exception as e:  # noqa: BLE001 - one bad instance must not stop the run
             res, err = None, f"{type(e).__name__}: {e}"

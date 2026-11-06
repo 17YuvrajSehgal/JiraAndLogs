@@ -401,3 +401,77 @@ def build_agent(model, ws: T.Workspace, store: IncidentStore, ctx: dict,
                     *(recorder.middleware() if recorder is not None else [])],
         checkpointer=checkpointer,
     )
+
+
+# ---------------------------------------------------------------------------
+# the runner entry point
+# ---------------------------------------------------------------------------
+def run_lc(ws: T.Workspace, seed: int = 42, *, model=None, repo_tree: bool = False,
+           trace_dir=None) -> dict:
+    """One instance through the LangGraph agent, in the shape run_agent
+    already writes.
+
+    Returning agent.run_instance's dict is deliberate: the harness, the
+    evaluation and every downstream script stay untouched, so this arm is
+    scored on exactly the same population by exactly the same code. An
+    arm that needed its own scoring path could not be compared with the
+    others.
+    """
+    import agent as A
+    from lc_trace import RunRecorder
+    from langgraph.checkpoint.memory import InMemorySaver
+
+    rid = f"{ws.project}:{ws.issue_key}"
+    store = IncidentStore.from_pool(ws.project, ws.memory)
+    ctx = {"cutoff": ws.cutoff, "this_key": ws.issue_key,
+           "this_fix_shas": frozenset(ws.fix_shas),
+           "dup_cluster": ws.dupclusters.get(ws.issue_key),
+           "dup_of": ws.dupclusters}
+    tree = A._repo_tree_for(ws) if repo_tree else ""
+
+    rec = RunRecorder(trace_dir, rid.replace(":", "_"),
+                      {"instance": rid, "arm": "lc", "seed": seed,
+                       "model": getattr(model, "model_name", str(model))}) \
+        if trace_dir else None
+    graph = build_agent(model, ws, store, ctx, ws.seed_candidates, tree,
+                        checkpointer=InMemorySaver(), recorder=rec)
+    cfg = {"configurable": {"thread_id": rid},
+           "recursion_limit": MAX_TURNS * 2 + 6}
+
+    stop, answer = "submitted", None
+    try:
+        state = graph.invoke({"messages": []}, cfg)
+        answer = state.get("structured_response")
+    except Exception as e:  # noqa: BLE001 - a dead run must still write a row
+        stop, state = f"error:{type(e).__name__}", {}
+    if answer is None and stop == "submitted":
+        stop = "no_answer"
+
+    # the model writes paths; they have to land on real files in THIS
+    # snapshot before they can be scored. Same resolver as the main agent.
+    resolver: dict = {}
+    resolved: list[str] = []
+    for rf in (answer.files if answer else []):
+        f = A._resolve(rf.path, ws, resolver)
+        if f and f not in resolved:
+            resolved.append(f)
+    final = (A.fuse(resolved, ws.seed_candidates)[:A.LIST_LEN] if resolved
+             else list(ws.seed_candidates[:A.LIST_LEN]))
+
+    summary = rec.finish(state, graph=graph, config=cfg) if rec else {}
+    usage = {"calls": summary.get("model_calls", 0),
+             "in": summary.get("input_tokens", 0),
+             "out": summary.get("output_tokens", 0)}
+    return {"ranking": final, "agent_ranking": resolved[:A.LIST_LEN],
+            "lexical_seed": ws.seed_candidates[:A.LIST_LEN],
+            "notes": [{"file": rf.path, "why": rf.evidence, "confidence": 1.0,
+                       "in_snapshot": rf.path in ws.snap.blob_of}
+                      for rf in (answer.files if answer else [])],
+            "tool_calls": ws.calls, "stop_reason": stop,
+            "rationale": "; ".join(c.step for c in answer.causal_chain)
+                         if answer else "",
+            "usage": usage, "resolver": resolver, "events": [], "seed": seed,
+            "version": 3, "arm": "lc",
+            "causal_chain": [c.model_dump() for c in answer.causal_chain]
+                            if answer else [],
+            "prewalk_symbols": [], "trace": summary.get("path", "")}

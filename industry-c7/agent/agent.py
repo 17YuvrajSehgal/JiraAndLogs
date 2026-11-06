@@ -35,6 +35,7 @@ import re
 import subprocess
 import sys
 import threading
+import urllib.request
 import uuid
 import time
 from collections import defaultdict
@@ -47,7 +48,9 @@ from localize import RRF_K  # noqa: E402
 
 HERE = Path(__file__).resolve().parent
 SKILL = (HERE / "skills" / "fault-localization.md")
-MODEL = "qwen3.8-27b"
+# C7_MODEL names the model to the server. The cluster vLLM serves it
+# under the bare name; a local server may use its own id.
+MODEL = os.environ.get("C7_MODEL") or "qwen3.8-27b"
 # No NODE here: the compute node changes with every SLURM job and the
 # bridge discovers it from the serve log. A copy in Python could only go
 # stale and disagree.
@@ -157,8 +160,14 @@ def call_llm(messages: list, tools: list, seed: int = 42,
     The payload goes over stdin, never the command line, so nothing is
     mangled by shell quoting.
     """
-    choice = ({"type": "function", "function": {"name": force_tool}}
-              if force_tool else "auto")
+    # "required" rather than {"type":"function","function":{"name":...}}:
+    # LM Studio rejects the object form outright ("Supported string values:
+    # none, auto, required"), and the only forced call passes a single
+    # tool, so the two are the same instruction. vLLM accepts both.
+    if force_tool:
+        names = [t["function"]["name"] for t in tools]
+        assert names == [force_tool],             f"force_tool={force_tool} but tools={names}; 'required' would "             f"let the model pick a different one"
+    choice = "required" if force_tool else "auto"
     messages = [{k: v for k, v in m.items() if not k.startswith("_")}
                 for m in messages]
     payload = {"model": MODEL, "messages": messages, "temperature": 0,
@@ -192,13 +201,26 @@ def call_llm(messages: list, tools: list, seed: int = 42,
 
 
 def _bridge_call(body: str, timeout: int) -> str:
-    """Send one request through the persistent WSL bridge (bridge.sh).
+    """Send one request to the model.
+
+    C7_LLM_URL points straight at an OpenAI-compatible server on this
+    machine (LM Studio, llama.cpp, a local vLLM). Unset, the request goes
+    through the persistent WSL bridge to the cluster, which is how every
+    number in the paper was produced.
 
     Python never spawns a process here: it drops a request file and waits
     for the matching response. The earlier design spawned one wsl.exe per
     call, which deadlocked WSL twice under 10-12 workers and froze the
     batch with no error.
     """
+    direct = os.environ.get("C7_LLM_URL")
+    if direct:
+        req = urllib.request.Request(
+            direct.rstrip("/") + "/chat/completions", data=body.encode("utf-8"),
+            headers={"Content-Type": "application/json"})
+        with urllib.request.urlopen(req, timeout=timeout) as r:
+            return r.read().decode("utf-8", "replace").strip()
+
     SPOOL.mkdir(parents=True, exist_ok=True)
     rid = uuid.uuid4().hex
     tmp = SPOOL / f".w-{rid}"
