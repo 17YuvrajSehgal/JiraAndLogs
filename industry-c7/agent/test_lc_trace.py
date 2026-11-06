@@ -29,7 +29,13 @@ from langchain_core.language_models.fake_chat_models import (  # noqa: E402
 from langchain_core.messages import AIMessage  # noqa: E402
 from langgraph.checkpoint.memory import InMemorySaver  # noqa: E402
 
+import lc_trace  # noqa: E402
 from lc_trace import RunRecorder, replay  # noqa: E402
+
+# the raw-message capture is env-gated. A test that only passes when the
+# caller happens to export C7_TRACE_RAW reports on the shell, not on the
+# code, so set it here and leave nothing to the environment.
+lc_trace.RAW = True
 
 
 class ToolCapableFake(GenericFakeChatModel):

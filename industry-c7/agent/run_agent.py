@@ -235,6 +235,11 @@ def main() -> int:
                          "from scripts/baseline_sample.py. Restricts the run "
                          "to that fixed population so the baselines and every "
                          "existing system are scored on identical instances.")
+    ap.add_argument("--allow-partial-subset", action="store_true",
+                    help="proceed even when more than a tenth of --subset "
+                         "is absent from the population. Without it the run "
+                         "refuses, because the warning alone was missed and "
+                         "a 30-instance pilot silently scored 6.")
     ap.add_argument("--workers", type=int, default=14)
     ap.add_argument("--seed", type=int, default=42)
     ap.add_argument("--tag", default="main")
@@ -258,9 +263,20 @@ def main() -> int:
         pop = [x for x in pop if f"{x[0]}:{x[1]['issue_key']}" in keep]
         missing = len(keep) - len(pop)
         if missing:
+            # A warning is not enough here. The pilot asked for 30 ids,
+            # 24 were outside the default 200/project population, and the
+            # run quietly scored 6 -- the warning scrolled past and the
+            # output looked like a finished run. On a cluster job that is
+            # hours of compute producing a population nobody chose.
             print(f"WARNING: {missing} of {len(keep)} subset ids are not in "
                   f"this population (wrong --project or --full flag?)",
                   flush=True)
+            if missing > len(keep) // 10 and not args.allow_partial_subset:
+                print(f"REFUSING: {missing}/{len(keep)} of the subset is "
+                      f"missing. Add --full, fix --project, or pass "
+                      f"--allow-partial-subset if a partial run is intended.",
+                      file=sys.stderr)
+                return 1
 
     # Resume keeps only instances that SUCCEEDED. An errored row used to
     # count as done, so anything in flight when the server hit its walltime
