@@ -329,14 +329,40 @@ def fuse(agent_list: list[str], lexical: list[str]) -> list[str]:
     return out
 
 
+def _repo_tree_for(ws, budget: int = 4000) -> str:
+    """A compact view of the repository as a shape.
+
+    Reuses the tree the CoSIL-style baseline already builds, trimmed
+    harder: there it is the whole search space, here it is a hint beside
+    signals the agent already has. Falls back to a directory listing if
+    the graph layer is unavailable, because a hint must never take the
+    run down.
+    """
+    try:
+        from codegraph import Graph
+        return Graph(ws).repo_tree(budget=budget)
+    except Exception:  # noqa: BLE001 - a hint is never worth a crash
+        dirs = sorted(ws.dirs().items(), key=lambda kv: -kv[1])[:40]
+        return "\n".join(f"{d}/  ({n} files)" for d, n in dirs)
+
+
 def run_instance(ws: T.Workspace, seed: int = 42,
                  max_turns: int = MAX_TURNS,
                  behaviour_query: str | None = None,
-                 version: int = 2) -> dict:
+                 version: int = 2, repo_tree: bool = False) -> dict:
     """Investigate one instance. Returns the ranking plus a transcript.
 
     version 3 adds the required causal_chain field and runs the backward
     control-flow hop in phase 0 instead of hoping the model asks for it.
+
+    repo_tree adds the repository structure to phase 0. The agent searches
+    lexically and has no view of the codebase as a shape: list_dir is
+    called 0.07 times per run, effectively never. Measured consequence --
+    on the 427 instances the agent misses entirely, a plain LLM given only
+    the file tree finds a gold file in 37% of them, despite scoring 0.558
+    Acc@1 against the agent's 0.687 overall. It wins exactly where we are
+    blind. CoSIL's first stage is a repository structure tree for the same
+    reason.
     """
     # Phase 0a: one call turns the report into retrieval terms. The raw
     # report is symptom-shaped; searching code with it finds the detection
@@ -358,6 +384,19 @@ def run_instance(ws: T.Workspace, seed: int = 42,
     # half of runs. Handing it over as evidence removes that dependence.
     pre = ws.search_text(behaviour, k=8).get("hits", [])
     past = ws.recall_incidents(behaviour, k=5).get("admissible_matches", [])
+    # A SECOND memory query, keyed on the symbols rather than the restated
+    # behaviour. recall_incidents runs 0.23 times per run when left to the
+    # model, and the memory ranking holds a gold file for 12.6% of the
+    # instances the agent misses entirely, so one phrasing of one query is
+    # leaving the system's own signal on the table. Same reasoning as the
+    # v3 prewalk: do it, rather than ask for it.
+    if syms:
+        seen_inc = {m["incident"] for m in past}
+        for m in ws.recall_incidents(" ".join(syms[:6]),
+                                     k=5).get("admissible_matches", []):
+            if m["incident"] not in seen_inc:
+                seen_inc.add(m["incident"])
+                past.append(m)
     # v3: the backward hop, run for the agent rather than offered to it.
     # v2 called callers_of once in 168 runs, so "walk backwards from the
     # frame" was advice the model declined to take. Same fix as the two
@@ -405,6 +444,9 @@ def run_instance(ws: T.Workspace, seed: int = 42,
                            for c in cs)
                for sym, cs in back)
            if back else "")
+        + (("\n\n=== REPOSITORY STRUCTURE (the fault may be in an area the "
+            "report never names) ===\n" + _repo_tree_for(ws))
+           if repo_tree else "")
         + "\n\nInvestigate, then submit a ranked list of up to 10 files "
           "that may contain the ROOT CAUSE. A file that a similar past "
           "incident was fixed in is strong evidence, especially when the "

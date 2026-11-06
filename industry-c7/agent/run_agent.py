@@ -35,6 +35,7 @@ import random
 import subprocess
 import sys
 import threading
+from itertools import zip_longest
 import time
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
@@ -49,6 +50,7 @@ from localize import (BENCH, OUT, PROJECTS, evaluate,  # noqa: E402
 
 P = ("kafka", "mariadb", "mongodb", "qt")
 AGENT_OUT = Path(__file__).resolve().parents[1] / "data/agent"
+ROOT_LLM = Path(__file__).resolve().parents[1] / "data/llm"
 SEED_SAMPLE, SAMPLE_N = 42, 200
 
 _lock = threading.Lock()
@@ -89,6 +91,42 @@ def _sample_keys(project, rng):
     idx = sorted(rng.sample(range(len(ev)), min(SAMPLE_N, len(ev))))
     return {ev[i]["issue_key"] for i in idx}
 
+
+
+def build_seeds(row: dict, rid: str, source: str, tree_rank: dict) -> list:
+    """The candidate files the agent starts from.
+
+    `cond_ours` is the retrieval layer alone and is what every reported
+    number so far used. `fused` interleaves three signals that fail on
+    DIFFERENT instances:
+
+      retrieval (cond_ours)   lexical + memory over file content
+      file-tree LLM           reasons about where code belongs, and finds
+                              a gold file in 37% of the instances the
+                              agent misses entirely
+      memory ranking          past incidents, 12.6% of those same misses
+
+    Measured seed recall over 4,409: 0.801 -> 0.918, and on hard
+    instances 0.638 -> 0.845. Taking cond_ours 30 deep instead of 20
+    changes nothing (0.801 -> 0.801), which is why this is a diversity
+    fix and not a depth one.
+
+    Interleaved rather than concatenated: the agent reads the list in
+    order and its attention falls off, so a signal appended at position
+    21 would be seen far less than one at position 3.
+    """
+    base = list(row["rankings"]["cond_ours"][:20])
+    if source != "fused":
+        return base
+    tree = [f for f in (tree_rank.get(rid) or [])][:10]
+    mem = list((row["rankings"].get("memory_bm25") or [])[:10])
+    out, seen = [], set()
+    for group in zip_longest(base, tree, mem):
+        for f in group:
+            if f and f not in seen:
+                seen.add(f)
+                out.append(f)
+    return out[:30]
 
 def build_population(projects, limit=0, full=False):
     """The evaluation split, drawn from the scored set.
@@ -142,6 +180,22 @@ def main() -> int:
                          "released (both are Python-AST only). They get the "
                          "same model, snapshot, report and turn budget, and "
                          "no incident memory. See agent/BASELINES.md.")
+    ap.add_argument("--repo-tree", action="store_true",
+                    help="Put the repository structure in phase 0. The "
+                         "agent calls list_dir 0.07 times per run, so it "
+                         "never sees the codebase as a shape; a plain LLM "
+                         "given only the file tree finds a gold file in "
+                         "37%% of the instances the agent misses entirely.")
+    ap.add_argument("--seed-source", default="cond_ours",
+                    choices=("cond_ours", "fused"),
+                    help="What the agent's starting candidates are built "
+                         "from. 'cond_ours' is the retrieval layer alone, "
+                         "the original behaviour. 'fused' adds the "
+                         "file-tree LLM pass and the memory ranking, which "
+                         "lifts seed recall 0.801 -> 0.918 (hard 0.638 -> "
+                         "0.845) because they fail on different instances; "
+                         "taking cond_ours 30 deep instead gains nothing, "
+                         "so the gap is signal diversity, not depth.")
     ap.add_argument("--subset", default="",
                     help="JSON file with an 'ids' list of project:issue_key, "
                          "from scripts/baseline_sample.py. Restricts the run "
@@ -217,6 +271,23 @@ def main() -> int:
           f"seed={args.seed} shuffle_seeds={args.shuffle_seeds}", flush=True)
 
     support = {p: load_support(p, PROJECTS[p]["key_prefix"]) for p in projects}
+    # The file-tree LLM pass, keyed by instance. It scores 0.558 Acc@1 on
+    # its own against the agent's 0.687, but it finds a gold file in 37% of
+    # the instances the agent misses ENTIRELY, because it reasons over the
+    # repository structure while the agent searches lexically. Loaded only
+    # for --seed-source=fused so the default run is byte-identical.
+    tree_rank: dict = {}
+    if args.seed_source == "fused":
+        f = ROOT_LLM / "scored-a2.jsonl"
+        if not f.exists():
+            print(f"--seed-source=fused needs {f}", file=sys.stderr)
+            return 1
+        for line in f.open(encoding="utf-8"):
+            if not line.strip():
+                continue
+            r = json.loads(line)
+            tree_rank[f"{r['project']}:{r['issue_key']}"] = r.get("ranking") or []
+        print(f"seed source: fused (file-tree LLM for {len(tree_rank)} instances)")
     fcaches = {p: {} for p in projects}
     commit = git_commit()
     fh = out_path.open("a", encoding="utf-8")
@@ -232,7 +303,7 @@ def main() -> int:
         mem, dup, created, _preds = support[proj]
         started = time.time()
         try:
-            seeds = list(row["rankings"]["cond_ours"][:20])
+            seeds = build_seeds(row, rid, args.seed_source, tree_rank)
             if args.shuffle_seeds:
                 random.Random(hash(rid) & 0xffff).shuffle(seeds)
             ws = T.Workspace(
@@ -240,7 +311,8 @@ def main() -> int:
                 parse_iso_epoch(b.get("created")) or created.get(b["issue_key"])
                 or b["fix_time"], b["issue_key"], set(b["fix_shas"]),
                 fcaches[proj], seeds)
-            res = (A.run_instance(ws, seed=args.seed, version=args.version)
+            res = (A.run_instance(ws, seed=args.seed, version=args.version,
+                                  repo_tree=args.repo_tree)
                    if args.arm == "ours"
                    else ARMS[args.arm](ws, seed=args.seed))
             err = None
@@ -303,6 +375,7 @@ def main() -> int:
                 "causal_chain": res.get("causal_chain", []),
                 "prewalk_symbols": res.get("prewalk_symbols", []),
                 "seed": args.seed, "shuffled_seeds": args.shuffle_seeds,
+                "seed_source": args.seed_source, "repo_tree": args.repo_tree,
                 "git_commit": commit, "model": A.MODEL, "error": None}
             (AGENT_OUT / "transcripts" /
              f"{args.tag}-{rid.replace(':', '_')}.json").write_text(

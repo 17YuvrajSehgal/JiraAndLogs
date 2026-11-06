@@ -1557,6 +1557,40 @@ def main() -> int:
           and "not yet run" in (ROOT / "industry-c7/paper/sections/05-results.tex")
               .read_text(encoding="utf-8"))
 
+
+    # ---- the seed-diversity fix: measured, and the default untouched -------
+    SSC = json.loads((RES / "seed-source-check.json").read_text(encoding="utf-8"))
+    # Stored values, not the 3-decimal ones the script prints. Writing a
+    # check from screen output has now failed four times in this project.
+    check("SEED the current source covers .8009, .6383 hard",
+          SSC["sources"]["cond_ours"]["gold_in_seed"] == .8009
+          and SSC["sources"]["cond_ours"]["gold_in_seed_hard"] == .6383)
+    check("SEED the fused source covers .9161, .842 hard",
+          SSC["sources"]["fused"]["gold_in_seed"] == .9161
+          and SSC["sources"]["fused"]["gold_in_seed_hard"] == .842)
+    check("SEED the lift is +.1152 overall, +.2037 hard, +.1057 as shown",
+          SSC["delta"]["gold_in_seed"] == .1152
+          and SSC["delta"]["gold_in_seed_hard"] == .2037
+          and SSC["delta"]["gold_in_top12_shown"] == .1057)
+    check("SEED the agent reaches .9032 top-10 from the .8009 seed today",
+          SSC["current_agent_top10"] == .9032)
+    rsrc = (ROOT / "industry-c7/agent/run_agent.py").read_text(encoding="utf-8")
+    asrc = (ROOT / "industry-c7/agent/agent.py").read_text(encoding="utf-8")
+    # Everything reported so far ran with the old defaults. If a default
+    # changes, those numbers silently stop describing the shipped system.
+    check("SEED cond_ours is still the DEFAULT seed source",
+          'ap.add_argument("--seed-source", default="cond_ours"' in rsrc)
+    check("TREE the repo tree is OFF by default",
+          'ap.add_argument("--repo-tree", action="store_true"' in rsrc
+          and "repo_tree: bool = False" in asrc)
+    check("TREE the tree is bounded and cannot crash the run",
+          "_repo_tree_for" in asrc and "a hint is never worth a crash" in asrc)
+    check("MEM the second memory query is structural, not instructed",
+          "A SECOND memory query" in asrc
+          and 'ws.recall_incidents(" ".join(syms[:6])' in asrc)
+    check("CFG every row records the configuration it ran under",
+          '"seed_source": args.seed_source, "repo_tree": args.repo_tree' in rsrc)
+
     # ---- report ---------------------------------------------------------------
     failed = [(c, d) for c, ok, d in checks if not ok]
     for c, ok, d in checks:
