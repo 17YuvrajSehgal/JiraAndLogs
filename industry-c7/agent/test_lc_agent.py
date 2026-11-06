@@ -158,5 +158,77 @@ else:
                        "read_skeleton", "list_dir", "callers_of",
                        "data_flow_back", "recall_incidents"}, str(sorted(names)))
 
+    # ---- the three defects the first real pilot exposed -----------------
+    # 1. the tools called ws.<method> directly, so nothing was counted and
+    #    the repeat guard never fired. The run looped and cost 11 calls.
+    byname = {t.name: t for t in LA.build_tools(ws)}
+    before = len(ws.calls)
+    r1 = byname["search_text"].invoke({"query": "connection state remove"})
+    chk("a tool call is recorded against the workspace",
+        len(ws.calls) == before + 1, f"{before} -> {len(ws.calls)}")
+    r2 = byname["search_text"].invoke({"query": "connection state remove"})
+    chk("an identical repeat call is told so, instead of looping",
+        "note" in r2 and "already made" in r2["note"],
+        str(r2.get("note"))[:60])
+    chk("the repeated call returns the same result it cached",
+        r1.get("hits") == r2.get("hits"))
+
+    # 2. the budget only nudged, so the model never had to stop. At the
+    #    hard limit the tools must be gone, or there is nothing forcing
+    #    an answer and the graph dies at its recursion limit.
+    class Req:
+        def __init__(self, nai):
+            self.state = {"messages": [type("M", (), {"type": "ai"})()
+                                       for _ in range(nai)]}
+            self.system_prompt = "S"
+            self.messages = []
+            self.tools = list(byname.values())
+
+        def override(self, **kw):
+            for k, v in kw.items():
+                setattr(self, k, v)
+            return self
+
+    seen = {}
+
+    def grab(req):
+        seen["tools"] = list(getattr(req, "tools", []))
+        seen["prompt"] = req.system_prompt
+        seen["messages"] = list(getattr(req, "messages", []))
+        return "R"
+
+    LA.turn_budget.wrap_model_call(Req(LA.MAX_TURNS - 5), grab)
+    chk("below the budget the model keeps every tool",
+        len(seen["tools"]) == 8, f"{len(seen['tools'])} tools")
+    LA.turn_budget.wrap_model_call(Req(LA.MAX_TURNS), grab)
+    chk("at the hard limit every tool is withdrawn",
+        seen["tools"] == [], f"{len(seen['tools'])} tools left")
+    chk("and the model is told to answer now",
+        "Answer NOW" in seen["prompt"])
+
+    # 3. no trimming at all, so context grew 8,005 -> 31,816 chars over
+    #    eleven turns and would end in a SILENT server-side truncation.
+    from langchain_core.messages import AIMessage, ToolMessage
+    hist = []
+    for i in range(LA.KEEP_FULL + 3):
+        hist.append(AIMessage(content=f"turn {i}"))
+        hist.append(ToolMessage(content="X" * 5000, tool_call_id=f"c{i}",
+                                name="read_code"))
+    req = Req(2)
+    req.messages = hist
+    LA.trim_history.wrap_model_call(req, grab)
+    tools_msgs = [m for m in seen["messages"]
+                  if getattr(m, "type", "") == "tool"]
+    stubbed = [m for m in tools_msgs if "omitted" in m.content]
+    chk("older tool results are stubbed, newest kept verbatim",
+        len(stubbed) == 3 and len(tools_msgs) - len(stubbed) == LA.KEEP_FULL,
+        f"{len(stubbed)} stubbed, {len(tools_msgs) - len(stubbed)} full")
+    chk("the stub names the tool, so the capture can price it",
+        all("read_code" in m.content for m in stubbed))
+    chk("a stub keeps its tool_call_id, or the message pairing breaks",
+        all(m.tool_call_id for m in stubbed))
+    chk("the stub is the marker lc_trace counts as cut",
+        all(__import__("lc_trace")._stubbed(m.content) for m in stubbed))
+
 print(f"\n{ok}/{n} checks passed")
 raise SystemExit(0 if ok == n else 1)

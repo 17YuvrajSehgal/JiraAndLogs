@@ -138,9 +138,18 @@ class RunRecorder:
                           for tc in (getattr(out_msg, "tool_calls", None) or [])]
             usage = getattr(out_msg, "usage_metadata", None) or {}
 
+            # what the model was ALLOWED to do, not just what it did. The
+            # turn-budget middleware withdraws the tools at the hard stop,
+            # and without this line a reader cannot tell a model that chose
+            # not to call one from a model that had none to call.
+            offered = [getattr(t, "name", None) or getattr(t, "__name__", str(t))
+                       for t in (getattr(request, "tools", None) or [])]
             rec._emit("model_call", {
                 "latency_s": dt,
                 "n_messages_sent": len(msgs),
+                "tools_offered": offered,
+                "finish_reason": (getattr(out_msg, "response_metadata", {}) or {})
+                                  .get("finish_reason"),
                 "messages_sent": shown,
                 "context": {
                     "chars_shown_to_model": shown_chars,

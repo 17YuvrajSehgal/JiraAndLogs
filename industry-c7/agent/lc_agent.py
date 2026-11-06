@@ -68,12 +68,16 @@ from langchain.agents.middleware import (  # noqa: E402
     after_model, before_agent, wrap_model_call,
 )
 from langchain.tools import tool  # noqa: E402
+from langchain_core.messages import ToolMessage  # noqa: E402
 
 import tools as T  # noqa: E402
 from lc_store import IncidentStore  # noqa: E402
 
 MAX_TURNS = 14
 TOP_FOR_COMMIT = 3
+# tool results kept verbatim before the older ones are stubbed;
+# the same number agent.py uses, so the two see the same history
+KEEP_FULL = 6
 
 
 # ---------------------------------------------------------------------------
@@ -129,52 +133,62 @@ def build_tools(ws: T.Workspace) -> list:
     results is a difference in ORCHESTRATION and not in what the tools can
     see. data_flow_back is kept available but is not promoted: it rescued
     1.7% of hard failures, and a tool the model may choose is cheaper than
-    a step every run must pay for."""
+    a step every run must pay for.
+
+    Everything goes through T.dispatch, never ws.<method> directly. The
+    first version called the methods, which looked equivalent and was not:
+    dispatch is where ws.calls is appended (so cost is counted) and where
+    a repeated identical call comes back with "identical call already
+    made; try a different symbol, query, or file". Without it the first
+    pilot ran the same search twice and read one file three times inside
+    eleven turns, then died at the recursion limit with no answer.
+    """
 
     @tool
     def search_symbol(name: str) -> dict:
         """Find where a class, function or identifier is DEFINED and used.
         A stack frame names a symbol, not the file that caused the fault."""
-        return ws.search_symbol(name)
+        return T.dispatch(ws, "search_symbol", {"name": name})
 
     @tool
     def search_text(query: str, k: int = 12) -> dict:
         """BM25 over file CONTENT. Describe the BEHAVIOUR that went wrong
         rather than quoting the error message."""
-        return ws.search_text(query, k=k)
+        return T.dispatch(ws, "search_text", {"query": query, "k": k})
 
     @tool
     def read_code(path: str, around: str = "", line: int = 0, n: int = 50) -> dict:
         """Read real source lines, optionally centred on a symbol or line."""
-        return ws.read_code(path, around=around, line=line, n=n)
+        return T.dispatch(ws, "read_code", {"path": path, "around": around,
+                                          "line": line, "n": n})
 
     @tool
     def read_skeleton(path: str) -> dict:
         """List the functions and classes a file declares."""
-        return ws.read_skeleton(path)
+        return T.dispatch(ws, "read_skeleton", {"path": path})
 
     @tool
     def list_dir(path: str = "") -> dict:
         """List source files and subdirectories."""
-        return ws.list_dir(path)
+        return T.dispatch(ws, "list_dir", {"path": path})
 
     @tool
     def callers_of(symbol: str) -> dict:
         """Which functions call or reference a symbol. One hop back toward
         the code that created the bad state."""
-        return ws.callers_of(symbol)
+        return T.dispatch(ws, "callers_of", {"symbol": symbol})
 
     @tool
     def data_flow_back(symbol: str) -> dict:
         """Where a symbol's value is SET, as opposed to where it is read."""
-        return ws.data_flow_back(symbol)
+        return T.dispatch(ws, "data_flow_back", {"symbol": symbol})
 
     @tool
     def recall_incidents(query: str, k: int = 5) -> dict:
         """Past incidents in this project that read like this one, and the
         files their fixes touched. Only incidents resolved before this
         report existed."""
-        return ws.recall_incidents(query, k=k)
+        return T.dispatch(ws, "recall_incidents", {"query": query, "k": k})
 
     return [search_symbol, search_text, read_code, read_skeleton,
             list_dir, callers_of, data_flow_back, recall_incidents]
@@ -342,17 +356,61 @@ def commit_check(state: TriageState, runtime) -> dict[str, Any] | None:
 
 @wrap_model_call
 def turn_budget(request, handler):
-    """Budget pressure, kept because it was needed: without it the first
-    smoke test spent 21-26 tool calls and submitted nothing on all three
-    instances. Applied as a prompt nudge rather than a hard stop so the
-    model can still finish cleanly."""
+    """Budget pressure, and then a hard stop.
+
+    The nudge alone was not enough. On the first real pilot the model
+    searched for eleven turns, never answered, and the graph died at its
+    recursion limit -- the run cost 11 calls and 77,558 prompt tokens and
+    produced nothing, so the row scored entirely on the lexical fallback.
+    agent.py never had this failure because its last turn forces
+    submit_ranking with tool_choice.
+
+    The structural equivalent here is to take the tools away. With none
+    offered the model cannot search again, and the only thing left to
+    produce is the structured answer.
+    """
     n = len([m for m in request.state.get("messages", [])
              if getattr(m, "type", "") == "ai"])
+    if n >= MAX_TURNS:
+        return handler(request.override(tools=[], system_prompt=(
+            (request.system_prompt or "")
+            + "\n\nYour turn budget is spent. Answer NOW from what you "
+              "already read. No further investigation is possible.")))
     if n >= MAX_TURNS - 3:
         request = request.override(system_prompt=(
             (request.system_prompt or "") +
             "\n\nYou are near your turn budget. Commit to an answer now."))
     return handler(request)
+
+
+@wrap_model_call
+def trim_history(request, handler):
+    """Keep the newest tool results verbatim, stub the older ones.
+
+    agent.py has always done this; the LangGraph rebuild did not, and the
+    first pilot showed the context climbing 8,005 -> 31,816 chars over
+    eleven turns with nothing reclaimed. Unbounded growth ends at the
+    server's overflow policy, which on a local server defaults to
+    truncating the middle SILENTLY -- the run would then be scored on a
+    prompt nobody recorded.
+
+    Stubbing here rather than there means the loss is deliberate, bounded
+    and, because lc_trace reads the stub marker, counted.
+    """
+    msgs = list(request.messages or [])
+    idx = [i for i, m in enumerate(msgs) if getattr(m, "type", "") == "tool"]
+    if len(idx) <= KEEP_FULL:
+        return handler(request)
+    out = list(msgs)
+    for i in idx[:-KEEP_FULL]:
+        m = msgs[i]
+        name = getattr(m, "name", None) or "tool"
+        out[i] = ToolMessage(
+            content=f"[result of {name} omitted to save context; "
+                    f"it was already used]",
+            tool_call_id=getattr(m, "tool_call_id", "") or "",
+            name=name)
+    return handler(request.override(messages=out))
 
 
 # ---------------------------------------------------------------------------
@@ -397,7 +455,7 @@ def build_agent(model, ws: T.Workspace, store: IncidentStore, ctx: dict,
         # the recorder goes LAST so it is innermost: it sees the request
         # after turn_budget has trimmed it, i.e. what the model actually got
         middleware=[make_preamble(ws, store, ctx, seed_candidates, repo_tree),
-                    turn_budget, commit_check,
+                    turn_budget, trim_history, commit_check,
                     *(recorder.middleware() if recorder is not None else [])],
         checkpointer=checkpointer,
     )
@@ -435,8 +493,13 @@ def run_lc(ws: T.Workspace, seed: int = 42, *, model=None, repo_tree: bool = Fal
         if trace_dir else None
     graph = build_agent(model, ws, store, ctx, ws.seed_candidates, tree,
                         checkpointer=InMemorySaver(), recorder=rec)
+    # Two super-steps per turn (model, then tools), plus the preamble, the
+    # commit check and the structured-response step. At +6 the graph died
+    # at 36 steps having made only 11 model calls, so turn_budget's hard
+    # stop at MAX_TURNS was never reached -- the limit cut the run off
+    # before the thing designed to end it could fire.
     cfg = {"configurable": {"thread_id": rid},
-           "recursion_limit": MAX_TURNS * 2 + 6}
+           "recursion_limit": MAX_TURNS * 2 + 20}
 
     stop, answer = "submitted", None
     try:

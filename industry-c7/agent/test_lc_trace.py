@@ -118,6 +118,12 @@ try:
         all(m.get("prompt_full") for m in mcalls))
     chk("the response and its tool calls are kept",
         mcalls[0]["response_tool_calls"][0]["name"] == "big_search")
+    chk("the tools the model was ALLOWED to call are recorded",
+        all("tools_offered" in m for m in mcalls)
+        and set(mcalls[0]["tools_offered"]) == {"big_search", "small_read"},
+        str(mcalls[0]["tools_offered"]))
+    chk("the provider finish_reason is kept, so a cap is not read as a choice",
+        all("finish_reason" in m for m in mcalls))
     chk("context accounting is present on every model call",
         all("chars_shown_to_model" in m["context"] for m in mcalls))
     chk("the huge tool result reaches the model's context and is counted",
