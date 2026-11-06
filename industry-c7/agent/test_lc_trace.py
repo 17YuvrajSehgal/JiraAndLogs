@@ -114,6 +114,14 @@ try:
         all("messages_sent" in m for m in mcalls)
         and len(mcalls[-1]["messages_sent"]) > len(mcalls[0]["messages_sent"]),
         f"{len(mcalls[0]['messages_sent'])} -> {len(mcalls[-1]['messages_sent'])}")
+    chk("C7_TRACE_RAW keeps the exact messages, so a call can be replayed",
+        all(m.get("request_messages") for m in mcalls)
+        and mcalls[-1]["request_messages"][0]["role"] in ("human", "system")
+        and any(mm["tool_call_id"] for mm in mcalls[-1]["request_messages"]),
+        f"{len(mcalls[-1].get('request_messages') or [])} messages kept")
+    chk("the system prompt is captured, not just the messages",
+        all("system_prompt" in m for m in mcalls),
+        "absent from the trace, a replay is not the real request")
     chk("the full prompt text is kept for every call",
         all(m.get("prompt_full") for m in mcalls))
     chk("the response and its tool calls are kept",

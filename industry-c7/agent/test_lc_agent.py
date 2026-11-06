@@ -99,6 +99,16 @@ good = LA.Localization(
                   LA.ChainStep(step="b", cited_from="recall_incidents")])
 chk("a complete submission validates", len(good.files) == 1)
 
+# No OPTIONAL field may re-enter the submission schema. With three of
+# them (confidence, file, rationale) the model never produced a tool
+# call on the captured failing request: it generated to the cap, at
+# 4,000 tokens and again at 16,000. Without them it answered in 899.
+# Descriptions and numeric bounds made no difference; only this did.
+_opt = {m.__name__: [n for n, f in m.model_fields.items() if not f.is_required()]
+        for m in (LA.Localization, LA.RankedFile, LA.ChainStep)}
+chk("the submission schema has no optional fields",
+    all(not v for v in _opt.values()), str(_opt))
+
 # ---- the graph itself, against a real snapshot and a stubbed model -------
 pop = RA.build_population(["kafka"], limit=1, full=True)
 if not pop:
@@ -227,28 +237,58 @@ else:
         "Answer NOW" not in (seen["prompt"] or ""))
 
     # 3. no trimming at all, so context grew 8,005 -> 31,816 chars over
-    #    eleven turns and would end in a SILENT server-side truncation.
+    #    eleven turns. Stubbing the old results (what agent.py does) was
+    #    measured to be WORSE than not trimming: on the captured final
+    #    request the model never answered, finish_reason=length at 4,000
+    #    tokens and still at 16,000 after 400s, while the same request
+    #    with the stub messages removed answered in 44s.
     from langchain_core.messages import AIMessage, ToolMessage
     hist = []
     for i in range(LA.KEEP_FULL + 3):
-        hist.append(AIMessage(content=f"turn {i}"))
+        hist.append(AIMessage(content="", tool_calls=[
+            {"name": "read_code", "args": {"path": f"F{i}.java"},
+             "id": f"c{i}", "type": "tool_call"}]))
         hist.append(ToolMessage(content="X" * 5000, tool_call_id=f"c{i}",
                                 name="read_code"))
     req = Req(2)
     req.messages = hist
     LA.trim_history.wrap_model_call(req, grab)
-    tools_msgs = [m for m in seen["messages"]
-                  if getattr(m, "type", "") == "tool"]
-    stubbed = [m for m in tools_msgs if "omitted" in m.content]
-    chk("older tool results are stubbed, newest kept verbatim",
-        len(stubbed) == 3 and len(tools_msgs) - len(stubbed) == LA.KEEP_FULL,
-        f"{len(stubbed)} stubbed, {len(tools_msgs) - len(stubbed)} full")
-    chk("the stub names the tool, so the capture can price it",
-        all("read_code" in m.content for m in stubbed))
-    chk("a stub keeps its tool_call_id, or the message pairing breaks",
-        all(m.tool_call_id for m in stubbed))
-    chk("the stub is the marker lc_trace counts as cut",
-        all(__import__("lc_trace")._stubbed(m.content) for m in stubbed))
+    out = seen["messages"]
+    tool_msgs = [m for m in out if getattr(m, "type", "") == "tool"]
+    chk("only the newest results survive; the rest are gone, not stubbed",
+        len(tool_msgs) == LA.KEEP_FULL
+        and not any("omitted" in m.content for m in tool_msgs),
+        f"{len(tool_msgs)} tool messages kept")
+    kept = {m.tool_call_id for m in tool_msgs}
+    chk("the newest ones are the ones kept",
+        kept == {f"c{i}" for i in range(3, LA.KEEP_FULL + 3)}, str(sorted(kept)))
+
+    # a tool_call with no reply is an invalid conversation; the assistant
+    # turn has to go with its result
+    ai = [m for m in out if getattr(m, "type", "") == "ai"]
+    called = {tc["id"] for m in ai for tc in (m.tool_calls or [])}
+    chk("no assistant turn is left calling a tool that has no reply",
+        called == kept, f"calls {sorted(called)} vs replies {sorted(kept)}")
+
+    # dropped bytes still have to be COUNTED -- that is the whole point
+    import tempfile
+
+    import lc_trace
+    rec = lc_trace.RunRecorder(Path(tempfile.mkdtemp()), "t", {})
+    for i in range(LA.KEEP_FULL + 3):
+        rec.tool_outputs[f"c{i}"] = "X" * 5000
+
+    class R2:
+        messages = out
+
+    rec.model_middleware().wrap_model_call(
+        R2(), lambda _r: type("X", (), {"result": AIMessage(content="ok")})())
+    ev = [e for e in lc_trace.replay(rec.path) if e["kind"] == "model_call"][0]
+    chk("the dropped results are priced, not silently lost",
+        ev["context"]["n_dropped_results"] == 3
+        and ev["context"]["chars_cut"] == 15000,
+        f"{ev['context']['n_dropped_results']} dropped, "
+        f"{ev['context']['chars_cut']} chars cut")
 
 print(f"\n{ok}/{n} checks passed")
 raise SystemExit(0 if ok == n else 1)

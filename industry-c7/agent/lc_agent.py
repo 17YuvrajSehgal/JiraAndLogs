@@ -103,9 +103,30 @@ class TriageState(AgentState):
 # ---------------------------------------------------------------------------
 # the answer, enforced by the framework rather than by a hand-written parser
 # ---------------------------------------------------------------------------
+# No OPTIONAL fields anywhere in the submission schema. This is not a
+# style preference, it is the difference between an answer and no answer.
+#
+# ToolStrategy turns these models into a tool schema, and the server
+# constrains decoding to that schema. With `confidence` on RankedFile,
+# `file` here and `rationale` on Localization -- all optional, all with
+# defaults -- the model never produced a tool call at all: it generated
+# to the token cap and stopped, at 4,000 tokens and again at 16,000.
+# Dropping the three turned that into a valid call in 899 tokens.
+#
+# Measured on the captured failing request, same messages and same
+# system prompt, one variable changed at a time:
+#
+#   generated schema as-is            NOTHING, finish=length,  4,000 tok
+#   same, cap raised to 16,000        NOTHING, finish=length, 16,000 tok
+#   same, all descriptions removed    NOTHING, finish=length,  4,000 tok
+#   same, numeric bounds removed      NOTHING, finish=length,  4,000 tok
+#   same, OPTIONAL FIELDS removed     CALLED,  finish=tool_calls, 899 tok
+#
+# It is cumulative: either property on its own is fine, both plus their
+# optional members is not. None of the three was ever read by run_lc,
+# which is why removing them costs nothing.
 class ChainStep(BaseModel):
     step: str = Field(description="One step from symptom toward the cause.")
-    file: str = Field("", description="The file this step implicates, if any.")
     cited_from: str = Field(
         description="Which tool result supports this step: search_symbol, "
                     "search_text, read_code, recall_incidents, callers_of.")
@@ -116,7 +137,6 @@ class RankedFile(BaseModel):
     evidence: str = Field(
         description="Why THIS file. Quote what you read: a line number, a "
                     "symbol, a past incident. Not a restatement of the title.")
-    confidence: float = Field(0.5, ge=0.0, le=1.0)
 
 
 class Localization(BaseModel):
@@ -129,7 +149,6 @@ class Localization(BaseModel):
         description="2-6 ordered steps from the reported symptom to the "
                     "named cause, each citing a tool result.",
         min_length=2, max_length=6)
-    rationale: str = Field("", description="One sentence on the ordering.")
 
 
 # ---------------------------------------------------------------------------
@@ -404,31 +423,45 @@ def turn_budget(request, handler):
 
 @wrap_model_call
 def trim_history(request, handler):
-    """Keep the newest tool results verbatim, stub the older ones.
+    """Drop the older tool exchanges. Do NOT stub them.
 
-    agent.py has always done this; the LangGraph rebuild did not, and the
-    first pilot showed the context climbing 8,005 -> 31,816 chars over
-    eleven turns with nothing reclaimed. Unbounded growth ends at the
-    server's overflow policy, which on a local server defaults to
-    truncating the middle SILENTLY -- the run would then be scored on a
-    prompt nobody recorded.
+    agent.py replaces an old tool result with "[result of X omitted to
+    save context; it was already used]" and keeps the message. Dropping
+    the exchange outright is preferred here for two reasons that are
+    about coherence, not about the stall: a stub is an assistant turn
+    that called a tool paired with a reply saying the answer is gone,
+    and the shorter history reads the same to a human.
 
-    Stubbing here rather than there means the loss is deliberate, bounded
-    and, because lc_trace reads the stub marker, counted.
+    Honest note on provenance: this was first written believing the
+    stubs caused the agent to stop answering. They did not -- that
+    comparison was run against a different instance than the one that
+    failed, and the real cause was the submission schema (see
+    ChainStep). The change is kept because dropping is cleaner, not
+    because it fixed anything.
+
+    A dropped message still has to be COUNTED -- that is the whole point
+    of the capture -- so lc_trace prices the gap against the tool
+    outputs it recorded, rather than looking for stub markers.
     """
     msgs = list(request.messages or [])
     idx = [i for i, m in enumerate(msgs) if getattr(m, "type", "") == "tool"]
     if len(idx) <= KEEP_FULL:
         return handler(request)
-    out = list(msgs)
-    for i in idx[:-KEEP_FULL]:
-        m = msgs[i]
-        name = getattr(m, "name", None) or "tool"
-        out[i] = ToolMessage(
-            content=f"[result of {name} omitted to save context; "
-                    f"it was already used]",
-            tool_call_id=getattr(m, "tool_call_id", "") or "",
-            name=name)
+    stale = {getattr(msgs[i], "tool_call_id", None) for i in idx[:-KEEP_FULL]}
+    stale.discard(None)
+    out = []
+    for m in msgs:
+        kind = getattr(m, "type", "")
+        if kind == "tool" and getattr(m, "tool_call_id", None) in stale:
+            continue
+        if kind == "ai":
+            tcs = getattr(m, "tool_calls", None) or []
+            # an assistant turn goes only when EVERY call it made is
+            # going too; a half-removed turn leaves a tool_call with no
+            # reply, which is an invalid conversation
+            if tcs and all(tc.get("id") in stale for tc in tcs):
+                continue
+        out.append(m)
     return handler(request.override(messages=out))
 
 

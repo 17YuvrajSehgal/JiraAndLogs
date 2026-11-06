@@ -37,11 +37,17 @@ Everything lands in two places that answer different questions:
 from __future__ import annotations
 
 import json
+import os
 import time
 from pathlib import Path
 from typing import Any, Callable
 
 from langchain.agents.middleware import wrap_model_call, wrap_tool_call
+
+# C7_TRACE_RAW=1 keeps the exact message list of every model call, so a
+# failing request can be replayed byte for byte instead of reconstructed
+# from a flattened preview.
+RAW = os.environ.get("C7_TRACE_RAW") == "1"
 
 
 def _text(content: Any) -> str:
@@ -99,7 +105,8 @@ class RunRecorder:
         @wrap_model_call
         def capture_model(request, handler):
             msgs = list(getattr(request, "messages", []) or [])
-            shown, cut = [], []
+            shown = []
+            present: set = set()
             avail_chars = shown_chars = 0
             for i, m in enumerate(msgs):
                 body = _text(getattr(m, "content", m))
@@ -108,18 +115,29 @@ class RunRecorder:
                 shown_chars += len(body)
                 entry = {"i": i, "role": role, "name": name,
                          "chars": len(body), "tokens_approx": _approx_tokens(body)}
-                if role == "tool" and _stubbed(body):
-                    # the model is seeing a placeholder; the real output is
-                    # in tool_outputs under this call id
+                if role == "tool":
                     cid = getattr(m, "tool_call_id", None)
-                    full = rec.tool_outputs.get(cid, "")
-                    entry.update({"stubbed": True, "full_chars": len(full),
-                                  "cut_chars": max(0, len(full) - len(body)),
-                                  "tool_call_id": cid})
-                    avail_chars += len(full)
+                    entry["tool_call_id"] = cid
+                    present.add(cid)
+                    if _stubbed(body):
+                        # a placeholder: the real output is in tool_outputs
+                        full = rec.tool_outputs.get(cid, "")
+                        entry.update({"stubbed": True, "full_chars": len(full),
+                                      "cut_chars": max(0, len(full) - len(body))})
+                        avail_chars += len(full)
+                    else:
+                        avail_chars += len(body)
                 else:
                     avail_chars += len(body)
                 shown.append(entry)
+
+            # A trimmed history DROPS stale exchanges rather than stubbing
+            # them, so no marker is left in the message list to find. The
+            # only honest way to price the gap is against the outputs this
+            # recorder watched the tools produce.
+            dropped = [(cid, out) for cid, out in rec.tool_outputs.items()
+                       if cid not in present]
+            avail_chars += sum(len(o) for _c, o in dropped)
 
             prompt_preview = "\n\n".join(
                 f"[{e['role']}] {_text(getattr(m, 'content', m))[:4000]}"
@@ -158,10 +176,34 @@ class RunRecorder:
                     "pct_cut": (round(100 * (avail_chars - shown_chars)
                                       / avail_chars, 1) if avail_chars else 0.0),
                     "n_stubbed_messages": sum(1 for e in shown if e.get("stubbed")),
+                    "n_dropped_results": len(dropped),
+                    "dropped_tool_call_ids": [c for c, _o in dropped],
                 },
                 "usage": {"input_tokens": usage.get("input_tokens"),
                           "output_tokens": usage.get("output_tokens"),
                           "total_tokens": usage.get("total_tokens")},
+                # the exact messages, replayable. prompt_full flattens the
+                # roles away and clips each message at 4,000 chars, which
+                # is enough to read and not enough to re-send -- every
+                # diagnosis so far has needed a separate capture script
+                # for exactly this. Off by default: ~20KB per call, which
+                # is fine for a pilot and 300MB for a 1,000-instance run.
+                "request_messages": ([
+                    {"role": getattr(m, "type", None) or getattr(m, "role", "?"),
+                     "content": _text(getattr(m, "content", m)),
+                     "tool_calls": [{"name": tc.get("name"),
+                                     "args": tc.get("args"),
+                                     "id": tc.get("id")}
+                                    for tc in (getattr(m, "tool_calls", None) or [])],
+                     "tool_call_id": getattr(m, "tool_call_id", None)}
+                    for m in msgs] if RAW else None),
+                # LangChain carries the system prompt OUTSIDE
+                # request.messages, so a trace holding only the messages
+                # is not the request. Replaying one without this answered
+                # cleanly while the real call stalled, and the difference
+                # was invisible in the trace. Same class of defect as the
+                # transcript clipping this module was written to replace.
+                "system_prompt": getattr(request, "system_prompt", None),
                 "response_text": content[:8000],
                 "response_tool_calls": tool_calls,
                 "prompt_full": prompt_preview,
