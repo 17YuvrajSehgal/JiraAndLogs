@@ -413,6 +413,11 @@ def main() -> int:
                 "cost": {"llm_calls": res["usage"]["calls"],
                          "prompt_tokens": res["usage"]["in"],
                          "completion_tokens": res["usage"]["out"],
+                         # thinking is charged to completion_tokens, so
+                         # without this the cost row cannot say how much
+                         # of the bill was deliberation
+                         "reasoning_tokens": res["usage"].get("reasoning_tokens", 0),
+                         "reasoning_chars": res["usage"].get("reasoning_chars", 0),
                          "wall_s": wall},
                 "resolver": res.get("resolver", {}),
                 "arm": res.get("arm", "ours"),

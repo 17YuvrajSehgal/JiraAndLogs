@@ -125,6 +125,28 @@ try:
         and mcalls[-1]["request_messages"][0]["role"] in ("human", "system")
         and any(mm["tool_call_id"] for mm in mcalls[-1]["request_messages"]),
         f"{len(mcalls[-1].get('request_messages') or [])} messages kept")
+    chk("the reasoning block is captured on every model call",
+        all("reasoning" in m for m in mcalls),
+        "with thinking on, the visible content is empty on a tool turn, "
+        "so this is the only record of WHY")
+    import lc_trace as _lt
+    class _Rc:
+        reasoning_content = "R" * 4000
+        additional_kwargs = {}
+        content = ""
+    class _Ak:
+        additional_kwargs = {"reasoning": "K" * 10}
+        content = ""
+    class _Bl:
+        additional_kwargs = {}
+        content = [{"type": "thinking", "thinking": "B" * 7}]
+    chk("reasoning is found wherever the provider puts it",
+        len(_lt._reasoning(_Rc())) == 4000
+        and _lt._reasoning(_Ak()) == "K" * 10
+        and _lt._reasoning(_Bl()) == "B" * 7,
+        "reasoning_content / additional_kwargs / content blocks")
+    chk("reasoning is kept in FULL, not clipped",
+        len(_lt._reasoning(_Rc())) == 4000)
     chk("the system prompt is captured, not just the messages",
         all("system_prompt" in m for m in mcalls),
         "absent from the trace, a replay is not the real request")

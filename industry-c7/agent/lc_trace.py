@@ -72,6 +72,31 @@ def _approx_tokens(s: str) -> int:
     return max(1, len(s) // 4)
 
 
+def _reasoning(msg) -> str:
+    """Providers disagree on where the thinking block lands: vLLM puts it
+    in reasoning_content, others in reasoning, LangChain may fold it into
+    additional_kwargs or a content block. Check all of them rather than
+    silently recording nothing."""
+    for attr in ("reasoning_content", "reasoning"):
+        v = getattr(msg, attr, None)
+        if isinstance(v, str) and v:
+            return v
+    extra = getattr(msg, "additional_kwargs", None) or {}
+    for k in ("reasoning_content", "reasoning"):
+        v = extra.get(k)
+        if isinstance(v, str) and v:
+            return v
+    blocks = getattr(msg, "content", None)
+    if isinstance(blocks, list):
+        out = [str(b.get("thinking") or b.get("reasoning") or "")
+               for b in blocks
+               if isinstance(b, dict)
+               and b.get("type") in ("thinking", "reasoning")]
+        if any(out):
+            return "".join(out)
+    return ""
+
+
 def _stubbed(s: str) -> bool:
     return s.startswith("[result of ") and "omitted" in s[:80]
 
@@ -204,6 +229,12 @@ class RunRecorder:
                 # was invisible in the trace. Same class of defect as the
                 # transcript clipping this module was written to replace.
                 "system_prompt": getattr(request, "system_prompt", None),
+                # the reasoning block in FULL. On a tool-calling turn the
+                # visible content is usually empty, so this is the only
+                # record of why the model chose that move. The chat
+                # template drops prior thinking, so it survives nowhere
+                # else.
+                "reasoning": _reasoning(out_msg),
                 "response_text": content[:8000],
                 "response_tool_calls": tool_calls,
                 "prompt_full": prompt_preview,

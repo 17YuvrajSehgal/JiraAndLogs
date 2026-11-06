@@ -527,12 +527,29 @@ def run_instance(ws: T.Workspace, seed: int = 42,
         usage["in"] += u.get("prompt_tokens", 0) or 0
         usage["out"] += u.get("completion_tokens", 0) or 0
         msg = resp["choices"][0].get("message", {}) or {}
-        events.append({"type": "assistant", "turn": turn,
-                       "content": (msg.get("content") or "")[:1500],
-                       "tool_calls": [
-                           {"name": (tc.get("function") or {}).get("name"),
-                            "args": _args_of(tc)}
-                           for tc in _tool_calls_of(msg)]})
+        # The reasoning block, kept in FULL and unclipped. With thinking on
+        # it is where the decision actually gets made: the visible content
+        # is usually empty on a tool-calling turn, so a transcript without
+        # this records the move and not the reason for it. vLLM returns it
+        # as reasoning_content (--reasoning-parser qwen3); other servers
+        # use "reasoning", so both are read. It is NOT fed back to the
+        # model -- the chat template drops prior thinking -- so this is
+        # the only place it survives at all.
+        think = msg.get("reasoning_content") or msg.get("reasoning") or ""
+        usage["reasoning_tokens"] = usage.get("reasoning_tokens", 0) + (
+            (u.get("completion_tokens_details") or {}).get("reasoning_tokens")
+            or 0)
+        usage["reasoning_chars"] = usage.get("reasoning_chars", 0) + len(think)
+        ev = {"type": "assistant", "turn": turn,
+              "content": (msg.get("content") or "")[:1500],
+              "tool_calls": [
+                  {"name": (tc.get("function") or {}).get("name"),
+                   "args": _args_of(tc)}
+                  for tc in _tool_calls_of(msg)]}
+        if think:
+            ev["reasoning"] = think
+            ev["reasoning_chars"] = len(think)
+        events.append(ev)
         tcs = _tool_calls_of(msg)
         if not tcs:
             # no tool call: nudge once, then stop
