@@ -45,6 +45,7 @@ import sys
 import time
 from collections import Counter, defaultdict
 from datetime import datetime
+import pathlib
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -60,10 +61,13 @@ PRED = ROOT / "paper-results-v2/multiseed-hybrid/wol-v3/seed42/hybrid-rrf-predic
 BENCH = ROOT / "industry-c7/data/benchmark"
 OUT = ROOT / "industry-c7/data/results"
 
-FULL_REPOS = {"kafka": ROOT / "data/c7-repos/kafka-full.git",
-              "mariadb": ROOT / "data/c7-repos/mariadb-full.git",
-              "mongodb": ROOT / "data/c7-repos/mongo-full.git",
-              "qt": ROOT / "data/c7-repos/qtbase-full.git"}
+# Derived from the miner's own PROJECTS rather than retyped. This was a
+# hand-written map of four repos while the benchmark had four projects;
+# at 27 it silently capped --project to the original four, so every new
+# project was unreachable by the retrieval pipeline. Verified identical
+# on the four they shared before the switch.
+FULL_REPOS = {p: pathlib.Path(cfg["git_dir"])
+              for p, cfg in PROJECTS.items()}
 
 KS = (1, 5, 10)
 RRF_K = 60

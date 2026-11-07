@@ -94,6 +94,11 @@ def main() -> int:
     tot = totbad = 0
     corrupt = []
     for f in sorted(glob.glob(str(base / "*.jsonl"))):
+        # the memory pools live beside the instances and have no
+        # snapshot_sha; globbing *.jsonl swept them in and the checker
+        # died on the first one instead of checking the 27 benchmarks
+        if f.endswith("-memory.jsonl"):
+            continue
         name, n, nbad, bad = check_project(Path(f))
         tot += n
         totbad += nbad

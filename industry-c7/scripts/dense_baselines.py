@@ -25,6 +25,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import pickle
 import sys
 import time
@@ -60,11 +61,23 @@ def main() -> int:
     args = ap.parse_args()
     cfg, git_dir = PROJECTS[args.project], FULL_REPOS[args.project]
 
+    # bge-small is 33M parameters, ~130 MB: it fits on any GPU present and
+    # does not need one. device was pinned to "cpu" when this ran over 4
+    # projects; at 27 that is the difference between an afternoon and an
+    # hour. C7_DENSE_DEVICE forces it either way, and the device chosen
+    # is recorded in the summary so a rerun on different hardware is not
+    # mistaken for a change in method.
+    import torch
     from sentence_transformers import SentenceTransformer
-    model = SentenceTransformer(MODEL, device="cpu")
+    device = (os.environ.get("C7_DENSE_DEVICE")
+              or ("cuda" if torch.cuda.is_available() else "cpu"))
+    batch = int(os.environ.get("C7_DENSE_BATCH")
+                or (256 if device == "cuda" else 64))
+    log.info("dense encoder %s on %s (batch %d)", MODEL, device, batch)
+    model = SentenceTransformer(MODEL, device=device)
 
     def embed(texts: list[str]) -> np.ndarray:
-        return model.encode(texts, batch_size=64, convert_to_numpy=True,
+        return model.encode(texts, batch_size=batch, convert_to_numpy=True,
                             normalize_embeddings=True,
                             show_progress_bar=False).astype(np.float32)
 
@@ -203,6 +216,7 @@ def main() -> int:
         return {m: round(sum(x[m] for x in ms) / len(ms), 4)
                 for m in ("acc@5", "mrr")}
     summary = {"project": args.project, "model": MODEL, "seed": SEED,
+               "device": device, "batch": batch,
                "n_sample": len(sample_b), "chunks": f"{MAX_CHUNKS}x{CHUNK_WORDS}w",
                "weights": "clean-tuned cond (frozen)",
                "systems": {k: agg(v) for k, v in results.items()}}
