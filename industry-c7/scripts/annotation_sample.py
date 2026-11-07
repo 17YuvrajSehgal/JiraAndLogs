@@ -1,4 +1,4 @@
-"""Draw the causal-annotation sample (T1) from benchmark-v2.
+"""Draw the causal-annotation sample (T1) from benchmark.
 
 Two strata, for two different jobs:
 
@@ -32,7 +32,7 @@ from collections import Counter
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
-V2 = ROOT / "industry-c7/data/benchmark-v2"
+V2 = ROOT / "industry-c7/data/benchmark"
 AGENT = ROOT / "industry-c7/data/agent/agent-v2.jsonl"
 OUT = ROOT / "industry-c7/annotation/sample.json"
 
@@ -55,7 +55,7 @@ def load_v2() -> dict[str, dict]:
 
 def main() -> int:
     v2 = load_v2()
-    print(f"benchmark-v2: {len(v2):,} instances")
+    print(f"benchmark: {len(v2):,} instances")
 
     # agent outcomes, used ONLY to balance the core stratum. The labels
     # themselves are never shown to the annotator (see annotation_render.py).

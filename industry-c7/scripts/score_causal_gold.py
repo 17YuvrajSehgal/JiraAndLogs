@@ -7,7 +7,7 @@ No system is re-run. Every system already stored a ranking for these
 instances, so the only thing that changes is the answer key the ranking is
 scored against.
 
-Population. The annotation sample was drawn from benchmark-v2, which spans
+Population. The annotation sample was drawn from benchmark, which spans
 27 projects; the stored rankings exist only for the four v1 study projects.
 An instance is eligible when it appears in v1 with the SAME gold set and the
 SAME snapshot, so the ranking really was produced against this answer key.
@@ -24,7 +24,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from localize import evaluate  # noqa: E402
 
 ROOT = Path(__file__).resolve().parents[1]
-B1, B2 = ROOT / "data/benchmark", ROOT / "data/benchmark-v2"
+B1, B2 = ROOT / "data/benchmark", ROOT / "data/benchmark"
 RES, LLM, AG = (ROOT / "data/results", ROOT / "data/llm", ROOT / "data/agent")
 # --pass2 re-scores everything against the blind second rater's labels, so
 # the paper can say whether T4 depends on which rater you believe (T2b).
@@ -186,7 +186,7 @@ the answer key the same ranking is scored against.
 | annotated as having no causal file at all | {out['n_no_causal_file']} |
 
 The other 58 annotated instances come from the 23 projects added in
-benchmark-v2, which no system has run on yet. The {out['n_no_causal_file']}
+benchmark, which no system has run on yet. The {out['n_no_causal_file']}
 with no causal file are reported, not scored: "no file in this fix is
 causal" is a finding about the benchmark, not a ranking any system can get
 right.

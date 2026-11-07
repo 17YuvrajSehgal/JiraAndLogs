@@ -1,4 +1,4 @@
-"""Generate paper/benchmark-v2-numbers.md from the mined benchmark-v2.
+"""Generate paper/benchmark-numbers.md from the mined benchmark.
 
 Every figure in the paper update should come from here rather than from
 notes, so a number cannot drift between the data and the prose. Run after
@@ -16,8 +16,8 @@ import os
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
-V2 = ROOT / "industry-c7/data/benchmark-v2"
-DOC = ROOT / "industry-c7/paper/benchmark-v2-numbers.md"
+V2 = ROOT / "industry-c7/data/benchmark"
+DOC = ROOT / "industry-c7/paper/benchmark-numbers.md"
 ORIG = {"kafka", "mariadb", "mongodb", "qt"}
 BS = chr(92)  # backslash, kept out of f-strings so LaTeX macros survive
 
@@ -85,9 +85,9 @@ def main() -> int:
               f"`{BS}nHardPct` becomes **{hard_pct}{BS}%**, "
               f"`{BS}nProjects` becomes **twenty-seven**.")
 
-    doc = f"""# benchmark-v2 numbers, ready for the paper
+    doc = f"""# benchmark numbers, ready for the paper
 
-Generated from `data/benchmark-v2/` by
+Generated from `data/benchmark/` by
 `industry-c7/scripts/benchmark_v2_numbers.py`. Every figure here comes from
 the mined data, not from notes. Re-run it after any re-mine.
 
@@ -100,7 +100,7 @@ and the agent have none of them run on v2.
 
 ## 1. Headline swap (abstract, §1, §8)
 
-| claim | current paper | benchmark-v2 |
+| claim | current paper | benchmark |
 |---|---|---|
 | instances | 6,437 | **{tot:,}** |
 | projects | 4 | **{len(rows)}** |

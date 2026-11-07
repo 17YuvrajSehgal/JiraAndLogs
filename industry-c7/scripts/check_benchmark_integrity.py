@@ -11,8 +11,8 @@ SHAs, so instances were given gold files that postdate their snapshot by
 years. Run this after any mine, and never run two miners on one project.
 
 Usage:
-    python industry-c7/scripts/check_benchmark_integrity.py --out benchmark-v2
-    python industry-c7/scripts/check_benchmark_integrity.py --out benchmark-v2 --fix
+    python industry-c7/scripts/check_benchmark_integrity.py --out benchmark
+    python industry-c7/scripts/check_benchmark_integrity.py --out benchmark --fix
 """
 
 from __future__ import annotations
@@ -84,7 +84,7 @@ def check_project(path: Path) -> tuple[str, int, int, list]:
 
 def main() -> int:
     ap = argparse.ArgumentParser()
-    ap.add_argument("--out", default="benchmark-v2")
+    ap.add_argument("--out", default="benchmark")
     ap.add_argument("--fix", action="store_true",
                     help="delete the file-list cache of any corrupt project "
                          "so a re-mine rebuilds it from git")

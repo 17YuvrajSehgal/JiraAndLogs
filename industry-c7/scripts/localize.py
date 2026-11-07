@@ -309,7 +309,13 @@ def load_support(project: str, key_prefix: str):
         for line in (G / "jira-memory-corpus.jsonl").open(encoding="utf-8"):
             d = json.loads(line)
             k = d.get("jira_issue_key") or ""
-            if k.startswith(key_prefix + "-"):
+            # key_prefix may be a LIST: hadoop is one tracker with four
+            # prefixes (HADOOP, HDFS, YARN, MAPREDUCE). list + "-" is a
+            # TypeError, so this path would crash rather than mislead,
+            # but it still has to work.
+            if any(k.startswith(x + "-") for x in
+                   ([key_prefix] if isinstance(key_prefix, str)
+                    else key_prefix)):
                 texts[k] = ((d.get("memory_text") or "")[:MEM_TEXT_CHARS],
                             parse_iso_epoch(d.get("available_as_memory_from")))
         for key, commits in linked.items():

@@ -768,7 +768,7 @@ def main() -> int:
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--project", required=True, choices=[*PROJECTS, "all"])
     ap.add_argument("--out", default="", help="output dir under industry-c7/data/ "
-                    "(default: benchmark). Use benchmark-v2 to build the expanded "
+                    "(default: benchmark). Use benchmark to build the expanded "
                     "set without touching the frozen one.")
     args = ap.parse_args()
     if args.out:

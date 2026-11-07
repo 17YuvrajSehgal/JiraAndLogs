@@ -31,7 +31,7 @@ from datetime import date
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
-V2 = ROOT / "industry-c7/data/benchmark-v2"
+V2 = ROOT / "industry-c7/data/benchmark"
 ANN = ROOT / "industry-c7/annotation"
 LABELS = ANN / "labels"
 OUT = ROOT / "industry-c7/data/causal-gold"

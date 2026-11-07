@@ -6,7 +6,7 @@ label set that would quietly produce a wrong causal-gold.
 
 Checks per label file:
   1. matches annotation/schema.json
-  2. the id exists in the sample and in benchmark-v2
+  2. the id exists in the sample and in benchmark
   3. file_roles covers EXACTLY the gold files of that instance, no more,
      no fewer (a missing file would silently drop from causal-gold; an
      extra one would invent ground truth)
@@ -30,7 +30,7 @@ from collections import Counter
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
-V2 = ROOT / "industry-c7/data/benchmark-v2"
+V2 = ROOT / "industry-c7/data/benchmark"
 ANN = ROOT / "industry-c7/annotation"
 LABELS = ANN / "labels"
 ROLES = {"causal", "symptom-handling", "preventive", "refactor", "test",
@@ -79,7 +79,7 @@ def check(lab: dict, v2: dict, sample_ids: set[str]) -> list[str]:
         e.append(f"id {i} is not in the sample")
     inst = v2.get(i)
     if inst is None:
-        e.append(f"id {i} is not in benchmark-v2")
+        e.append(f"id {i} is not in benchmark")
         return e
 
     if not str(lab["annotator"]).strip():

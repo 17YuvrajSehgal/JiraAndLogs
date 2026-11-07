@@ -1142,13 +1142,13 @@ def main() -> int:
     # were unanswerable, which the data contradicts.
     ex1 = json.loads((ROOT / "industry-c7/data/benchmark"
                       / "excluded-test-only-gold.json").read_text(encoding="utf-8"))
-    ex2 = json.loads((ROOT / "industry-c7/data/benchmark-v2"
+    ex2 = json.loads((ROOT / "industry-c7/data/benchmark"
                       / "excluded-test-only-gold.json").read_text(encoding="utf-8"))
     check("S4 scored set: 123 of 6,437 removed, 6,314 scored, all mongodb",
           (ex1["n_excluded"], ex1["n_total"], ex1["n_scored"]) == (123, 6437, 6314)
           and list(ex1["per_project"]) == ["mongodb"],
           f"{ex1['n_excluded']}/{ex1['n_total']} {list(ex1['per_project'])}")
-    check("S2 benchmark-v2 scored set: 101 of 38,001 removed",
+    check("S2 benchmark scored set: 101 of 38,001 removed",
           (ex2["n_excluded"], ex2["n_total"]) == (101, 38001),
           f"{ex2['n_excluded']}/{ex2['n_total']}")
     removed = ROOT / "industry-c7/data/results/removed-test-only-gold"

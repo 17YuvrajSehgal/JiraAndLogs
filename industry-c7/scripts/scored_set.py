@@ -22,7 +22,7 @@ from mine_benchmark import TEST_PATH  # noqa: E402
 
 ROOT = Path(__file__).resolve().parents[1]
 
-# The four gaps measured over benchmark-v2. Case-sensitive for the same
+# The four gaps measured over benchmark. Case-sensitive for the same
 # reason TEST_PATH is: "IT.java" is a capital-I convention, and matching it
 # case-insensitively would also eat Audit.java, Edit.java, Unit.java.
 TEST_PATH_EXTRA = re.compile(
@@ -85,7 +85,7 @@ def load(bench: Path) -> set:
 
 
 if __name__ == "__main__":
-    for name in ("benchmark", "benchmark-v2"):
+    for name in ("benchmark", "benchmark"):
         bench = ROOT / "data" / name
         if not bench.exists():
             continue

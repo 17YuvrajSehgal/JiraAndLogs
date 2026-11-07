@@ -31,7 +31,7 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
-V2 = ROOT / "industry-c7/data/benchmark-v2"
+V2 = ROOT / "industry-c7/data/benchmark"
 SAMPLE = ROOT / "industry-c7/annotation/sample.json"
 PACKETS = ROOT / "industry-c7/annotation/packets"
 REPOS = ROOT / "data/c7-repos"

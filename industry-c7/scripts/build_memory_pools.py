@@ -36,8 +36,25 @@ logging.basicConfig(level=logging.INFO, format="[%(asctime)s] %(levelname)s: %(m
                     datefmt="%H:%M:%S", force=True)
 log = logging.getLogger("c7-memory")
 
-PJD_COLLECTION = {"kafka": "Apache", "mariadb": "MariaDB",
-                  "mongodb": "MongoDB", "qt": "Qt"}
+# Verified by probing each project's key prefix against every collection
+# in JiraReposAnon rather than assuming from the project name: 20 Apache
+# trackers, and infinispan/wildfly/keycloak live under RedHat, not their
+# own. Probe output: all 27 found, none unmapped.
+PJD_COLLECTION = {
+    # Apache tracker
+    "kafka": "Apache", "hive": "Apache", "hadoop": "Apache",
+    "hbase": "Apache", "ambari": "Apache", "cassandra": "Apache",
+    "spark": "Apache", "flink": "Apache", "groovy": "Apache",
+    "camel": "Apache", "phoenix": "Apache", "impala": "Apache",
+    "ignite": "Apache", "pdfbox": "Apache", "derby": "Apache",
+    "solr": "Apache", "pig": "Apache", "geode": "Apache",
+    "drill": "Apache", "beam": "Apache",
+    # their own trackers
+    "mariadb": "MariaDB", "mongodb": "MongoDB", "qt": "Qt",
+    "sakai": "Sakai",
+    # Red Hat tracker, NOT a per-project one
+    "infinispan": "RedHat", "wildfly": "RedHat", "keycloak": "RedHat",
+}
 MEM_TEXT_CHARS = 4_000
 
 
@@ -70,8 +87,15 @@ def build(project: str) -> dict:
     log.info("%s: %d keys linked at 1-3 commits", project, len(linked))
 
     rows, created_map, dup_pairs = [], {}, []
+    # hadoop's key_prefix is a LIST (HADOOP, HDFS, YARN, MAPREDUCE) --
+    # one tracker, four prefixes. f"^{prefix}-" on a list interpolates
+    # the repr and matches nothing, so hadoop silently produced an empty
+    # pool: 0 issues, 0 memory, no error. link_commits already handles
+    # the list; only this query did not.
+    prefixes = [prefix] if isinstance(prefix, str) else list(prefix)
+    key_re = "^(" + "|".join(prefixes) + ")-"
     cur = coll.find(
-        {"key": {"$regex": f"^{prefix}-"}},
+        {"key": {"$regex": key_re}},
         {"key": 1, "fields.summary": 1, "fields.description": 1,
          "fields.created": 1, "fields.resolutiondate": 1,
          "fields.resolution.name": 1, "fields.issuetype.name": 1,
