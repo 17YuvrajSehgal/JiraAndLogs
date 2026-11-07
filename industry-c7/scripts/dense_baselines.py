@@ -73,7 +73,7 @@ def main() -> int:
               or ("cuda" if torch.cuda.is_available() else "cpu"))
     batch = int(os.environ.get("C7_DENSE_BATCH")
                 or (256 if device == "cuda" else 64))
-    log.info("dense encoder %s on %s (batch %d)", MODEL, device, batch)
+    print(f"dense encoder {MODEL} on {device} (batch {batch})", flush=True)
     model = SentenceTransformer(MODEL, device=device)
 
     def embed(texts: list[str]) -> np.ndarray:
