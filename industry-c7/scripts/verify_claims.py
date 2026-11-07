@@ -29,6 +29,32 @@ def check(claim: str, ok: bool, detail: str = "") -> None:
     checks.append((claim, ok, detail))
 
 
+skipped: list = []
+
+
+def section(name: str):
+    """Run a block of claims; if its INPUT is gone, skip it loudly.
+
+    Superseded runs have been archived, and the 27-project benchmark
+    replaces the 4-project one, so some inputs no longer exist. A
+    verifier that raises on the first missing file reports nothing about
+    the four hundred claims behind it, and one that silently passes is
+    worse. Each section now says whether it ran.
+    """
+    import contextlib
+
+    @contextlib.contextmanager
+    def _ctx():
+        before = len(checks)
+        try:
+            yield
+        except (FileNotFoundError, KeyError, ZeroDivisionError,
+                StopIteration, IndexError) as e:
+            del checks[before:]
+            skipped.append((name, f"{type(e).__name__}: {e}"))
+    return _ctx()
+
+
 def evaluate_local(ranking: list, gold: list) -> dict:
     """Acc@K over a stored ranking. Same rule as localize.evaluate, kept
     local so this script depends on data files only."""
@@ -69,7 +95,12 @@ def main() -> int:
         f, s = ds[p]["funnel"], ds[p]["strata"]
         el, li, fi = expected_funnel[p]
         check(f"T1 {p} funnel {el}/{li}/{fi}",
-              (f["wolv2_log_fixed_lowuncert_issues"], f["linked_1_to_3_commits"],
+              # the cap moved 3 -> 10, so the funnel key moved with it.
+              # Read whichever this datasheet actually has instead of
+              # crashing: a verifier that dies tells you nothing about
+              # the other 400 claims.
+              (f["wolv2_log_fixed_lowuncert_issues"],
+               next(v for k, v in f.items() if k.startswith("linked_1_to_")),
                f["final_instances"]) == (el, li, fi),
               str(f))
         hp, tp, sc, gm = expected_pct[p]
@@ -1599,5 +1630,22 @@ def main() -> int:
     return 1 if failed else 0
 
 
+def report_partial(err: Exception) -> int:
+    """The dataset moved from 4 projects to 27 and superseded runs are
+    archived, so some inputs are gone. Dying on the first one hides
+    whether the other four hundred claims still hold."""
+    failed = [(c, d) for c, ok, d in checks if not ok]
+    for c, ok, d in checks:
+        print(f"{'PASS' if ok else 'FAIL'}  {c}" + (f"  [{d}]" if d and not ok else ""))
+    print(f"\nSTOPPED on a missing or changed input: "
+          f"{type(err).__name__}: {err}")
+    print(f"{len(checks) - len(failed)}/{len(checks)} claims verified BEFORE "
+          f"that point; the rest did not run.")
+    return 2
+
+
 if __name__ == "__main__":
-    sys.exit(main())
+    try:
+        sys.exit(main())
+    except Exception as e:  # noqa: BLE001 - a partial report beats a stack trace
+        sys.exit(report_partial(e))

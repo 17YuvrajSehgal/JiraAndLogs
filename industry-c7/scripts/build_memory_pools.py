@@ -29,8 +29,9 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from mine_benchmark import OUT as BENCH_OUT  # noqa: E402
-from mine_benchmark import (PROJECTS, REPOS, TEST_PATH,  # noqa: E402
-                            fetch_file_lists, link_commits)
+from mine_benchmark import (MAX_FIX_COMMITS, PROJECTS,  # noqa: E402
+                            REPOS, TEST_PATH, fetch_file_lists,
+                            link_commits)
 
 logging.basicConfig(level=logging.INFO, format="[%(asctime)s] %(levelname)s: %(message)s",
                     datefmt="%H:%M:%S", force=True)
@@ -82,9 +83,15 @@ def build(project: str) -> dict:
     coll = MongoClient("localhost", 27017)["JiraReposAnon"][PJD_COLLECTION[project]]
 
     linked, _ = link_commits(cfg["git_dir"], prefix, cfg.get("link_via", "subject"))
+    # the SAME cap the benchmark uses, imported rather than retyped.
+    # These were 10 and 3 respectively: an issue with five fix commits
+    # could be an instance you must localize but never a memory entry
+    # that votes. Two rules where there is one decision, and they had
+    # already drifted once. Costs 1.3% of kafka's pool, 0.1% of hive's.
     linked = {k: sorted(v, key=lambda c: c["ts"]) for k, v in linked.items()
-              if 1 <= len(v) <= 3}
-    log.info("%s: %d keys linked at 1-3 commits", project, len(linked))
+              if 1 <= len(v) <= MAX_FIX_COMMITS}
+    log.info("%s: %d keys linked at 1-%d commits", project,
+             len(linked), MAX_FIX_COMMITS)
 
     rows, created_map, dup_pairs = [], {}, []
     # hadoop's key_prefix is a LIST (HADOOP, HDFS, YARN, MAPREDUCE) --
