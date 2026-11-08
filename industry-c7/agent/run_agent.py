@@ -84,9 +84,9 @@ def lc_model(seed: int):
             api_key=os.environ.get("C7_LLM_KEY") or "not-needed",
             temperature=0, seed=seed, timeout=1200, max_retries=2,
             # the same thinking switch agent.py uses, so the two arms are
-            # not quietly served under different settings
-            extra_body={"chat_template_kwargs":
-                        {"enable_thinking": A.ENABLE_THINKING}},
+            # not quietly served under different settings, and both forms of
+            # the switch so the local server and the cluster agree
+            extra_body=dict(A.THINK_SWITCH),
             max_completion_tokens=int(os.environ.get("C7_MAX_TOKENS")
                                       or 1500 + A.THINK_HEADROOM))
     return _LC_MODEL

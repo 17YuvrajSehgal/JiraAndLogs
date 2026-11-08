@@ -68,6 +68,22 @@ MODEL = os.environ.get("C7_MODEL") or "qwen3.8-27b"
 # it unexamined.
 ENABLE_THINKING = (os.environ.get("C7_THINK", "0") != "0")
 THINK_HEADROOM = 2500 if ENABLE_THINKING else 0
+
+# Two switches, because the two servers we run against honour different
+# ones and neither errors on the one it does not know.
+#
+#   cluster vLLM   chat_template_kwargs={"enable_thinking": false}
+#   LM Studio      reasoning_effort="none"
+#
+# Measured on the local server: chat_template_kwargs alone left
+# reasoning_tokens at 28 and the reasoning field populated, i.e. thinking
+# was still on while the config said it was off. reasoning_effort="none"
+# took it to 0. Sending only one of them means the pilot and the full run
+# are not the same experiment, and nothing in the output would say so.
+THINK_SWITCH: dict = (
+    {"chat_template_kwargs": {"enable_thinking": True}} if ENABLE_THINKING
+    else {"chat_template_kwargs": {"enable_thinking": False},
+          "reasoning_effort": "none"})
 # No NODE here: the compute node changes with every SLURM job and the
 # bridge discovers it from the serve log. A copy in Python could only go
 # stale and disagree.
@@ -209,7 +225,7 @@ def call_llm(messages: list, tools: list, seed: int = 42,
                 for m in messages]
     payload = {"model": MODEL, "messages": messages, "temperature": 0,
                "seed": seed, "max_tokens": max_tokens,
-               "chat_template_kwargs": {"enable_thinking": ENABLE_THINKING}}
+               **THINK_SWITCH}
     # An EMPTY tools list is a 400 from vLLM ("`tools` must not be an empty
     # array"), not an empty tool set, so the field is omitted instead. The
     # main agent always passes tools; the CoSIL-style baseline's staged
