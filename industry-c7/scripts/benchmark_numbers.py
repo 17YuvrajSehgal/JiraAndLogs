@@ -37,6 +37,11 @@ def main() -> int:
     tot = hard = trace = single = 0
 
     for f in sorted(glob.glob(str(V2 / "*.jsonl"))):
+        # The memory pools live in this directory too and carry a
+        # different schema, so a bare *.jsonl glob reads them as
+        # instances and dies on the first missing field.
+        if f.endswith("-memory.jsonl"):
+            continue
         p = os.path.basename(f)[:-6]
         n = h = t = sc = 0
         golds = []

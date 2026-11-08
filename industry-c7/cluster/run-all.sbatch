@@ -34,10 +34,25 @@
 
 set -uo pipefail
 S=/scratch/yuvraj17
-BASE=${C7_BASE:-$S/JiraAndLogs_scratch/c7run}
-C7=$BASE/JiraAndLogs/industry-c7
+BASE=${C7_BASE:-$S/c7-data}
+C7=$BASE/industry-c7
 WORKERS="${WORKERS:-12}"
 PORT=${PORT:-8000}
+
+# ---- the tree must be the 27-project one --------------------------------
+# BASE used to default to $S/JiraAndLogs_scratch/c7run, which is the OLD
+# 4-project tree. That tree is still on disk, still self-consistent and
+# still runnable, so a job submitted there produces results that look
+# perfectly healthy and are silently scored on kafka/mariadb/mongodb/qt
+# alone. A path default cannot be trusted to encode which dataset this is,
+# so assert the dataset itself.
+NPROJ=$(ls "$C7"/data/benchmark/*.jsonl 2>/dev/null | grep -vc -- -memory.jsonl)
+if [ "$NPROJ" != "27" ]; then
+  echo "REFUSING: $C7/data/benchmark has $NPROJ projects, expected 27." >&2
+  echo "C7_BASE=$BASE is not the current tree. The old 4-project tree" >&2
+  echo "lives at $S/JiraAndLogs_scratch/c7run and must not be run." >&2
+  exit 1
+fi
 
 # ---- the stage, with no default ------------------------------------------
 STAGE="${C7_STAGE:-}"
@@ -103,9 +118,8 @@ mkdir -p "$CACHE"/vllm "$CACHE"/hf "$CACHE"/triton "$CACHE"/inductor "$CACHE"/xd
 export VLLM_CACHE_ROOT=$CACHE/vllm HF_HOME=$CACHE/hf XDG_CACHE_HOME=$CACHE/xdg
 export TRITON_CACHE_DIR=$CACHE/triton TORCHINDUCTOR_CACHE_DIR=$CACHE/inductor
 
-# vLLM's venv is python 3.12 and the agent's is 3.11; the server runs in its
-# own subshell with its own module, because mixing them breaks whichever
-# loads second.
+# vLLM and the agent each have their own standalone venv; the server runs
+# in its own subshell because mixing the two breaks whichever loads second.
 (
   module load python/3.12.4 >/dev/null 2>&1
   exec "$VLLM_BIN" serve "$MODEL_DIR" \
@@ -148,8 +162,13 @@ curl -s -m 5 "http://localhost:$PORT/v1/models" | grep -q qwen3.8-27b \
 # The parsers now live on /scratch under XDG_CACHE_HOME, and this check
 # runs HERE, on the compute node, where the login node's internet cannot
 # hide the problem. Ten seconds against three wasted hours.
-module load python/3.11 >/dev/null 2>&1
-PY=$BASE/venv/bin/python3
+# The agent venv is a standalone CPython 3.12.16 built with uv at
+# $S/c7-llm/agent-venv, so there is no module to load. It carries the
+# laptop's exact pins (langchain 1.4.9, langgraph 1.2.20, pydantic 2.14.3,
+# tree-sitter-language-pack 1.22.1) so a cluster run cannot drift from a
+# local one.
+PY=$S/c7-llm/agent-venv/bin/python
+[ -x "$PY" ] || { echo "no agent venv at $PY" >&2; exit 1; }
 "$PY" - <<'PREFLIGHT' || { echo "PREFLIGHT FAILED: not starting" >&2; exit 1; }
 import sys
 try:
@@ -184,7 +203,7 @@ grep -q "bridge up" "$BASE/logs/bridge-${SLURM_JOB_ID:-local}.log" \
        cat "$BASE/logs/bridge-${SLURM_JOB_ID:-local}.log" >&2; exit 1; }
 echo "bridge up (local endpoint)"
 
-cd "$BASE/JiraAndLogs" || exit 1
+cd "$BASE" || exit 1
 export C7_SPOOL="$SPOOL"
 
 # ---- 3. the one stage -----------------------------------------------------

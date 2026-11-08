@@ -1,6 +1,6 @@
-# benchmark-v2 numbers, ready for the paper
+# benchmark numbers, ready for the paper
 
-Generated from `data/benchmark-v2/` by
+Generated from `data/benchmark/` by
 `industry-c7/scripts/benchmark_v2_numbers.py`. Every figure here comes from
 the mined data, not from notes. Re-run it after any re-mine.
 
@@ -13,7 +13,7 @@ and the agent have none of them run on v2.
 
 ## 1. Headline swap (abstract, §1, §8)
 
-| claim | current paper | benchmark-v2 |
+| claim | current paper | benchmark |
 |---|---|---|
 | instances | 6,437 | **38,001** |
 | projects | 4 | **27** |

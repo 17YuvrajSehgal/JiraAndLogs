@@ -24,8 +24,8 @@ case "$WHAT" in
   arms|judge|locagent|cosil|all) ;;
   *) echo "usage: submit.sh arms|judge|locagent|cosil|all" >&2; exit 1 ;;
 esac
-BASE=${C7_BASE:-/scratch/yuvraj17/JiraAndLogs_scratch/c7run}
-JOB=$BASE/JiraAndLogs/industry-c7/cluster/run-all.sbatch
+BASE=${C7_BASE:-/scratch/yuvraj17/c7-data}
+JOB=$BASE/industry-c7/cluster/run-all.sbatch
 [ -f "$JOB" ] || { echo "no job script at $JOB" >&2; exit 1; }
 
 case "$(hostname -f 2>/dev/null || hostname)" in
