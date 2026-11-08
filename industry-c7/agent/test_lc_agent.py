@@ -88,16 +88,25 @@ try:
 except ValidationError:
     chk("an empty submission is rejected", True)
 try:
-    LA.Localization(files=[LA.RankedFile(path="a.java", evidence="x")],
+    LA.Localization(files=[LA.RankedFile(path="a.java", symbol="m",
+                                     evidence="x")],
                     causal_chain=[LA.ChainStep(step="a", cited_from="read_code")])
     chk("a one-step chain is rejected (2-6 required)", False)
 except ValidationError:
     chk("a one-step chain is rejected (2-6 required)", True)
 good = LA.Localization(
-    files=[LA.RankedFile(path="a.java", evidence="line 42 sets it to null")],
+    files=[LA.RankedFile(path="a.java", symbol="handleRequest",
+                         evidence="line 42 sets it to null")],
     causal_chain=[LA.ChainStep(step="a", cited_from="read_code"),
                   LA.ChainStep(step="b", cited_from="recall_incidents")])
 chk("a complete submission validates", len(good.files) == 1)
+chk("the submitted region survives on the model", good.files[0].symbol
+    == "handleRequest")
+try:
+    LA.RankedFile(path="a.java", evidence="x")
+    chk("a file without a region is rejected", False)
+except ValidationError:
+    chk("a file without a region is rejected", True)
 
 # No OPTIONAL field may re-enter the submission schema. With three of
 # them (confidence, file, rationale) the model never produced a tool

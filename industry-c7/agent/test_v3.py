@@ -43,7 +43,13 @@ check("v3 chain step must cite a tool",
 check("v3 chain may cite data_flow_back",
       "data_flow_back" in chain["items"]["properties"]["cited_from"]["enum"])
 check("v3 still requires per-file evidence",
-      v3p["properties"]["files"]["items"]["required"] == ["path", "evidence"])
+      "evidence" in v3p["properties"]["files"]["items"]["required"])
+# The challenge asks for code REGIONS, not files. A file path alone cannot
+# answer that, so the region is required rather than suggested: the same
+# reason evidence is required, and the same reason it is actually present.
+check("v3 requires a per-file code region (symbol)",
+      v3p["properties"]["files"]["items"]["required"]
+      == ["path", "symbol", "evidence"])
 
 # ---- T11: the tool surface -------------------------------------------------
 v2_names = [t["function"]["name"] for t in T.TOOL_SCHEMAS]
@@ -169,6 +175,6 @@ check("v3 index is rebuilt per instance, not cached per project",
       FakeMem(True, "_t_v3")._memory_index()
       is not FakeMem(True, "_t_v3")._memory_index())
 
-total = 24
+total = 25
 print(f"\n{ok}/{total} checks passed")
 sys.exit(0 if ok == total else 1)

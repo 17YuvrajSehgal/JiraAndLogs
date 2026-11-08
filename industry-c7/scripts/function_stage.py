@@ -222,6 +222,9 @@ def main() -> int:
     # a better file stage should raise the ceiling before any function-level
     # ranking change can matter. cond_ours scores 0.686 Acc@5 at file level
     # and agent v3 scores 0.888, so this is the first thing to try.
+    # "submitted" is the agent's OWN region, not a stage bolted on after it.
+    # The other sources rank candidate functions by keyword overlap; this one
+    # scores what the model actually committed to in submit_ranking.
     ap.add_argument("--ranking", default="cond_ours",
                     help="file ranking to take candidates from: a key in "
                          "rankings (cond_ours), or 'agent' for agent-v3-full")
@@ -248,7 +251,8 @@ def main() -> int:
 
     agent_rank: dict[str, list] = {}
     agent_read: dict[str, set] = {}
-    if args.ranking == "agent" or args.read_boost:
+    agent_regions: dict[str, list] = {}
+    if args.ranking in ("agent", "submitted") or args.read_boost:
         af = ROOT_AG / "agent-v3-full.jsonl"
         for line in af.open(encoding="utf-8"):
             if not line.strip():
@@ -257,6 +261,14 @@ def main() -> int:
             if a["project"] != args.project or a.get("error")                     or a.get("stop_reason") == "llm_error":
                 continue
             agent_rank[a["issue_key"]] = a["ranking"]
+            # notes carry the submitted region per file, already resolved
+            # against the snapshot at submit time. An unresolved symbol is
+            # dropped here, which scores it as a miss rather than inventing
+            # a key that could never match.
+            agent_regions[a["issue_key"]] = [
+                f"{n['file']}::{n['symbol_resolved']}@{n['symbol_lines'][0]}"
+                for n in (a.get("notes") or [])
+                if n.get("symbol_resolved") and n.get("symbol_lines")]
             if args.read_boost:
                 agent_read[a["issue_key"]] = read_functions(
                     args.project, a["issue_key"])
@@ -275,7 +287,7 @@ def main() -> int:
     # 0.921 only because the cache was deleted by hand first. Stamping the
     # grammar config into the cache makes that automatic.
     cache_path = OUT / f"funcs-{args.project}.pkl"
-    gkey = grammar_key(cfg["src_ext"])
+    gkey = grammar_key(PROJECTS[args.project]["src_ext"])
     fcache: dict[str, list] = {}
     if cache_path.exists():
         blob = pickle.loads(cache_path.read_bytes())
@@ -288,7 +300,8 @@ def main() -> int:
     out_rows, stats, t0 = [], Counter(), time.time()
     for i, r in enumerate(rows):
         b = bench[r["issue_key"]]
-        snap_files = (agent_rank[r["issue_key"]] if args.ranking == "agent"
+        snap_files = (agent_rank[r["issue_key"]]
+                      if args.ranking in ("agent", "submitted")
                       else r["rankings"][args.ranking])[:TOP_FILES]
         gold_paths = [f for f in b["gold_files"] if parser_for(f)]
         stats["gold_files_unparseable"] += len(b["gold_files"]) - len(gold_paths)
@@ -338,8 +351,12 @@ def main() -> int:
             for name, s, e in fcache[bl]:
                 docs[f"{path}::{name}@{s}"] = Counter(
                     tokenize("\n".join(lines[s - 1:e])))
-        qtoks = tokenize(b["query_text"])
-        ranking = [d for d, _ in bm25_rank(qtoks, docs)]
+        if args.ranking == "submitted":
+            # no keyword stage: this IS the model's answer, in its own order
+            ranking = agent_regions.get(r["issue_key"], [])
+        else:
+            qtoks = tokenize(b["query_text"])
+            ranking = [d for d, _ in bm25_rank(qtoks, docs)]
         if args.read_boost:
             read = agent_read.get(r["issue_key"], set())
             hot = [d for d in ranking if (d.split("::")[0],
@@ -356,8 +373,13 @@ def main() -> int:
             for k in KS:
                 metrics[f"acc@{k}"] = float(any(d in gold_keys
                                                 for d in ranking[:k]))
+            # For a bolted-on stage this is "could the ranker have won".
+            # For the submitted answer the model never had a candidate set,
+            # so the honest ceiling is whether it named the gold region at
+            # all, anywhere in its list.
+            pool = set(ranking) if args.ranking == "submitted" else set(docs)
             metrics["oracle_in_candidates"] = float(
-                any(k_ in docs for k_ in gold_keys))
+                any(k_ in pool for k_ in gold_keys))
         out_rows.append({"issue_key": r["issue_key"], "fix_time": r["fix_time"],
                          "strata": r["strata"], "eligible": eligible,
                          "n_gold_functions": len(gold_funcs),

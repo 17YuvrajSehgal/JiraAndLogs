@@ -87,18 +87,26 @@ SPOOL = Path(os.environ.get("C7_SPOOL")
 SUBMIT = {"type": "function", "function": {
     "name": "submit_ranking",
     "description": "Commit the final ranked list, most likely first. Call "
-                   "this exactly once, at the end. Every file must carry "
-                   "the evidence that put it on the list.",
+                   "this exactly once, at the end. Every file must carry the "
+                   "function that holds the fault and the evidence "
+                   "that put it on the list.",
     "parameters": {"type": "object", "properties": {
         "files": {"type": "array", "maxItems": 10, "items": {
             "type": "object", "properties": {
                 "path": {"type": "string"},
+                "symbol": {"type": "string",
+                           "description": "the function or method in THIS "
+                                          "file that holds the fault, named "
+                                          "exactly as it appears in the code. "
+                                          "Not the class, not the file. This "
+                                          "is the code region the answer is "
+                                          "about."},
                 "evidence": {"type": "string",
                              "description": "what you SAW that implicates "
                                             "this file: the symbol, the line, "
                                             "the past incident, the call"},
                 "confidence": {"type": "number"}},
-            "required": ["path", "evidence"]}},
+            "required": ["path", "symbol", "evidence"]}},
         "rationale": {"type": "string",
                       "description": "one or two sentences on what decided "
                                      "the top choice"}},
@@ -161,6 +169,11 @@ SYSTEM = (
     "Use the tools. Do not answer from file names alone. When you have "
     "evidence, record it with note_candidate. Finish by calling "
     "submit_ranking exactly once.\n\n"
+    "For every file you rank, name the function or method inside it that "
+    "holds the fault, exactly as it appears in the code. That is the code "
+    "region, and it is what the answer is really about: a file can be a "
+    "thousand lines. read_code takes a symbol, so open the function and "
+    "read it before you name it.\n\n"
     "=== INVESTIGATION METHOD ===\n" + skill_text())
 
 
@@ -576,7 +589,15 @@ def run_instance(ws: T.Workspace, seed: int = 42,
                 for f in (args.get("files") or []):
                     if isinstance(f, dict) and f.get("path"):
                         submitted.append(str(f["path"]))
+                        sym = str(f.get("symbol") or "")[:200]
+                        hit = ws.resolve_symbol(str(f["path"]), sym)
                         evidence.append({"file": str(f["path"]),
+                                         "symbol": sym,
+                                         # the resolved name, or "" when the
+                                         # model named something this file
+                                         # does not contain
+                                         "symbol_resolved": hit[0] if hit else "",
+                                         "symbol_lines": [hit[1], hit[2]] if hit else [],
                                          "reason": str(f.get("evidence") or "")[:400],
                                          "confidence": float(f.get("confidence") or 0.5),
                                          "in_snapshot": str(f["path"]) in ws.snap.blob_of})

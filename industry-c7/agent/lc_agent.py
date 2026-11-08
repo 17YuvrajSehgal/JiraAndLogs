@@ -134,6 +134,11 @@ class ChainStep(BaseModel):
 
 class RankedFile(BaseModel):
     path: str = Field(description="Repository-relative path.")
+    symbol: str = Field(
+        description="The function or method inside THIS file that holds the "
+                    "fault, named exactly as it appears in the code. Not the "
+                    "class, not the file. Use read_code to confirm the name "
+                    "before you write it.")
     evidence: str = Field(
         description="Why THIS file. Quote what you read: a line number, a "
                     "symbol, a past incident. Not a restatement of the title.")
@@ -484,7 +489,9 @@ Rank by evidence quality: code that CREATES the bad state beats code that
 observes it; a file a similar past incident was fixed in is strong, especially
 when the report names no file; a file whose CONTENT matches the behaviour beats
 one whose PATH matches a word in the title; the file in the stack trace is weak
-on its own."""
+on its own.
+
+For EVERY file you rank you must also name the function or method inside it that holds the fault. That is the code region, and it is what the answer is really about: a file can be a thousand lines. Name it exactly as it appears in the code, not the class and not the file. read_code takes a symbol, so open the function and read it before you name it. If you have not read it, you are guessing."""
 
 
 def build_agent(model, ws: T.Workspace, store: IncidentStore, ctx: dict,
@@ -579,15 +586,26 @@ def run_lc(ws: T.Workspace, seed: int = 42, *, model=None, repo_tree: bool = Fal
     final = (A.fuse(resolved, ws.seed_candidates)[:A.LIST_LEN] if resolved
              else list(ws.seed_candidates[:A.LIST_LEN]))
 
+    # The submitted region, checked against the file it names. A symbol the
+    # file does not contain resolves to "" and is scored as a miss, which is
+    # the point: this field exists to make the model commit to a region, and
+    # a name nobody can find is not a region.
+    notes = []
+    for rf in (answer.files if answer else []):
+        hit = ws.resolve_symbol(rf.path, rf.symbol)
+        notes.append({"file": rf.path, "why": rf.evidence, "confidence": 1.0,
+                      "symbol": rf.symbol,
+                      "symbol_resolved": hit[0] if hit else "",
+                      "symbol_lines": [hit[1], hit[2]] if hit else [],
+                      "in_snapshot": rf.path in ws.snap.blob_of})
+
     summary = rec.finish(state, graph=graph, config=cfg) if rec else {}
     usage = {"calls": summary.get("model_calls", 0),
              "in": summary.get("input_tokens", 0),
              "out": summary.get("output_tokens", 0)}
     return {"ranking": final, "agent_ranking": resolved[:A.LIST_LEN],
             "lexical_seed": ws.seed_candidates[:A.LIST_LEN],
-            "notes": [{"file": rf.path, "why": rf.evidence, "confidence": 1.0,
-                       "in_snapshot": rf.path in ws.snap.blob_of}
-                      for rf in (answer.files if answer else [])],
+            "notes": notes,
             "tool_calls": ws.calls, "stop_reason": stop,
             "rationale": "; ".join(c.step for c in answer.causal_chain)
                          if answer else "",

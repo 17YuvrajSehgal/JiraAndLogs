@@ -232,6 +232,38 @@ class Workspace:
             self.fcache[blob] = list_functions(path, raw[:MAX_BLOB_BYTES])
         return self.fcache[blob]
 
+    def resolve_symbol(self, path: str, symbol: str):
+        """Match a submitted symbol to a real function in this snapshot.
+
+        Returns (name, start_line, end_line), or None when nothing matches.
+        The model writes names the way a human would, so a few shapes are
+        accepted before giving up: a bare name, Class.method, method(),
+        and a trailing ::name. Anything else is a miss, and a miss is
+        reported rather than repaired -- a symbol that is not in the file
+        is exactly the hallucination this field exists to expose.
+        """
+        funcs = self._funcs_of(path)
+        if not funcs or not symbol:
+            return None
+        want = symbol.strip()
+        for cut in ("(", "<"):          # m(int a) -> m, f<T> -> f
+            if cut in want:
+                want = want.split(cut, 1)[0]
+        want = want.strip()
+        for sep in ("::", "#", "."):    # Class::m, Class#m, Class.m -> m
+            if sep in want:
+                want = want.rsplit(sep, 1)[1].strip()
+        if not want:
+            return None
+        for f in funcs:
+            if f[0] == want:
+                return f
+        low = want.lower()
+        for f in funcs:
+            if f[0].lower() == low:
+                return f
+        return None
+
     def _segments(self, path: str) -> list[tuple[str, int, Counter]]:
         """(label, start_line, tokens) per segment.
 
