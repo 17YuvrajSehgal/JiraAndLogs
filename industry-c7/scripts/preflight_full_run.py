@@ -47,15 +47,34 @@ P = list(R.P)
 full = R.build_population(P, full=True)
 samp = R.build_population(P)
 ids = lambda pop: {f"{p}:{b['issue_key']}" for p, b, _ in pop}
-check("full split is 4,409 instances", len(full) == 4409, str(len(full)))
+check("full split is 26,544 instances", len(full) == 26544, str(len(full)))
 per = {}
 for p, b, _ in full:
     per[p] = per.get(p, 0) + 1
-check("per-project split matches Sec. 4 (476/1179/2434/320)",
-      per == {"kafka": 476, "mariadb": 1179, "mongodb": 2434, "qt": 320},
-      str(per))
-check("the 790 study sample sits inside the full split",
-      ids(samp) <= ids(full))
+check("the split spans all 27 projects", len(per) == 27, f"{len(per)} projects")
+# Pinning 27 hand-copied counts would go stale the first time anything is
+# re-mined. The invariant is exact and cannot: the eval split of a project
+# is its scored set minus its own dev prefix. A project silently dropping
+# out, or a boundary moving, breaks this.
+from localize import load_bench  # noqa: E402
+mismatch = []
+for q in sorted(per):
+    n_scored = len(load_bench(q))
+    nd = json.load((ROOT / f"data/results/{q}-summary.json").open())["n_dev"]
+    if per[q] != n_scored - nd:
+        mismatch.append(f"{q}: eval={per[q]} but scored-dev={n_scored - nd}")
+check("every project's eval count is its scored set minus its dev prefix",
+      not mismatch, "; ".join(mismatch[:3]))
+# The population the agentic baselines are measured on must be reachable
+# from the population the agent runs, or the paired comparison has nothing
+# to pair on. This is the check that would have caught the sample being
+# drawn from the whole scored set instead of the eval split.
+for name in ("sample", "pilot"):
+    sub = set(json.loads((ROOT / f"data/results/baseline-{name}.json")
+                         .read_text(encoding="utf-8"))["ids"])
+    outside = sub - ids(full)
+    check(f"the baseline {name} sits inside the full split",
+          not outside, f"{len(outside)} of {len(sub)} outside")
 leak = 0
 for p in P:
     raw = sorted((json.loads(l) for l in
@@ -110,12 +129,30 @@ check("resume retries errored rows instead of counting them done",
 check("the run aborts rather than burning the population on a dead server",
       "_ABORT" in src and "ABORT_AFTER" in src)
 tdir = AG / "transcripts"
-sizes = [f.stat().st_size for f in list(tdir.glob("v2-*.json"))[:200]]
-mean_kb = (sum(sizes) / len(sizes) / 1024) if sizes else 0
-need_gb = mean_kb * 4409 / 1024 / 1024
+# This globbed "v2-*.json" and nothing has ever been named that: transcripts
+# are "<tag>-<project>_<KEY>.json". sizes came back empty, mean_kb was 0,
+# need_gb was 0, and "free disk covers the transcripts" could not fail. It
+# also multiplied by a hardcoded 4409 rather than the population actually
+# queued. A check that cannot fail is worse than no check.
+# Every transcript, not the first 400: glob order is roughly alphabetical,
+# so a prefix is all "cosil-*" and those are far smaller than the agent's
+# own traces. Thinking is on for this run, which the thinking-off history
+# here cannot see, so treat the result as a floor.
+sizes = [f.stat().st_size for f in tdir.glob("*.json")]
+# MEAN_KB_FLOOR is the measured mean over the 6,409 transcripts of the
+# 4-project run, now in data/archive/agent-4project/. A first run has no
+# transcripts to measure, and the old code answered that case with 0 KB,
+# which made the disk check unfailable. Falling back to a measured constant
+# keeps it a real check on an empty directory. It is a FLOOR: those runs
+# had thinking off, and reasoning traces are larger.
+MEAN_KB_FLOOR = 49
+mean_kb = (sum(sizes) / len(sizes) / 1024) if sizes else MEAN_KB_FLOOR
+need_gb = mean_kb * len(full) / 1024 / 1024
 freeb = shutil.disk_usage(str(AG)).free / 1024 ** 3
 check("free disk covers the transcripts", freeb > need_gb * 2,
-      f"need ~{need_gb:.1f} GB, free {freeb:.0f} GB")
+      f"{mean_kb:.0f} KB each x {len(full):,} = ~{need_gb:.1f} GB, "
+      f"free {freeb:.0f} GB"
+      + ("" if sizes else f" (no transcripts yet; floor of {MEAN_KB_FLOOR} KB)"))
 
 print("\n=== transport ===")
 spool = AG / "spool"

@@ -49,7 +49,13 @@ from baselines import ARMS  # noqa: E402
 from localize import (BENCH, OUT, PROJECTS, evaluate,  # noqa: E402
                       load_bench, load_support, parse_iso_epoch)
 
-P = ("kafka", "mariadb", "mongodb", "qt")
+# The project list is derived, never typed. It was a hardcoded 4-tuple of
+# kafka/mariadb/mongodb/qt, which made --project reject the other 23 by
+# argparse `choices` and, worse, made a bare --full run 4,535 instances of
+# the old four while looking exactly like a whole-benchmark run. Deriving
+# it from localize.PROJECTS keeps the runner in step with the benchmark,
+# and sorted() keeps build_population's pre-shuffle order deterministic.
+P = tuple(sorted(PROJECTS))
 AGENT_OUT = Path(__file__).resolve().parents[1] / "data/agent"
 ROOT_LLM = Path(__file__).resolve().parents[1] / "data/llm"
 SEED_SAMPLE, SAMPLE_N = 42, 200
