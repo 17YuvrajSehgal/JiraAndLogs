@@ -22,6 +22,11 @@ ROOT = Path(__file__).resolve().parents[2] / "industry-c7"
 RES = ROOT / "data/results"
 AG = ROOT / "data/agent"
 LLM = ROOT / "data/llm"
+# DELIBERATELY the original four. The 790 is a fixed historical sample
+# drawn from the 4-project benchmark and checked against
+# final-table-790.json; widening it to 27 would not extend the study,
+# it would break the artifact this script exists to reproduce. Every
+# other script derives its list from localize.PROJECTS.
 P = ("kafka", "mariadb", "mongodb", "qt")
 
 N_BOOT = 2000

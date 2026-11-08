@@ -38,7 +38,11 @@ from localize import OUT, RRF_K, evaluate  # noqa: E402
 
 LLM = ROOT / "industry-c7/data/llm"
 AGENT = ROOT / "industry-c7/data/agent"
-P = ("kafka", "mariadb", "mongodb", "qt")
+from localize import PROJECTS as _ALL_PROJECTS  # noqa: E402
+# Derived from localize.PROJECTS, never typed. A hardcoded 4-tuple here
+# does not fail, it quietly reports the old four projects as if they
+# were the benchmark.
+P = tuple(sorted(_ALL_PROJECTS))
 METRICS = ("acc@1", "acc@5", "acc@10", "mrr")
 B, SEED = 2000, 42
 

@@ -36,11 +36,15 @@ from pathlib import Path
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
 from localize import FULL_REPOS  # noqa: E402
+from localize import PROJECTS as _ALL_PROJECTS  # noqa: E402
 
 ROOT = HERE.parents[0]
 AG, RES, BENCH = ROOT / "data/agent", ROOT / "data/results", ROOT / "data/benchmark"
 TR = AG / "transcripts"
-P = ("kafka", "mariadb", "mongodb", "qt")
+# Derived from localize.PROJECTS, never typed. A hardcoded 4-tuple here
+# does not fail, it quietly reports the old four projects as if they
+# were the benchmark.
+P = tuple(sorted(_ALL_PROJECTS))
 
 LINE_RE = re.compile(r"\blines?\s+(\d+)(?:\s*[-–]\s*(\d+))?", re.I)
 # A call or a qualified name: the things evidence actually quotes.

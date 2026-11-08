@@ -24,8 +24,12 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from localize import OUT  # noqa: E402
+from localize import PROJECTS as _ALL_PROJECTS  # noqa: E402
 
-P = ("kafka", "mariadb", "mongodb", "qt")
+# Derived from localize.PROJECTS, never typed. A hardcoded 4-tuple here
+# does not fail, it quietly reports the old four projects as if they
+# were the benchmark.
+P = tuple(sorted(_ALL_PROJECTS))
 
 
 def main() -> int:

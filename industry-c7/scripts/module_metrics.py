@@ -22,8 +22,34 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 RES = ROOT / "industry-c7/data/results"
+# Module depth is a JUDGEMENT PER REPOSITORY, not a derivable number: it is
+# how many leading path components name a unit an on-call engineer would
+# recognise. It cannot be auto-filled, and the dataset's own gold_modules
+# field is no help -- mine_benchmark uses f.split("/")[0], depth 1 for
+# everything, which is exactly the "meaningless where everything lives under
+# src/" case this docstring warns about.
+#
+# Only these four are decided. The benchmark has 27. Rather than report
+# module metrics over whichever subset happens to be filled in, the guard
+# below refuses, because a four-project module table printed next to a
+# 27-project file table is the kind of thing that reaches a paper.
 DEPTH = {"kafka": 1, "mariadb": 2, "mongodb": 3, "qt": 2}
-SYSTEMS = ("trace_grep", "path_bm25", "content_bm25", "memory_bm25",
+
+
+def require_depths(projects) -> None:
+    """Refuse unless every project asked for has a decided depth."""
+    missing = sorted(set(projects) - set(DEPTH))
+    if missing:
+        raise SystemExit(
+            f"REFUSING: module depth is undecided for {len(missing)} of "
+            f"{len(set(projects))} projects: {', '.join(missing)}. "
+            "Module depth is a per-repository judgement (see DEPTH above). "
+            "Decide each one by looking at that repo's top-level layout, add "
+            "it to DEPTH, then re-run. Module metrics stay unreported until "
+            "then rather than covering a silent subset.")
+
+
+SYSTEMS =("trace_grep", "path_bm25", "content_bm25", "memory_bm25",
            "fused_no_memory", "fused_ours", "cond_no_memory", "cond_ours")
 KS = (1, 3, 5)
 
@@ -113,7 +139,18 @@ def main() -> int:
                       f"{d['overall']['mrr']:>8.3f}"
                       f"{d['hard']['acc@1']:>12.3f}")
         return 0
-    out = {}
+    # Refuse by default. This writes module-metrics.json, and a file holding
+    # four projects is indistinguishable from a benchmark-wide one once it is
+    # on disk and something else reads it. --only-decided is the explicit
+    # opt-in, and it stamps the coverage into the artifact.
+    from localize import PROJECTS as _ALL  # noqa: E402
+    only = "--only-decided" in sys.argv
+    if not only:
+        require_depths(sorted(_ALL))
+    out = {"_coverage": {"projects_reported": sorted(DEPTH),
+                         "projects_in_benchmark": len(_ALL),
+                         "undecided_depth": sorted(set(_ALL) - set(DEPTH)),
+                         "benchmark_wide": len(DEPTH) == len(_ALL)}}
     for proj, depth in DEPTH.items():
         rows = [json.loads(l) for l in
                 (RES / f"{proj}-instances.jsonl").open(encoding="utf-8")]
@@ -145,6 +182,11 @@ def main() -> int:
                 agg[sys_name] = {m: round(v / n, 4) for m, v in ms.items()}
         out[proj] = {"n_eval": len(ev), "module_depth": depth, "systems": agg}
 
+    if not out["_coverage"]["benchmark_wide"]:
+        print(f"\n*** PARTIAL: {len(DEPTH)} of "
+              f"{out['_coverage']['projects_in_benchmark']} projects. "
+              "Not a benchmark-wide result; module depth is undecided for "
+              f"{len(out['_coverage']['undecided_depth'])}. ***")
     (RES / "module-metrics.json").write_text(json.dumps(out, indent=2),
                                              encoding="utf-8")
     for proj, res in out.items():

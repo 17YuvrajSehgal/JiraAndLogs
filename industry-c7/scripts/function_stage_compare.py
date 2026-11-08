@@ -23,11 +23,19 @@ from __future__ import annotations
 import json
 import random
 import statistics as st
+import sys
 from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from localize import PROJECTS as _ALL_PROJECTS  # noqa: E402
 
 ROOT = Path(__file__).resolve().parents[1]
 RES = ROOT / "data/results"
-P = ("kafka", "mariadb", "mongodb", "qt")
+# Derived from localize.PROJECTS, never typed. A hardcoded 4-tuple here
+# does not fail, it quietly reports the old four projects as if they
+# were the benchmark. Deriving it means a project with a missing input
+# raises instead of vanishing from the table.
+P = tuple(sorted(_ALL_PROJECTS))
 VARIANTS = (("", "cond_ours candidates (current paper)"),
             ("-agent", "agent v3 candidates"),
             ("-agentread", "agent v3 candidates + read-boost"))

@@ -28,6 +28,12 @@ from run_agent import build_seeds  # noqa: E402
 RES, AG, LLM = ROOT / "data/results", ROOT / "data/agent", ROOT / "data/llm"
 
 
+from localize import PROJECTS as _ALL_PROJECTS  # noqa: E402
+# Derived from localize.PROJECTS, never typed. A hardcoded 4-tuple here
+# does not fail, it quietly reports the old four projects as if they
+# were the benchmark.
+_ALL_PROJECTS_SORTED = tuple(sorted(_ALL_PROJECTS))
+
 def main() -> int:
     agent = {}
     for line in (AG / "agent-v3-full.jsonl").open(encoding="utf-8"):
@@ -38,7 +44,7 @@ def main() -> int:
             agent[r["id"]] = r
 
     rows = {}
-    for p in ("kafka", "mariadb", "mongodb", "qt"):
+    for p in _ALL_PROJECTS_SORTED:
         f = RES / f"{p}-instances.jsonl"
         if not f.exists():
             continue

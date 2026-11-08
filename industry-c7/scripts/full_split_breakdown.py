@@ -29,11 +29,15 @@ from pathlib import Path
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
 from localize import evaluate  # noqa: E402
+from localize import PROJECTS as _ALL_PROJECTS  # noqa: E402
 from stats_agent import rrf  # noqa: E402
 
 ROOT = HERE.parents[0]
 RES, LLM, AG = ROOT / "data/results", ROOT / "data/llm", ROOT / "data/agent"
-P = ("kafka", "mariadb", "mongodb", "qt")
+# Derived from localize.PROJECTS, never typed. A hardcoded 4-tuple here
+# does not fail, it quietly reports the old four projects as if they
+# were the benchmark.
+P = tuple(sorted(_ALL_PROJECTS))
 SEED, N_BOOT = 20261103, 2000
 # T25. Restrict the scored population to a saved subsample, and tag the
 # outputs so a restricted run can never overwrite the full-split ones. Every

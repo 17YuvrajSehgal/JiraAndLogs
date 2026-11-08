@@ -30,8 +30,12 @@ sys.path.insert(0, str(HERE.parents[0] / "agent"))
 import run_agent as R  # noqa: E402
 import tools as T  # noqa: E402
 from localize import OUT, PROJECTS, load_support, parse_iso_epoch  # noqa: E402
+from localize import PROJECTS as _ALL_PROJECTS  # noqa: E402
 
-P = ("kafka", "mariadb", "mongodb", "qt")
+# Derived from localize.PROJECTS, never typed. A hardcoded 4-tuple here
+# does not fail, it quietly reports the old four projects as if they
+# were the benchmark.
+P = tuple(sorted(_ALL_PROJECTS))
 SEED = 99
 
 

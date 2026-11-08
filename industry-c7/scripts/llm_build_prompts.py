@@ -45,8 +45,12 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from function_stage import list_functions, parser_for, raw_blobs  # noqa: E402
 from localize import (BENCH, FULL_REPOS, OUT, PROJECTS, load_bench,  # noqa: E402
                       Snapshot, run_git)
+from localize import PROJECTS as _ALL_PROJECTS  # noqa: E402
 
-P = ("kafka", "mariadb", "mongodb", "qt")
+# Derived from localize.PROJECTS, never typed. A hardcoded 4-tuple here
+# does not fail, it quietly reports the old four projects as if they
+# were the benchmark.
+P = tuple(sorted(_ALL_PROJECTS))
 LLM = Path(__file__).resolve().parents[1] / "data/llm"
 SEED, SAMPLE = 42, 200
 MAX_DIRS_SHOWN = 900

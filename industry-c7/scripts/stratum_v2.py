@@ -28,7 +28,11 @@ from function_stage import list_functions, parser_for, raw_blobs  # noqa: E402
 from localize import BENCH, FULL_REPOS, OUT  # noqa: E402
 from mine_benchmark import run_git  # noqa: E402
 
-P = ("kafka", "mariadb", "mongodb", "qt")
+from localize import PROJECTS as _ALL_PROJECTS  # noqa: E402
+# Derived from localize.PROJECTS, never typed. A hardcoded 4-tuple here
+# does not fail, it quietly reports the old four projects as if they
+# were the benchmark.
+P = tuple(sorted(_ALL_PROJECTS))
 MIN_NAME = 4
 
 

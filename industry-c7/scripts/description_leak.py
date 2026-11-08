@@ -31,10 +31,14 @@ from pathlib import Path
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
 from localize import OUT, evaluate, load_bench  # noqa: E402
+from localize import PROJECTS as _ALL_PROJECTS  # noqa: E402
 
 ROOT = HERE.parents[0]
 BENCH = ROOT / "data" / "benchmark"
-P = ("kafka", "mariadb", "mongodb", "qt")
+# Derived from localize.PROJECTS, never typed. A hardcoded 4-tuple here
+# does not fail, it quietly reports the old four projects as if they
+# were the benchmark.
+P = tuple(sorted(_ALL_PROJECTS))
 KS = ("acc@1", "acc@5", "mrr")
 
 STRICT = {

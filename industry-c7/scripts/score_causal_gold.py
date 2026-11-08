@@ -45,7 +45,11 @@ V3 = "--v3" in sys.argv
 CG = ROOT / ("data/causal-gold-pass2/causal-gold.jsonl" if PASS2
              else "data/causal-gold/causal-gold.jsonl")
 TAG = "-pass2" if PASS2 else ("-v3" if V3 else "")
-P = ("kafka", "mariadb", "mongodb", "qt")
+from localize import PROJECTS as _ALL_PROJECTS  # noqa: E402
+# Derived from localize.PROJECTS, never typed. A hardcoded 4-tuple here
+# does not fail, it quietly reports the old four projects as if they
+# were the benchmark.
+P = tuple(sorted(_ALL_PROJECTS))
 SEED, N_BOOT = 20261102, 2000
 METRICS = ("acc@1", "acc@5", "acc@10", "mrr")
 

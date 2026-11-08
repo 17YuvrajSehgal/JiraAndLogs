@@ -7,7 +7,7 @@ lexical fallbacks, so stop_reason and the v3 behaviour fields are the
 things worth watching.
 
 Usage:
-    python industry-c7/scripts/run_status.py [--tag v3-full] [--n 4409]
+    python industry-c7/scripts/run_status.py [--tag v3-full] [--n 26544]
 """
 
 from __future__ import annotations
@@ -19,7 +19,8 @@ from collections import Counter
 from pathlib import Path
 
 AG = Path(__file__).resolve().parents[1] / "data/agent"
-tag, total = "v3-full", 4409
+# 26,544 is the 27-project eval split; it was 4,409, the old four.
+tag, total = "v3-full", 26544
 for i, a in enumerate(sys.argv):
     if a == "--tag" and i + 1 < len(sys.argv):
         tag = sys.argv[i + 1]

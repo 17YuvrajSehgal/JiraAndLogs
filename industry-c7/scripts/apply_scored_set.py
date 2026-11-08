@@ -22,11 +22,16 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from scored_set import load  # noqa: E402
+from localize import PROJECTS as _ALL_PROJECTS  # noqa: E402
 
 ROOT = Path(__file__).resolve().parents[1]
 RES, LLM = ROOT / "data" / "results", ROOT / "data" / "llm"
 KEEPOUT = RES / "removed-test-only-gold"
-PROJECTS = ("kafka", "mariadb", "mongodb", "qt")
+# Derived from localize.PROJECTS, never typed. A hardcoded 4-tuple here
+# does not fail, it quietly reports the old four projects as if they
+# were the benchmark. Deriving it means a project with a missing input
+# raises instead of vanishing from the table.
+PROJECTS = tuple(sorted(_ALL_PROJECTS))
 EXCL = load(ROOT / "data" / "benchmark")
 
 

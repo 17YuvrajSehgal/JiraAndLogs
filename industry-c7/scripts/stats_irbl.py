@@ -23,7 +23,12 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 RES = ROOT / "industry-c7/data/results"
-P = ("kafka", "mariadb", "mongodb", "qt")
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from localize import PROJECTS as _ALL_PROJECTS  # noqa: E402
+# Derived from localize.PROJECTS, never typed. A hardcoded 4-tuple here
+# does not fail, it quietly reports the old four projects as if they
+# were the benchmark.
+P = tuple(sorted(_ALL_PROJECTS))
 WITHIN = (("leak_simiscore", "simiscore_leaky", "simiscore_fw"),
           ("leak_buglocator", "buglocator_leaky_a3", "buglocator_fw_a3"),
           ("leak_brtracer", "brtracer_leaky", "brtracer_fw"))
