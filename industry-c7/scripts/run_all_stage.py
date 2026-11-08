@@ -28,6 +28,24 @@ from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
 ROOT = HERE.parent
+sys.path.insert(0, str(HERE))
+
+
+def _funcs_cache_stale(project: str) -> bool:
+    """True when funcs-<p>.pkl was written under a different grammar config."""
+    import pickle
+    from localize import PROJECTS  # noqa: PLC0415 - keeps import cost off dry runs
+    from function_stage import grammar_key  # noqa: PLC0415
+    f = RES / f"funcs-{project}.pkl"
+    if not f.exists():
+        return False
+    try:
+        blob = pickle.loads(f.read_bytes())
+    except Exception:  # noqa: BLE001 - an unreadable cache is a stale cache
+        return True
+    return (not isinstance(blob, dict)
+            or blob.get("__grammar__") != grammar_key(
+                PROJECTS[project]["src_ext"]))
 BENCH = ROOT / "data/benchmark"
 RES = ROOT / "data/results"
 LOGS = ROOT / "data/stagelogs"
@@ -62,11 +80,20 @@ def main() -> int:
     par = args.parallel or cfg["parallel"]
     LOGS.mkdir(parents=True, exist_ok=True)
 
-    todo, blocked, done = [], [], []
+    todo, blocked, done, stale = [], [], [], []
     for p, n in projects():
         if (RES / cfg["out"].format(p=p)).exists():
-            done.append(p)
-            continue
+            # "the output file exists" is not the same as "the output is
+            # current". The funcs cache stores [] for any file no grammar
+            # covers, so widening LANG_OF leaves every one of them answering
+            # [] forever. Skipping on existence alone would mean a grammar
+            # change silently does nothing, which is how ambari sat at 0.472
+            # coverage. Ask the stage itself whether its cache is current.
+            if args.stage == "funcs" and _funcs_cache_stale(p):
+                stale.append(p)
+            else:
+                done.append(p)
+                continue
         missing = [t.format(p=p) for t in cfg["needs"]
                    if not (RES / t.format(p=p)).exists()]
         (blocked if missing else todo).append((p, n, missing))
@@ -74,6 +101,9 @@ def main() -> int:
     print(f"stage={args.stage} parallel={par}")
     print(f"  {len(done)} already done, {len(todo)} to run, "
           f"{len(blocked)} blocked on missing inputs")
+    for p in stale:
+        print(f"    STALE   {p:12s} grammar config changed since its cache "
+              f"was written; rerunning")
     for p, n, m in blocked:
         print(f"    BLOCKED {p:12s} missing {m}")
     if args.dry_run:

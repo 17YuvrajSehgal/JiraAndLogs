@@ -23,6 +23,7 @@ Usage:
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import pickle
 import re
@@ -69,16 +70,61 @@ def read_functions(project: str, issue_key: str) -> set:
     return out
 HUNK_RE = re.compile(r"^@@ -(\d+)(?:,(\d+))? \+\d+(?:,\d+)? @@")
 
-# extension -> grammar; .yy/.idl/.qml have no reliable function grammar here
-LANG_OF = {".java": "java", ".scala": "scala"}
+# extension -> grammar. Every entry here was checked against REAL gold files
+# from the repos, not a toy snippet, because a grammar that loads is not a
+# grammar that parses: tree-sitter's groovy produced 554 ERROR nodes and no
+# function node at all over 12 real Groovy files, so .groovy stays out.
+# .yy (bison), .idl (mongo IDL) and .qml have no usable function grammar
+# either, and .qml never appears in a gold file, so none of them are wired.
+LANG_OF = {".java": "java", ".scala": "scala", ".py": "python", ".go": "go"}
 for _e in (".c", ".cc", ".cpp", ".h", ".hpp", ".ic", ".inl", ".mm"):
     LANG_OF[_e] = "cpp"
+
+# Which node types are a function-like DEFINITION, per language. This is not
+# one shared tuple, because the same name means different things across
+# grammars. Counted on real gold files:
+#   java   method_declaration 81, constructor_declaration 13
+#   scala  function_definition 298  (function_declaration is an abstract
+#          member with no body, so it is not a region and is excluded)
+#   cpp    function_definition 425  (function_declarator is a signature)
+#   python function_definition 101
+#   go     method_declaration 131, function_declaration 58  <- the second is
+#          every top-level func; matching only the first would have silently
+#          dropped them while still looking like Go support.
+FUNC_NODES = {
+    "java": ("method_declaration", "constructor_declaration"),
+    "scala": ("function_definition",),
+    "cpp": ("function_definition",),
+    "python": ("function_definition",),
+    "go": ("function_declaration", "method_declaration"),
+}
+
+def grammar_key(src_ext) -> str:
+    """Fingerprint of the grammar rules THIS project can actually hit.
+
+    Per project, not global: adding Python must rebuild ambari's cache, and
+    must not rebuild hive's, which has no .py in its src_ext and whose
+    entries are provably unchanged.
+    """
+    exts = sorted(e for e in src_ext if e in LANG_OF)
+    langs = sorted({LANG_OF[e] for e in exts})
+    return hashlib.sha1(repr((exts, [(l, tuple(FUNC_NODES[l]))
+                                     for l in langs])).encode()
+                        ).hexdigest()[:16]
 
 _parsers: dict[str, object] = {}
 
 
+def _save_cache(path: Path, fcache: dict, key: str) -> None:
+    path.write_bytes(pickle.dumps({"__grammar__": key, "fcache": fcache}))
+
+
+def lang_for(path: str) -> str | None:
+    return LANG_OF.get(Path(path).suffix.lower())
+
+
 def parser_for(path: str):
-    lang = LANG_OF.get(Path(path).suffix.lower())
+    lang = lang_for(path)
     if lang is None:
         return None
     if lang not in _parsers:
@@ -104,14 +150,17 @@ def list_functions(path: str, blob_text: bytes) -> list[tuple[str, int, int]]:
     p = parser_for(path)
     if p is None:
         return []
+    lang = lang_for(path)
+    wanted = FUNC_NODES[lang]
     tree = p.parse(blob_text)
     out: list[tuple[str, int, int]] = []
     stack = [tree.root_node]
     while stack:
         n = stack.pop()
-        if n.type in ("method_declaration", "constructor_declaration",
-                      "function_definition"):
-            if n.type == "function_definition" and n.child_by_field_name("declarator"):
+        if n.type in wanted:
+            # C++ hides the name under a chain of declarators; every other
+            # grammar here exposes a `name` field directly.
+            if lang == "cpp":
                 name = _cpp_name(n)
             else:
                 nm = n.child_by_field_name("name")
@@ -219,9 +268,22 @@ def main() -> int:
         n_dev = 0
         print(f"agent mode: {len(rows)} instances with a v3 ranking")
 
+    # The cache is keyed by blob sha and stores [] for a file no grammar
+    # covers. That is the trap: widen LANG_OF and every previously
+    # unparseable blob still answers [] forever, so the new grammar silently
+    # does nothing. Adding .py to ambari moved its coverage from 0.472 to
+    # 0.921 only because the cache was deleted by hand first. Stamping the
+    # grammar config into the cache makes that automatic.
     cache_path = OUT / f"funcs-{args.project}.pkl"
-    fcache: dict[str, list] = (pickle.loads(cache_path.read_bytes())
-                               if cache_path.exists() else {})
+    gkey = grammar_key(cfg["src_ext"])
+    fcache: dict[str, list] = {}
+    if cache_path.exists():
+        blob = pickle.loads(cache_path.read_bytes())
+        if isinstance(blob, dict) and blob.get("__grammar__") == gkey:
+            fcache = blob["fcache"]
+        else:
+            print("  grammar config changed since this cache was written; "
+                  "rebuilding it from scratch", flush=True)
 
     out_rows, stats, t0 = [], Counter(), time.time()
     for i, r in enumerate(rows):
@@ -305,8 +367,8 @@ def main() -> int:
         if i % 200 == 0:
             print(f"  {i}/{len(rows)} ({time.time() - t0:.0f}s, "
                   f"fcache {len(fcache)})", flush=True)
-            cache_path.write_bytes(pickle.dumps(fcache))
-    cache_path.write_bytes(pickle.dumps(fcache))
+            _save_cache(cache_path, fcache, gkey)
+    _save_cache(cache_path, fcache, gkey)
 
     ev = [x for x in out_rows[n_dev:] if x["eligible"]] \
         if not args.limit else [x for x in out_rows if x["eligible"]]
