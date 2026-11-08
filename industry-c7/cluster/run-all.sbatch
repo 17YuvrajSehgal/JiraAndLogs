@@ -97,6 +97,12 @@ SPOOL=$C7/data/agent/spool-${SLURM_JOB_ID:-local}
 mkdir -p "$BASE/logs" "$SPOOL"
 echo "node=$(hostname) job=${SLURM_JOB_ID:-none} stage=$STAGE maxlen=$MAXLEN"
 
+# PY is used by the thinking check below, which ran 48 lines BEFORE this
+# assignment. With set -u that is an unbound-variable exit at second zero:
+# the job died before it served anything, every time.
+PY=$S/c7-llm/agent-venv/bin/python
+[ -x "$PY" ] || { echo "no agent venv at $PY" >&2; exit 1; }
+
 MODEL_DIR=""
 for cand in "$S/models/Qwen3.8-27B" "$S/c7-llm/models/Qwen3.8-27B"; do
   [ -f "$cand/config.json" ] && { MODEL_DIR=$cand; break; }
@@ -206,8 +212,6 @@ THINKCHK
 # laptop's exact pins (langchain 1.4.9, langgraph 1.2.20, pydantic 2.14.3,
 # tree-sitter-language-pack 1.22.1) so a cluster run cannot drift from a
 # local one.
-PY=$S/c7-llm/agent-venv/bin/python
-[ -x "$PY" ] || { echo "no agent venv at $PY" >&2; exit 1; }
 C7="$C7" "$PY" - <<'PREFLIGHT' || { echo "PREFLIGHT FAILED: not starting" >&2; exit 1; }
 import sys
 import os
