@@ -55,7 +55,18 @@ MODEL = os.environ.get("C7_MODEL") or "qwen3.8-27b"
 # every max_tokens below carries headroom for them or the answer is cut
 # off mid-sentence. Measured on this model family: roughly 1,900
 # reasoning tokens before the answer starts.
-ENABLE_THINKING = (os.environ.get("C7_THINK", "1") != "0")
+# OFF by default. The agent's behaviour is meant to come from its own
+# design -- the tools it is given, the required submission fields, the
+# investigation skill -- and host reasoning sits on top of all of that and
+# makes it harder to attribute a result to any of it. The paired kafka
+# pilot also measured it worse: acc@1 0.600 against 0.800, 4.8x the output
+# tokens, and 2 of 5 runs dead with no_tool_call when reasoning ran past
+# 90% of the output budget.
+#
+# C7_THINK=1 turns it on for the one comparison arm, so the paper can
+# report the effect of host reasoning on this design rather than leaving
+# it unexamined.
+ENABLE_THINKING = (os.environ.get("C7_THINK", "0") != "0")
 THINK_HEADROOM = 2500 if ENABLE_THINKING else 0
 # No NODE here: the compute node changes with every SLURM job and the
 # bridge discovers it from the serve log. A copy in Python could only go

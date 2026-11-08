@@ -52,6 +52,23 @@ def _opt(name: str, default: str = "") -> str:
 
 SUBSET, TAG = _opt("subset"), _opt("tag")
 SUF = f"-{TAG}" if TAG else ""
+# Every metric the paper reports, in the order the tables use them.
+#
+# hit@k is what these tables used to call acc@k. Identical rule: at least
+# one fix-touched file in the top k. acc@k is still computed and still in
+# the rows, so older figures resolve, but the reported name now says what
+# it measures.
+#
+# precision@k is reported WITH its ceiling and never without. 51.3% of
+# issues touch exactly one file, so a perfect answer ranked first scores
+# 1/5 = 0.2 at k=5. Printing 0.2 next to nothing reads as a failure; it is
+# the maximum. r_precision is the number that does not need the caveat,
+# because it judges a one-file issue on the top 1 and a six-file issue on
+# the top 6.
+REPORTED = ("hit@1", "hit@5", "recall@5", "precision@5",
+            "precision_ceiling@5", "r_precision", "ap", "mrr",
+            "acc@1", "acc@5")
+
 LABEL = {"remember_v3": "REMEMBER (v3)", "llm_twostage": "Model alone",
          "locagent_style": "LocAgent-style (agentic)",
          "cosil_style": "CoSIL-style (agentic)",
@@ -199,7 +216,7 @@ def main() -> int:
                            "empty on all 6,314 scored instances by construction",
         "strata_n": {name: sum(1 for k in ids if sel(k)) for name, sel in strata.items()},
         "scores": {s: {name: {m: (lambda v: round(v, 4) if v is not None else None)(
-            mean(s, sel, m)) for m in ("acc@1", "acc@5", "mrr")}
+            mean(s, sel, m)) for m in REPORTED}
             for name, sel in strata.items()} for s in sorted(full)},
         "vs_best_baseline": {},
     }
@@ -208,7 +225,7 @@ def main() -> int:
         best = max(others, key=lambda s: mean(s, strata["all"], "acc@1"))
         out["best_baseline"] = best
         out["vs_best_baseline"] = {m: paired("remember_v3", best, m)
-                                   for m in ("acc@1", "acc@5", "mrr")}
+                                   for m in REPORTED}
 
     # The comparisons the abstract and intro actually make, so every headline
     # delta traces to this file instead of being computed by hand. Reported
@@ -241,13 +258,22 @@ def main() -> int:
     if excluded:
         print(f"excluded (partial coverage): {', '.join(excluded)}")
     print()
-    hdr = f"{'system':30s}{'Acc@1':>8s}{'Acc@5':>8s}{'MRR':>7s}{'hard@1':>9s}{'easy@1':>9s}"
+    hdr = (f"{'system':30s}{'Hit@1':>7s}{'Hit@5':>7s}{'Rec@5':>7s}"
+           f"{'Prec@5':>8s}{'R-Prec':>8s}{'AP':>7s}{'MRR':>7s}{'hard@1':>8s}")
     print(hdr)
     print("-" * len(hdr))
     for s in order:
-        v = out["scores"][s]
-        print(f"{LABEL.get(s, s):30s}{v['all']['acc@1']:>8.3f}{v['all']['acc@5']:>8.3f}"
-              f"{v['all']['mrr']:>7.3f}{v['hard']['acc@1']:>9.3f}{v['easy']['acc@1']:>9.3f}")
+        v = out["scores"][s]["all"]
+        print(f"{LABEL.get(s, s):30s}{v['hit@1']:>7.3f}{v['hit@5']:>7.3f}"
+              f"{v['recall@5']:>7.3f}{v['precision@5']:>8.3f}"
+              f"{v['r_precision']:>8.3f}{v['ap']:>7.3f}{v['mrr']:>7.3f}"
+              f"{out['scores'][s]['hard']['hit@1']:>8.3f}")
+    # The ceiling depends only on how many files each fix touched, so it is
+    # identical for every system and belongs on one line, not in a column
+    # that looks like a score. Prec@5 must never be read without it.
+    ceil = out["scores"][order[0]]["all"]["precision_ceiling@5"]
+    print(f"{'-- max achievable Prec@5':30s}{'':>7s}{'':>7s}{'':>7s}"
+          f"{ceil:>8.3f}   (set by fix size, not by any system)")
     if out["vs_best_baseline"]:
         t = out["vs_best_baseline"]["acc@1"]
         print(f"\nREMEMBER v3 vs best baseline ({LABEL.get(out['best_baseline'], out['best_baseline'])}), "

@@ -37,7 +37,10 @@ COMPARISONS = (
     ("memory_unweighted", "fused_ours", "fused_no_memory"),
     ("ours_vs_tracegrep", "cond_ours", "trace_grep"),
 )
-METRICS = ("acc@5", "mrr")
+# hit@5 is acc@5 renamed. recall@5 and precision@5 are tested too, because
+# a system can win on "did you find one of them" and lose on "how many of
+# them did you find", and the paper now reports both.
+METRICS = ("hit@1", "hit@5", "recall@5", "precision@5", "r_precision", "mrr")
 B = 2000
 SEED = 42
 
