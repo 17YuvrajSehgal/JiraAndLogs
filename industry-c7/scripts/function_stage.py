@@ -236,6 +236,15 @@ def main() -> int:
     ap.add_argument("--tag", default="",
                     help="output suffix, e.g. --tag -agent writes "
                          "{p}-functions-agent-summary.json")
+    # The agent file used to be the hardcoded name "agent-v3-full.jsonl",
+    # which does not exist any more: the main run is cut into five
+    # project-disjoint shards writing agent-full-s1..s5.jsonl. So
+    # --ranking submitted either crashed on a missing file or, worse, read
+    # a stale one and reported regions from a run nobody asked about.
+    # The default is a glob over the shards, and every match is read.
+    ap.add_argument("--agent-glob", default="agent-full-*.jsonl",
+                    help="glob under data/agent for the rows carrying the "
+                         "submitted regions (default: the sharded main run)")
     args = ap.parse_args()
     git_dir = FULL_REPOS[args.project]
 
@@ -253,38 +262,56 @@ def main() -> int:
     agent_read: dict[str, set] = {}
     agent_regions: dict[str, list] = {}
     if args.ranking in ("agent", "submitted") or args.read_boost:
-        af = ROOT_AG / "agent-v3-full.jsonl"
-        for line in af.open(encoding="utf-8"):
-            if not line.strip():
-                continue
-            a = json.loads(line)
-            if a["project"] != args.project or is_dead_row(a):
-                continue
-            agent_rank[a["issue_key"]] = a["ranking"]
-            # notes carry the submitted region per file, already resolved
-            # against the snapshot at submit time. An unresolved symbol is
-            # dropped here, which scores it as a miss rather than inventing
-            # a key that could never match.
-            # "regions" lives in the row; "notes" only in the transcript.
-            # Prefer the row so scoring never depends on transcripts being
-            # present, and fall back for rows written before the field.
-            src = a.get("regions") or [
-                {"path": n["file"], "resolved": n.get("symbol_resolved", ""),
-                 "lines": n.get("symbol_lines", [])}
-                for n in (a.get("notes") or [])]
-            agent_regions[a["issue_key"]] = [
-                f"{g['path']}::{g['resolved']}@{g['lines'][0]}"
-                for g in src if g.get("resolved") and g.get("lines")]
-            if args.read_boost:
-                agent_read[a["issue_key"]] = read_functions(
-                    args.project, a["issue_key"])
+        files = sorted(ROOT_AG.glob(args.agent_glob))
+        if not files:
+            print(f"no agent rows match {args.agent_glob} under {ROOT_AG}",
+                  file=sys.stderr)
+            return 1
+        print(f"agent rows from: {', '.join(f.name for f in files)}")
+        # Shards are project-disjoint, so one issue_key must not appear
+        # twice. If it does, two shards overlapped and whichever file sorts
+        # last would silently win; say so instead.
+        seen_in: dict[str, str] = {}
+        for af in files:
+            for line in af.open(encoding="utf-8"):
+                if not line.strip():
+                    continue
+                a = json.loads(line)
+                if a["project"] != args.project or is_dead_row(a):
+                    continue
+                k = a["issue_key"]
+                if k in seen_in:
+                    print(f"REFUSING: {args.project}:{k} appears in both "
+                          f"{seen_in[k]} and {af.name}; the shards are not "
+                          f"disjoint", file=sys.stderr)
+                    return 1
+                seen_in[k] = af.name
+                agent_rank[k] = a["ranking"]
+                # notes carry the submitted region per file, already
+                # resolved against the snapshot at submit time. An
+                # unresolved symbol is dropped here, which scores it as a
+                # miss rather than inventing a key that could never match.
+                # "regions" lives in the row; "notes" only in the
+                # transcript. Prefer the row so scoring never depends on
+                # transcripts being present, and fall back for rows written
+                # before the field existed.
+                src = a.get("regions") or [
+                    {"path": n["file"],
+                     "resolved": n.get("symbol_resolved", ""),
+                     "lines": n.get("symbol_lines", [])}
+                    for n in (a.get("notes") or [])]
+                agent_regions[k] = [
+                    f"{g['path']}::{g['resolved']}@{g['lines'][0]}"
+                    for g in src if g.get("resolved") and g.get("lines")]
+                if args.read_boost:
+                    agent_read[k] = read_functions(args.project, k)
         # The agent ran the eval split only, so an instance with no agent
         # ranking has no candidate set at all. Dropping it here instead of
         # scoring it as a miss keeps the population honest; the dev rows it
         # removes were never scored anyway.
         rows = [r for r in rows if r["issue_key"] in agent_rank]
         n_dev = 0
-        print(f"agent mode: {len(rows)} instances with a v3 ranking")
+        print(f"agent mode: {len(rows)} instances with an agent ranking")
 
     # The cache is keyed by blob sha and stores [] for a file no grammar
     # covers. That is the trap: widen LANG_OF and every previously
