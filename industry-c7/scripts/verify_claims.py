@@ -567,9 +567,13 @@ def main() -> int:
     # any GPU time. Pinned to the stored values, not the printed ones.
     bs = json.loads((RES / "baseline-sample.json").read_text(encoding="utf-8"))
     bp = json.loads((RES / "baseline-pilot.json").read_text(encoding="utf-8"))
-    check("T25 the measurement sample is 1,000 of the 4,409 eval instances",
-          bs["n"] == 1000 and bs["drawn_from"] == 4409,
+    check("T25 the measurement sample is 1,000 of the 26,544 eval instances",
+          bs["n"] == 1000 and bs["drawn_from"] == 26544,
           f"{bs['n']} of {bs['drawn_from']}")
+    check("T25 the sample spans all 27 projects",
+          bs["n_projects"] == 27, f"{bs['n_projects']} projects")
+    check("T25 the sample is drawn from the runner's own eval population",
+          "build_population" in bs["population"], bs["population"])
     check("T25 the pilot is 30 instances, disjoint from the sample",
           bp["n"] == 30 and not (set(bp["ids"]) & set(bs["ids"])),
           f"{len(set(bp['ids']) & set(bs['ids']))} overlap")
@@ -578,18 +582,21 @@ def main() -> int:
     # re-running it produced a DIFFERENT 1,000. Pinning the id digests means a
     # population that silently moves fails here instead of in a reported
     # number.
-    for name, want in (("sample", "d014dc223d9f9f09047919f83994e574"),
-                       ("pilot", "8bf465c5802e553ba04e54aea6ea98d3")):
+    for name, want in (("sample", "ffb6bc810fe394129dc88ade4589ea09"),
+                       ("pilot", "7519da758c12bb26db3693479adeab93")):
         d = bs if name == "sample" else bp
         got = hashlib.md5(json.dumps(d["ids"]).encode()).hexdigest()
         check(f"T25 the {name} population is exactly the one measured on",
               got == want, f"{got} != {want}")
-    check("T25 sample hard fraction .516 tracks the population's .5167",
-          bs["sample_mix"]["hard_frac"] == .516
-          and bs["population_mix"]["hard_frac"] == .5167)
-    # Stored values, not the ones the sampler prints.
-    for proj, samp, pop in (("kafka", .108, .108), ("mariadb", .267, .2674),
-                            ("mongodb", .552, .5521), ("qt", .073, .0726)):
+    check("T25 sample hard fraction .483 tracks the population's .4822",
+          bs["sample_mix"]["hard_frac"] == .483
+          and bs["population_mix"]["hard_frac"] == .4822)
+    # Stored values, not the ones the sampler prints. beam is the thinnest
+    # cell in the draw at 9 instances, so it is pinned on purpose: if
+    # proportional allocation ever rounds a small project to zero, the
+    # sample stops spanning 27 projects and this fails.
+    for proj, samp, pop in (("hive", .124, .1238), ("hadoop", .116, .1157),
+                            ("mongodb", .095, .0955), ("beam", .008, .0084)):
         check(f"T25 sample project mix {proj} {samp} tracks population {pop}",
               bs["sample_mix"]["by_project"][proj] == samp
               and bs["population_mix"]["by_project"][proj] == pop)
