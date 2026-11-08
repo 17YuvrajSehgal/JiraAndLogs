@@ -135,10 +135,11 @@ def main() -> int:
                 for s, m in (r.get("metrics") or {}).items():
                     pre.setdefault(s, {})[k] = m
 
-    # ARISE votes are loaded only for non-wolv2 projects (localize.py), and all
-    # four study projects are wolv2, so this signal is empty on every instance
-    # of this benchmark by construction. It is inactive, not weak; reporting it
-    # as a 0.000 baseline would misdescribe it. The paper never mentions it.
+    # ARISE votes are loaded only for non-wolv2 projects (localize.py) and no
+    # project here supplies them, so this signal is empty by construction.
+    # Re-measured on the 27-project benchmark: empty on 26,544 of 26,544 eval
+    # instances. It is inactive, not weak; reporting it as a 0.000 baseline
+    # would misdescribe it. The paper never mentions it.
     DEAD = {"memory_arise"}
 
     # "fusion" is the paper's best NON-AGENT system: reciprocal-rank fusion of
