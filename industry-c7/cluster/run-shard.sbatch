@@ -34,7 +34,19 @@ S=/scratch/$USER
 BASE=${C7_BASE:-$S/c7-data}
 C7=$BASE/industry-c7
 WORKERS="${WORKERS:-24}"
-PORT=${PORT:-8000}
+# A fixed 8000 works only while no two of these jobs share a node. Nothing
+# guarantees that: a Trillium node has 4 to 8 GPUs and the scheduler is
+# free to pack single-GPU jobs onto one. The second vLLM would then fail to
+# bind and the job would die after loading 52GB of weights. Take the first
+# free port instead.
+pick_port () {
+  for p in $(seq "${1:-8000}" "$((${1:-8000} + 200))"); do
+    if ! (exec 3<>/dev/tcp/127.0.0.1/"$p") 2>/dev/null; then echo "$p"; return; fi
+  done
+  echo "no free port in range" >&2; exit 1
+}
+PORT=${PORT:-$(pick_port 8000)}
+echo "port=$PORT"
 TP="${TP:-1}"
 
 # ---- the shard identity, no defaults ------------------------------------

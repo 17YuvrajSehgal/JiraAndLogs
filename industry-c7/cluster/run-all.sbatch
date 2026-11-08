@@ -37,7 +37,17 @@ S=/scratch/yuvraj17
 BASE=${C7_BASE:-$S/c7-data}
 C7=$BASE/industry-c7
 WORKERS="${WORKERS:-12}"
-PORT=${PORT:-8000}
+# locagent and cosil are submitted together and may land on the same node,
+# where the second vLLM cannot bind 8000 and dies after loading 52GB of
+# weights. Take the first free port.
+pick_port () {
+  for p in $(seq "${1:-8000}" "$((${1:-8000} + 200))"); do
+    if ! (exec 3<>/dev/tcp/127.0.0.1/"$p") 2>/dev/null; then echo "$p"; return; fi
+  done
+  echo "no free port in range" >&2; exit 1
+}
+PORT=${PORT:-$(pick_port 8000)}
+echo "port=$PORT"
 
 # ---- the tree must be the 27-project one --------------------------------
 # BASE used to default to $S/JiraAndLogs_scratch/c7run, which is the OLD
