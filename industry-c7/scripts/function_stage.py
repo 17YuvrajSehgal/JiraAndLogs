@@ -35,7 +35,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from localize import (BENCH, FULL_REPOS, KS, MAX_BLOB_BYTES, OUT,  # noqa: E402
-                      PROJECTS, bm25_rank, tokenize)
+                      PROJECTS, bm25_rank, is_dead_row, tokenize)
 from mine_benchmark import run_git  # noqa: E402
 
 from tree_sitter_language_pack import get_parser  # noqa: E402
@@ -258,7 +258,7 @@ def main() -> int:
             if not line.strip():
                 continue
             a = json.loads(line)
-            if a["project"] != args.project or a.get("error")                     or a.get("stop_reason") == "llm_error":
+            if a["project"] != args.project or is_dead_row(a):
                 continue
             agent_rank[a["issue_key"]] = a["ranking"]
             # notes carry the submitted region per file, already resolved

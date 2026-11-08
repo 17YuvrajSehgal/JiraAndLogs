@@ -31,6 +31,7 @@ from pathlib import Path
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
 from localize import OUT, evaluate, load_bench  # noqa: E402
+from localize import is_dead_row  # noqa: E402
 from localize import PROJECTS as _ALL_PROJECTS  # noqa: E402
 
 ROOT = HERE.parents[0]
@@ -154,7 +155,7 @@ def study_table(drop: set) -> dict:
     from score_causal_gold import DOC_ORDER, rankings
     ag = [json.loads(l) for l in
           (OUT.parent / "agent/agent-v2.jsonl").open(encoding="utf-8")]
-    ag = [r for r in ag if not r.get("error")]
+    ag = [r for r in ag if not is_dead_row(r)]
     gold = {f"{r['project']}:{r['issue_key']}": r["gold_files"] for r in ag}
     rk = rankings(set(gold))
     names = [n for n, _ in DOC_ORDER if n in rk and not set(gold) - set(rk[n])]

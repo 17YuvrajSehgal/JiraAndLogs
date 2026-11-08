@@ -19,6 +19,8 @@ from collections import Counter
 from pathlib import Path
 
 AG = Path(__file__).resolve().parents[1] / "data/agent"
+import sys as _s; _s.path.insert(0, str(Path(__file__).resolve().parents[0]))
+from localize import is_dead_row  # noqa: E402
 # 26,544 is the 27-project eval split; it was 4,409, the old four.
 tag, total = "v3-full", 26544
 for i, a in enumerate(sys.argv):
@@ -38,7 +40,7 @@ for line in f.open(encoding="utf-8"):
     except Exception:  # noqa: BLE001 - a half-written last line is normal
         pass
 n = len(rows)
-good = [r for r in rows if not r.get("error")]
+good = [r for r in rows if not is_dead_row(r)]
 hard_err = [r for r in rows if r.get("error")]
 stop = Counter(r.get("stop_reason") for r in good)
 llm_err = stop.get("llm_error", 0)

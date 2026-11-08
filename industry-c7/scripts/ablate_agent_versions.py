@@ -26,6 +26,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "industry-c7/scripts"))
+from localize import is_dead_row  # noqa: E402
 from localize import OUT  # noqa: E402
 
 AGENT = ROOT / "industry-c7/data/agent"
@@ -40,7 +41,7 @@ def load(tag):
         return out
     for line in p.open(encoding="utf-8"):
         d = json.loads(line)
-        if not d.get("error"):
+        if not is_dead_row(d):
             out[d["id"]] = d
     return out
 

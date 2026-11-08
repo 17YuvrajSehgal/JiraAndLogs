@@ -37,6 +37,8 @@ from pathlib import Path
 HERE = Path(__file__).resolve().parent
 ROOT = HERE.parents[0]
 AG, RES = ROOT / "data/agent", ROOT / "data/results"
+sys.path.insert(0, str(HERE))
+from localize import is_dead_row  # noqa: E402
 SEED, N_BOOT = 20261104, 2000
 ARMS = {"locagent": "LocAgent-style", "cosil": "CoSIL-style"}
 
@@ -49,7 +51,7 @@ def rows(f: Path) -> dict:
         if not line.strip():
             continue
         r = json.loads(line)
-        if r.get("error") or r.get("stop_reason") == "llm_error":
+        if is_dead_row(r):
             continue
         out[r["id"]] = r
     return out

@@ -26,6 +26,9 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 AG, RES, CG = ROOT / "data/agent", ROOT / "data/results", ROOT / "data/causal-gold"
+import sys
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from localize import is_dead_row  # noqa: E402
 
 
 def jsonl(p):
@@ -39,7 +42,7 @@ def chain_files(r) -> set:
 
 def main() -> int:
     rows = [r for r in jsonl(AG / "agent-v3-full.jsonl")
-            if not r.get("error") and r.get("stop_reason") != "llm_error"]
+            if not is_dead_row(r)]
     gold = {(r["project"], r["issue_key"]): r for r in jsonl(CG / "causal-gold.jsonl")}
 
     n = len(rows)

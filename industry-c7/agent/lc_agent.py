@@ -566,12 +566,17 @@ def run_lc(ws: T.Workspace, seed: int = 42, *, model=None, repo_tree: bool = Fal
     cfg = {"configurable": {"thread_id": rid},
            "recursion_limit": MAX_TURNS * 2 + 20}
 
-    stop, answer = "submitted", None
+    stop, answer, stop_detail = "submitted", None, ""
     try:
         state = graph.invoke({"messages": []}, cfg)
         answer = state.get("structured_response")
     except Exception as e:  # noqa: BLE001 - a dead run must still write a row
+        # The class name alone is not diagnosable. Five pilot rows read
+        # "error:OpenAIInvalidRequestError" and the reason turned out to be
+        # the server refusing the prompt on context size, which the message
+        # says outright and the class name does not. Keep the text.
         stop, state = f"error:{type(e).__name__}", {}
+        stop_detail = str(e)[:600]
     if answer is None and stop == "submitted":
         stop = "no_answer"
 
@@ -607,6 +612,7 @@ def run_lc(ws: T.Workspace, seed: int = 42, *, model=None, repo_tree: bool = Fal
             "lexical_seed": ws.seed_candidates[:A.LIST_LEN],
             "notes": notes,
             "tool_calls": ws.calls, "stop_reason": stop,
+            "stop_detail": stop_detail,
             "rationale": "; ".join(c.step for c in answer.causal_chain)
                          if answer else "",
             "usage": usage, "resolver": resolver, "events": [], "seed": seed,

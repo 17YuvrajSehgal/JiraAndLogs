@@ -47,7 +47,8 @@ import agent as A  # noqa: E402
 import tools as T  # noqa: E402
 from baselines import ARMS  # noqa: E402
 from localize import (BENCH, OUT, PROJECTS, evaluate,  # noqa: E402
-                      load_bench, load_support, parse_iso_epoch)
+                      is_dead_row, load_bench, load_support,
+                      parse_iso_epoch)
 
 # The project list is derived, never typed. It was a hardcoded 4-tuple of
 # kafka/mariadb/mongodb/qt, which made --project reject the other 23 by
@@ -305,7 +306,7 @@ def main() -> int:
             # exactly what happens to everything in flight when the vLLM
             # job hits its walltime. max_turns and no_tool_call are real
             # agent outcomes and are kept.
-            if r.get("error") or r.get("stop_reason") == "llm_error":
+            if is_dead_row(r):
                 dropped += 1
                 continue
             if r["id"] in done:        # belt and braces: never double count
@@ -386,7 +387,7 @@ def main() -> int:
             res, err = None, f"{type(e).__name__}: {e}"
         wall = round(time.time() - started, 1)
         with _lock:
-            if res is not None and res.get("stop_reason") == "llm_error":
+            if res is not None and is_dead_row(res):
                 _consec_llm_err += 1
                 if _consec_llm_err >= ABORT_AFTER and not _ABORT.is_set():
                     _ABORT.set()
@@ -397,8 +398,7 @@ def main() -> int:
                           flush=True)
             elif res is not None:
                 _consec_llm_err = 0
-        if _ABORT.is_set() and res is not None \
-                and res.get("stop_reason") == "llm_error":
+        if _ABORT.is_set() and res is not None and is_dead_row(res):
             return                      # do not bank a fallback ranking
         gold = b["gold_files"]
         if res is None:
@@ -413,7 +413,9 @@ def main() -> int:
                 "metrics": evaluate(res["ranking"], gold),
                 "metrics_agent_only": evaluate(res["agent_ranking"], gold),
                 "metrics_lexical": evaluate(res["lexical_seed"], gold),
-                "stop_reason": res["stop_reason"], "rationale": res["rationale"],
+                "stop_reason": res["stop_reason"],
+                "stop_detail": res.get("stop_detail", ""),
+                "rationale": res["rationale"],
                 "n_notes": len(res["notes"]), "n_tool_calls": len(res["tool_calls"]),
                 # The submitted code regions, in rank order, kept in the ROW
                 # and not only in the transcript. Transcripts are ~1.2 GB for

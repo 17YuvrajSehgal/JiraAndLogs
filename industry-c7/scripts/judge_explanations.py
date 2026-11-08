@@ -40,6 +40,7 @@ sys.path.insert(0, str(HERE))
 sys.path.insert(0, str(HERE.parents[0] / "agent"))
 from explanation_checks import submitted  # noqa: E402
 from localize import load_bench  # noqa: E402
+from localize import is_dead_row  # noqa: E402
 
 _REPORTS: dict[str, str] = {}
 
@@ -107,7 +108,7 @@ def rows() -> list[dict]:
         if not line.strip():
             continue
         r = json.loads(line)
-        if not r.get("error") and r.get("stop_reason") != "llm_error":
+        if not is_dead_row(r):
             out.append(r)
     return out
 

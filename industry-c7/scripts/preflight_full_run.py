@@ -121,11 +121,21 @@ check(f"output path is writable ({out.name})",
       AG.exists() and (AG / "transcripts").exists(), str(AG))
 print(f"      rows already in {out.name}: {done} (run resumes over these)")
 src = (ROOT / "agent/run_agent.py").read_text(encoding="utf-8")
+# This used to grep run_agent.py for the literal predicate text. The text
+# was there and the check passed, while the lc arm wrote "error:<Class>",
+# which that predicate does not match -- so the thing being checked was the
+# spelling, not the behaviour. It now calls the predicate on the two row
+# shapes that actually occur, which is what has to hold.
+from localize import is_dead_row  # noqa: E402
 check("resume retries errored rows instead of counting them done",
-      'r.get("error") or r.get("stop_reason") == "llm_error"' in src
-      and "dropped += 1" in src,
-      "a server that dies at walltime would otherwise bank a lexical "
-      "fallback ranking as a finished result")
+      is_dead_row({"error": None, "stop_reason": "error:OpenAIInvalidRequestError"})
+      and is_dead_row({"error": None, "stop_reason": "llm_error"})
+      and is_dead_row({"error": "JSONDecodeError: x"})
+      and not is_dead_row({"error": None, "stop_reason": "submitted"})
+      and not is_dead_row({"error": None, "stop_reason": "max_turns"})
+      and "is_dead_row(r)" in src and "dropped += 1" in src,
+      "a server that dies at walltime, or one 400 from the model, would "
+      "otherwise bank a lexical fallback ranking as a finished result")
 check("the run aborts rather than burning the population on a dead server",
       "_ABORT" in src and "ABORT_AFTER" in src)
 tdir = AG / "transcripts"

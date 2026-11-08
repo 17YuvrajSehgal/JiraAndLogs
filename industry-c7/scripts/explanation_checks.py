@@ -36,6 +36,7 @@ from pathlib import Path
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
 from localize import FULL_REPOS  # noqa: E402
+from localize import is_dead_row  # noqa: E402
 from localize import PROJECTS as _ALL_PROJECTS  # noqa: E402
 
 ROOT = HERE.parents[0]
@@ -235,7 +236,7 @@ def main() -> int:
         if not line.strip():
             continue
         r = json.loads(line)
-        if r.get("error") or r.get("stop_reason") == "llm_error":
+        if is_dead_row(r):
             continue
         k = (r["project"], r["issue_key"])
         if k in bench:

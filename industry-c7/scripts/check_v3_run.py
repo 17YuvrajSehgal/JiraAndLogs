@@ -17,11 +17,13 @@ from collections import Counter
 from pathlib import Path
 
 AG = Path(__file__).resolve().parents[1] / "data/agent"
+import sys as _s; _s.path.insert(0, str(Path(__file__).resolve().parents[0]))
+from localize import is_dead_row  # noqa: E402
 tag = sys.argv[1] if len(sys.argv) > 1 else "v3-full"
 rows = [json.loads(l) for l in
         (AG / f"agent-{tag}.jsonl").open(encoding="utf-8")]
-good = [r for r in rows if not r.get("error")]
-err = [r for r in rows if r.get("error")]
+good = [r for r in rows if not is_dead_row(r)]
+err = [r for r in rows if is_dead_row(r)]
 
 print(f"rows {len(rows)}   ok {len(good)}   errored {len(err)}")
 if err:

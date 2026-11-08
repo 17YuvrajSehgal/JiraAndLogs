@@ -32,6 +32,8 @@ from collections import Counter
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
+import sys as _s; _s.path.insert(0, str(Path(__file__).resolve().parents[0]))
+from localize import is_dead_row  # noqa: E402
 V2 = ROOT / "industry-c7/data/benchmark"
 AGENT = ROOT / "industry-c7/data/agent/agent-v2.jsonl"
 OUT = ROOT / "industry-c7/annotation/sample.json"
@@ -63,7 +65,7 @@ def main() -> int:
     if AGENT.exists():
         for line in open(AGENT, encoding="utf-8"):
             r = json.loads(line)
-            if not r.get("error"):
+            if not is_dead_row(r):
                 agent[r["id"]] = r["metrics"]["acc@5"] == 1
     print(f"agent outcomes available for {len(agent):,} instances")
 

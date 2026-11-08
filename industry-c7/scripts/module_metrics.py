@@ -119,7 +119,8 @@ def study_790() -> dict:
 
     ag = [json.loads(l) for l in
           (RES.parent / "agent/agent-v2.jsonl").open(encoding="utf-8")]
-    ag = [r for r in ag if not r.get("error")]
+    from localize import is_dead_row  # noqa: E402
+    ag = [r for r in ag if not is_dead_row(r)]
     gold = {f"{r['project']}:{r['issue_key']}": r["gold_files"] for r in ag}
     hard = {f"{r['project']}:{r['issue_key']}": bool(r.get("hard")) for r in ag}
     rk = rankings(set(gold))

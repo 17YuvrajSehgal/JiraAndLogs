@@ -690,3 +690,26 @@ def main() -> int:
 
 if __name__ == "__main__":
     sys.exit(main())
+
+
+# A row whose ranking did not come from the model. On every such path the
+# runner does NOT raise: it falls back to the lexical seed and writes a row
+# with error=None, so the row looks finished and scores like a real answer.
+#
+# This used to be spelled inline as
+#     r.get("error") or r.get("stop_reason") == "llm_error"
+# in ten places. "llm_error" is what agent.py and baselines.py write. The
+# LangChain arm (lc_agent.py, the arm the paper runs) writes
+# "error:<ExceptionClass>" instead, which matches none of them. The result:
+# a 30-instance pilot banked 5 rows of pure lexical baseline as agent
+# results, resume refused to retry them, and the dead-server abort never
+# fired. One mismatched string defeated three separate safeguards, so the
+# predicate lives in one place now and every caller imports it.
+#
+# max_turns, no_tool_call, nudged and no_answer are real agent outcomes and
+# are NOT dead: the model ran and simply did not finish well.
+def is_dead_row(r: dict) -> bool:
+    if r.get("error"):
+        return True
+    stop = r.get("stop_reason") or ""
+    return stop == "llm_error" or stop.startswith("error:")

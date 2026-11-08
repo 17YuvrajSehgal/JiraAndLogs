@@ -39,6 +39,7 @@ sys.path.insert(0, str(HERE))
 import run_agent as RA  # noqa: E402
 import tools as T  # noqa: E402
 from localize import parse_iso_epoch  # noqa: E402
+from localize import is_dead_row  # noqa: E402
 
 RES = ROOT / "data/results"
 
@@ -50,7 +51,7 @@ def main() -> int:
         if not line.strip():
             continue
         r = json.loads(line)
-        if not r.get("error") and r.get("stop_reason") != "llm_error":
+        if not is_dead_row(r):
             rows[r["id"]] = r
 
     pop = {f"{p}:{b['issue_key']}": (p, b, row)
