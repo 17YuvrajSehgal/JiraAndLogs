@@ -153,6 +153,45 @@ done
 curl -s -m 5 "http://localhost:$PORT/v1/models" | grep -q qwen3.8-27b \
   || { echo "server never became ready" >&2; exit 1; }
 
+# ---- 1a. is the thinking switch actually honoured by THIS server? ---------
+# The local LM Studio server silently ignores chat_template_kwargs and keeps
+# reasoning on, so a run can be configured for thinking-off and served with
+# thinking-on while nothing in the output says so. Never assume a switch
+# works; ask the server that is about to run 26,544 instances.
+C7="$C7" ENDPOINT="http://localhost:$PORT" "$PY" - <<'THINKCHK'   || { echo "THINKING CHECK FAILED: not starting" >&2; exit 1; }
+import json, os, sys, urllib.request
+sys.path.insert(0, os.environ["C7"] + "/agent")
+sys.path.insert(0, os.environ["C7"] + "/scripts")
+import agent as A
+body = {"model": A.MODEL, "temperature": 0, "max_tokens": 200, "seed": 42,
+        "messages": [{"role": "user", "content": "What is 17*23? Number only."}],
+        **A.THINK_SWITCH}
+req = urllib.request.Request(os.environ["ENDPOINT"] + "/v1/chat/completions",
+                             data=json.dumps(body).encode(),
+                             headers={"Content-Type": "application/json"})
+try:
+    d = json.loads(urllib.request.urlopen(req, timeout=300).read())
+except Exception as e:
+    print(f"  the server REJECTED the thinking switch: {e}", file=sys.stderr)
+    print(f"  switch sent: {json.dumps(A.THINK_SWITCH)}", file=sys.stderr)
+    sys.exit(1)
+msg = d["choices"][0]["message"]
+rt = (d.get("usage", {}).get("completion_tokens_details") or {}).get(
+    "reasoning_tokens", 0)
+has = bool(msg.get("reasoning_content") or msg.get("reasoning"))
+print(f"  thinking requested: {A.ENABLE_THINKING}; server returned "
+      f"reasoning_tokens={rt}, reasoning_field={has}")
+if not A.ENABLE_THINKING and (rt or has):
+    print("  REFUSING: thinking is configured OFF and the server kept it ON.",
+          file=sys.stderr)
+    sys.exit(1)
+if A.ENABLE_THINKING and not (rt or has):
+    print("  REFUSING: thinking is configured ON and the server kept it OFF.",
+          file=sys.stderr)
+    sys.exit(1)
+print("  thinking check ok")
+THINKCHK
+
 # ---- 1b. PREFLIGHT on the compute node ------------------------------------
 # tree_sitter_language_pack fetches its parsers from GitHub at RUNTIME, and
 # compute nodes have no internet. The cache also defaults under /home,
