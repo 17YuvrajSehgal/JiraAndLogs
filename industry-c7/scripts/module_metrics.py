@@ -33,7 +33,44 @@ RES = ROOT / "industry-c7/data/results"
 # module metrics over whichever subset happens to be filled in, the guard
 # below refuses, because a four-project module table printed next to a
 # 27-project file table is the kind of thing that reaches a paper.
-DEPTH = {"kafka": 1, "mariadb": 2, "mongodb": 3, "qt": 2}
+DEPTH = {
+    "ambari": 1,       # 11 mods, major 0.81, rand 0.091, agree 0.81
+    "beam": 2,         # 30 mods, major 0.36, rand 0.033, agree 0.62
+    "camel": 2,        # 422 mods, major 0.29, rand 0.002, agree 0.70
+    "cassandra": 6,    # 90 mods, major 0.39, rand 0.011
+    "derby": 7,        # 103 mods, major 0.39, rand 0.010, agree 0.70
+    "drill": 2,        # 40 mods, major 0.88, rand 0.025, agree 0.90
+    "flink": 1,        # 39 mods, major 0.35, rand 0.026, agree 0.74
+    "geode": 1,        # 32 mods, major 0.75, rand 0.031, agree 0.97
+    "groovy": 6,       # 269 mods, major 0.23, rand 0.004, agree 0.00
+    "hadoop": 2,       # 41 mods, major 0.31, rand 0.024, agree 0.39
+    "hbase": 1,        # 29 mods, major 0.61, rand 0.035, agree 1.00
+    "hive": 1,         # 38 mods, major 0.67, rand 0.026, agree 0.91
+    "ignite": 2,       # 48 mods, major 0.85, rand 0.021, agree 0.96
+    "impala": 4,       # 53 mods, major 0.40, rand 0.019, agree 0.60
+    "infinispan": 1,   # 34 mods, major 0.67, rand 0.029, agree 0.78
+    "kafka": 1,        # 15 mods, major 0.49, rand 0.067, agree 1.00
+    "keycloak": 1,     # 19 mods, major 0.45, rand 0.053, agree 0.59
+    "mariadb": 2,      # 90 mods, major 0.62, rand 0.011, agree 0.98
+    "mongodb": 4,      # 140 mods, major 0.18, rand 0.007, agree 0.92
+    "pdfbox": 1,       # 7 mods, major 0.76, rand 0.143, agree 1.00
+    "phoenix": 1,      # 7 mods, major 0.95, rand 0.143, agree 1.00
+    "pig": 5,          # 35 mods, major 0.41, rand 0.029, agree 0.00
+    "qt": 2,           # 125 mods, major 0.31, rand 0.008, agree 0.68
+    "sakai": 2,        # 283 mods, major 0.12, rand 0.004, agree 0.58
+    "solr": 2,         # 8 mods, major 0.75, rand 0.125, agree 0.86
+    "spark": 2,        # 32 mods, major 0.31, rand 0.031, agree 0.55
+    "wildfly": 1,      # 42 mods, major 0.18, rand 0.024, agree 0.57
+}
+
+# Projects where module accuracy cannot carry a claim: one module holds
+# most of the faults, so a constant answer already scores this well, at
+# EVERY depth 1-7 (module_depth_study.py). Reported, never claimed.
+TRIVIAL_MAJORITY = {
+    "phoenix": 0.95, "drill": 0.88, "ignite": 0.86, "pdfbox": 0.76,
+    "solr": 0.75, "hive": 0.67, "geode": 0.63, "mariadb": 0.62,
+    "hbase": 0.61,
+}
 
 
 def require_depths(projects) -> None:
@@ -190,12 +227,25 @@ def main() -> int:
     (RES / "module-metrics.json").write_text(json.dumps(out, indent=2),
                                              encoding="utf-8")
     for proj, res in out.items():
+        if proj.startswith("_"):      # _coverage is metadata, not a project
+            continue
+        maj = TRIVIAL_MAJORITY.get(proj)
+        warn = ("  <-- constant answer already scores %.2f: report, do not "
+                "claim" % maj) if maj else ""
         print(f"\n--- {proj} (module depth {res['module_depth']}, "
-              f"n={res['n_eval']}) ---")
+              f"n={res['n_eval']}){warn} ---")
         print(f"{'system':<17}{'acc@1':>8}{'acc@3':>8}{'acc@5':>8}{'mrr':>8}")
         for s, m in res["systems"].items():
             print(f"{s:<17}{m['acc@1']:>8.3f}{m['acc@3']:>8.3f}"
                   f"{m['acc@5']:>8.3f}{m['mrr']:>8.3f}")
+        if maj:
+            print(f"{'majority baseline':<17}{maj:>8.3f}{maj:>8.3f}"
+                  f"{maj:>8.3f}{'-':>8}")
+    if TRIVIAL_MAJORITY:
+        print(f"\n{len(TRIVIAL_MAJORITY)} of {len(DEPTH)} projects have a "
+              "majority baseline above 0.60 at every depth 1-7, so module "
+              "accuracy there measures the repository's shape, not the "
+              "system. See scripts/module_depth_study.py.")
     return 0
 
 

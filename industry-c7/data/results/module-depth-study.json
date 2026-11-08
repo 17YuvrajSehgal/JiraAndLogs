@@ -1,0 +1,2244 @@
+{
+  "ambari": {
+    "project": "ambari",
+    "snapshot": "a3afb5c29008",
+    "n_paths": 10389,
+    "build_root_depths": {
+      "1": 11,
+      "2": 6,
+      "3": 26,
+      "4": 1,
+      "5": 2,
+      "7": 1
+    },
+    "modal_build_depth": 3,
+    "n_src": 4352,
+    "n_build_roots": 48,
+    "n_gold_files": 2596,
+    "n_gold_with_declared_module": 2107,
+    "declared_coverage": 0.8116,
+    "depths": {
+      "1": {
+        "n_modules": 11,
+        "random": 0.0909,
+        "majority": 0.808,
+        "median_files_per_module": 58,
+        "singleton_modules": 1,
+        "n_gold_modules": 14,
+        "agree_with_build": 0.8125
+      },
+      "2": {
+        "n_modules": 23,
+        "random": 0.0435,
+        "majority": 0.808,
+        "median_files_per_module": 13,
+        "singleton_modules": 3,
+        "n_gold_modules": 37,
+        "agree_with_build": 0.0992
+      },
+      "3": {
+        "n_modules": 53,
+        "random": 0.0189,
+        "majority": 0.808,
+        "median_files_per_module": 4,
+        "singleton_modules": 15,
+        "n_gold_modules": 53,
+        "agree_with_build": 0.0384
+      },
+      "4": {
+        "n_modules": 63,
+        "random": 0.0159,
+        "majority": 0.4078,
+        "median_files_per_module": 4,
+        "singleton_modules": 17,
+        "n_gold_modules": 58,
+        "agree_with_build": 0.0498
+      },
+      "5": {
+        "n_modules": 104,
+        "random": 0.0096,
+        "majority": 0.4078,
+        "median_files_per_module": 4,
+        "singleton_modules": 27,
+        "n_gold_modules": 73,
+        "agree_with_build": 0.0
+      },
+      "6": {
+        "n_modules": 149,
+        "random": 0.0067,
+        "majority": 0.4078,
+        "median_files_per_module": 3,
+        "singleton_modules": 39,
+        "n_gold_modules": 130,
+        "agree_with_build": 0.0
+      },
+      "7": {
+        "n_modules": 187,
+        "random": 0.0053,
+        "majority": 0.4078,
+        "median_files_per_module": 2,
+        "singleton_modules": 65,
+        "n_gold_modules": 183,
+        "agree_with_build": 0.0
+      }
+    }
+  },
+  "beam": {
+    "project": "beam",
+    "snapshot": "c4fc3987f31a",
+    "n_paths": 9567,
+    "build_root_depths": {
+      "1": 8,
+      "2": 29,
+      "3": 29,
+      "4": 88,
+      "5": 36,
+      "6": 2,
+      "8": 3,
+      "10": 1
+    },
+    "modal_build_depth": 4,
+    "n_src": 6627,
+    "n_build_roots": 197,
+    "n_gold_files": 425,
+    "n_gold_with_declared_module": 386,
+    "declared_coverage": 0.9082,
+    "depths": {
+      "1": {
+        "n_modules": 8,
+        "random": 0.125,
+        "majority": 0.7152,
+        "median_files_per_module": 126,
+        "singleton_modules": 0,
+        "n_gold_modules": 5,
+        "agree_with_build": 0.0
+      },
+      "2": {
+        "n_modules": 30,
+        "random": 0.0333,
+        "majority": 0.3576,
+        "median_files_per_module": 50,
+        "singleton_modules": 5,
+        "n_gold_modules": 21,
+        "agree_with_build": 0.6244
+      },
+      "3": {
+        "n_modules": 59,
+        "random": 0.0169,
+        "majority": 0.2785,
+        "median_files_per_module": 11,
+        "singleton_modules": 8,
+        "n_gold_modules": 39,
+        "agree_with_build": 0.1425
+      },
+      "4": {
+        "n_modules": 199,
+        "random": 0.005,
+        "majority": 0.1266,
+        "median_files_per_module": 7,
+        "singleton_modules": 33,
+        "n_gold_modules": 67,
+        "agree_with_build": 0.2332
+      },
+      "5": {
+        "n_modules": 331,
+        "random": 0.003,
+        "majority": 0.0981,
+        "median_files_per_module": 4,
+        "singleton_modules": 65,
+        "n_gold_modules": 84,
+        "agree_with_build": 0.0259
+      },
+      "6": {
+        "n_modules": 480,
+        "random": 0.0021,
+        "majority": 0.0981,
+        "median_files_per_module": 3,
+        "singleton_modules": 95,
+        "n_gold_modules": 98,
+        "agree_with_build": 0.0104
+      },
+      "7": {
+        "n_modules": 610,
+        "random": 0.0016,
+        "majority": 0.0981,
+        "median_files_per_module": 2,
+        "singleton_modules": 248,
+        "n_gold_modules": 105,
+        "agree_with_build": 0.0104
+      }
+    }
+  },
+  "camel": {
+    "project": "camel",
+    "snapshot": "82a97c428c46",
+    "n_paths": 31922,
+    "build_root_depths": {
+      "1": 16,
+      "2": 425,
+      "3": 112,
+      "4": 4,
+      "5": 1,
+      "6": 35,
+      "7": 2
+    },
+    "modal_build_depth": 2,
+    "n_src": 20901,
+    "n_build_roots": 596,
+    "n_gold_files": 1155,
+    "n_gold_with_declared_module": 843,
+    "declared_coverage": 0.7299,
+    "depths": {
+      "1": {
+        "n_modules": 11,
+        "random": 0.0909,
+        "majority": 0.6318,
+        "median_files_per_module": 155,
+        "singleton_modules": 1,
+        "n_gold_modules": 10,
+        "agree_with_build": 0.2242
+      },
+      "2": {
+        "n_modules": 422,
+        "random": 0.0024,
+        "majority": 0.2923,
+        "median_files_per_module": 19,
+        "singleton_modules": 10,
+        "n_gold_modules": 230,
+        "agree_with_build": 0.7034
+      },
+      "3": {
+        "n_modules": 508,
+        "random": 0.002,
+        "majority": 0.2923,
+        "median_files_per_module": 19,
+        "singleton_modules": 18,
+        "n_gold_modules": 238,
+        "agree_with_build": 0.0593
+      },
+      "4": {
+        "n_modules": 1070,
+        "random": 0.0009,
+        "majority": 0.2923,
+        "median_files_per_module": 6,
+        "singleton_modules": 90,
+        "n_gold_modules": 263,
+        "agree_with_build": 0.0
+      },
+      "5": {
+        "n_modules": 1215,
+        "random": 0.0008,
+        "majority": 0.2923,
+        "median_files_per_module": 6,
+        "singleton_modules": 103,
+        "n_gold_modules": 263,
+        "agree_with_build": 0.0
+      },
+      "6": {
+        "n_modules": 1229,
+        "random": 0.0008,
+        "majority": 0.2923,
+        "median_files_per_module": 6,
+        "singleton_modules": 109,
+        "n_gold_modules": 263,
+        "agree_with_build": 0.0071
+      },
+      "7": {
+        "n_modules": 1230,
+        "random": 0.0008,
+        "majority": 0.2923,
+        "median_files_per_module": 6,
+        "singleton_modules": 110,
+        "n_gold_modules": 263,
+        "agree_with_build": 0.0059
+      }
+    }
+  },
+  "cassandra": {
+    "project": "cassandra",
+    "snapshot": "bf1446cd85ca",
+    "n_paths": 4506,
+    "build_root_depths": {
+      "1": 1,
+      "2": 2
+    },
+    "modal_build_depth": 2,
+    "n_src": 3411,
+    "n_build_roots": 4,
+    "n_gold_files": 1154,
+    "n_gold_with_declared_module": 0,
+    "declared_coverage": 0.0,
+    "depths": {
+      "1": {
+        "n_modules": 4,
+        "random": 0.25,
+        "majority": 0.9789,
+        "median_files_per_module": 1255,
+        "singleton_modules": 0,
+        "n_gold_modules": 6,
+        "agree_with_build": null
+      },
+      "2": {
+        "n_modules": 12,
+        "random": 0.0833,
+        "majority": 0.9782,
+        "median_files_per_module": 28,
+        "singleton_modules": 2,
+        "n_gold_modules": 14,
+        "agree_with_build": null
+      },
+      "3": {
+        "n_modules": 18,
+        "random": 0.0556,
+        "majority": 0.9782,
+        "median_files_per_module": 17,
+        "singleton_modules": 5,
+        "n_gold_modules": 14,
+        "agree_with_build": null
+      },
+      "4": {
+        "n_modules": 18,
+        "random": 0.0556,
+        "majority": 0.9782,
+        "median_files_per_module": 17,
+        "singleton_modules": 5,
+        "n_gold_modules": 14,
+        "agree_with_build": null
+      },
+      "5": {
+        "n_modules": 18,
+        "random": 0.0556,
+        "majority": 0.9782,
+        "median_files_per_module": 17,
+        "singleton_modules": 5,
+        "n_gold_modules": 14,
+        "agree_with_build": null
+      },
+      "6": {
+        "n_modules": 90,
+        "random": 0.0111,
+        "majority": 0.3885,
+        "median_files_per_module": 14,
+        "singleton_modules": 13,
+        "n_gold_modules": 49,
+        "agree_with_build": null
+      },
+      "7": {
+        "n_modules": 210,
+        "random": 0.0048,
+        "majority": 0.2365,
+        "median_files_per_module": 7,
+        "singleton_modules": 40,
+        "n_gold_modules": 102,
+        "agree_with_build": null
+      }
+    }
+  },
+  "derby": {
+    "project": "derby",
+    "snapshot": "5a9ae9750257",
+    "n_paths": 4326,
+    "build_root_depths": {
+      "1": 1,
+      "2": 34,
+      "3": 3,
+      "5": 2,
+      "6": 1
+    },
+    "modal_build_depth": 2,
+    "n_src": 2864,
+    "n_build_roots": 42,
+    "n_gold_files": 705,
+    "n_gold_with_declared_module": 10,
+    "declared_coverage": 0.0142,
+    "depths": {
+      "1": {
+        "n_modules": 4,
+        "random": 0.25,
+        "majority": 0.9985,
+        "median_files_per_module": 23,
+        "singleton_modules": 1,
+        "n_gold_modules": 2,
+        "agree_with_build": 0.0
+      },
+      "2": {
+        "n_modules": 17,
+        "random": 0.0588,
+        "majority": 0.7725,
+        "median_files_per_module": 23,
+        "singleton_modules": 2,
+        "n_gold_modules": 11,
+        "agree_with_build": 0.3
+      },
+      "3": {
+        "n_modules": 30,
+        "random": 0.0333,
+        "majority": 0.7725,
+        "median_files_per_module": 4,
+        "singleton_modules": 12,
+        "n_gold_modules": 12,
+        "agree_with_build": 0.1
+      },
+      "4": {
+        "n_modules": 31,
+        "random": 0.0323,
+        "majority": 0.7725,
+        "median_files_per_module": 3,
+        "singleton_modules": 13,
+        "n_gold_modules": 12,
+        "agree_with_build": 0.1
+      },
+      "5": {
+        "n_modules": 35,
+        "random": 0.0286,
+        "majority": 0.7725,
+        "median_files_per_module": 2,
+        "singleton_modules": 14,
+        "n_gold_modules": 13,
+        "agree_with_build": 0.7
+      },
+      "6": {
+        "n_modules": 64,
+        "random": 0.0156,
+        "majority": 0.6647,
+        "median_files_per_module": 2,
+        "singleton_modules": 26,
+        "n_gold_modules": 23,
+        "agree_with_build": 0.7
+      },
+      "7": {
+        "n_modules": 103,
+        "random": 0.0097,
+        "majority": 0.387,
+        "median_files_per_module": 4,
+        "singleton_modules": 33,
+        "n_gold_modules": 41,
+        "agree_with_build": 0.7
+      }
+    }
+  },
+  "drill": {
+    "project": "drill",
+    "snapshot": "ecdb8db222cc",
+    "n_paths": 6092,
+    "build_root_depths": {
+      "1": 10,
+      "2": 38,
+      "3": 5,
+      "4": 1,
+      "5": 3,
+      "6": 2
+    },
+    "modal_build_depth": 2,
+    "n_src": 4394,
+    "n_build_roots": 60,
+    "n_gold_files": 1026,
+    "n_gold_with_declared_module": 1008,
+    "declared_coverage": 0.9825,
+    "depths": {
+      "1": {
+        "n_modules": 8,
+        "random": 0.125,
+        "majority": 0.8993,
+        "median_files_per_module": 119,
+        "singleton_modules": 0,
+        "n_gold_modules": 9,
+        "agree_with_build": 0.0625
+      },
+      "2": {
+        "n_modules": 40,
+        "random": 0.025,
+        "majority": 0.8769,
+        "median_files_per_module": 24,
+        "singleton_modules": 0,
+        "n_gold_modules": 24,
+        "agree_with_build": 0.8998
+      },
+      "3": {
+        "n_modules": 44,
+        "random": 0.0227,
+        "majority": 0.8769,
+        "median_files_per_module": 24,
+        "singleton_modules": 0,
+        "n_gold_modules": 25,
+        "agree_with_build": 0.0377
+      },
+      "4": {
+        "n_modules": 76,
+        "random": 0.0132,
+        "majority": 0.8769,
+        "median_files_per_module": 9,
+        "singleton_modules": 8,
+        "n_gold_modules": 27,
+        "agree_with_build": 0.0
+      },
+      "5": {
+        "n_modules": 82,
+        "random": 0.0122,
+        "majority": 0.8451,
+        "median_files_per_module": 9,
+        "singleton_modules": 9,
+        "n_gold_modules": 30,
+        "agree_with_build": 0.0
+      },
+      "6": {
+        "n_modules": 88,
+        "random": 0.0114,
+        "majority": 0.8433,
+        "median_files_per_module": 9,
+        "singleton_modules": 11,
+        "n_gold_modules": 33,
+        "agree_with_build": 0.0
+      },
+      "7": {
+        "n_modules": 91,
+        "random": 0.011,
+        "majority": 0.8433,
+        "median_files_per_module": 9,
+        "singleton_modules": 11,
+        "n_gold_modules": 36,
+        "agree_with_build": 0.0
+      }
+    }
+  },
+  "flink": {
+    "project": "flink",
+    "snapshot": "dfad1d5c72b8",
+    "n_paths": 18161,
+    "build_root_depths": {
+      "1": 38,
+      "2": 154,
+      "3": 6,
+      "6": 4
+    },
+    "modal_build_depth": 2,
+    "n_src": 13892,
+    "n_build_roots": 203,
+    "n_gold_files": 1961,
+    "n_gold_with_declared_module": 1765,
+    "declared_coverage": 0.9001,
+    "depths": {
+      "1": {
+        "n_modules": 39,
+        "random": 0.0256,
+        "majority": 0.353,
+        "median_files_per_module": 94,
+        "singleton_modules": 1,
+        "n_gold_modules": 36,
+        "agree_with_build": 0.7388
+      },
+      "2": {
+        "n_modules": 160,
+        "random": 0.0063,
+        "majority": 0.353,
+        "median_files_per_module": 11,
+        "singleton_modules": 24,
+        "n_gold_modules": 118,
+        "agree_with_build": 0.2612
+      },
+      "3": {
+        "n_modules": 175,
+        "random": 0.0057,
+        "majority": 0.353,
+        "median_files_per_module": 12,
+        "singleton_modules": 25,
+        "n_gold_modules": 123,
+        "agree_with_build": 0.0
+      },
+      "4": {
+        "n_modules": 271,
+        "random": 0.0037,
+        "majority": 0.3401,
+        "median_files_per_module": 7,
+        "singleton_modules": 40,
+        "n_gold_modules": 131,
+        "agree_with_build": 0.0
+      },
+      "5": {
+        "n_modules": 285,
+        "random": 0.0035,
+        "majority": 0.3401,
+        "median_files_per_module": 6,
+        "singleton_modules": 46,
+        "n_gold_modules": 134,
+        "agree_with_build": 0.0
+      },
+      "6": {
+        "n_modules": 293,
+        "random": 0.0034,
+        "majority": 0.3401,
+        "median_files_per_module": 6,
+        "singleton_modules": 48,
+        "n_gold_modules": 135,
+        "agree_with_build": 0.0
+      },
+      "7": {
+        "n_modules": 304,
+        "random": 0.0033,
+        "majority": 0.3401,
+        "median_files_per_module": 6,
+        "singleton_modules": 50,
+        "n_gold_modules": 137,
+        "agree_with_build": 0.0
+      }
+    }
+  },
+  "geode": {
+    "project": "geode",
+    "snapshot": "5e9c775229d9",
+    "n_paths": 10884,
+    "build_root_depths": {
+      "1": 34,
+      "2": 17,
+      "6": 1
+    },
+    "modal_build_depth": 1,
+    "n_src": 9052,
+    "n_build_roots": 53,
+    "n_gold_files": 1016,
+    "n_gold_with_declared_module": 797,
+    "declared_coverage": 0.7844,
+    "depths": {
+      "1": {
+        "n_modules": 32,
+        "random": 0.0312,
+        "majority": 0.7468,
+        "median_files_per_module": 54,
+        "singleton_modules": 0,
+        "n_gold_modules": 30,
+        "agree_with_build": 0.9749
+      },
+      "2": {
+        "n_modules": 42,
+        "random": 0.0238,
+        "majority": 0.7468,
+        "median_files_per_module": 36,
+        "singleton_modules": 0,
+        "n_gold_modules": 35,
+        "agree_with_build": 0.0251
+      },
+      "3": {
+        "n_modules": 123,
+        "random": 0.0081,
+        "majority": 0.7452,
+        "median_files_per_module": 11,
+        "singleton_modules": 10,
+        "n_gold_modules": 38,
+        "agree_with_build": 0.0
+      },
+      "4": {
+        "n_modules": 143,
+        "random": 0.007,
+        "majority": 0.7452,
+        "median_files_per_module": 9,
+        "singleton_modules": 12,
+        "n_gold_modules": 38,
+        "agree_with_build": 0.0
+      },
+      "5": {
+        "n_modules": 154,
+        "random": 0.0065,
+        "majority": 0.629,
+        "median_files_per_module": 8,
+        "singleton_modules": 18,
+        "n_gold_modules": 41,
+        "agree_with_build": 0.0
+      },
+      "6": {
+        "n_modules": 155,
+        "random": 0.0065,
+        "majority": 0.629,
+        "median_files_per_module": 7,
+        "singleton_modules": 18,
+        "n_gold_modules": 41,
+        "agree_with_build": 0.0
+      },
+      "7": {
+        "n_modules": 159,
+        "random": 0.0063,
+        "majority": 0.629,
+        "median_files_per_module": 7,
+        "singleton_modules": 19,
+        "n_gold_modules": 41,
+        "agree_with_build": 0.0
+      }
+    }
+  },
+  "groovy": {
+    "project": "groovy",
+    "snapshot": "43ee40f45628",
+    "n_paths": 4884,
+    "build_root_depths": {
+      "1": 2,
+      "2": 36
+    },
+    "modal_build_depth": 2,
+    "n_src": 4378,
+    "n_build_roots": 39,
+    "n_gold_files": 540,
+    "n_gold_with_declared_module": 59,
+    "declared_coverage": 0.1093,
+    "depths": {
+      "1": {
+        "n_modules": 5,
+        "random": 0.2,
+        "majority": 0.9454,
+        "median_files_per_module": 64,
+        "singleton_modules": 0,
+        "n_gold_modules": 3,
+        "agree_with_build": 0.0
+      },
+      "2": {
+        "n_modules": 45,
+        "random": 0.0222,
+        "majority": 0.9454,
+        "median_files_per_module": 13,
+        "singleton_modules": 6,
+        "n_gold_modules": 21,
+        "agree_with_build": 1.0
+      },
+      "3": {
+        "n_modules": 56,
+        "random": 0.0179,
+        "majority": 0.5869,
+        "median_files_per_module": 15,
+        "singleton_modules": 7,
+        "n_gold_modules": 23,
+        "agree_with_build": 0.0
+      },
+      "4": {
+        "n_modules": 164,
+        "random": 0.0061,
+        "majority": 0.5869,
+        "median_files_per_module": 4,
+        "singleton_modules": 43,
+        "n_gold_modules": 39,
+        "agree_with_build": 0.0
+      },
+      "5": {
+        "n_modules": 219,
+        "random": 0.0046,
+        "majority": 0.5869,
+        "median_files_per_module": 3,
+        "singleton_modules": 59,
+        "n_gold_modules": 55,
+        "agree_with_build": 0.0
+      },
+      "6": {
+        "n_modules": 269,
+        "random": 0.0037,
+        "majority": 0.2294,
+        "median_files_per_module": 3,
+        "singleton_modules": 81,
+        "n_gold_modules": 72,
+        "agree_with_build": 0.0
+      },
+      "7": {
+        "n_modules": 328,
+        "random": 0.003,
+        "majority": 0.1271,
+        "median_files_per_module": 3,
+        "singleton_modules": 95,
+        "n_gold_modules": 118,
+        "agree_with_build": 0.0
+      }
+    }
+  },
+  "hadoop": {
+    "project": "hadoop",
+    "snapshot": "dba139cd0f9b",
+    "n_paths": 14651,
+    "build_root_depths": {
+      "1": 14,
+      "2": 48,
+      "3": 25,
+      "4": 19,
+      "5": 9,
+      "6": 7,
+      "7": 4,
+      "8": 25,
+      "9": 7
+    },
+    "modal_build_depth": 2,
+    "n_src": 11411,
+    "n_build_roots": 159,
+    "n_gold_files": 2482,
+    "n_gold_with_declared_module": 2397,
+    "declared_coverage": 0.9658,
+    "depths": {
+      "1": {
+        "n_modules": 8,
+        "random": 0.125,
+        "majority": 0.361,
+        "median_files_per_module": 1612,
+        "singleton_modules": 0,
+        "n_gold_modules": 12,
+        "agree_with_build": 0.0588
+      },
+      "2": {
+        "n_modules": 41,
+        "random": 0.0244,
+        "majority": 0.3122,
+        "median_files_per_module": 42,
+        "singleton_modules": 2,
+        "n_gold_modules": 44,
+        "agree_with_build": 0.3901
+      },
+      "3": {
+        "n_modules": 59,
+        "random": 0.0169,
+        "majority": 0.3067,
+        "median_files_per_module": 42,
+        "singleton_modules": 5,
+        "n_gold_modules": 68,
+        "agree_with_build": 0.3262
+      },
+      "4": {
+        "n_modules": 107,
+        "random": 0.0093,
+        "majority": 0.3067,
+        "median_files_per_module": 22,
+        "singleton_modules": 9,
+        "n_gold_modules": 89,
+        "agree_with_build": 0.1506
+      },
+      "5": {
+        "n_modules": 128,
+        "random": 0.0078,
+        "majority": 0.3067,
+        "median_files_per_module": 19,
+        "singleton_modules": 13,
+        "n_gold_modules": 91,
+        "agree_with_build": 0.0743
+      },
+      "6": {
+        "n_modules": 142,
+        "random": 0.007,
+        "majority": 0.3067,
+        "median_files_per_module": 18,
+        "singleton_modules": 16,
+        "n_gold_modules": 98,
+        "agree_with_build": 0.0
+      },
+      "7": {
+        "n_modules": 150,
+        "random": 0.0067,
+        "majority": 0.3067,
+        "median_files_per_module": 17,
+        "singleton_modules": 19,
+        "n_gold_modules": 107,
+        "agree_with_build": 0.0
+      }
+    }
+  },
+  "hbase": {
+    "project": "hbase",
+    "snapshot": "bf5d1cc3d643",
+    "n_paths": 5876,
+    "build_root_depths": {
+      "1": 34,
+      "2": 16,
+      "4": 1
+    },
+    "modal_build_depth": 1,
+    "n_src": 4996,
+    "n_build_roots": 52,
+    "n_gold_files": 2142,
+    "n_gold_with_declared_module": 1602,
+    "declared_coverage": 0.7479,
+    "depths": {
+      "1": {
+        "n_modules": 29,
+        "random": 0.0345,
+        "majority": 0.6102,
+        "median_files_per_module": 44,
+        "singleton_modules": 2,
+        "n_gold_modules": 33,
+        "agree_with_build": 1.0
+      },
+      "2": {
+        "n_modules": 34,
+        "random": 0.0294,
+        "majority": 0.6102,
+        "median_files_per_module": 27,
+        "singleton_modules": 2,
+        "n_gold_modules": 36,
+        "agree_with_build": 0.0
+      },
+      "3": {
+        "n_modules": 57,
+        "random": 0.0175,
+        "majority": 0.6102,
+        "median_files_per_module": 21,
+        "singleton_modules": 5,
+        "n_gold_modules": 38,
+        "agree_with_build": 0.0
+      },
+      "4": {
+        "n_modules": 64,
+        "random": 0.0156,
+        "majority": 0.6102,
+        "median_files_per_module": 15,
+        "singleton_modules": 7,
+        "n_gold_modules": 39,
+        "agree_with_build": 0.0
+      },
+      "5": {
+        "n_modules": 64,
+        "random": 0.0156,
+        "majority": 0.6102,
+        "median_files_per_module": 15,
+        "singleton_modules": 7,
+        "n_gold_modules": 40,
+        "agree_with_build": 0.0
+      },
+      "6": {
+        "n_modules": 64,
+        "random": 0.0156,
+        "majority": 0.6102,
+        "median_files_per_module": 15,
+        "singleton_modules": 7,
+        "n_gold_modules": 40,
+        "agree_with_build": 0.0
+      },
+      "7": {
+        "n_modules": 65,
+        "random": 0.0154,
+        "majority": 0.6102,
+        "median_files_per_module": 13,
+        "singleton_modules": 8,
+        "n_gold_modules": 54,
+        "agree_with_build": 0.0
+      }
+    }
+  },
+  "hive": {
+    "project": "hive",
+    "snapshot": "8572c1201e1d",
+    "n_paths": 21099,
+    "build_root_depths": {
+      "1": 38,
+      "2": 32,
+      "3": 8,
+      "5": 2,
+      "7": 1,
+      "8": 1
+    },
+    "modal_build_depth": 1,
+    "n_src": 7527,
+    "n_build_roots": 83,
+    "n_gold_files": 2921,
+    "n_gold_with_declared_module": 2891,
+    "declared_coverage": 0.9897,
+    "depths": {
+      "1": {
+        "n_modules": 38,
+        "random": 0.0263,
+        "majority": 0.6688,
+        "median_files_per_module": 39,
+        "singleton_modules": 1,
+        "n_gold_modules": 33,
+        "agree_with_build": 0.9111
+      },
+      "2": {
+        "n_modules": 62,
+        "random": 0.0161,
+        "majority": 0.6688,
+        "median_files_per_module": 25,
+        "singleton_modules": 1,
+        "n_gold_modules": 48,
+        "agree_with_build": 0.0664
+      },
+      "3": {
+        "n_modules": 96,
+        "random": 0.0104,
+        "majority": 0.6679,
+        "median_files_per_module": 14,
+        "singleton_modules": 6,
+        "n_gold_modules": 65,
+        "agree_with_build": 0.0225
+      },
+      "4": {
+        "n_modules": 108,
+        "random": 0.0093,
+        "majority": 0.6679,
+        "median_files_per_module": 12,
+        "singleton_modules": 8,
+        "n_gold_modules": 68,
+        "agree_with_build": 0.0
+      },
+      "5": {
+        "n_modules": 114,
+        "random": 0.0088,
+        "majority": 0.6679,
+        "median_files_per_module": 12,
+        "singleton_modules": 11,
+        "n_gold_modules": 68,
+        "agree_with_build": 0.0
+      },
+      "6": {
+        "n_modules": 123,
+        "random": 0.0081,
+        "majority": 0.6679,
+        "median_files_per_module": 9,
+        "singleton_modules": 13,
+        "n_gold_modules": 73,
+        "agree_with_build": 0.0
+      },
+      "7": {
+        "n_modules": 127,
+        "random": 0.0079,
+        "majority": 0.6679,
+        "median_files_per_module": 9,
+        "singleton_modules": 16,
+        "n_gold_modules": 77,
+        "agree_with_build": 0.0
+      }
+    }
+  },
+  "ignite": {
+    "project": "ignite",
+    "snapshot": "556d1a989b74",
+    "n_paths": 15445,
+    "build_root_depths": {
+      "1": 3,
+      "2": 53,
+      "3": 16,
+      "4": 12,
+      "5": 10
+    },
+    "modal_build_depth": 2,
+    "n_src": 11360,
+    "n_build_roots": 95,
+    "n_gold_files": 876,
+    "n_gold_with_declared_module": 822,
+    "declared_coverage": 0.9384,
+    "depths": {
+      "1": {
+        "n_modules": 3,
+        "random": 0.3333,
+        "majority": 0.9871,
+        "median_files_per_module": 323,
+        "singleton_modules": 0,
+        "n_gold_modules": 2,
+        "agree_with_build": 0.0207
+      },
+      "2": {
+        "n_modules": 48,
+        "random": 0.0208,
+        "majority": 0.8547,
+        "median_files_per_module": 18,
+        "singleton_modules": 1,
+        "n_gold_modules": 23,
+        "agree_with_build": 0.9647
+      },
+      "3": {
+        "n_modules": 58,
+        "random": 0.0172,
+        "majority": 0.8547,
+        "median_files_per_module": 17,
+        "singleton_modules": 2,
+        "n_gold_modules": 23,
+        "agree_with_build": 0.0146
+      },
+      "4": {
+        "n_modules": 94,
+        "random": 0.0106,
+        "majority": 0.8547,
+        "median_files_per_module": 9,
+        "singleton_modules": 3,
+        "n_gold_modules": 26,
+        "agree_with_build": 0.0
+      },
+      "5": {
+        "n_modules": 102,
+        "random": 0.0098,
+        "majority": 0.8547,
+        "median_files_per_module": 8,
+        "singleton_modules": 5,
+        "n_gold_modules": 26,
+        "agree_with_build": 0.0
+      },
+      "6": {
+        "n_modules": 103,
+        "random": 0.0097,
+        "majority": 0.8547,
+        "median_files_per_module": 8,
+        "singleton_modules": 6,
+        "n_gold_modules": 26,
+        "agree_with_build": 0.0
+      },
+      "7": {
+        "n_modules": 108,
+        "random": 0.0093,
+        "majority": 0.8547,
+        "median_files_per_module": 7,
+        "singleton_modules": 8,
+        "n_gold_modules": 26,
+        "agree_with_build": 0.0
+      }
+    }
+  },
+  "impala": {
+    "project": "impala",
+    "snapshot": "4b33107d15c3",
+    "n_paths": 5473,
+    "build_root_depths": {
+      "1": 4,
+      "2": 13,
+      "3": 30,
+      "4": 7
+    },
+    "modal_build_depth": 3,
+    "n_src": 2355,
+    "n_build_roots": 55,
+    "n_gold_files": 813,
+    "n_gold_with_declared_module": 813,
+    "declared_coverage": 1.0,
+    "depths": {
+      "1": {
+        "n_modules": 6,
+        "random": 0.1667,
+        "majority": 0.6559,
+        "median_files_per_module": 35,
+        "singleton_modules": 2,
+        "n_gold_modules": 2,
+        "agree_with_build": 0.3924
+      },
+      "2": {
+        "n_modules": 11,
+        "random": 0.0909,
+        "majority": 0.6559,
+        "median_files_per_module": 4,
+        "singleton_modules": 2,
+        "n_gold_modules": 2,
+        "agree_with_build": 0.0
+      },
+      "3": {
+        "n_modules": 35,
+        "random": 0.0286,
+        "majority": 0.4046,
+        "median_files_per_module": 10,
+        "singleton_modules": 5,
+        "n_gold_modules": 17,
+        "agree_with_build": 0.5793
+      },
+      "4": {
+        "n_modules": 53,
+        "random": 0.0189,
+        "majority": 0.4046,
+        "median_files_per_module": 10,
+        "singleton_modules": 11,
+        "n_gold_modules": 24,
+        "agree_with_build": 0.599
+      },
+      "5": {
+        "n_modules": 65,
+        "random": 0.0154,
+        "majority": 0.2448,
+        "median_files_per_module": 7,
+        "singleton_modules": 11,
+        "n_gold_modules": 25,
+        "agree_with_build": 0.599
+      },
+      "6": {
+        "n_modules": 65,
+        "random": 0.0154,
+        "majority": 0.2448,
+        "median_files_per_module": 7,
+        "singleton_modules": 11,
+        "n_gold_modules": 25,
+        "agree_with_build": 0.599
+      },
+      "7": {
+        "n_modules": 65,
+        "random": 0.0154,
+        "majority": 0.2448,
+        "median_files_per_module": 7,
+        "singleton_modules": 11,
+        "n_gold_modules": 25,
+        "agree_with_build": 0.599
+      }
+    }
+  },
+  "infinispan": {
+    "project": "infinispan",
+    "snapshot": "b71e28ac79e4",
+    "n_paths": 9426,
+    "build_root_depths": {
+      "1": 32,
+      "2": 57,
+      "3": 13,
+      "4": 4,
+      "6": 4
+    },
+    "modal_build_depth": 2,
+    "n_src": 7446,
+    "n_build_roots": 111,
+    "n_gold_files": 1273,
+    "n_gold_with_declared_module": 1167,
+    "declared_coverage": 0.9167,
+    "depths": {
+      "1": {
+        "n_modules": 34,
+        "random": 0.0294,
+        "majority": 0.6717,
+        "median_files_per_module": 67,
+        "singleton_modules": 0,
+        "n_gold_modules": 37,
+        "agree_with_build": 0.7772
+      },
+      "2": {
+        "n_modules": 72,
+        "random": 0.0139,
+        "majority": 0.6717,
+        "median_files_per_module": 30,
+        "singleton_modules": 5,
+        "n_gold_modules": 82,
+        "agree_with_build": 0.2194
+      },
+      "3": {
+        "n_modules": 96,
+        "random": 0.0104,
+        "majority": 0.6717,
+        "median_files_per_module": 20,
+        "singleton_modules": 5,
+        "n_gold_modules": 90,
+        "agree_with_build": 0.0017
+      },
+      "4": {
+        "n_modules": 121,
+        "random": 0.0083,
+        "majority": 0.6717,
+        "median_files_per_module": 16,
+        "singleton_modules": 6,
+        "n_gold_modules": 90,
+        "agree_with_build": 0.0017
+      },
+      "5": {
+        "n_modules": 128,
+        "random": 0.0078,
+        "majority": 0.6717,
+        "median_files_per_module": 15,
+        "singleton_modules": 7,
+        "n_gold_modules": 92,
+        "agree_with_build": 0.0
+      },
+      "6": {
+        "n_modules": 131,
+        "random": 0.0076,
+        "majority": 0.6717,
+        "median_files_per_module": 13,
+        "singleton_modules": 8,
+        "n_gold_modules": 92,
+        "agree_with_build": 0.0
+      },
+      "7": {
+        "n_modules": 223,
+        "random": 0.0045,
+        "majority": 0.1125,
+        "median_files_per_module": 14,
+        "singleton_modules": 15,
+        "n_gold_modules": 144,
+        "agree_with_build": 0.0
+      }
+    }
+  },
+  "kafka": {
+    "project": "kafka",
+    "snapshot": "8cca18d7b99d",
+    "n_paths": 4640,
+    "build_root_depths": {
+      "1": 2,
+      "2": 1,
+      "3": 1,
+      "7": 1
+    },
+    "modal_build_depth": 1,
+    "n_src": 3978,
+    "n_build_roots": 6,
+    "n_gold_files": 587,
+    "n_gold_with_declared_module": 149,
+    "declared_coverage": 0.2538,
+    "depths": {
+      "1": {
+        "n_modules": 15,
+        "random": 0.0667,
+        "majority": 0.4905,
+        "median_files_per_module": 51,
+        "singleton_modules": 0,
+        "n_gold_modules": 13,
+        "agree_with_build": 1.0
+      },
+      "2": {
+        "n_modules": 42,
+        "random": 0.0238,
+        "majority": 0.4905,
+        "median_files_per_module": 11,
+        "singleton_modules": 0,
+        "n_gold_modules": 24,
+        "agree_with_build": 0.0
+      },
+      "3": {
+        "n_modules": 54,
+        "random": 0.0185,
+        "majority": 0.4905,
+        "median_files_per_module": 11,
+        "singleton_modules": 1,
+        "n_gold_modules": 24,
+        "agree_with_build": 0.0
+      },
+      "4": {
+        "n_modules": 68,
+        "random": 0.0147,
+        "majority": 0.4905,
+        "median_files_per_module": 8,
+        "singleton_modules": 2,
+        "n_gold_modules": 24,
+        "agree_with_build": 0.0
+      },
+      "5": {
+        "n_modules": 73,
+        "random": 0.0137,
+        "majority": 0.4905,
+        "median_files_per_module": 8,
+        "singleton_modules": 3,
+        "n_gold_modules": 24,
+        "agree_with_build": 0.0
+      },
+      "6": {
+        "n_modules": 101,
+        "random": 0.0099,
+        "majority": 0.287,
+        "median_files_per_module": 6,
+        "singleton_modules": 11,
+        "n_gold_modules": 45,
+        "agree_with_build": 0.0
+      },
+      "7": {
+        "n_modules": 139,
+        "random": 0.0072,
+        "majority": 0.287,
+        "median_files_per_module": 5,
+        "singleton_modules": 26,
+        "n_gold_modules": 55,
+        "agree_with_build": 0.0
+      }
+    }
+  },
+  "keycloak": {
+    "project": "keycloak",
+    "snapshot": "c9e1e00b95d9",
+    "n_paths": 11929,
+    "build_root_depths": {
+      "1": 22,
+      "2": 58,
+      "3": 83,
+      "4": 54,
+      "5": 36,
+      "6": 27,
+      "7": 9,
+      "8": 2
+    },
+    "modal_build_depth": 3,
+    "n_src": 6068,
+    "n_build_roots": 292,
+    "n_gold_files": 719,
+    "n_gold_with_declared_module": 686,
+    "declared_coverage": 0.9541,
+    "depths": {
+      "1": {
+        "n_modules": 19,
+        "random": 0.0526,
+        "majority": 0.4478,
+        "median_files_per_module": 178,
+        "singleton_modules": 1,
+        "n_gold_modules": 26,
+        "agree_with_build": 0.5875
+      },
+      "2": {
+        "n_modules": 44,
+        "random": 0.0227,
+        "majority": 0.4478,
+        "median_files_per_module": 29,
+        "singleton_modules": 6,
+        "n_gold_modules": 67,
+        "agree_with_build": 0.2784
+      },
+      "3": {
+        "n_modules": 86,
+        "random": 0.0116,
+        "majority": 0.4478,
+        "median_files_per_module": 13,
+        "singleton_modules": 9,
+        "n_gold_modules": 93,
+        "agree_with_build": 0.0977
+      },
+      "4": {
+        "n_modules": 123,
+        "random": 0.0081,
+        "majority": 0.4478,
+        "median_files_per_module": 6,
+        "singleton_modules": 16,
+        "n_gold_modules": 100,
+        "agree_with_build": 0.0364
+      },
+      "5": {
+        "n_modules": 156,
+        "random": 0.0064,
+        "majority": 0.4478,
+        "median_files_per_module": 5,
+        "singleton_modules": 28,
+        "n_gold_modules": 100,
+        "agree_with_build": 0.0
+      },
+      "6": {
+        "n_modules": 176,
+        "random": 0.0057,
+        "majority": 0.4478,
+        "median_files_per_module": 4,
+        "singleton_modules": 37,
+        "n_gold_modules": 100,
+        "agree_with_build": 0.0
+      },
+      "7": {
+        "n_modules": 295,
+        "random": 0.0034,
+        "majority": 0.2367,
+        "median_files_per_module": 4,
+        "singleton_modules": 55,
+        "n_gold_modules": 140,
+        "agree_with_build": 0.0
+      }
+    }
+  },
+  "mariadb": {
+    "project": "mariadb",
+    "snapshot": "75538f94ca06",
+    "n_paths": 24391,
+    "build_root_depths": {
+      "1": 20,
+      "2": 68,
+      "3": 19,
+      "4": 18,
+      "5": 18,
+      "6": 29,
+      "7": 13,
+      "8": 11,
+      "9": 7,
+      "10": 2
+    },
+    "modal_build_depth": 2,
+    "n_src": 4277,
+    "n_build_roots": 206,
+    "n_gold_files": 921,
+    "n_gold_with_declared_module": 778,
+    "declared_coverage": 0.8447,
+    "depths": {
+      "1": {
+        "n_modules": 24,
+        "random": 0.0417,
+        "majority": 0.6204,
+        "median_files_per_module": 18,
+        "singleton_modules": 3,
+        "n_gold_modules": 16,
+        "agree_with_build": 0.446
+      },
+      "2": {
+        "n_modules": 90,
+        "random": 0.0111,
+        "majority": 0.6204,
+        "median_files_per_module": 5,
+        "singleton_modules": 29,
+        "n_gold_modules": 49,
+        "agree_with_build": 0.9769
+      },
+      "3": {
+        "n_modules": 146,
+        "random": 0.0068,
+        "majority": 0.6204,
+        "median_files_per_module": 4,
+        "singleton_modules": 43,
+        "n_gold_modules": 97,
+        "agree_with_build": 0.7172
+      },
+      "4": {
+        "n_modules": 162,
+        "random": 0.0062,
+        "majority": 0.6204,
+        "median_files_per_module": 4,
+        "singleton_modules": 48,
+        "n_gold_modules": 101,
+        "agree_with_build": 0.7262
+      },
+      "5": {
+        "n_modules": 180,
+        "random": 0.0056,
+        "majority": 0.6204,
+        "median_files_per_module": 5,
+        "singleton_modules": 48,
+        "n_gold_modules": 103,
+        "agree_with_build": 0.7224
+      },
+      "6": {
+        "n_modules": 199,
+        "random": 0.005,
+        "majority": 0.6204,
+        "median_files_per_module": 5,
+        "singleton_modules": 55,
+        "n_gold_modules": 103,
+        "agree_with_build": 0.7224
+      },
+      "7": {
+        "n_modules": 203,
+        "random": 0.0049,
+        "majority": 0.6204,
+        "median_files_per_module": 5,
+        "singleton_modules": 57,
+        "n_gold_modules": 103,
+        "agree_with_build": 0.7224
+      }
+    }
+  },
+  "mongodb": {
+    "project": "mongodb",
+    "snapshot": "cc733015b5f7",
+    "n_paths": 37496,
+    "build_root_depths": {
+      "1": 2,
+      "2": 2,
+      "3": 44,
+      "4": 53,
+      "5": 37,
+      "6": 8,
+      "7": 4,
+      "8": 3
+    },
+    "modal_build_depth": 4,
+    "n_src": 21305,
+    "n_build_roots": 154,
+    "n_gold_files": 2843,
+    "n_gold_with_declared_module": 2631,
+    "declared_coverage": 0.9254,
+    "depths": {
+      "1": {
+        "n_modules": 3,
+        "random": 0.3333,
+        "majority": 0.9224,
+        "median_files_per_module": 30,
+        "singleton_modules": 1,
+        "n_gold_modules": 12,
+        "agree_with_build": 0.0
+      },
+      "2": {
+        "n_modules": 6,
+        "random": 0.1667,
+        "majority": 0.9183,
+        "median_files_per_module": 24,
+        "singleton_modules": 2,
+        "n_gold_modules": 22,
+        "agree_with_build": 0.0144
+      },
+      "3": {
+        "n_modules": 52,
+        "random": 0.0192,
+        "majority": 0.6714,
+        "median_files_per_module": 63,
+        "singleton_modules": 5,
+        "n_gold_modules": 55,
+        "agree_with_build": 0.3421
+      },
+      "4": {
+        "n_modules": 140,
+        "random": 0.0071,
+        "majority": 0.1828,
+        "median_files_per_module": 26,
+        "singleton_modules": 23,
+        "n_gold_modules": 106,
+        "agree_with_build": 0.9164
+      },
+      "5": {
+        "n_modules": 371,
+        "random": 0.0027,
+        "majority": 0.1828,
+        "median_files_per_module": 17,
+        "singleton_modules": 53,
+        "n_gold_modules": 136,
+        "agree_with_build": 0.8719
+      },
+      "6": {
+        "n_modules": 756,
+        "random": 0.0013,
+        "majority": 0.1828,
+        "median_files_per_module": 9,
+        "singleton_modules": 143,
+        "n_gold_modules": 143,
+        "agree_with_build": 0.8609
+      },
+      "7": {
+        "n_modules": 1011,
+        "random": 0.001,
+        "majority": 0.1828,
+        "median_files_per_module": 7,
+        "singleton_modules": 191,
+        "n_gold_modules": 144,
+        "agree_with_build": 0.8609
+      }
+    }
+  },
+  "pdfbox": {
+    "project": "pdfbox",
+    "snapshot": "b03436ba7641",
+    "n_paths": 1960,
+    "build_root_depths": {
+      "1": 11
+    },
+    "modal_build_depth": 1,
+    "n_src": 1375,
+    "n_build_roots": 12,
+    "n_gold_files": 581,
+    "n_gold_with_declared_module": 538,
+    "declared_coverage": 0.926,
+    "depths": {
+      "1": {
+        "n_modules": 7,
+        "random": 0.1429,
+        "majority": 0.756,
+        "median_files_per_module": 101,
+        "singleton_modules": 0,
+        "n_gold_modules": 9,
+        "agree_with_build": 1.0
+      },
+      "2": {
+        "n_modules": 7,
+        "random": 0.1429,
+        "majority": 0.756,
+        "median_files_per_module": 101,
+        "singleton_modules": 0,
+        "n_gold_modules": 9,
+        "agree_with_build": 0.0
+      },
+      "3": {
+        "n_modules": 13,
+        "random": 0.0769,
+        "majority": 0.756,
+        "median_files_per_module": 72,
+        "singleton_modules": 0,
+        "n_gold_modules": 9,
+        "agree_with_build": 0.0
+      },
+      "4": {
+        "n_modules": 13,
+        "random": 0.0769,
+        "majority": 0.756,
+        "median_files_per_module": 72,
+        "singleton_modules": 0,
+        "n_gold_modules": 9,
+        "agree_with_build": 0.0
+      },
+      "5": {
+        "n_modules": 13,
+        "random": 0.0769,
+        "majority": 0.756,
+        "median_files_per_module": 72,
+        "singleton_modules": 0,
+        "n_gold_modules": 9,
+        "agree_with_build": 0.0
+      },
+      "6": {
+        "n_modules": 13,
+        "random": 0.0769,
+        "majority": 0.756,
+        "median_files_per_module": 72,
+        "singleton_modules": 0,
+        "n_gold_modules": 9,
+        "agree_with_build": 0.0
+      },
+      "7": {
+        "n_modules": 14,
+        "random": 0.0714,
+        "majority": 0.756,
+        "median_files_per_module": 72,
+        "singleton_modules": 1,
+        "n_gold_modules": 20,
+        "agree_with_build": 0.0
+      }
+    }
+  },
+  "phoenix": {
+    "project": "phoenix",
+    "snapshot": "dfecc198e88a",
+    "n_paths": 2390,
+    "build_root_depths": {
+      "1": 10,
+      "2": 1
+    },
+    "modal_build_depth": 1,
+    "n_src": 2146,
+    "n_build_roots": 12,
+    "n_gold_files": 824,
+    "n_gold_with_declared_module": 769,
+    "declared_coverage": 0.9333,
+    "depths": {
+      "1": {
+        "n_modules": 7,
+        "random": 0.1429,
+        "majority": 0.9521,
+        "median_files_per_module": 6,
+        "singleton_modules": 0,
+        "n_gold_modules": 13,
+        "agree_with_build": 1.0
+      },
+      "2": {
+        "n_modules": 7,
+        "random": 0.1429,
+        "majority": 0.9521,
+        "median_files_per_module": 6,
+        "singleton_modules": 0,
+        "n_gold_modules": 13,
+        "agree_with_build": 0.0
+      },
+      "3": {
+        "n_modules": 11,
+        "random": 0.0909,
+        "majority": 0.9507,
+        "median_files_per_module": 7,
+        "singleton_modules": 0,
+        "n_gold_modules": 20,
+        "agree_with_build": 0.0
+      },
+      "4": {
+        "n_modules": 11,
+        "random": 0.0909,
+        "majority": 0.9507,
+        "median_files_per_module": 7,
+        "singleton_modules": 0,
+        "n_gold_modules": 20,
+        "agree_with_build": 0.0
+      },
+      "5": {
+        "n_modules": 11,
+        "random": 0.0909,
+        "majority": 0.9507,
+        "median_files_per_module": 7,
+        "singleton_modules": 0,
+        "n_gold_modules": 20,
+        "agree_with_build": 0.0
+      },
+      "6": {
+        "n_modules": 11,
+        "random": 0.0909,
+        "majority": 0.9507,
+        "median_files_per_module": 7,
+        "singleton_modules": 0,
+        "n_gold_modules": 20,
+        "agree_with_build": 0.0
+      },
+      "7": {
+        "n_modules": 14,
+        "random": 0.0714,
+        "majority": 0.937,
+        "median_files_per_module": 8,
+        "singleton_modules": 0,
+        "n_gold_modules": 23,
+        "agree_with_build": 0.0
+      }
+    }
+  },
+  "pig": {
+    "project": "pig",
+    "snapshot": "60760b95f226",
+    "n_paths": 2458,
+    "build_root_depths": {
+      "1": 1,
+      "2": 1,
+      "3": 4,
+      "5": 1
+    },
+    "modal_build_depth": 3,
+    "n_src": 1791,
+    "n_build_roots": 8,
+    "n_gold_files": 540,
+    "n_gold_with_declared_module": 22,
+    "declared_coverage": 0.0407,
+    "depths": {
+      "1": {
+        "n_modules": 6,
+        "random": 0.1667,
+        "majority": 0.957,
+        "median_files_per_module": 228,
+        "singleton_modules": 0,
+        "n_gold_modules": 4,
+        "agree_with_build": 0.0
+      },
+      "2": {
+        "n_modules": 9,
+        "random": 0.1111,
+        "majority": 0.957,
+        "median_files_per_module": 20,
+        "singleton_modules": 0,
+        "n_gold_modules": 6,
+        "agree_with_build": 0.0
+      },
+      "3": {
+        "n_modules": 11,
+        "random": 0.0909,
+        "majority": 0.957,
+        "median_files_per_module": 7,
+        "singleton_modules": 3,
+        "n_gold_modules": 7,
+        "agree_with_build": 1.0
+      },
+      "4": {
+        "n_modules": 11,
+        "random": 0.0909,
+        "majority": 0.957,
+        "median_files_per_module": 7,
+        "singleton_modules": 3,
+        "n_gold_modules": 7,
+        "agree_with_build": 0.0
+      },
+      "5": {
+        "n_modules": 35,
+        "random": 0.0286,
+        "majority": 0.4132,
+        "median_files_per_module": 13,
+        "singleton_modules": 4,
+        "n_gold_modules": 16,
+        "agree_with_build": 0.0
+      },
+      "6": {
+        "n_modules": 72,
+        "random": 0.0139,
+        "majority": 0.4099,
+        "median_files_per_module": 4,
+        "singleton_modules": 18,
+        "n_gold_modules": 39,
+        "agree_with_build": 0.0
+      },
+      "7": {
+        "n_modules": 97,
+        "random": 0.0103,
+        "majority": 0.395,
+        "median_files_per_module": 4,
+        "singleton_modules": 27,
+        "n_gold_modules": 62,
+        "agree_with_build": 0.0
+      }
+    }
+  },
+  "qt": {
+    "project": "qt",
+    "snapshot": "f6dab97455f8",
+    "n_paths": 22301,
+    "build_root_depths": {
+      "1": 5,
+      "2": 53,
+      "3": 238,
+      "4": 462,
+      "5": 829,
+      "6": 209,
+      "7": 18,
+      "8": 2,
+      "9": 1
+    },
+    "modal_build_depth": 5,
+    "n_src": 8092,
+    "n_build_roots": 1818,
+    "n_gold_files": 514,
+    "n_gold_with_declared_module": 514,
+    "declared_coverage": 1.0,
+    "depths": {
+      "1": {
+        "n_modules": 9,
+        "random": 0.1111,
+        "majority": 0.9386,
+        "median_files_per_module": 71,
+        "singleton_modules": 0,
+        "n_gold_modules": 3,
+        "agree_with_build": 0.0447
+      },
+      "2": {
+        "n_modules": 125,
+        "random": 0.008,
+        "majority": 0.3114,
+        "median_files_per_module": 1,
+        "singleton_modules": 73,
+        "n_gold_modules": 21,
+        "agree_with_build": 0.6829
+      },
+      "3": {
+        "n_modules": 493,
+        "random": 0.002,
+        "majority": 0.2105,
+        "median_files_per_module": 3,
+        "singleton_modules": 219,
+        "n_gold_modules": 85,
+        "agree_with_build": 0.1206
+      },
+      "4": {
+        "n_modules": 916,
+        "random": 0.0011,
+        "majority": 0.0636,
+        "median_files_per_module": 2,
+        "singleton_modules": 409,
+        "n_gold_modules": 111,
+        "agree_with_build": 0.2101
+      },
+      "5": {
+        "n_modules": 1820,
+        "random": 0.0005,
+        "majority": 0.0636,
+        "median_files_per_module": 1,
+        "singleton_modules": 1182,
+        "n_gold_modules": 116,
+        "agree_with_build": 0.2023
+      },
+      "6": {
+        "n_modules": 1977,
+        "random": 0.0005,
+        "majority": 0.0636,
+        "median_files_per_module": 1,
+        "singleton_modules": 1307,
+        "n_gold_modules": 118,
+        "agree_with_build": 0.2082
+      },
+      "7": {
+        "n_modules": 1991,
+        "random": 0.0005,
+        "majority": 0.0636,
+        "median_files_per_module": 1,
+        "singleton_modules": 1313,
+        "n_gold_modules": 119,
+        "agree_with_build": 0.2082
+      }
+    }
+  },
+  "sakai": {
+    "project": "sakai",
+    "snapshot": "52250bbfb69e",
+    "n_paths": 17334,
+    "build_root_depths": {
+      "1": 85,
+      "2": 227,
+      "3": 126,
+      "4": 7,
+      "5": 5
+    },
+    "modal_build_depth": 2,
+    "n_src": 6032,
+    "n_build_roots": 451,
+    "n_gold_files": 1183,
+    "n_gold_with_declared_module": 1142,
+    "declared_coverage": 0.9653,
+    "depths": {
+      "1": {
+        "n_modules": 81,
+        "random": 0.0123,
+        "majority": 0.1875,
+        "median_files_per_module": 27,
+        "singleton_modules": 5,
+        "n_gold_modules": 71,
+        "agree_with_build": 0.1576
+      },
+      "2": {
+        "n_modules": 283,
+        "random": 0.0035,
+        "majority": 0.1215,
+        "median_files_per_module": 7,
+        "singleton_modules": 47,
+        "n_gold_modules": 235,
+        "agree_with_build": 0.5823
+      },
+      "3": {
+        "n_modules": 317,
+        "random": 0.0032,
+        "majority": 0.1215,
+        "median_files_per_module": 6,
+        "singleton_modules": 53,
+        "n_gold_modules": 257,
+        "agree_with_build": 0.2522
+      },
+      "4": {
+        "n_modules": 368,
+        "random": 0.0027,
+        "majority": 0.1215,
+        "median_files_per_module": 5,
+        "singleton_modules": 66,
+        "n_gold_modules": 258,
+        "agree_with_build": 0.0009
+      },
+      "5": {
+        "n_modules": 403,
+        "random": 0.0025,
+        "majority": 0.1201,
+        "median_files_per_module": 5,
+        "singleton_modules": 85,
+        "n_gold_modules": 263,
+        "agree_with_build": 0.007
+      },
+      "6": {
+        "n_modules": 411,
+        "random": 0.0024,
+        "majority": 0.1201,
+        "median_files_per_module": 5,
+        "singleton_modules": 89,
+        "n_gold_modules": 266,
+        "agree_with_build": 0.0
+      },
+      "7": {
+        "n_modules": 466,
+        "random": 0.0021,
+        "majority": 0.1201,
+        "median_files_per_module": 4,
+        "singleton_modules": 121,
+        "n_gold_modules": 284,
+        "agree_with_build": 0.0
+      }
+    }
+  },
+  "solr": {
+    "project": "solr",
+    "snapshot": "d2c49c6ed6e0",
+    "n_paths": 7156,
+    "build_root_depths": {
+      "1": 2,
+      "2": 12,
+      "3": 11
+    },
+    "modal_build_depth": 2,
+    "n_src": 4048,
+    "n_build_roots": 26,
+    "n_gold_files": 817,
+    "n_gold_with_declared_module": 696,
+    "declared_coverage": 0.8519,
+    "depths": {
+      "1": {
+        "n_modules": 3,
+        "random": 0.3333,
+        "majority": 0.9035,
+        "median_files_per_module": 6,
+        "singleton_modules": 1,
+        "n_gold_modules": 6,
+        "agree_with_build": 0.092
+      },
+      "2": {
+        "n_modules": 8,
+        "random": 0.125,
+        "majority": 0.7514,
+        "median_files_per_module": 69,
+        "singleton_modules": 1,
+        "n_gold_modules": 19,
+        "agree_with_build": 0.8621
+      },
+      "3": {
+        "n_modules": 18,
+        "random": 0.0556,
+        "majority": 0.7514,
+        "median_files_per_module": 15,
+        "singleton_modules": 1,
+        "n_gold_modules": 33,
+        "agree_with_build": 0.046
+      },
+      "4": {
+        "n_modules": 22,
+        "random": 0.0455,
+        "majority": 0.7514,
+        "median_files_per_module": 15,
+        "singleton_modules": 1,
+        "n_gold_modules": 33,
+        "agree_with_build": 0.0
+      },
+      "5": {
+        "n_modules": 33,
+        "random": 0.0303,
+        "majority": 0.7514,
+        "median_files_per_module": 8,
+        "singleton_modules": 2,
+        "n_gold_modules": 35,
+        "agree_with_build": 0.0
+      },
+      "6": {
+        "n_modules": 36,
+        "random": 0.0278,
+        "majority": 0.7514,
+        "median_files_per_module": 8,
+        "singleton_modules": 2,
+        "n_gold_modules": 45,
+        "agree_with_build": 0.0
+      },
+      "7": {
+        "n_modules": 37,
+        "random": 0.027,
+        "majority": 0.7514,
+        "median_files_per_module": 8,
+        "singleton_modules": 2,
+        "n_gold_modules": 59,
+        "agree_with_build": 0.0
+      }
+    }
+  },
+  "spark": {
+    "project": "spark",
+    "snapshot": "0a258376b79f",
+    "n_paths": 18175,
+    "build_root_depths": {
+      "1": 12,
+      "2": 22,
+      "3": 2
+    },
+    "modal_build_depth": 2,
+    "n_src": 5210,
+    "n_build_roots": 37,
+    "n_gold_files": 1137,
+    "n_gold_with_declared_module": 1064,
+    "declared_coverage": 0.9358,
+    "depths": {
+      "1": {
+        "n_modules": 15,
+        "random": 0.0667,
+        "majority": 0.5495,
+        "median_files_per_module": 160,
+        "singleton_modules": 1,
+        "n_gold_modules": 18,
+        "agree_with_build": 0.4389
+      },
+      "2": {
+        "n_modules": 32,
+        "random": 0.0312,
+        "majority": 0.3073,
+        "median_files_per_module": 32,
+        "singleton_modules": 1,
+        "n_gold_modules": 42,
+        "agree_with_build": 0.5536
+      },
+      "3": {
+        "n_modules": 41,
+        "random": 0.0244,
+        "majority": 0.3073,
+        "median_files_per_module": 25,
+        "singleton_modules": 1,
+        "n_gold_modules": 52,
+        "agree_with_build": 0.0075
+      },
+      "4": {
+        "n_modules": 72,
+        "random": 0.0139,
+        "majority": 0.2933,
+        "median_files_per_module": 18,
+        "singleton_modules": 1,
+        "n_gold_modules": 54,
+        "agree_with_build": 0.0
+      },
+      "5": {
+        "n_modules": 100,
+        "random": 0.01,
+        "majority": 0.2914,
+        "median_files_per_module": 10,
+        "singleton_modules": 13,
+        "n_gold_modules": 60,
+        "agree_with_build": 0.0
+      },
+      "6": {
+        "n_modules": 100,
+        "random": 0.01,
+        "majority": 0.2914,
+        "median_files_per_module": 10,
+        "singleton_modules": 13,
+        "n_gold_modules": 61,
+        "agree_with_build": 0.0
+      },
+      "7": {
+        "n_modules": 103,
+        "random": 0.0097,
+        "majority": 0.2914,
+        "median_files_per_module": 8,
+        "singleton_modules": 15,
+        "n_gold_modules": 62,
+        "agree_with_build": 0.0
+      }
+    }
+  },
+  "wildfly": {
+    "project": "wildfly",
+    "snapshot": "0d138eff6956",
+    "n_paths": 13860,
+    "build_root_depths": {
+      "1": 51,
+      "2": 87,
+      "3": 60,
+      "4": 17
+    },
+    "modal_build_depth": 2,
+    "n_src": 9893,
+    "n_build_roots": 216,
+    "n_gold_files": 1089,
+    "n_gold_with_declared_module": 904,
+    "declared_coverage": 0.8301,
+    "depths": {
+      "1": {
+        "n_modules": 42,
+        "random": 0.0238,
+        "majority": 0.1834,
+        "median_files_per_module": 45,
+        "singleton_modules": 1,
+        "n_gold_modules": 52,
+        "agree_with_build": 0.5708
+      },
+      "2": {
+        "n_modules": 90,
+        "random": 0.0111,
+        "majority": 0.1434,
+        "median_files_per_module": 25,
+        "singleton_modules": 3,
+        "n_gold_modules": 89,
+        "agree_with_build": 0.2489
+      },
+      "3": {
+        "n_modules": 156,
+        "random": 0.0064,
+        "majority": 0.1434,
+        "median_files_per_module": 21,
+        "singleton_modules": 15,
+        "n_gold_modules": 103,
+        "agree_with_build": 0.1803
+      },
+      "4": {
+        "n_modules": 190,
+        "random": 0.0053,
+        "majority": 0.1434,
+        "median_files_per_module": 14,
+        "singleton_modules": 21,
+        "n_gold_modules": 103,
+        "agree_with_build": 0.0
+      },
+      "5": {
+        "n_modules": 213,
+        "random": 0.0047,
+        "majority": 0.1434,
+        "median_files_per_module": 11,
+        "singleton_modules": 25,
+        "n_gold_modules": 103,
+        "agree_with_build": 0.0
+      },
+      "6": {
+        "n_modules": 219,
+        "random": 0.0046,
+        "majority": 0.1434,
+        "median_files_per_module": 10,
+        "singleton_modules": 29,
+        "n_gold_modules": 103,
+        "agree_with_build": 0.0
+      },
+      "7": {
+        "n_modules": 224,
+        "random": 0.0045,
+        "majority": 0.1434,
+        "median_files_per_module": 10,
+        "singleton_modules": 31,
+        "n_gold_modules": 103,
+        "agree_with_build": 0.0
+      }
+    }
+  }
+}
