@@ -265,10 +265,16 @@ def main() -> int:
             # against the snapshot at submit time. An unresolved symbol is
             # dropped here, which scores it as a miss rather than inventing
             # a key that could never match.
+            # "regions" lives in the row; "notes" only in the transcript.
+            # Prefer the row so scoring never depends on transcripts being
+            # present, and fall back for rows written before the field.
+            src = a.get("regions") or [
+                {"path": n["file"], "resolved": n.get("symbol_resolved", ""),
+                 "lines": n.get("symbol_lines", [])}
+                for n in (a.get("notes") or [])]
             agent_regions[a["issue_key"]] = [
-                f"{n['file']}::{n['symbol_resolved']}@{n['symbol_lines'][0]}"
-                for n in (a.get("notes") or [])
-                if n.get("symbol_resolved") and n.get("symbol_lines")]
+                f"{g['path']}::{g['resolved']}@{g['lines'][0]}"
+                for g in src if g.get("resolved") and g.get("lines")]
             if args.read_boost:
                 agent_read[a["issue_key"]] = read_functions(
                     args.project, a["issue_key"])
