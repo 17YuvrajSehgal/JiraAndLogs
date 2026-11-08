@@ -169,17 +169,31 @@ curl -s -m 5 "http://localhost:$PORT/v1/models" | grep -q qwen3.8-27b \
 # local one.
 PY=$S/c7-llm/agent-venv/bin/python
 [ -x "$PY" ] || { echo "no agent venv at $PY" >&2; exit 1; }
-"$PY" - <<'PREFLIGHT' || { echo "PREFLIGHT FAILED: not starting" >&2; exit 1; }
+C7="$C7" "$PY" - <<'PREFLIGHT' || { echo "PREFLIGHT FAILED: not starting" >&2; exit 1; }
 import sys
+import os
+sys.path.insert(0, os.environ["C7"] + "/scripts")
 try:
     from tree_sitter_language_pack import get_parser, cache_dir
 except Exception as e:
     print(f"  cannot import the parser pack: {e}", file=sys.stderr); sys.exit(1)
+# The language list is READ FROM THE CODE, never typed here. This block used
+# to name java, cpp and scala. When .py and .go were added to LANG_OF it
+# would have passed on a node with no Go parser and then failed per
+# instance, which is the shape of the bug that killed 178 of 185 runs once.
+from function_stage import LANG_OF  # noqa: E402
 print(f"  parser cache: {cache_dir()}")
+SAMPLE = {"java": b"class A { void m() {} }", "cpp": b"int f(){return 0;}",
+          "scala": b"object A { def m(): Int = 1 }",
+          "python": b"def f():\n    return 1\n",
+          "go": b"package m\nfunc F() int { return 1 }\n"}
+langs = sorted(set(LANG_OF.values()))
 bad = []
-for lang, code in (("java", b"class A { void m() {} }"),
-                   ("cpp", b"int f(){return 0;}"),
-                   ("scala", b"object A { def m(): Int = 1 }")):
+for lang in langs:
+    code = SAMPLE.get(lang)
+    if code is None:
+        bad.append(f"{lang}: in LANG_OF but this preflight has no sample for it")
+        continue
     try:
         get_parser(lang).parse(code)
     except Exception as e:
@@ -189,7 +203,7 @@ if bad:
     for b in bad:
         print(f"    {b}", file=sys.stderr)
     sys.exit(1)
-print("  preflight ok: java, cpp, scala all parse with no network")
+print(f"  preflight ok: {', '.join(langs)} all parse with no network")
 PREFLIGHT
 
 # ---- 2. the local bridge --------------------------------------------------
