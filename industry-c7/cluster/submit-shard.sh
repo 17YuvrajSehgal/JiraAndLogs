@@ -100,8 +100,11 @@ for sh in "${SHARDS[@]}"; do
   eval "PROJECTS=\$P_$sh"
   [ -n "${PROJECTS:-}" ] || { echo "no project list for $sh" >&2; exit 1; }
   printf '%-4s %s\n' "$sh" "$PROJECTS"
-  sbatch "${TEST[@]}" "${FLAGS[@]}" -t 24:00:00 --job-name="c7-$sh" \
-    --export=ALL,SHARD="$sh",C7_PROJECTS="$PROJECTS",TP="$TP",MAXLEN=65536,WORKERS="${WORKERS:-24}" \
+  SEED="${SEED:-42}"
+  NAME="c7-$sh"
+  [ "$SEED" = "42" ] || NAME="c7-$sh-s$SEED"
+  sbatch "${TEST[@]}" "${FLAGS[@]}" -t 24:00:00 --job-name="$NAME" \
+    --export=ALL,SHARD="$sh",C7_PROJECTS="$PROJECTS",TP="$TP",MAXLEN=65536,SEED="$SEED",WORKERS="${WORKERS:-24}" \
     "$JOB" 2>&1 | grep -v -E "^SBATCH (WARNING|:)|^ You have requested|^ need this amount"
 done
 

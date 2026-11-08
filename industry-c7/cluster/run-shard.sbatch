@@ -62,10 +62,15 @@ if [ "$MAXLEN" != "65536" ]; then
   exit 1
 fi
 
-TAG="full-$SHARD"
+# Mahsa asked for three seeds and the average of them. A second seed must
+# not write into the first seed's file, so the seed is part of the tag
+# whenever it is not the default 42. Seed 42 keeps its bare name so the
+# runs already on disk stay addressable.
+SEED="${SEED:-42}"
+if [ "$SEED" = "42" ]; then TAG="full-$SHARD"; else TAG="full-$SHARD-seed$SEED"; fi
 OUTF=$C7/data/agent/agent-$TAG.jsonl
 mkdir -p "$C7/data/agent" "$BASE/logs"
-echo "node=$(hostname) job=${SLURM_JOB_ID:-none} shard=$SHARD tp=$TP maxlen=$MAXLEN"
+echo "node=$(hostname) job=${SLURM_JOB_ID:-none} shard=$SHARD tp=$TP maxlen=$MAXLEN seed=$SEED"
 echo "projects: $PROJECTS"
 echo "resume: $(grep -c . "$OUTF" 2>/dev/null || echo 0) rows already in $(basename "$OUTF")"
 
@@ -141,10 +146,10 @@ cd "$BASE" || exit 1
 PROJ_ARGS=()
 for p in $PROJECTS; do PROJ_ARGS+=(--project "$p"); done
 
-echo "=== shard $SHARD: arm=lc, workers=$WORKERS, seed 42, thinking off ==="
+echo "=== shard $SHARD: arm=lc, workers=$WORKERS, seed $SEED, thinking off ==="
 C7_LLM_URL="http://localhost:$PORT/v1" C7_MODEL=qwen3.8-27b \
   "$PY" industry-c7/agent/run_agent.py \
     --arm lc --full --tag "$TAG" --workers "$WORKERS" \
-    --seed 42 "${PROJ_ARGS[@]}"
+    --seed "$SEED" "${PROJ_ARGS[@]}"
 echo "=== shard $SHARD now at $(grep -c . "$OUTF" 2>/dev/null || echo 0) rows ==="
 echo "=== job done ==="
