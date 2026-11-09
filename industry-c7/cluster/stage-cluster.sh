@@ -64,11 +64,63 @@ if step vllm; then
     && ok vllm
 fi
 
-# 3. version-matched flashinfer kernels. The PyPI cubin lags the release and
-#    kills the engine at start; non-fatal because vLLM falls back to JIT.
+# 3. flashinfer kernels. REQUIRED, not an optimisation.
+#
+#    flashinfer JIT-compiles a kernel during model warm-up. That needs nvcc,
+#    and the compute nodes have no CUDA toolkit: no /usr/local/cuda, nothing
+#    on PATH. So without prebuilt kernels vLLM does not start at all, it
+#    dies in compile_or_warm_up_model with
+#
+#      RuntimeError: Could not find nvcc and default
+#      cuda_home='/usr/local/cuda' doesn't exist
+#
+#    This step used to call `vllm download-kernels`, which probes the local
+#    GPU to pick an architecture. A login node has no GPU, so it failed with
+#    "Can't initialize NVML" and the old code printed
+#    "non-fatal: JIT fallback" and carried on. There is no JIT fallback
+#    here. Rorqual staged clean that way, sat in the queue for 26 hours and
+#    would have failed all seven of its jobs four minutes after starting.
+#
+#    The jit-cache wheels carry prebuilt kernels for every architecture, so
+#    they install from a login node with no GPU and no nvcc. Pinned to the
+#    flashinfer that vLLM 0.32.0 brings in, because a mismatched cubin kills
+#    the engine at start.
 if step kernels; then
-  (cd "$BASE" && "$BASE/vllm-venv/bin/vllm" download-kernels) && ok kernels \
-    || echo "    download-kernels failed (non-fatal: JIT fallback)"
+  FI_VER=$("$BASE/vllm-venv/bin/python" -c \
+    "import importlib.metadata as m; print(m.version('flashinfer-python'))" \
+    2>/dev/null)
+  if [ -z "$FI_VER" ]; then
+    echo "    REFUSING: flashinfer-python is not installed; vLLM step must run first" >&2
+    exit 1
+  fi
+  echo "    flashinfer-python $FI_VER; fetching matching jit-cache wheels"
+  if uv pip install --python "$BASE/vllm-venv/bin/python" \
+       "flashinfer-jit-cache==${FI_VER}+cu130" \
+       --extra-index-url https://flashinfer.ai/whl/cu130/; then
+    # Prove it, per architecture. sm90a is H100, sm80 A100, sm100a B200.
+    if "$BASE/vllm-venv/bin/python" - <<'PY'
+import importlib.metadata as md
+import sys
+# sm90a is H100 (nibi, fir, rorqual, trillium), sm80 is A100 (narval),
+# sm100a is B200. Require the two we actually run on.
+need = ["flashinfer-jit-cache-sm80", "flashinfer-jit-cache-sm90a"]
+bad = []
+for n in need:
+    try:
+        print("      ", n, md.version(n))
+    except Exception:
+        print("      ", n, "MISSING")
+        bad.append(n)
+sys.exit(1 if bad else 0)
+PY
+    then ok kernels
+    else echo "    REFUSING: jit-cache installed but an arch wheel is missing" >&2; exit 1
+    fi
+  else
+    echo "    REFUSING: could not install flashinfer-jit-cache." >&2
+    echo "    Without it vLLM cannot start on a node with no nvcc." >&2
+    exit 1
+  fi
 fi
 
 # 4. the model
