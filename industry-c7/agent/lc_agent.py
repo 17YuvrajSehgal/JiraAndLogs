@@ -53,6 +53,7 @@ lc_run.py, so that this file stays readable as a design.
 
 from __future__ import annotations
 
+import os
 import sys
 from pathlib import Path
 from typing import Annotated, Any, Callable
@@ -77,8 +78,27 @@ from lc_store import IncidentStore  # noqa: E402
 MAX_TURNS = 14
 TOP_FOR_COMMIT = 3
 # tool results kept verbatim before the older ones are stubbed;
-# the same number agent.py uses, so the two see the same history
-KEEP_FULL = 6
+# the same number agent.py uses, so the two see the same history.
+#
+# 6 was chosen for a much smaller context window. Measured on 2,381
+# instances of the 65,536-token run: on the FINAL model call, the one that
+# produces the answer, the median instance can no longer see 55.2% of what
+# its tools returned, and the worst 85.4%. Meanwhile the largest prompt in
+# the whole run reached 25,916 tokens, 39.5% of the window, and an
+# untrimmed history would have peaked at 50,984 tokens with NOT ONE
+# instance exceeding the window. The trimming is protecting headroom that
+# is never used.
+#
+# Both knobs are env-settable so an arm can be compared without editing
+# code, and the defaults are exactly the old behaviour: a run that sets
+# neither is byte-identical to the one already in flight.
+KEEP_FULL = int(os.environ.get("C7_KEEP_FULL") or 6)
+# Budget mode. With C7_CTX_CHARS set, oldest tool results are dropped only
+# while the history exceeds that many characters, instead of always cutting
+# to a fixed count. KEEP_FULL then acts as the floor. A pure count has no
+# idea how big the results are; a budget cannot blow the window, which a
+# large count alone could on an instance longer than any seen so far.
+CTX_CHARS = int(os.environ.get("C7_CTX_CHARS") or 0)
 # the investigation tools by name. The hard stop withdraws exactly these
 # and leaves whatever tool the structured-output strategy injected, so
 # the model is left with one thing it can do: answer.
@@ -452,8 +472,26 @@ def trim_history(request, handler):
     idx = [i for i, m in enumerate(msgs) if getattr(m, "type", "") == "tool"]
     if len(idx) <= KEEP_FULL:
         return handler(request)
-    stale = {getattr(msgs[i], "tool_call_id", None) for i in idx[:-KEEP_FULL]}
+
+    if CTX_CHARS:
+        # Budget mode: walk oldest-first and drop only while the whole
+        # history is still over budget, never cutting below KEEP_FULL.
+        total = sum(len(str(getattr(m, "content", "") or "")) for m in msgs)
+        stale, keep_floor = set(), len(idx) - KEEP_FULL
+        for n, i in enumerate(idx):
+            if total <= CTX_CHARS or n >= keep_floor:
+                break
+            cid = getattr(msgs[i], "tool_call_id", None)
+            if cid is None:
+                continue
+            stale.add(cid)
+            total -= len(str(getattr(msgs[i], "content", "") or ""))
+    else:
+        stale = {getattr(msgs[i], "tool_call_id", None)
+                 for i in idx[:-KEEP_FULL]}
     stale.discard(None)
+    if not stale:
+        return handler(request)
     out = []
     for m in msgs:
         kind = getattr(m, "type", "")

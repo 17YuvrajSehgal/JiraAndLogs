@@ -52,8 +52,19 @@ TP="${TP:-1}"
 # ---- the shard identity, no defaults ------------------------------------
 SHARD="${SHARD:-}"
 [ -n "$SHARD" ] || { echo "REFUSING: SHARD is not set (it names the output file)" >&2; exit 1; }
+# SUBSET names a json list of "project:KEY" and spans whatever projects it
+# likes, so C7_PROJECTS is not required with it. Used for small paired
+# arms: pick instances the main run has already finished, rerun them with
+# one setting changed, and compare against rows that already exist instead
+# of paying for both sides.
+SUBSET="${SUBSET:-}"
 PROJECTS="${C7_PROJECTS:-}"
-[ -n "$PROJECTS" ] || { echo "REFUSING: C7_PROJECTS is not set" >&2; exit 1; }
+if [ -n "$SUBSET" ]; then
+  [ -f "$C7/$SUBSET" ] || { echo "REFUSING: no subset file at $C7/$SUBSET" >&2; exit 1; }
+  echo "subset: $SUBSET ($(grep -c '"' "$C7/$SUBSET") entries)"
+elif [ -z "$PROJECTS" ]; then
+  echo "REFUSING: set C7_PROJECTS or SUBSET" >&2; exit 1
+fi
 
 # ---- the tree must be the 27-project one --------------------------------
 NPROJ=$(ls "$C7"/data/benchmark/*.jsonl 2>/dev/null | grep -vc -- -memory.jsonl)
@@ -79,7 +90,18 @@ fi
 # whenever it is not the default 42. Seed 42 keeps its bare name so the
 # runs already on disk stay addressable.
 SEED="${SEED:-42}"
-if [ "$SEED" = "42" ]; then TAG="full-$SHARD"; else TAG="full-$SHARD-seed$SEED"; fi
+# TAG can be set outright, and must be for anything that is NOT part of the
+# main run. The default spells "full-<shard>", and data/agent/agent-full-*
+# is the glob that the region scorer and the progress count both use to
+# mean "the main run". A side arm named full-something lands inside that
+# glob, where it is either summed into the totals or, since it reruns
+# instances the main run already did, trips the disjointness guard and
+# blocks region scoring outright.
+if [ -n "${TAG:-}" ]; then
+  :
+elif [ "$SEED" = "42" ]; then TAG="full-$SHARD"
+else TAG="full-$SHARD-seed$SEED"
+fi
 OUTF=$C7/data/agent/agent-$TAG.jsonl
 mkdir -p "$C7/data/agent" "$BASE/logs"
 echo "node=$(hostname) job=${SLURM_JOB_ID:-none} shard=$SHARD tp=$TP maxlen=$MAXLEN seed=$SEED"
@@ -155,13 +177,18 @@ C7="$C7" "$PY" "$C7/cluster/parser_check.py" \
 
 # ---- 2. the shard -------------------------------------------------------
 cd "$BASE" || exit 1
-PROJ_ARGS=()
-for p in $PROJECTS; do PROJ_ARGS+=(--project "$p"); done
+ARGS=()
+if [ -n "$SUBSET" ]; then
+  ARGS+=(--subset "industry-c7/$SUBSET")
+else
+  for p in $PROJECTS; do ARGS+=(--project "$p"); done
+fi
 
 echo "=== shard $SHARD: arm=lc, workers=$WORKERS, seed $SEED, thinking off ==="
+echo "    KEEP_FULL=${C7_KEEP_FULL:-6 (default)} CTX_CHARS=${C7_CTX_CHARS:-0 (off)}"
 C7_LLM_URL="http://localhost:$PORT/v1" C7_MODEL=qwen3.8-27b \
   "$PY" industry-c7/agent/run_agent.py \
     --arm lc --full --tag "$TAG" --workers "$WORKERS" \
-    --seed "$SEED" "${PROJ_ARGS[@]}"
+    --seed "$SEED" "${ARGS[@]}"
 echo "=== shard $SHARD now at $(grep -c . "$OUTF" 2>/dev/null || echo 0) rows ==="
 echo "=== job done ==="
