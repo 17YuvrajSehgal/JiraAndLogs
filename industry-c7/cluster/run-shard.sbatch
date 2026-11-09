@@ -97,11 +97,22 @@ SEED="${SEED:-42}"
 # glob, where it is either summed into the totals or, since it reruns
 # instances the main run already did, trips the disjointness guard and
 # blocks region scoring outright.
+#
+# That is exactly what a seed suffix used to do. "full-s2-seed7" still
+# begins with "full-", so agent-full-s2-seed7.jsonl matched the main-run
+# glob: the progress count read 53,088 of 26,544 and region scoring
+# refused on every project because each issue_key now sat in two files.
+# A non-default seed therefore leads with the seed instead of with "full",
+# which puts it outside the glob while staying obvious on disk.
 if [ -n "${TAG:-}" ]; then
   :
 elif [ "$SEED" = "42" ]; then TAG="full-$SHARD"
-else TAG="full-$SHARD-seed$SEED"
+else TAG="seed$SEED-$SHARD"
 fi
+case "$TAG" in
+  full-*-seed*) echo "REFUSING: TAG=$TAG matches the main-run glob agent-full-*" >&2
+                exit 1 ;;
+esac
 OUTF=$C7/data/agent/agent-$TAG.jsonl
 mkdir -p "$C7/data/agent" "$BASE/logs"
 echo "node=$(hostname) job=${SLURM_JOB_ID:-none} shard=$SHARD tp=$TP maxlen=$MAXLEN seed=$SEED"
