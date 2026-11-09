@@ -29,6 +29,7 @@ from pathlib import Path
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
 from localize import evaluate  # noqa: E402
+from localize import agent_run_rows  # noqa: E402
 from localize import is_dead_row  # noqa: E402
 from localize import PROJECTS as _ALL_PROJECTS  # noqa: E402
 from stats_agent import rrf  # noqa: E402
@@ -90,9 +91,7 @@ def jsonl(p):
 
 def main() -> int:
     agent = {}
-    for r in jsonl(AG / "agent-v3-full.jsonl"):
-        if is_dead_row(r):
-            continue
+    for r in agent_run_rows(AG):
         agent[f"{r['project']}:{r['issue_key']}"] = r
     ids = sorted(agent)
     if SUBSET:

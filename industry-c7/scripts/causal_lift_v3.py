@@ -28,6 +28,7 @@ ROOT = Path(__file__).resolve().parents[1]
 AG, RES, CG = ROOT / "data/agent", ROOT / "data/results", ROOT / "data/causal-gold"
 import sys
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+from localize import agent_run_rows  # noqa: E402
 from localize import is_dead_row  # noqa: E402
 
 
@@ -41,8 +42,7 @@ def chain_files(r) -> set:
 
 
 def main() -> int:
-    rows = [r for r in jsonl(AG / "agent-v3-full.jsonl")
-            if not is_dead_row(r)]
+    rows = agent_run_rows(AG)
     gold = {(r["project"], r["issue_key"]): r for r in jsonl(CG / "causal-gold.jsonl")}
 
     n = len(rows)
@@ -92,6 +92,24 @@ def main() -> int:
     no_file = 100 - out["share_chain_names_a_file"] * 100
     no_gold = 100 - out["share_chain_hits_fix_gold"] * 100
     lab = out["labelled"]
+    # share_causal_given_fix_hit is None when no labelled chain named a
+    # fix-gold file, and multiplying that by 100 used to raise TypeError
+    # right at the end of a 26,541-instance pass.
+    #
+    # It is None for the whole seed-42 run, and not because the agent got
+    # worse: the lc arm's ChainStep carries only `step` and `cited_from`.
+    # The `file` field was dropped from the schema because optional fields
+    # stopped the model calling submit at all, and the comment that records
+    # that change says the fields were never read. These scripts read them.
+    # So the chain file-attribution analysis has no input on this run, and
+    # saying so is the honest output.
+    _share = lab["share_causal_given_fix_hit"]
+    share_txt = ("n/a" if _share is None else f"{_share * 100:.0f}%")
+    if _share is None:
+        print("NOTE: no labelled chain named a fix-gold file. Chain steps in "
+              "this run carry `step` and `cited_from` only, never `file`, so "
+              "the file-attribution analysis has no input. Section 2 of the "
+              "written doc is not measurable from this run.", flush=True)
 
     doc = f"""# T12: causal lift of agent v3
 
@@ -132,7 +150,7 @@ On the subset with an independent causal label (n = {lab['n']}):
 |---|---|
 | chain names a fix-gold file | {lab['n_hits_fix']} / {lab['n']} |
 | chain names a causal-gold file | {lab['n_hits_causal']} / {lab['n']} |
-| **causal share, given the chain hit fix gold** | **{lab['share_causal_given_fix_hit'] * 100:.0f}%** ({lab['n_hits_causal']}/{lab['n_hits_fix']}) |
+| **causal share, given the chain hit fix gold** | **{share_txt}** ({lab['n_hits_causal']}/{lab['n_hits_fix']}) |
 
 Not one chain in this subset pointed at a fix-modified file that the
 annotation calls `symptom-handling`, `preventive`, `refactor` or `test`.

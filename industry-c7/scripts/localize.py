@@ -770,3 +770,63 @@ def match_symbol(funcs, symbol: str):
         wbl = wb.lower()
         hits = [f for f, n in names if bare(n).lower() == wbl]
     return hits[0] if hits else None
+
+
+# ---- the main agent run, which is no longer one file --------------------
+# It used to be data/agent/agent-v3-full.jsonl. The 26,544-instance run is
+# now five project-disjoint shards, agent-full-s1..s5.jsonl, with s1
+# historically named agent-full-trillium.jsonl. Eight scripts still opened
+# the old name and died on FileNotFoundError, which is why this lives here
+# instead of being pasted into each of them.
+MAIN_RUN_GLOB = "agent-full-*.jsonl"
+
+
+def agent_run_rows(agent_dir, glob_pat=None, drop_dead=True):
+    """Every row of one agent run, read across its shards.
+
+    glob_pat defaults to $C7_AGENT_GLOB, else the main run. That env var is
+    how a caller scores a different seed: seed 7 writes agent-seed7-*.jsonl
+    and seed 123 agent-seed123-*.jsonl, both outside the main-run glob on
+    purpose, so no script needs editing to report a second seed.
+
+    drop_dead removes rows the agent could not finish. It defaults to True
+    because every caller wants that, and two of them had hand-written the
+    test as `not r.get("error") and r.get("stop_reason") != "llm_error"`,
+    which misses the error:<ClassName> that the lc arm actually writes.
+
+    Refuses when one issue_key shows up in two files. That means the glob
+    caught a second seed or two shards that overlap, and summing those
+    would silently double-count instances.
+    """
+    import os as _os
+
+    agent_dir = Path(agent_dir)
+    pat = glob_pat or _os.environ.get("C7_AGENT_GLOB") or MAIN_RUN_GLOB
+    files = sorted(agent_dir.glob(pat))
+    if not files:
+        raise FileNotFoundError(
+            f"no agent run files matching {pat!r} in {agent_dir}. "
+            f"The run is sharded now; set C7_AGENT_GLOB to pick another "
+            f"seed, e.g. 'agent-seed7-*.jsonl'.")
+    rows, seen, dead = [], {}, 0
+    for f in files:
+        with f.open(encoding="utf-8") as fh:
+            for line in fh:
+                if not line.strip():
+                    continue
+                r = json.loads(line)
+                key = f"{r.get('project')}:{r.get('issue_key')}"
+                if key in seen and seen[key] != f.name:
+                    raise ValueError(
+                        f"{key} appears in both {seen[key]} and {f.name}. "
+                        f"Shards must be project-disjoint, so {pat!r} is "
+                        f"matching more than one run.")
+                seen[key] = f.name
+                if drop_dead and is_dead_row(r):
+                    dead += 1
+                    continue
+                rows.append(r)
+    print(f"agent run: {len(rows)} rows from {len(files)} file(s) "
+          f"matching {pat}" + (f", {dead} dead dropped" if dead else ""),
+          flush=True)
+    return rows

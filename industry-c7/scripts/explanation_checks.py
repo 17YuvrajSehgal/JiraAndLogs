@@ -36,6 +36,7 @@ from pathlib import Path
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
 from localize import FULL_REPOS  # noqa: E402
+from localize import agent_run_rows  # noqa: E402
 from localize import is_dead_row  # noqa: E402
 from localize import PROJECTS as _ALL_PROJECTS  # noqa: E402
 
@@ -232,12 +233,7 @@ def main() -> int:
                 bench[(p, b["issue_key"])] = b["snapshot_sha"]
 
     jobs = []
-    for line in (AG / "agent-v3-full.jsonl").open(encoding="utf-8"):
-        if not line.strip():
-            continue
-        r = json.loads(line)
-        if is_dead_row(r):
-            continue
+    for r in agent_run_rows(AG):
         k = (r["project"], r["issue_key"])
         if k in bench:
             jobs.append((r["project"], r["issue_key"], bench[k],

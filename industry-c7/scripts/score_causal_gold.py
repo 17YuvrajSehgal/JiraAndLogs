@@ -21,6 +21,7 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+from localize import agent_run_rows  # noqa: E402
 from localize import evaluate  # noqa: E402
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -98,15 +99,27 @@ def rankings(keys: set) -> dict:
                 k = f"{r['project']}:{r['issue_key']}"
                 if k in keys:
                     out.setdefault(name, {})[k] = r["ranking"]
-    for r in jsonl(AG / "agent-v2.jsonl"):
-        k = f"{r['project']}:{r['issue_key']}"
-        if k in keys:
-            out.setdefault("remember", {})[k] = r["ranking"]
+    # The v2 arm is archived, not live: data/agent/agent-v2.jsonl moved to
+    # data/archive/agent/. Reading it unguarded made this script die on a
+    # missing file and take causal_lift_v3 down with it, since that reads
+    # the scores this one writes. Look in both places and skip the system
+    # if the file is gone, rather than lose the whole comparison to one
+    # retired arm.
+    for cand in (AG / "agent-v2.jsonl",
+                 ROOT / "data/archive/agent/agent-v2.jsonl"):
+        if cand.exists():
+            for r in jsonl(cand):
+                k = f"{r['project']}:{r['issue_key']}"
+                if k in keys:
+                    out.setdefault("remember", {})[k] = r["ranking"]
+            break
+    else:
+        print("note: no agent-v2.jsonl anywhere; skipping the v2 arm",
+              file=sys.stderr)
     if V3:
-        f = AG / "agent-v3-full.jsonl"
-        for r in jsonl(f):
+        for r in agent_run_rows(AG):
             k = f"{r['project']}:{r['issue_key']}"
-            if k in keys and not r.get("error")                     and r.get("stop_reason") != "llm_error":
+            if k in keys:
                 out.setdefault("remember_v3", {})[k] = r["ranking"]
     return out
 

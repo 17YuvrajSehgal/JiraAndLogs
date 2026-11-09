@@ -39,6 +39,7 @@ sys.path.insert(0, str(HERE))
 import run_agent as RA  # noqa: E402
 import tools as T  # noqa: E402
 from localize import parse_iso_epoch  # noqa: E402
+from localize import agent_run_rows  # noqa: E402
 from localize import is_dead_row  # noqa: E402
 
 RES = ROOT / "data/results"
@@ -47,12 +48,8 @@ RES = ROOT / "data/results"
 def main() -> int:
     n_want = int(sys.argv[1]) if len(sys.argv) > 1 else 400
     rows = {}
-    for line in (ROOT / "data/agent/agent-v3-full.jsonl").open(encoding="utf-8"):
-        if not line.strip():
-            continue
-        r = json.loads(line)
-        if not is_dead_row(r):
-            rows[r["id"]] = r
+    for r in agent_run_rows(ROOT / "data/agent"):
+        rows[r["id"]] = r
 
     pop = {f"{p}:{b['issue_key']}": (p, b, row)
            for p, b, row in RA.build_population(list(RA.P), 0, True)}

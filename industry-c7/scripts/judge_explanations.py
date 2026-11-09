@@ -40,6 +40,7 @@ sys.path.insert(0, str(HERE))
 sys.path.insert(0, str(HERE.parents[0] / "agent"))
 from explanation_checks import submitted  # noqa: E402
 from localize import load_bench  # noqa: E402
+from localize import agent_run_rows  # noqa: E402
 from localize import is_dead_row  # noqa: E402
 
 _REPORTS: dict[str, str] = {}
@@ -103,14 +104,7 @@ SCHEMA = {"type": "function", "function": {
 
 
 def rows() -> list[dict]:
-    out = []
-    for line in (AG / "agent-v3-full.jsonl").open(encoding="utf-8"):
-        if not line.strip():
-            continue
-        r = json.loads(line)
-        if not is_dead_row(r):
-            out.append(r)
-    return out
+    return agent_run_rows(AG)
 
 
 def sample() -> list[dict]:

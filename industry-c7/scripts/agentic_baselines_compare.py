@@ -38,6 +38,7 @@ HERE = Path(__file__).resolve().parent
 ROOT = HERE.parents[0]
 AG, RES = ROOT / "data/agent", ROOT / "data/results"
 sys.path.insert(0, str(HERE))
+from localize import agent_run_rows  # noqa: E402
 from localize import is_dead_row  # noqa: E402
 SEED, N_BOOT = 20261104, 2000
 ARMS = {"locagent": "LocAgent-style", "cosil": "CoSIL-style"}
@@ -58,7 +59,7 @@ def rows(f: Path) -> dict:
 
 
 def main() -> int:
-    ours = rows(AG / "agent-v3-full.jsonl")
+    ours = {r["id"]: r for r in agent_run_rows(AG)}
     arms = {a: rows(AG / f"agent-{a}-eval.jsonl") for a in ARMS}
     missing = [a for a, d in arms.items() if not d]
     if missing:
