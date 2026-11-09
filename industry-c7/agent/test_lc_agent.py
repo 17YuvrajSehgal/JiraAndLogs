@@ -90,18 +90,33 @@ except ValidationError:
 try:
     LA.Localization(files=[LA.RankedFile(path="a.java", symbol="m",
                                      evidence="x")],
-                    causal_chain=[LA.ChainStep(step="a", cited_from="read_code")])
+                    causal_chain=[LA.ChainStep(step="a", cited_from="read_code",
+                                               file="a.java")])
     chk("a one-step chain is rejected (2-6 required)", False)
 except ValidationError:
     chk("a one-step chain is rejected (2-6 required)", True)
 good = LA.Localization(
     files=[LA.RankedFile(path="a.java", symbol="handleRequest",
                          evidence="line 42 sets it to null")],
-    causal_chain=[LA.ChainStep(step="a", cited_from="read_code"),
-                  LA.ChainStep(step="b", cited_from="recall_incidents")])
+    causal_chain=[LA.ChainStep(step="a", cited_from="read_code",
+                               file="a.java"),
+                  LA.ChainStep(step="b", cited_from="recall_incidents",
+                               file="")])
 chk("a complete submission validates", len(good.files) == 1)
 chk("the submitted region survives on the model", good.files[0].symbol
     == "handleRequest")
+
+# The challenge asks for an explanation "linking issue symptoms, selected
+# log events and candidate code regions", and causal_lift_v3.py reads
+# step["file"] for every number it reports. Without this field that whole
+# analysis silently scored zero on a 26,544-instance run.
+try:
+    LA.ChainStep(step="a", cited_from="read_code")
+    chk("a chain step without a file is rejected", False)
+except ValidationError:
+    chk("a chain step without a file is rejected", True)
+chk("a step about the report, not code, may name no file",
+    good.causal_chain[1].file == "")
 try:
     LA.RankedFile(path="a.java", evidence="x")
     chk("a file without a region is rejected", False)

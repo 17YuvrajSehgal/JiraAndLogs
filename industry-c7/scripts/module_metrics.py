@@ -104,36 +104,45 @@ def metrics_of(ranked_mods: list, gold_mods: set) -> dict:
     return m
 
 
-def study_790() -> dict:
-    """Module metrics for EVERY system on the instances REMEMBER ran.
+def study_agent() -> dict:
+    """Module metrics for EVERY system on the instances the agent ran.
 
-    The table above covers the retrieval layer on the full evaluation
-    split. REMEMBER ran 790 of those, so its module accuracy cannot be
-    read off that table -- the populations differ and comparing across
-    them is the mistake this project has already made once. Here every
-    system is scored on the identical id set, which is the intersection
-    of the ids all of them stored a ranking for.
+    Challenge output (i) is "the affected module", so this table is a
+    required result, not a supplement.
+
+    The population is the agent's own run, read through agent_run_rows so
+    C7_AGENT_GLOB picks the seed. It used to be data/agent/agent-v2.jsonl,
+    the archived 790-instance v2 arm: the table therefore reported a
+    retired system under the name REMEMBER on a population 33x smaller
+    than the one the paper reports, and the live arm (remember_v3) was not
+    in DOC_ORDER at all, so it never appeared. Both are fixed.
+
+    Every system is scored on the identical id set, the intersection of
+    the ids all of them stored a ranking for, because comparing across
+    populations is the mistake this project has already made once.
     """
     sys.path.insert(0, str(Path(__file__).resolve().parent))
     from score_causal_gold import DOC_ORDER, rankings  # noqa: E402
+    from localize import agent_run_rows  # noqa: E402
 
-    ag = [json.loads(l) for l in
-          (RES.parent / "agent/agent-v2.jsonl").open(encoding="utf-8")]
-    from localize import is_dead_row  # noqa: E402
-    ag = [r for r in ag if not is_dead_row(r)]
+    ag = agent_run_rows(RES.parent / "agent")
     gold = {f"{r['project']}:{r['issue_key']}": r["gold_files"] for r in ag}
     hard = {f"{r['project']}:{r['issue_key']}": bool(r.get("hard")) for r in ag}
     rk = rankings(set(gold))
     names = [n for n, _ in DOC_ORDER if n in rk]
     # The IRBL baselines stored rankings only for the causal-gold subset, so
-    # an intersection over all nine systems collapses to 93 instances. Report
-    # both: the six systems that ran everything, and the nine-way comparison
+    # an intersection over every system collapses to a fraction of the run.
+    # Report both: the systems that ran everything, and the wider comparison
     # on the smaller set. Never one population silently standing in for the
     # other.
     full = [n for n in names if not set(gold) - set(rk[n])]
-    groups = {"full_790": full, "with_irbl": names}
+    groups = {"full_agent": full, "with_irbl": names}
 
-    out = {"coverage": {n: len(rk[n]) for n in names}, "populations": {}}
+    out = {"population_size": len(gold),
+           "coverage": {n: len(rk[n]) for n in names},
+           "systems_missing_from_doc_order":
+               sorted(set(rk) - {n for n, _ in DOC_ORDER}),
+           "populations": {}}
     for gname, gnames in groups.items():
         ids = sorted(set.intersection(*(set(rk[n]) for n in gnames)))
         res = {"n": len(ids), "n_hard": sum(hard[i] for i in ids),
@@ -163,10 +172,14 @@ def study_790() -> dict:
 
 
 def main() -> int:
-    if "--study790" in sys.argv:
-        res = study_790()
-        (RES / "module-metrics-790.json").write_text(
+    if "--agent" in sys.argv or "--study790" in sys.argv:
+        res = study_agent()
+        (RES / "module-metrics-agent.json").write_text(
             json.dumps(res, indent=2), encoding="utf-8")
+        print(f"agent population: {res['population_size']} instances")
+        if res["systems_missing_from_doc_order"]:
+            print("  NOT REPORTED, absent from DOC_ORDER: "
+                  + ", ".join(res["systems_missing_from_doc_order"]))
         for gname, g in res["populations"].items():
             print(f"\n=== {gname}: n={g['n']} ({g['n_hard']} hard) ===")
             print(f"{'system':<38}{'acc@1':>8}{'acc@5':>8}{'mrr':>8}"

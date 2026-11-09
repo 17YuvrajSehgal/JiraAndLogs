@@ -143,13 +143,32 @@ class TriageState(AgentState):
 #   same, OPTIONAL FIELDS removed     CALLED,  finish=tool_calls, 899 tok
 #
 # It is cumulative: either property on its own is fine, both plus their
-# optional members is not. None of the three was ever read by run_lc,
-# which is why removing them costs nothing.
+# optional members is not.
+#
+# `file` is back, and REQUIRED rather than optional. The earlier note said
+# none of the three was ever read, which was wrong: causal_lift_v3.py
+# reads step["file"] for every number it reports, so removing it did not
+# cost nothing, it silently zeroed the whole chain-attribution analysis on
+# a 26,544-instance run. The challenge also asks for an explanation
+# "linking issue symptoms, selected log events and candidate code
+# regions", which cannot be checked if no step names a region.
+#
+# Required, not optional, is the point: what stalled decoding was fields
+# WITH DEFAULTS, and `step` and `cited_from` are already required strings
+# that have never stalled. An empty string is a valid value here, so a
+# step about the report rather than about code does not have to invent a
+# path; chain_files() already drops empty strings. This specific shape was
+# not in the table above, so the pilot has to confirm it before a full run.
 class ChainStep(BaseModel):
     step: str = Field(description="One step from symptom toward the cause.")
     cited_from: str = Field(
         description="Which tool result supports this step: search_symbol, "
                     "search_text, read_code, recall_incidents, callers_of.")
+    file: str = Field(
+        description="Repository-relative path of the file THIS step is "
+                    "about, copied from a tool result. Write an empty "
+                    "string when the step is about the report or the logs "
+                    "rather than about code. Never guess a path.")
 
 
 class RankedFile(BaseModel):
@@ -642,6 +661,18 @@ def run_lc(ws: T.Workspace, seed: int = 42, *, model=None, repo_tree: bool = Fal
                       "symbol_lines": [hit[1], hit[2]] if hit else [],
                       "in_snapshot": rf.path in ws.snap.blob_of})
 
+    # The chain's file goes through the SAME resolver as the ranking, because
+    # causal_lift_v3.py intersects these paths with gold_files, which are
+    # snapshot paths. A model-written path that does not land on a real file
+    # becomes "", which that script already drops; it is never repaired into
+    # some nearby path, for the same reason an unresolved symbol is a miss.
+    chain = []
+    for c in (answer.causal_chain if answer else []):
+        d = c.model_dump()
+        raw = (d.get("file") or "").strip()
+        d["file"] = (A._resolve(raw, ws, resolver) or "") if raw else ""
+        chain.append(d)
+
     summary = rec.finish(state, graph=graph, config=cfg) if rec else {}
     usage = {"calls": summary.get("model_calls", 0),
              "in": summary.get("input_tokens", 0),
@@ -655,6 +686,5 @@ def run_lc(ws: T.Workspace, seed: int = 42, *, model=None, repo_tree: bool = Fal
                          if answer else "",
             "usage": usage, "resolver": resolver, "events": [], "seed": seed,
             "version": 3, "arm": "lc",
-            "causal_chain": [c.model_dump() for c in answer.causal_chain]
-                            if answer else [],
+            "causal_chain": chain,
             "prewalk_symbols": [], "trace": summary.get("path", "")}

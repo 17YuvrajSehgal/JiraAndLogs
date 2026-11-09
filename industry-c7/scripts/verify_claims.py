@@ -1301,23 +1301,36 @@ def main() -> int:
           f"{st_t['remember']['clean']['acc@5']}")
 
     # ---- supervisor comment 4: module accuracy for REMEMBER ----------------
-    mm = json.loads((RES / "module-metrics-790.json").read_text(encoding="utf-8"))
-    f790 = mm["populations"]["full_790"]
-    check("SUP4 module table covers all 790, 375 hard",
-          f790["n"] == 790 and f790["n_hard"] == 375,
-          f"{f790['n']}/{f790['n_hard']}")
-    check("SUP4 REMEMBER module Acc@1 94.2%, hard 90.4%",
-          f790["systems"]["remember"]["overall"]["acc@1"] == 0.9418
-          and f790["systems"]["remember"]["hard"]["acc@1"] == 0.904,
-          f"{f790['systems']['remember']['overall']['acc@1']} / "
-          f"{f790['systems']['remember']['hard']['acc@1']}")
-    check("SUP4 REMEMBER leads every system on module Acc@1",
-          all(f790["systems"]["remember"]["overall"]["acc@1"]
-              > d["overall"]["acc@1"]
-              for s, d in f790["systems"].items() if s != "remember"))
-    check("SUP4 the IRBL baselines cover only 93 of the 790",
-          mm["populations"]["with_irbl"]["n"] == 93,
-          str(mm["populations"]["with_irbl"]["n"]))
+    # Challenge output (i) is "the affected module", so this is a required
+    # result. The artifact moved: module-metrics-790.json held the archived
+    # v2 arm on 790 instances, under the label REMEMBER, while the live arm
+    # was not in DOC_ORDER and never appeared. module_metrics.py --agent now
+    # scores the run itself.
+    #
+    # The VALUES below are deliberately not pinned to a number yet: the
+    # population changed from 790 to the full run, so any constant carried
+    # over from the old file would be a claim about a system that no longer
+    # exists. Pin them from the final run, once, the way every other check
+    # here is pinned.
+    mmf = RES / "module-metrics-agent.json"
+    if not mmf.exists():
+        check("SUP4 module metrics exist for the agent's own population",
+              False, "run: python scripts/module_metrics.py --agent")
+    else:
+        mm = json.loads(mmf.read_text(encoding="utf-8"))
+        fa = mm["populations"]["full_agent"]
+        check("SUP4 the module table is scored on the agent's own run",
+              fa["n"] == mm["population_size"],
+              f"{fa['n']} of {mm['population_size']}")
+        check("SUP4 the LIVE arm is in the module table, not just the v2 one",
+              "remember_v3" in fa["systems"],
+              ", ".join(sorted(fa["systems"])))
+        check("SUP4 no system is silently dropped from the module table",
+              not mm["systems_missing_from_doc_order"],
+              ", ".join(mm["systems_missing_from_doc_order"]))
+        check("SUP4 the IRBL group is reported as its own population",
+              mm["populations"]["with_irbl"]["n"] <= fa["n"],
+              f"{mm['populations']['with_irbl']['n']} vs {fa['n']}")
 
     # ---- supervisor comment 5: the memory firewall stage -------------------
     ml = json.loads((RES / "memory-index-leak.json").read_text(encoding="utf-8"))

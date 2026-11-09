@@ -129,7 +129,13 @@ DOC_ORDER = [("rvsm", "rVSM"), ("buglocator_fw_a5", "BugLocator"),
              ("fused_ours", "Retrieval + incident memory (untuned)"),
              ("cond_ours", "Retrieval + incident memory"),
              ("llm_rerank", "Model re-rank"), ("llm_twostage", "Model alone"),
-             ("remember", "REMEMBER")]
+             # `remember` is the ARCHIVED v2 arm, not the system this paper
+             # reports. It was labelled "REMEMBER" while remember_v3 was
+             # missing from this list entirely, so every document built from
+             # DOC_ORDER -- the module table included -- named a retired arm
+             # as the headline system and left the live one out.
+             ("remember", "REMEMBER (v2, archived)"),
+             ("remember_v3", "REMEMBER")]
 
 
 def write_doc(out: dict, scored: dict, ids: list) -> None:
