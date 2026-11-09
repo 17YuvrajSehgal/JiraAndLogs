@@ -65,9 +65,14 @@ def main() -> int:
             for m in {module_of(f, depth) for f in r["gold_files"]}:
                 freq[m] += 1
         frequent = [m for m, _ in freq.most_common(max(KS))]
+        # The ranked dev order in full, so the "still exists" variant below
+        # can walk past modules the repository has since removed.
+        freq_all = [m for m, _ in freq.most_common()]
 
         rnd = {k: 0.0 for k in KS}
         frq = {k: 0.0 for k in KS}
+        frq_live = {k: 0.0 for k in KS}
+        n_stale = 0
         m_counts = []
         for i, r in enumerate(ev):
             b = bench[r["issue_key"]]
@@ -76,9 +81,22 @@ def main() -> int:
             gold = {module_of(f, depth) for f in r["gold_files"]}
             M, G = len(mods), len(gold & mods) or len(gold)
             m_counts.append(M)
+            # A repository that reorganises between the dev and eval halves
+            # hands the plain baseline a module that no longer exists, and
+            # then it cannot be right at rank 1 whatever it does. HBase is
+            # the case: its dev split is dominated by `src` (615 instances,
+            # the pre-split single tree) and NO eval instance has a `src`
+            # module, so frequent@1 is exactly 0.000 over 2,272 instances
+            # while frequent@3 is 0.883. That understates the baseline for a
+            # reason unrelated to the task, which flatters us. Report both:
+            # the plain one, and one restricted to modules the eval snapshot
+            # still contains, which is the stronger bar to clear.
+            live = [m for m in freq_all if m in mods][:max(KS)]
+            n_stale += int(bool(frequent) and frequent[0] not in mods)
             for k in KS:
                 rnd[k] += random_acc(M, G, k)
                 frq[k] += float(any(m in gold for m in frequent[:k]))
+                frq_live[k] += float(any(m in gold for m in live[:k]))
             if i % 400 == 0:
                 log.info("%s %d/%d", proj, i, len(ev))
 
@@ -91,6 +109,9 @@ def main() -> int:
                 "max": max(m_counts)},
             "random": {f"acc@{k}": round(rnd[k] / n, 4) for k in KS},
             "most_frequent": {f"acc@{k}": round(frq[k] / n, 4) for k in KS},
+            "most_frequent_live": {f"acc@{k}": round(frq_live[k] / n, 4)
+                                   for k in KS},
+            "eval_instances_where_top_dev_module_is_gone": n_stale,
         }
         log.info("%s done: %s", proj, out[proj])
 
