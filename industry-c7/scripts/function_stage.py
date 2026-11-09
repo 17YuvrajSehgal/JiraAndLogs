@@ -35,7 +35,8 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from localize import (BENCH, FULL_REPOS, KS, MAX_BLOB_BYTES, OUT,  # noqa: E402
-                      PROJECTS, bm25_rank, is_dead_row, tokenize)
+                      PROJECTS, bm25_rank, is_dead_row, match_symbol,
+                      tokenize)
 from mine_benchmark import run_git  # noqa: E402
 
 from tree_sitter_language_pack import get_parser  # noqa: E402
@@ -245,6 +246,15 @@ def main() -> int:
     ap.add_argument("--agent-glob", default="agent-full-*.jsonl",
                     help="glob under data/agent for the rows carrying the "
                          "submitted regions (default: the sharded main run)")
+    # Without this, --ranking cond_ours scores the whole eval split while
+    # --ranking submitted scores only the instances the agent has finished,
+    # and comparing the two numbers compares two different populations. The
+    # agent run is still in flight, so that gap is currently thousands of
+    # instances wide. Same rule as the file-level bars: rescore the baseline
+    # on exactly the instances the new system ran.
+    ap.add_argument("--restrict-to-agent", action="store_true",
+                    help="score only instances that have an agent row, so a "
+                         "baseline ranking is comparable to 'submitted'")
     args = ap.parse_args()
     git_dir = FULL_REPOS[args.project]
 
@@ -261,7 +271,8 @@ def main() -> int:
     agent_rank: dict[str, list] = {}
     agent_read: dict[str, set] = {}
     agent_regions: dict[str, list] = {}
-    if args.ranking in ("agent", "submitted") or args.read_boost:
+    if (args.ranking in ("agent", "submitted") or args.read_boost
+            or args.restrict_to_agent):
         files = sorted(ROOT_AG.glob(args.agent_glob))
         if not files:
             print(f"no agent rows match {args.agent_glob} under {ROOT_AG}",
@@ -296,13 +307,27 @@ def main() -> int:
                 # transcripts being present, and fall back for rows written
                 # before the field existed.
                 src = a.get("regions") or [
-                    {"path": n["file"],
+                    {"path": n["file"], "symbol": n.get("symbol", ""),
                      "resolved": n.get("symbol_resolved", ""),
                      "lines": n.get("symbol_lines", [])}
                     for n in (a.get("notes") or [])]
+                # The RAW symbol is kept, not the resolved one, and the
+                # match is redone here against this snapshot's functions.
+                #
+                # Why: resolve_symbol stripped the qualifier from the
+                # submitted symbol but compared it against stored names
+                # that keep theirs, so every qualified C++ name missed.
+                # "JOIN::exec" in sql_select.cc became "exec", never
+                # matched the stored "JOIN::exec", and was recorded as a
+                # symbol the file does not contain. Rows written by a run
+                # that was already in flight when that was found still
+                # carry the empty resolved field, and rerunning 26,544
+                # instances to fix a string comparison would be absurd.
+                # Resolving at scoring time also means the number does not
+                # depend on which day the row was written.
                 agent_regions[k] = [
-                    f"{g['path']}::{g['resolved']}@{g['lines'][0]}"
-                    for g in src if g.get("resolved") and g.get("lines")]
+                    (g["path"], g.get("symbol") or g.get("resolved") or "")
+                    for g in src if (g.get("symbol") or g.get("resolved"))]
                 if args.read_boost:
                     agent_read[k] = read_functions(args.project, k)
         # The agent ran the eval split only, so an instance with no agent
@@ -311,7 +336,8 @@ def main() -> int:
         # removes were never scored anyway.
         rows = [r for r in rows if r["issue_key"] in agent_rank]
         n_dev = 0
-        print(f"agent mode: {len(rows)} instances with an agent ranking")
+        print(f"agent mode: {len(rows)} instances with an agent ranking "
+              f"(ranking={args.ranking})")
 
     # The cache is keyed by blob sha and stores [] for a file no grammar
     # covers. That is the trap: widen LANG_OF and every previously
@@ -385,8 +411,17 @@ def main() -> int:
                 docs[f"{path}::{name}@{s}"] = Counter(
                     tokenize("\n".join(lines[s - 1:e])))
         if args.ranking == "submitted":
-            # no keyword stage: this IS the model's answer, in its own order
-            ranking = agent_regions.get(r["issue_key"], [])
+            # no keyword stage: this IS the model's answer, in its own order.
+            # Each (path, symbol) is matched against the functions parsed
+            # from THIS snapshot; a symbol the file does not contain drops
+            # out and is scored as a miss, which is the point of the field.
+            ranking = []
+            for path, sym in agent_regions.get(r["issue_key"], []):
+                hit = match_symbol(fcache.get(blob_of.get(path, ""), []), sym)
+                if hit:
+                    key = f"{path}::{hit[0]}@{hit[1]}"
+                    if key not in ranking:
+                        ranking.append(key)
         else:
             qtoks = tokenize(b["query_text"])
             ranking = [d for d, _ in bm25_rank(qtoks, docs)]

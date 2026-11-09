@@ -52,7 +52,8 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
 from function_stage import list_functions, parser_for, raw_blobs  # noqa: E402
 from localize import (FULL_REPOS, MAX_BLOB_BYTES, PROJECTS,  # noqa: E402
-                      BM25Index, Snapshot, bm25_rank, path_tokens, tokenize)
+                      BM25Index, Snapshot, bm25_rank, match_symbol,
+                      path_tokens, tokenize)
 
 MAX_HITS = 20
 MAX_CODE_LINES = 80
@@ -242,27 +243,16 @@ class Workspace:
         reported rather than repaired -- a symbol that is not in the file
         is exactly the hallucination this field exists to expose.
         """
-        funcs = self._funcs_of(path)
-        if not funcs or not symbol:
-            return None
-        want = symbol.strip()
-        for cut in ("(", "<"):          # m(int a) -> m, f<T> -> f
-            if cut in want:
-                want = want.split(cut, 1)[0]
-        want = want.strip()
-        for sep in ("::", "#", "."):    # Class::m, Class#m, Class.m -> m
-            if sep in want:
-                want = want.rsplit(sep, 1)[1].strip()
-        if not want:
-            return None
-        for f in funcs:
-            if f[0] == want:
-                return f
-        low = want.lower()
-        for f in funcs:
-            if f[0].lower() == low:
-                return f
-        return None
+        # The matching rule lives in localize.match_symbol, because the
+        # region scorer has to apply the identical rule and two copies of a
+        # string comparison drift. The old copy here stripped the qualifier
+        # from the submitted symbol but compared it against stored names
+        # that keep theirs, so "JOIN::exec" in sql_select.cc became "exec",
+        # never matched the stored "JOIN::exec", and was recorded as a
+        # symbol the file does not contain. That is why the unresolved rate
+        # tracked language and not difficulty: qt 85%, mongodb 75%, impala
+        # 62%, mariadb 44%, against 10-20% on the Java projects.
+        return match_symbol(self._funcs_of(path), symbol)
 
     def _segments(self, path: str) -> list[tuple[str, int, Counter]]:
         """(label, start_line, tokens) per segment.

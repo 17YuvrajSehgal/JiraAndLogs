@@ -713,3 +713,60 @@ def is_dead_row(r: dict) -> bool:
         return True
     stop = r.get("stop_reason") or ""
     return stop == "llm_error" or stop.startswith("error:")
+
+
+def match_symbol(funcs, symbol: str):
+    """Match a submitted symbol against parsed (name, start, end) functions.
+
+    ONE implementation, because there were nearly two. The agent resolves a
+    submitted region at submit time (tools.Workspace.resolve_symbol) and the
+    region scorer resolves it again at scoring time (function_stage.py). Two
+    copies of a string-matching rule drift, and the last time a predicate
+    was spelled out twice in this repo the two spellings disagreed and three
+    safeguards silently stopped working.
+
+    The rule: the model writes names the way a person would, so a few shapes
+    are accepted. Arguments and template parameters are dropped, a fully
+    qualified match wins over a bare one so Class::m does not collide with
+    another class's m, and case is tried last. Anything else is a miss, and
+    a miss is reported rather than repaired: a symbol the file does not
+    contain is exactly what this field exists to expose.
+
+    Returns the matching (name, start, end) tuple, or None.
+    """
+    if not funcs or not symbol:
+        return None
+
+    def strip_args(s: str) -> str:
+        for cut in ("(", "<"):          # m(int a) -> m, f<T> -> f
+            if cut in s:
+                s = s.split(cut, 1)[0]
+        return s.strip()
+
+    def bare(s: str) -> str:
+        for sep in ("::", "#", "."):    # Class::m, Class#m, Class.m -> m
+            if sep in s:
+                s = s.rsplit(sep, 1)[1].strip()
+        return s
+
+    want = strip_args(symbol.strip())
+    if not want:
+        return None
+    names = [(f, strip_args(f[0])) for f in funcs]
+
+    for f, n in names:                  # JOIN::exec == JOIN::exec
+        if n == want:
+            return f
+    wl = want.lower()
+    for f, n in names:
+        if n.lower() == wl:
+            return f
+
+    wb = bare(want)                     # exec == JOIN::exec
+    if not wb:
+        return None
+    hits = [f for f, n in names if bare(n) == wb]
+    if not hits:
+        wbl = wb.lower()
+        hits = [f for f, n in names if bare(n).lower() == wbl]
+    return hits[0] if hits else None
