@@ -129,6 +129,12 @@ def study_agent() -> dict:
     gold = {f"{r['project']}:{r['issue_key']}": r["gold_files"] for r in ag}
     hard = {f"{r['project']}:{r['issue_key']}": bool(r.get("hard")) for r in ag}
     rk = rankings(set(gold))
+    # The live arm is injected here rather than left to score_causal_gold,
+    # whose V3 = "--v3" in sys.argv is read at IMPORT time: this script
+    # never passes that flag, so the system the paper reports was dropped
+    # from its own module table without a word. We already hold its rows.
+    rk["remember_v3"] = {f"{r['project']}:{r['issue_key']}": r["ranking"]
+                         for r in ag}
     names = [n for n, _ in DOC_ORDER if n in rk]
     # The IRBL baselines stored rankings only for the causal-gold subset, so
     # an intersection over every system collapses to a fraction of the run.
