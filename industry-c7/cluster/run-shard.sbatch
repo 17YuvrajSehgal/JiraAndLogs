@@ -195,11 +195,70 @@ else
   for p in $PROJECTS; do ARGS+=(--project "$p"); done
 fi
 
-echo "=== shard $SHARD: arm=lc, workers=$WORKERS, seed $SEED, thinking off ==="
-echo "    KEEP_FULL=${C7_KEEP_FULL:-6 (default)} CTX_CHARS=${C7_CTX_CHARS:-0 (off)}"
-C7_LLM_URL="http://localhost:$PORT/v1" C7_MODEL=qwen3.8-27b \
-  "$PY" industry-c7/agent/run_agent.py \
-    --arm lc --full --tag "$TAG" --workers "$WORKERS" \
-    --seed "$SEED" "${ARGS[@]}"
-echo "=== shard $SHARD now at $(grep -c . "$OUTF" 2>/dev/null || echo 0) rows ==="
+# How long is left on the clock? Asked once, from the scheduler, because a
+# follow-on task must not be started with ten minutes to run. Outside
+# SLURM this reports a large number, so a local run behaves as before.
+JOB_END=$(scontrol show job "${SLURM_JOB_ID:-0}" -o 2>/dev/null \
+          | grep -oE 'EndTime=[^ ]+' | head -1 | cut -d= -f2)
+JOB_END_EPOCH=$( [ -n "$JOB_END" ] && date -d "$JOB_END" +%s 2>/dev/null || echo 0 )
+remaining_s () {
+  if [ "${JOB_END_EPOCH:-0}" -gt 0 ]; then echo $(( JOB_END_EPOCH - $(date +%s) ))
+  else echo 999999; fi
+}
+hhmm () { printf '%dh%02dm' $(( $1 / 3600 )) $(( ($1 % 3600) / 60 )); }
+
+run_seed () {
+  local seed="$1" tag="$2" outf="$C7/data/agent/agent-$2.jsonl"
+  echo "=== shard $SHARD: arm=lc, workers=$WORKERS, seed $seed, thinking off ==="
+  echo "    tag=$tag KEEP_FULL=${C7_KEEP_FULL:-6 (default)} CTX_CHARS=${C7_CTX_CHARS:-0 (off)}"
+  echo "    walltime left: $(hhmm "$(remaining_s)")"
+  C7_LLM_URL="http://localhost:$PORT/v1" C7_MODEL=qwen3.8-27b \
+    "$PY" industry-c7/agent/run_agent.py \
+      --arm lc --full --tag "$tag" --workers "$WORKERS" \
+      --seed "$seed" "${ARGS[@]}"
+  echo "=== shard $SHARD seed $seed now at $(grep -c . "$outf" 2>/dev/null || echo 0) rows ==="
+}
+
+run_seed "$SEED" "$TAG"
+
+# ---- 3. spend the rest of the walltime ----------------------------------
+# Seed 42 finished its five shards in 8 to 14 hours of a 24 hour
+# allocation, then exited and handed back 58.7 GPU-hours with a 52GB
+# server already loaded, while the two agentic baselines sat in queues 600
+# jobs deep. Getting the server up is the expensive part. Once it is up,
+# the job should keep feeding it.
+#
+# Follow-on work is the SAME shard at another seed. That needs no
+# coordination at all: the project list does not change and each seed
+# writes its own file, so two jobs can never contend. Stealing unfinished
+# projects from a slower shard would pack better, but it breaks the
+# project-disjoint guarantee that lets five of these run at once, so it is
+# deliberately not done here.
+#
+# Every task is resumable, so one cut off at walltime continues on
+# resubmission instead of starting over.
+FOLLOW_ON_SEEDS="${FOLLOW_ON_SEEDS:-}"
+MIN_FOLLOW_ON_S="${MIN_FOLLOW_ON_S:-3600}"
+for fs in $FOLLOW_ON_SEEDS; do
+  [ "$fs" = "$SEED" ] && continue
+  left=$(remaining_s)
+  if [ "$left" -lt "$MIN_FOLLOW_ON_S" ]; then
+    echo "=== follow-on stops: $(hhmm "$left") left, needs $(hhmm "$MIN_FOLLOW_ON_S") ==="
+    break
+  fi
+  if [ "$fs" = "42" ]; then ftag="full-$SHARD"; else ftag="seed$fs-$SHARD"; fi
+  fout=$C7/data/agent/agent-$ftag.jsonl
+  echo "=== follow-on: seed $fs on shard $SHARD, $(hhmm "$left") left,"
+  echo "    resuming from $(grep -c . "$fout" 2>/dev/null || echo 0) rows ==="
+  run_seed "$fs" "$ftag"
+done
+
+# If the job is about to exit with real time still on the clock, say so
+# loudly and with the number, so the waste is visible in the log instead
+# of being found in sacct a day later.
+left=$(remaining_s)
+if [ "$left" -gt "$MIN_FOLLOW_ON_S" ] && [ "$left" -lt 999999 ]; then
+  echo "=== NOTE: exiting with $(hhmm "$left") of walltime unused, on a node"
+  echo "    whose server is loaded. FOLLOW_ON_SEEDS=\"7 123\" spends it. ==="
+fi
 echo "=== job done ==="

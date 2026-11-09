@@ -103,8 +103,14 @@ for sh in "${SHARDS[@]}"; do
   SEED="${SEED:-42}"
   NAME="c7-$sh"
   [ "$SEED" = "42" ] || NAME="c7-$sh-s$SEED"
+  # FOLLOW_ON_SEEDS keeps the job working after its own shard finishes.
+  # Without it a shard that finishes early exits and hands the GPU back
+  # with hours left: seed 42 returned 58.7 GPU-hours that way. Default to
+  # the other seeds, since that is the work we always want next and it
+  # needs no coordination between shards. Set it empty for the old way.
+  FOLLOW_ON_SEEDS="${FOLLOW_ON_SEEDS-42 7 123}"
   sbatch "${TEST[@]}" "${FLAGS[@]}" -t 24:00:00 --job-name="$NAME" \
-    --export=ALL,SHARD="$sh",C7_PROJECTS="$PROJECTS",TP="$TP",MAXLEN=65536,SEED="$SEED",WORKERS="${WORKERS:-24}" \
+    --export=ALL,SHARD="$sh",C7_PROJECTS="$PROJECTS",TP="$TP",MAXLEN=65536,SEED="$SEED",WORKERS="${WORKERS:-24}",FOLLOW_ON_SEEDS="$FOLLOW_ON_SEEDS" \
     "$JOB" 2>&1 | grep -v -E "^SBATCH (WARNING|:)|^ You have requested|^ need this amount"
 done
 
