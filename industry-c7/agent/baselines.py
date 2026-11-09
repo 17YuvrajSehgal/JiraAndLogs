@@ -105,6 +105,94 @@ def parse_locations(text: str, ws) -> list[str]:
     return out[:LIST_LEN]
 
 
+# A LocAgent stanza is a path followed by optional `line:`, `class:` and
+# `function:` lines -- their Figure 8 output format, which LOCAGENT_SYSTEM
+# already asks for verbatim. A CoSIL location is `path:Qualified.Name`, the
+# entity id its own call graph uses. Both are parsed here, so neither arm
+# is scored at a granularity its paper does not use and neither is given a
+# prompt we invented.
+KV_RE = re.compile(r"^\s*(class|function|method|def)\s*[:=]\s*(.+?)\s*$", re.I)
+ENTITY_RE = re.compile(
+    r"([\w./+-]+\.(?:scala|java|hpp|cpp|qml|idl|inl|yy|mm|cc|ic|h|c))"
+    r"\s*[:#]\s*([A-Za-z_~][\w:.]*)")
+# Real answers contain "(member declaration) _numYields" and "the method
+# foo()". Keep the identifier, drop the commentary around it.
+NOISE_RE = re.compile(
+    r"^\s*\([^)]*\)\s*|^\s*(?:the\s+)?"
+    r"(?:member\s+|static\s+|inline\s+|virtual\s+)*"
+    r"(?:function|method|constructor|destructor)\s+", re.I)
+SYM_OK_RE = re.compile(r"[A-Za-z_~][\w:.]*")
+
+
+def _clean_symbol(raw: str) -> str:
+    """Strip the prose a free-text answer wraps around a symbol name."""
+    s = NOISE_RE.sub("", (raw or "").strip()).strip()
+    s = s.split("(", 1)[0].split("<", 1)[0].strip()
+    s = s.strip("`'\"*, \t")
+    # Class.method and Class::method are kept whole: match_symbol prefers a
+    # qualified match and falls back to the bare name, so keeping the
+    # qualifier can only help and never costs a hit.
+    return s if SYM_OK_RE.fullmatch(s or "") else ""
+
+
+def parse_regions(text: str, ws) -> list[dict]:
+    """Pull (file, symbol) pairs out of a free-text answer, in order.
+
+    Both published systems localize functions. LocAgent's entities are
+    `path:QualifiedName` and its Table 2 tools return classes and
+    functions; CoSIL's second stage is an iterative function call-graph
+    search. Only our parser was file-only, which measured both arms at a
+    granularity neither paper reports.
+
+    Returns the shape `function_stage.py --ranking submitted` reads:
+    `{"path", "symbol"}`, deduplicated, most suspicious first. A symbol the
+    file does not contain is NOT repaired here; the scorer resolves it
+    against the snapshot and counts a miss, exactly as it does for ours.
+    """
+    blocks = CODE_BLOCK_RE.findall(text or "")
+    hay = "\n".join(blocks) if blocks else (text or "")
+    out, seen, stats = [], set(), {}
+
+    def add(path_raw, symbol):
+        f = A._resolve(path_raw, ws, stats)
+        sym = _clean_symbol(symbol)
+        if not f or not sym:
+            return
+        if (f, sym) not in seen:
+            seen.add((f, sym))
+            out.append({"path": f, "symbol": sym})
+
+    # CoSIL form first: `path:Name` is unambiguous wherever it appears.
+    for path_raw, sym in ENTITY_RE.findall(hay):
+        add(path_raw, sym)
+
+    # LocAgent stanza form: a path line, then key/value lines beneath it.
+    cur, cls = None, ""
+    for line in hay.splitlines():
+        paths = PATH_RE.findall(line)
+        if paths and not ENTITY_RE.search(line):
+            cur, cls = paths[-1], ""
+            continue
+        m = KV_RE.match(line)
+        if not (m and cur):
+            continue
+        kind, val = m.group(1).lower(), m.group(2)
+        if kind == "class":
+            cls = _clean_symbol(val)
+            continue
+        fn = _clean_symbol(val)
+        if fn:
+            # Do not re-qualify a name that already carries its class:
+            # "class: QSGTextNode" + "function: QSGTextNode::updateText"
+            # must stay QSGTextNode::updateText, not become
+            # QSGTextNode.QSGTextNode::updateText, which matches nothing
+            # on the qualified pass.
+            qualified = "::" in fn or "." in fn
+            add(cur, fn if (qualified or not cls or cls == fn)
+                else f"{cls}.{fn}")
+    return out[:LIST_LEN]
+
+
 def _isolate(ws) -> None:
     """Strip the parts of our pipeline neither published system has.
 
@@ -117,7 +205,8 @@ def _isolate(ws) -> None:
     ws.seed_search_pool = False
 
 
-def _finish(ws, arm, agent_list, events, usage, stop, extra=None):
+def _finish(ws, arm, agent_list, events, usage, stop, extra=None,
+            regions=None):
     """Common return shape. The baseline's OWN ranking is the headline.
 
     `ranking_fused` applies the same lexical fallback \\sys{} gets, so a
@@ -132,6 +221,11 @@ def _finish(ws, arm, agent_list, events, usage, stop, extra=None):
             "lexical_seed": ws.seed_candidates[:LIST_LEN],
             "empty": not agent_list,
             "notes": ws.notes, "tool_calls": ws.calls, "stop_reason": stop,
+            # The challenge asks for ranked code REGIONS, not files, and
+            # both published systems localize functions. This is the
+            # field function_stage.py --ranking submitted reads, so the
+            # baselines are scored by the same code path as ours.
+            "regions": list(regions or []),
             "rationale": "", "usage": usage, "resolver": {},
             "events": events, "seed": usage.get("seed", 42),
             "version": 0, "arm": arm, "causal_chain": [],
@@ -349,8 +443,12 @@ def run_locagent(ws: T.Workspace, seed: int = 42,
         answer = next((e.get("content") or "" for e in reversed(events)
                        if e.get("type") == "assistant"), "")
     ranked = parse_locations(answer, ws)
+    # LOCAGENT_SYSTEM is their Figure 8 verbatim and already asks for
+    # `class:` and `function:` lines, so nothing is added to the prompt
+    # here; the parser simply stops discarding what the model writes.
+    regions = parse_regions(answer, ws)
     return _finish(ws, "locagent", ranked, events, usage, stop,
-                   {"final_text": answer[:2000]})
+                   {"final_text": answer[:2000]}, regions=regions)
 
 
 # ---------------------------------------------------------------------------
@@ -387,22 +485,37 @@ def _ask_text(messages, usage, events, seed, label,
     return (msg.get("content") or "") if msg else ""
 
 
-def _reflect(issue: str, last: str, ws, usage, events, seed, label) -> list[str]:
+def _reflect_text(issue: str, last: str, usage, events, seed, label,
+                  functions: bool = False) -> str:
     """CoSIL's reflective alignment: one short independent query that
     reranks and reformats the previous answer. Their ablation puts it at
     6-10% of the system's accuracy, entirely by rescuing unparseable
-    output."""
-    out = _ask_text(
+    output.
+
+    `functions` selects the granularity this aligns. CoSIL stage 1 is
+    file-level search-space reduction and stage 2 is a function call-graph
+    search, so the reformatter has to ask for whatever the stage produced.
+    Asking stage 2 for file paths, which this did, discarded its
+    function-level answer before anything could score it.
+    """
+    want = ("locations as path:Class.function (or path:function), one per "
+            "line" if functions else "file paths, one per line")
+    return _ask_text(
         [{"role": "system", "content":
-          "You reformat localization results. Output ONLY file paths, one "
-          "per line, most suspicious first, wrapped in triple backticks. "
-          "No prose, no line numbers, no explanation."},
+          f"You reformat localization results. Output ONLY {want}, most "
+          f"suspicious first, wrapped in triple backticks. No prose, no "
+          f"explanation."},
          {"role": "user", "content":
           f"Issue:\n{issue[:3000]}\n\nPrevious answer:\n{last[:6000]}\n\n"
-          f"Rerank the candidate locations it names and output the file "
-          f"paths only."}],
+          f"Rerank the candidate locations it names and output them in "
+          f"that format only."}],
         usage, events, seed, label, max_tokens=600 + A.THINK_HEADROOM)
-    return parse_locations(out, ws)
+
+
+def _reflect(issue: str, last: str, ws, usage, events, seed, label) -> list[str]:
+    """File-level reflective alignment, i.e. CoSIL stage 1."""
+    return parse_locations(
+        _reflect_text(issue, last, usage, events, seed, label), ws)
 
 
 def run_cosil(ws: T.Workspace, seed: int = 42,
@@ -541,21 +654,32 @@ def run_cosil(ws: T.Workspace, seed: int = 42,
          {"role": "user", "content":
           f"Issue:\n{issue}\n\nCollected context:\n{ctx}\n\nFile-level "
           f"candidates from the first stage:\n" + "\n".join(files)
-          + "\n\nList the most suspicious locations, most likely first, as "
-            "file paths, one per line, in triple backticks."}],
+          + "\n\nList the most suspicious locations, most likely first, one "
+            "per line in triple backticks, each as path:Class.function (or "
+            "path:function when there is no class). Name the function that "
+            "must change, not the file alone."}],
         usage, events, seed, "cosil.summary")
-    ranked = _reflect(issue, summary, ws, usage, events, seed,
-                      "cosil.reflect_func") or parse_locations(summary, ws)
-    # CoSIL's function-level answer maps onto files; the first-stage
-    # file ranking fills the tail, as its own pipeline does.
-    for f in files:
+    aligned = _reflect_text(issue, summary, usage, events, seed,
+                            "cosil.reflect_func", functions=True)
+    regions = parse_regions(aligned, ws) or parse_regions(summary, ws)
+    # The file ranking still comes out of the same text, because PATH_RE
+    # matches the path inside `path:Class.function`. So moving stage 2 to
+    # its own paper's granularity cannot cost this arm a file-level hit.
+    # Regions lead, since they are the ranked locations; anything named
+    # without a function follows; the first-stage file list fills the tail,
+    # as CoSIL's own pipeline does.
+    ranked = []
+    for cand in ([r["path"] for r in regions]
+                 + parse_locations(aligned, ws)
+                 + parse_locations(summary, ws) + files):
         if len(ranked) >= LIST_LEN:
             break
-        if f not in ranked:
-            ranked.append(f)
+        if cand not in ranked:
+            ranked.append(cand)
     return _finish(ws, "cosil", ranked, events, usage, stop,
                    {"file_stage": files, "n_iter": len(context) + n_pruned,
-                    "n_pruned": n_pruned, "final_text": summary[:2000]})
+                    "n_pruned": n_pruned, "final_text": summary[:2000],
+                    "aligned_text": aligned[:2000]}, regions=regions)
 
 
 ARMS = {"locagent": run_locagent, "cosil": run_cosil}

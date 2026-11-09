@@ -423,10 +423,20 @@ def main() -> int:
                 # reported result and must travel with the metrics.
                 # symbol_resolved is "" when the model named something the
                 # file does not contain, which is scored as a miss.
-                "regions": [{"path": n["file"], "symbol": n.get("symbol", ""),
-                             "resolved": n.get("symbol_resolved", ""),
-                             "lines": n.get("symbol_lines", [])}
-                            for n in res["notes"]],
+                #
+                # An arm that builds its own regions wins. Our arm records
+                # them through note_candidate, so `notes` is the source. The
+                # agentic baselines parse a free-text answer and have no
+                # note_candidate tool at all -- their notes carry no symbol,
+                # so deriving regions from notes here silently emptied the
+                # field for every baseline row and scored both arms at
+                # file level, which is not the granularity either paper
+                # reports or the challenge asks for.
+                "regions": res.get("regions") or [
+                    {"path": n["file"], "symbol": n.get("symbol", ""),
+                     "resolved": n.get("symbol_resolved", ""),
+                     "lines": n.get("symbol_lines", [])}
+                    for n in res["notes"]],
                 "tools_used": [c["tool"] for c in res["tool_calls"]],
                 "cost": {"llm_calls": res["usage"]["calls"],
                          "prompt_tokens": res["usage"]["in"],

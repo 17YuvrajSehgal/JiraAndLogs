@@ -147,6 +147,57 @@ check("prose outside a fence is still parsed when there is no fence",
           "The bug is in core/src/main/scala/kafka/server/KafkaApis.scala.",
           fw) == ["core/src/main/scala/kafka/server/KafkaApis.scala"])
 
+
+# ---- regions: the granularity the challenge actually asks for -------------
+# "The output should include ... (ii) a ranked list of suspicious code
+# regions". Both published systems localize functions, so an arm that
+# answers files only is being scored at a granularity its paper does not
+# use. These checks pin the parser that keeps the function.
+regs = B.parse_regions(LOC_ANSWER, fw)
+check("regions are parsed from the paper's own output format",
+      len(regs) == 2, str(regs))
+check("class and function are joined into one qualified symbol",
+      regs and regs[0]["symbol"] == "DistributedHerder.tick", str(regs[:1]))
+check("a function with no class keeps its bare name",
+      len(regs) == 2 and regs[1]["symbol"] == "handleFetchRequest",
+      str(regs[-1:]))
+check("regions carry the resolved path, not what the model typed",
+      all(r["path"] in fw.snap.blob_of for r in regs), str(regs))
+
+# A name that already carries its class must not be qualified twice:
+# QSGTextNode + QSGTextNode::updateText is QSGTextNode::updateText, never
+# QSGTextNode.QSGTextNode::updateText, which resolves to nothing.
+qp = "src/quick/scenegraph/qsgtextnode.cpp"
+qr = B.parse_regions(
+    f"```\n{qp}\nclass: QSGTextNode\nfunction: QSGTextNode::updateText\n```",
+    _FakeWS([qp]))
+check("an already-qualified function is not re-qualified",
+      qr == [{"path": qp, "symbol": "QSGTextNode::updateText"}], str(qr))
+
+# CoSIL answers with its own entity id, path:Qualified.Name.
+cp = "sql/item_jsonfunc.cc"
+cr = B.parse_regions(f"```\n{cp}:Item_func_json_array_append.fix_length_and_dec\n```",
+                     _FakeWS([cp]))
+check("CoSIL's path:Class.function entity id parses",
+      cr == [{"path": cp,
+              "symbol": "Item_func_json_array_append.fix_length_and_dec"}],
+      str(cr))
+
+# Real answers wrap the name in prose. The identifier survives, the prose
+# does not, and anything that is not an identifier is dropped rather than
+# guessed at.
+mp = "src/mongo/db/cur/cur_op.h"
+mr = B.parse_regions(
+    f"```\n{mp}\nclass: CurOp\nfunction: (member declaration) _numYields\n```",
+    _FakeWS([mp]))
+check("prose around a symbol is stripped, the identifier is kept",
+      mr == [{"path": mp, "symbol": "CurOp._numYields"}], str(mr))
+check("an answer naming only files yields NO region, scored as a miss",
+      B.parse_regions(f"```\n{mp}\nline: 1\n```", _FakeWS([mp])) == [])
+check("an unparseable symbol is dropped, never invented",
+      B.parse_regions(f"```\n{mp}\nfunction: see above\n```",
+                      _FakeWS([mp])) == [])
+
 # ---- the code graph, on a real snapshot ------------------------------------
 pop = R.build_population(["kafka"], limit=1)
 if not pop:
