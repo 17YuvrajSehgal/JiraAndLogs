@@ -1,0 +1,1 @@
+--arm wf --full --seed 42 --tag wf-t05 --workers 24 --project camel --project cassandra --project pig --project wildfly

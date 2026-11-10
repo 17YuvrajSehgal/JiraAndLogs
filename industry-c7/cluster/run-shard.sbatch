@@ -62,8 +62,8 @@ PROJECTS="${C7_PROJECTS:-}"
 if [ -n "$SUBSET" ]; then
   [ -f "$C7/$SUBSET" ] || { echo "REFUSING: no subset file at $C7/$SUBSET" >&2; exit 1; }
   echo "subset: $SUBSET ($(grep -c '"' "$C7/$SUBSET") entries)"
-elif [ -z "$PROJECTS" ]; then
-  echo "REFUSING: set C7_PROJECTS or SUBSET" >&2; exit 1
+elif [ -z "$PROJECTS" ] && [ "${WORKER:-0}" != 1 ]; then
+  echo "REFUSING: set C7_PROJECTS or SUBSET (or WORKER=1 for a queue-only job)" >&2; exit 1
 fi
 
 # ---- the tree must be the 27-project one --------------------------------
@@ -104,8 +104,13 @@ SEED="${SEED:-42}"
 # refused on every project because each issue_key now sat in two files.
 # A non-default seed therefore leads with the seed instead of with "full",
 # which puts it outside the glob while staying obvious on disk.
+if [ -n "$SUBSET" ] && [ -z "${TAG:-}" ]; then
+  echo "REFUSING: a SUBSET run needs its own TAG; the default full-$SHARD is the main-run file" >&2
+  exit 1
+fi
+TAG_GIVEN=0
 if [ -n "${TAG:-}" ]; then
-  :
+  TAG_GIVEN=1
 elif [ "$SEED" = "42" ]; then TAG="full-$SHARD"
 else TAG="seed$SEED-$SHARD"
 fi
@@ -206,20 +211,64 @@ remaining_s () {
   else echo 999999; fi
 }
 hhmm () { printf '%dh%02dm' $(( $1 / 3600 )) $(( ($1 % 3600) / 60 )); }
+MIN_FOLLOW_ON_S_ARMS="${MIN_FOLLOW_ON_S:-3600}"
+
+# ---- one run per tag across clusters ------------------------------------
+# The same shards are queued on several clusters because nobody knows which
+# queue moves first. Their filesystems are separate, so a job cannot see
+# that another cluster already has its tag. c7_fleet.sh monitor (on the
+# laptop) can: a job writes queue/started/<tag> when it begins a tag, the
+# monitor copies that to every OTHER cluster as queue/skip/<tag>, and a job
+# that finds the skip marker moves on to its next tag. A duplicate job that
+# starts late is therefore spare capacity for the seeds, not repeated work.
+Q=$BASE/queue
+mkdir -p "$Q"/{pending,claimed,done,failed,skip,started,finished}
 
 run_seed () {
-  local seed="$1" tag="$2" outf="$C7/data/agent/agent-$2.jsonl"
+  local seed="$1" tag="$2" extra="${3:-}" outf="$C7/data/agent/agent-$2.jsonl"
+  if [ -e "$Q/skip/$tag" ]; then
+    echo "=== SKIP $tag: already running on $(cat "$Q/skip/$tag") ==="
+    return 0
+  fi
+  [ -e "$Q/started/$tag" ] || echo "$(date +%s) ${SLURM_JOB_ID:-local} $(hostname)" > "$Q/started/$tag"
   echo "=== shard $SHARD: arm=lc, workers=$WORKERS, seed $seed, thinking off ==="
+  echo "    extra args: ${extra:-none}"
   echo "    tag=$tag KEEP_FULL=${C7_KEEP_FULL:-6 (default)} CTX_CHARS=${C7_CTX_CHARS:-0 (off)}"
   echo "    walltime left: $(hhmm "$(remaining_s)")"
   C7_LLM_URL="http://localhost:$PORT/v1" C7_MODEL=qwen3.8-27b \
     "$PY" industry-c7/agent/run_agent.py \
       --arm lc --full --tag "$tag" --workers "$WORKERS" \
-      --seed "$seed" "${ARGS[@]}"
+      --seed "$seed" "${ARGS[@]}" $extra \
+    && touch "$Q/finished/$tag"
   echo "=== shard $SHARD seed $seed now at $(grep -c . "$outf" 2>/dev/null || echo 0) rows ==="
 }
 
-run_seed "$SEED" "$TAG"
+# WORKER=1: a job with no work of its own. It serves the model and takes
+# tasks from the queue, nothing else. Every worker is identical, so any of
+# them can start anywhere and pick up whatever is next.
+if [ "${WORKER:-0}" = 1 ]; then
+  echo "=== WORKER mode: no shard of its own, queue only ==="
+  ARMS=""; FOLLOW_ON_SEEDS=""
+else
+  run_seed "$SEED" "$TAG" "${EXTRA_ARGS:-}"
+fi
+
+# ---- 2b. further arms on the SAME loaded server (T38) -------------------
+# ARMS="v4-off=--no-log-layer;v4-noise-generic_x2=--noise generic_x2"
+# Each entry is TAG=EXTRA_ARGS, run in order, each resumable, each gated by
+# the walltime left. One job then covers the ON/OFF ablation and the noise
+# arms on one server, which is what makes them a paired comparison.
+IFS=';' read -ra _ARMS <<< "${ARMS:-}"
+for a in "${_ARMS[@]}"; do
+  [ -n "$a" ] || continue
+  atag="${a%%=*}"; aextra="${a#*=}"
+  case "$atag" in full-*) echo "REFUSING arm tag $atag: inside the main-run glob" >&2; continue ;; esac
+  left=$(remaining_s)
+  if [ "$left" -lt "$MIN_FOLLOW_ON_S_ARMS" ]; then
+    echo "=== arms stop: $(hhmm "$left") left; $atag not started ==="; break
+  fi
+  run_seed "$SEED" "$atag" "$aextra"
+done
 
 # ---- 3. spend the rest of the walltime ----------------------------------
 # Seed 42 finished its five shards in 8 to 14 hours of a 24 hour
@@ -239,6 +288,13 @@ run_seed "$SEED" "$TAG"
 # resubmission instead of starting over.
 FOLLOW_ON_SEEDS="${FOLLOW_ON_SEEDS:-}"
 MIN_FOLLOW_ON_S="${MIN_FOLLOW_ON_S:-3600}"
+# A follow-on seed writes to full-<shard> / seed<N>-<shard>, the main-run
+# files. With a SUBSET it would put subset rows into them, so a side run
+# never takes follow-on seeds.
+if [ -n "$SUBSET" ] && [ -n "$FOLLOW_ON_SEEDS" ]; then
+  echo "=== follow-on seeds ignored: this is a SUBSET run ==="
+  FOLLOW_ON_SEEDS=""
+fi
 for fs in $FOLLOW_ON_SEEDS; do
   [ "$fs" = "$SEED" ] && continue
   left=$(remaining_s)
@@ -246,12 +302,121 @@ for fs in $FOLLOW_ON_SEEDS; do
     echo "=== follow-on stops: $(hhmm "$left") left, needs $(hhmm "$MIN_FOLLOW_ON_S") ==="
     break
   fi
-  if [ "$fs" = "42" ]; then ftag="full-$SHARD"; else ftag="seed$fs-$SHARD"; fi
+  if [ "$TAG_GIVEN" = 1 ]; then
+    # a named run (e.g. TAG=wf-s1, EXTRA_ARGS="--arm wf") repeats ITSELF at
+    # the next seed, in its own files, never in the main-run ones
+    ftag="$TAG-seed$fs"; fextra="${EXTRA_ARGS:-}"
+  else
+    if [ "$fs" = "42" ]; then ftag="full-$SHARD"; else ftag="seed$fs-$SHARD"; fi
+    fextra=""
+  fi
   fout=$C7/data/agent/agent-$ftag.jsonl
   echo "=== follow-on: seed $fs on shard $SHARD, $(hhmm "$left") left,"
   echo "    resuming from $(grep -c . "$fout" 2>/dev/null || echo 0) rows ==="
-  run_seed "$fs" "$ftag"
+  run_seed "$fs" "$ftag" "$fextra"
 done
+
+# ---- 4. keep the server hosted: a task queue ----------------------------
+# With its own work done the job does not exit. It keeps the loaded server
+# and takes tasks from queue/pending/<name>.task until the walltime is
+# nearly spent. A task file holds the arguments of one run_agent.py call,
+# for example
+#   --arm wf --full --seed 42 --tag wf-t03 --workers 24 --project hive
+# so baselines and extra seeds can be added while jobs are running, with no
+# new queue wait and no new model load.
+#
+#   order     tasks named <N>-<rest> run in order of N (1- before 2-), and
+#             inside one N each cluster starts at a different task
+#             (TASK_OFFSET), so two clusters that start together do not
+#             both pick the first one
+#   lock      mkdir queue/claimed/<name>: one job per task on this cluster.
+#             A claim whose job is gone is taken over, and the run resumes
+#             from the rows already written
+#   other     queue/skip/<name> (written by c7_fleet.sh monitor) means
+#   clusters  another cluster has the task. Checked before a task AND every
+#             30 s during it: a duplicate is stopped, not finished
+#   failure   parked in queue/failed, never retried in a loop
+#   done      only when run_agent exits 0 and did not ABORT on a dead server
+CUR=""
+release () { [ -n "$CUR" ] && rm -rf "$Q/claimed/$CUR"; }
+trap 'release; cleanup' EXIT
+trap 'release; exit 143' TERM
+QUEUE_MIN_S="${QUEUE_MIN_S:-900}"
+# How long to stay with NOTHING to do before giving the node back. 0 = stay
+# until the walltime. A swarm of workers sets this so that dozens of them
+# do not idle for hours once the queue is empty.
+QUEUE_IDLE_MAX_S="${QUEUE_IDLE_MAX_S:-0}"
+TASK_OFFSET="${TASK_OFFSET:-0}"
+
+order_tasks () {
+  local pr files n i
+  for pr in $(ls "$Q/pending" 2>/dev/null | sed -n 's/^\([0-9][0-9]*\)-.*\.task$/\1/p' | sort -un); do
+    files=("$Q"/pending/"$pr"-*.task); n=${#files[@]}
+    for ((i = 0; i < n; i++)); do echo "${files[(i + TASK_OFFSET) % n]}"; done
+  done
+  ls "$Q"/pending/*.task 2>/dev/null | grep -v '/[0-9][0-9]*-[^/]*$'
+}
+
+if [ "${JOB_END_EPOCH:-0}" -gt 0 ] && [ "${QUEUE:-1}" = 1 ]; then
+  echo "=== hosting the server for queue tasks, $(hhmm "$(remaining_s)") left, offset $TASK_OFFSET ==="
+  idle_since=$(date +%s)
+  while [ "$(remaining_s)" -gt "$QUEUE_MIN_S" ]; do
+    took=0
+    for f in $(order_tasks); do
+      [ -e "$f" ] || continue
+      name=$(basename "$f" .task)
+      [ -e "$Q/done/$name" ] || [ -e "$Q/failed/$name" ] || [ -e "$Q/skip/$name" ] && continue
+      # a claim whose job is gone is stale: take it over
+      if [ -d "$Q/claimed/$name" ]; then
+        owner=$(cut -d' ' -f1 "$Q/claimed/$name/owner" 2>/dev/null)
+        squeue -h -j "${owner:-0}" 2>/dev/null | grep -q . && continue
+        rm -rf "$Q/claimed/$name"
+      fi
+      mkdir "$Q/claimed/$name" 2>/dev/null || continue
+      CUR=$name
+      echo "${SLURM_JOB_ID:-local} $(hostname) $(date +%s)" > "$Q/claimed/$name/owner"
+      [ -e "$Q/started/$name" ] || echo "$(date +%s) ${SLURM_JOB_ID:-local} $(hostname)" > "$Q/started/$name"
+      tlog="$BASE/logs/task-$name-${SLURM_JOB_ID:-local}.log"
+      echo "=== queue task $name ($(hhmm "$(remaining_s)") left): $(cat "$f") ==="
+      # shellcheck disable=SC2046 -- the task line is an argument list
+      C7_LLM_URL="http://localhost:$PORT/v1" C7_MODEL=qwen3.8-27b \
+        "$PY" industry-c7/agent/run_agent.py $(cat "$f") > "$tlog" 2>&1 &
+      RP=$!
+      stopped=0
+      while kill -0 "$RP" 2>/dev/null; do
+        if [ -e "$Q/skip/$name" ]; then
+          echo "=== $name is running on $(cat "$Q/skip/$name"); stopping it here ==="
+          kill "$RP" 2>/dev/null; stopped=1; break
+        fi
+        sleep 30
+      done
+      wait "$RP"; rc=$?
+      grep -E "^population=|^finished |ABORT|REFUSING|Traceback" "$tlog" | tail -4
+      if [ "$stopped" = 1 ]; then
+        :
+      elif [ "$rc" = 0 ] && ! grep -q "ABORT" "$tlog"; then
+        touch "$Q/done/$name" "$Q/finished/$name"
+      elif grep -q "ABORT" "$tlog"; then
+        echo "=== $name: the server stopped answering; leaving the task for another job ==="
+        rm -rf "$Q/claimed/$name"; CUR=""
+        break 2
+      else
+        echo "task failed with exit $rc, see $tlog" > "$Q/failed/$name"
+      fi
+      rm -rf "$Q/claimed/$name"; CUR=""; took=1
+      idle_since=$(date +%s)
+      break
+    done
+    if [ "$took" != 1 ]; then
+      if [ "$QUEUE_IDLE_MAX_S" -gt 0 ] && [ $(( $(date +%s) - idle_since )) -gt "$QUEUE_IDLE_MAX_S" ]; then
+        echo "=== nothing to do for $(hhmm "$QUEUE_IDLE_MAX_S"); giving the node back ==="
+        break
+      fi
+      sleep 120
+    fi
+  done
+  echo "=== queue loop ends: $(hhmm "$(remaining_s)") left ==="
+fi
 
 # If the job is about to exit with real time still on the clock, say so
 # loudly and with the number, so the waste is visible in the log instead

@@ -550,6 +550,17 @@ literature achieves on the same reports and snapshots. We compare
 against two: LocAgent~\cite{chen2025locagent} and
 CoSIL~\cite{jiang2025cosil}.
 
+\textbf{Why not the challenge's own references.} The multi-agent
+localizer of Rafi et al.~\cite{rafi2024multiagent} ranks the methods
+covered by failing tests, ordered by a spectrum-based score. Failing
+tests and coverage do not exist when an issue is first reported, which
+is the premise of this challenge, so it cannot run on our inputs.
+RCAgent~\cite{wang2024rcagent} explains a failed cloud job in prose. It
+does not output a ranked list of code regions, so Acc@K and MRR do not
+apply, and its evaluation data are private. LocAgent and CoSIL take
+exactly our inputs, an issue and a repository, and return ranked code
+locations. They are the closest published agents we can run.
+
 \textbf{Neither released system runs on this benchmark, and the reason
 is not an adapter.} Both build their code graph with Python's \texttt{ast}
 module, and both say so: LocAgent states it focuses on Python

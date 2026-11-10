@@ -231,6 +231,15 @@ def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--project", choices=list(FULL_REPOS))
     ap.add_argument("--selfcheck", action="store_true")
+    # T36. Write the perturbed text AND the lexical ranking recomputed on it,
+    # so the agent under noise is seeded from noisy retrieval, not from the
+    # clean ranking stored in {p}-instances.jsonl. Same per-instance prng
+    # key as the lexical experiment, so both see identical noise.
+    ap.add_argument("--dump", action="append", default=[],
+                    help="COND or COND_xR, e.g. generic_x2; repeatable")
+    ap.add_argument("--ids", default="",
+                    help="subset JSON with an 'ids' list (baseline_sample.py); "
+                         "with --dump, perturb exactly these instances")
     args = ap.parse_args()
     if args.selfcheck:
         return selfcheck()
@@ -255,6 +264,9 @@ def main() -> int:
     rng = random.Random(SEED)
     sample = sorted(rng.sample(range(len(ev)), min(SAMPLE, len(ev))))
     sample_b = [ev[i] for i in sample]
+    if args.ids:
+        keep = set(json.loads(Path(args.ids).read_text(encoding="utf-8"))["ids"])
+        sample_b = [b for b in ev if f"{args.project}:{b['issue_key']}" in keep]
     # foreign noise: lines from OTHER eval issues of the same project
     foreign_all = {b["issue_key"]: [l for l in b["query_text"].splitlines()
                                     if l.strip()] for b in sample_b}
@@ -306,7 +318,7 @@ def main() -> int:
         regime = "mention" if has_mention else "no_mention"
         fused = rrf(rk, w_cond[regime])
         gset = set(b["gold_files"])
-        return float(any(f in gset for f in fused[:5])), regime
+        return float(any(f in gset for f in fused[:5])), regime, fused
 
     conds = ([("clean", 0)]
              + [(c, r) for c in ("dup", "foreign", "generic") for r in RATIOS]
@@ -314,6 +326,28 @@ def main() -> int:
              + [("mixed", k) for k in STREAMS]
              + [("cascade", r) for r in RATIOS]
              + [("decisive", 0)])
+    dump = None
+    if args.dump:
+        want = set(args.dump)
+        conds = [(c, r) for c, r in conds if (f"{c}_x{r}" if r else c) in want]
+        if len(conds) != len(want):
+            ap.error(f"unknown --dump condition in {sorted(want)}")
+        # Append, never truncate. The 1,000-sample dump and the 30-instance
+        # pilot dump live in one file per project; opening with "w" for the
+        # second id set would have erased the first. Rows already present
+        # are skipped, which also makes a killed dump resumable.
+        dump_path = OUT / f"{args.project}-noise-dump.jsonl"
+        dumped = set()
+        if dump_path.exists():
+            for line in dump_path.open(encoding="utf-8"):
+                r = json.loads(line)
+                dumped.add((r["id"], r["noise"]))
+        want_keys = [f"{c}_x{r}" if r else c for c, r in conds]
+        sample_b = [b for b in sample_b
+                    if any((f"{args.project}:{b['issue_key']}", k) not in dumped
+                           for k in want_keys)]
+        print(f"dump: {len(dumped)} rows on disk, {len(sample_b)} instances to do")
+        dump = dump_path.open("a", encoding="utf-8")
     acc = {f"{c}_x{r}" if r else c: [] for c, r in conds}
     regime_flips = Counter()
     n_decisive_found = 0
@@ -344,7 +378,13 @@ def main() -> int:
             prng = random.Random(f"{SEED}:{b['issue_key']}:{c}:{r}")
             text = perturb(b["query_text"], c, r, prng, pool,
                            stream_pool=streams, drop_idx=d_idx)
-            a5, regime = localize_one(b, snap, text)
+            a5, regime, fused = localize_one(b, snap, text)
+            if dump is not None and (f"{args.project}:{b['issue_key']}",
+                                     f"{c}_x{r}" if r else c) not in dumped:
+                dump.write(json.dumps({"id": f"{args.project}:{b['issue_key']}",
+                                       "noise": f"{c}_x{r}" if r else c,
+                                       "text": text, "seeds": fused[:20]})
+                           + "\n")
             key = f"{c}_x{r}" if r else c
             acc[key].append(a5)
             if c == "clean":
@@ -364,6 +404,10 @@ def main() -> int:
                # reported over this denominator, not over n_sample.
                "n_decisive_identified": n_decisive_found,
                "clean_main_run_acc5": summ["eval"]["cond_ours"]["acc@5"]}
+    if dump is not None:
+        dump.close()
+        print(f"dump -> {OUT / (args.project + '-noise-dump.jsonl')}")
+        return 0   # a dump run must not overwrite the published summary
     (OUT / f"{args.project}-noise-summary.json").write_text(
         json.dumps(summary, indent=2), encoding="utf-8")
     print(json.dumps(summary["acc@5"], indent=1))

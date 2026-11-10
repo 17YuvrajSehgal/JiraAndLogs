@@ -1,0 +1,1 @@
+--arm wf --full --seed 7 --tag wf-t08-seed7 --workers 24 --project kafka --project mariadb --project qt --project solr

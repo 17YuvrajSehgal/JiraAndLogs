@@ -88,20 +88,22 @@ try:
 except ValidationError:
     chk("an empty submission is rejected", True)
 try:
-    LA.Localization(files=[LA.RankedFile(path="a.java", symbol="m",
+    LA.Localization(module="core",
+                    files=[LA.RankedFile(path="a.java", symbol="m",
                                      evidence="x")],
                     causal_chain=[LA.ChainStep(step="a", cited_from="read_code",
-                                               file="a.java")])
+                                               file="a.java", log_event="")])
     chk("a one-step chain is rejected (2-6 required)", False)
 except ValidationError:
     chk("a one-step chain is rejected (2-6 required)", True)
 good = LA.Localization(
+    module="core",
     files=[LA.RankedFile(path="a.java", symbol="handleRequest",
                          evidence="line 42 sets it to null")],
     causal_chain=[LA.ChainStep(step="a", cited_from="read_code",
-                               file="a.java"),
+                               file="a.java", log_event="E1"),
                   LA.ChainStep(step="b", cited_from="recall_incidents",
-                               file="")])
+                               file="", log_event="")])
 chk("a complete submission validates", len(good.files) == 1)
 chk("the submitted region survives on the model", good.files[0].symbol
     == "handleRequest")
@@ -111,12 +113,24 @@ chk("the submitted region survives on the model", good.files[0].symbol
 # step["file"] for every number it reports. Without this field that whole
 # analysis silently scored zero on a 26,544-instance run.
 try:
-    LA.ChainStep(step="a", cited_from="read_code")
+    LA.ChainStep(step="a", cited_from="read_code", log_event="")
     chk("a chain step without a file is rejected", False)
 except ValidationError:
     chk("a chain step without a file is rejected", True)
 chk("a step about the report, not code, may name no file",
     good.causal_chain[1].file == "")
+# T29/T32: the module and the cited log event are required, not optional
+for kw, name in ((dict(step="a", cited_from="x", file=""), "log_event"),):
+    try:
+        LA.ChainStep(**kw)
+        chk(f"a chain step without {name} is rejected", False)
+    except ValidationError:
+        chk(f"a chain step without {name} is rejected", True)
+try:
+    LA.Localization(files=good.files, causal_chain=good.causal_chain)
+    chk("a submission without a module is rejected", False)
+except ValidationError:
+    chk("a submission without a module is rejected", True)
 try:
     LA.RankedFile(path="a.java", evidence="x")
     chk("a file without a region is rejected", False)
@@ -185,12 +199,36 @@ else:
             "retrieval layer ranked highest" in brief)
         chk("tool calls made during the preamble are not charged to the agent",
             len(ws.calls) == 0, f"{len(ws.calls)} calls recorded")
+        chk("preamble runs the log layer (events, printing sites, back hop)",
+            all(k in p for k in ("events", "printed_by", "log_back")))
+        chk("the briefing lists the modules to pick from",
+            "=== MODULES" in brief and len(p["modules"]) > 1)
+        chk("every module offered is one the scorer accepts",
+            all(LA.resolve_module(m, ws, {x for x, _ in p["modules"]}) == m
+                for m, _ in p["modules"][:20]))
+        chk("a file path is cut down to its module",
+            LA.resolve_module(ws.snap.files[0], ws,
+                              {x for x, _ in p["modules"]}) != "")
+        chk("an invented module is a miss, not repaired",
+            LA.resolve_module("no/such/module", ws,
+                              {x for x, _ in p["modules"]}) == "")
 
     names = [t.name for t in LA.build_tools(ws)]
     chk("the tool surface matches the hand-rolled agent",
         set(names) == {"search_symbol", "search_text", "read_code",
                        "read_skeleton", "list_dir", "callers_of",
-                       "data_flow_back", "recall_incidents"}, str(sorted(names)))
+                       "data_flow_back", "recall_incidents", "dependencies",
+                       "match_log"}, str(sorted(names)))
+    off = {t.name for t in LA.build_tools(ws, log_layer=False)}
+    chk("the log-layer ablation removes match_log and nothing else",
+        set(names) - off == {"match_log"}, str(sorted(off)))
+    chk("dependencies resolves a real file",
+        "imports" in ws.dependencies(ws.snap.files[0]))
+    chk("a cited event id is grounded", LA.grounded("E2", ws, {"E1", "E2"}))
+    chk("a quoted report line is grounded",
+        LA.grounded(" ".join(ws.query_text.split()[:6]), ws, set()))
+    chk("an invented log line is not grounded",
+        LA.grounded("this line was never in the report at all", ws, set()) is False)
 
     # ---- the three defects the first real pilot exposed -----------------
     # 1. the tools called ws.<method> directly, so nothing was counted and
@@ -233,7 +271,7 @@ else:
 
     LA.turn_budget.wrap_model_call(Req(LA.MAX_TURNS - 5), grab)
     chk("below the budget the model keeps every tool",
-        len(seen["tools"]) == 8, f"{len(seen['tools'])} tools")
+        len(seen["tools"]) == len(LA.AGENT_TOOLS), f"{len(seen['tools'])} tools")
     LA.turn_budget.wrap_model_call(Req(LA.MAX_TURNS), grab)
     chk("at the hard limit every tool is withdrawn",
         seen["tools"] == [], f"{len(seen['tools'])} tools left")
@@ -313,6 +351,36 @@ else:
         and ev["context"]["chars_cut"] == 15000,
         f"{ev['context']['n_dropped_results']} dropped, "
         f"{ev['context']['chars_cut']} chars cut")
+
+# ---- the commit check must send the model back, or its question is lost --
+from langchain_core.messages import AIMessage as _AI, HumanMessage as _HM  # noqa: E402
+_upd = LA.commit_check.after_model(
+    {"messages": [_HM("q"), _AI("a"), _HM("b"), _AI("prose answer")],
+     "commit_checked": False}, None)
+chk("the commit check jumps back to the model (else the run ends no_answer)",
+    bool(_upd) and _upd.get("jump_to") == "model", str(_upd)[:80])
+chk("the commit check fires only once",
+    LA.commit_check.after_model({"messages": [_AI("x")] * 5,
+                                 "commit_checked": True}, None) is None)
+
+
+# ---- resolve_region: `name@line`, against a file with two constructors ----
+class _WS:
+    F = [("Sched", 10, 20), ("Sched", 22, 30), ("doWork", 40, 90)]
+
+    def _funcs_of(self, path):
+        return self.F
+
+    def resolve_symbol(self, path, name):
+        return next((f for f in self.F if f[0] == name), None)
+
+
+chk("name@line picks the exact overload",
+    LA.resolve_region(_WS(), "a.java", "Sched@22") == [("Sched", 22, 30)])
+chk("a class name in front of another function's first line -> that function",
+    LA.resolve_region(_WS(), "a.java", "Sched@40") == [("doWork", 40, 90)])
+chk("a line that starts no function falls back to the name (all overloads)",
+    LA.resolve_region(_WS(), "a.java", "Sched@55") == _WS.F[:2])
 
 print(f"\n{ok}/{n} checks passed")
 raise SystemExit(0 if ok == n else 1)

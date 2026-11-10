@@ -492,6 +492,204 @@ We produce one and never score it.
 
 ---
 
+## P6 — Challenge coverage gaps (agent audit 2026-11-09)
+
+Audit of `agent/` against the challenge PDF. Each row is one gap. Code for
+T29–T36 lives in `agent/logs.py`, `agent/lc_agent.py` and `run_agent.py`;
+all of it is scored by `scripts/c7_coverage.py`. The log layer can be
+switched off (`--no-log-layer`) so its value is an ablation, not a claim.
+
+- [~] **T29. CODE DONE 2026-11-09, needs the T38 run.** Affected module from the agent (output i).** Today the module
+      is computed after the run by cutting file paths at `module_metrics.DEPTH`.
+      Add a required `module` field to the submission, give the agent the
+      project's module list in the briefing, and score agent-module against
+      the collapsed-ranking module on the same rows. **CODE + GPU run**
+- [x] **T30. DONE 2026-11-09 (`agent/logs.py`).** Select log events from the bundle.** Reports are pasted raw and
+      cut at 18,000 chars (MongoDB max is 706,007). Mask variables into
+      templates, collapse repeats, rank events (first error before later
+      ones, generic timeout/retry lines down), number them E1..En, and
+      compress the report so the cut drops repeats, not evidence. **CODE**
+- [~] **T31. CODE DONE 2026-11-09, needs the T38 run.** Log-to-code retrieval.** Index the logging statements and
+      exception messages of the snapshot (Java/Scala loggers, `throw new`,
+      MariaDB `sql_print_*`/`ib::*`/`my_error`, MongoDB `LOGV2*`/`uassert`,
+      Qt `qWarning`...). Match each selected event to the statement that
+      printed it, then walk one hop back from that function. New tool
+      `match_log`, plus the same probe in the preamble. **CODE + GPU run**
+      **CPU result (`c7_coverage.py --log-sites --limit 300`, seed 42,
+      `data/results/c7-log-sites.json`):** among eval reports whose log
+      events match a statement in the snapshot, the printing file is a gold
+      file in kafka 64/160 (0.40), mariadb 27/155 (0.17), mongodb 6/40
+      (0.15), qt 0/10. So 60-100% of the time the code that printed the log
+      is NOT the fixed file -- the challenge's third difficulty, measured.
+      Coverage is the limit: qt matched only 10/300, mongodb 40/300.
+- [~] **T32. CODE DONE 2026-11-09, needs the T38 run.** The explanation cites log events.** Required
+      `ChainStep.log_event` (an event id or a quoted report line, empty when
+      the step is about code). Check mechanically that each cited event
+      exists in the report. **CODE + GPU run**
+- [~] **T33. CODE DONE 2026-11-09, needs the T38 run.** Ranked code regions, not ranked files.** Allow several regions
+      per file; give lexical-only files after fusion a region from their
+      best-matching function (marked `source: lexical`). Score region
+      Acc@K/MRR against `*-functions.jsonl` gold functions. **CODE**
+- [x] **T34. DONE 2026-11-09 (`dependencies` tool).** Component dependencies.** Our agent never uses `codegraph.py`
+      (only the baselines do). Add a `dependencies(path)` tool: imports and
+      imported-by. **CODE**
+- [~] **T35. CODE DONE 2026-11-09 (`c7_coverage.py`), needs a run.** Crash vs non-crash strata.** Report every metric on three
+      strata: stack trace / log lines but no trace / prose only. Uses
+      results already on disk plus the new run. **CPU**
+- [~] **T36. CODE DONE 2026-11-09, dumps on CPU, needs the T38 run.** The agent under noise.** T13–T15 ran on the lexical pipeline
+      only. `run_agent.py --noise COND:RATIO` perturbs the report with the
+      same `noise_robustness.perturb`, seeded per instance. Run `generic:2`,
+      `cascade:2` and `decisive` on the 1,000 sample. **GPU run**
+- [x] **T37. DONE 2026-11-09 (§V agentic subsection).** Why not Rafi et al. [1] and RCAgent [2].** Paper text: [1] needs
+      failing tests and coverage (not available at report time, our own
+      premise); [2] targets cloud job RCA, is closed, and does not output
+      code regions. Our LocAgent/CoSIL ports are the closest runnable
+      agents. **WRITING**
+- [ ] **T38. Runs.** (a) 30-instance pilot of the new schema first: the
+      comments in `lc_agent.py` record that schema shape changes can stall
+      decoding, so check `no_answer` rate before anything big. (b) 1,000
+      sample, log layer ON vs OFF, same seed, paired. (c) T36 noise arms.
+      **GPU**
+
+- [~] **T39. CODE DONE 2026-11-09, needs a run.** Staged workflow arm (`--arm wf`, `agent/workflow.py`).**
+      The free investigation loop is replaced by SHORTLIST -> EXAMINE (one
+      file per step, fixed-form verdict) -> WALK BACK (code) -> RANK (cards
+      only). Designed from `scripts/trace_analysis.py` over all 26,541
+      answered rows of the main run (digest: `scripts/trace_decisions.py`,
+      `data/agent/full/`): 83.2% of runs end only because the budget removed
+      the tools; 72.7% of read_code calls re-read a file; a gold file is
+      first named on turn 1 in 82.8% of runs and turns 4-14 add 5.1 points;
+      55.8% of failures have gold in the list but not first, 79.2% of those
+      READ gold, and the wrong top file was read later than gold in 67.7%
+      (33.9% in right runs). `--arm lc` stays as the free-loop ablation.
+      Diagram: `agent/AGENT-DIAGRAM.md`. **GPU run**
+
+- [x] **T40. DONE 2026-11-10 (CPU). Would a code graph find the files the evidence misses? No.**
+      `scripts/graph_headroom.py` on the 1,000 sample
+      (`data/results/graph-headroom.jsonl`). A gold file is in the top-20
+      seeds for 83.2% and in the evidence table for 87.8% (reformulation
+      stubbed, so a lower bound). For the 122 where it is in neither, one
+      hop of imports + callers + callees reaches a gold file in 18.9% while
+      adding a median 84 files (0.23 gold per 100 added). The structure-free
+      control, same-directory siblings of the top-5 seeds, reaches 36.9% at
+      0.26 per 100. Upper bound on coverage gained by one graph hop: 2.3% of
+      all instances. Not worth building for candidate generation.
+- [~] **T41. CODE DONE 2026-11-10, pilot running.** Function-level localization.**
+      `scripts/function_diagnosis.py` on 24,851 main-run rows with gold
+      functions: top region right 48.2%; file wrong 33.8%; file right but a
+      real wrong function 12.7%; file right but a function the file does
+      not contain 5.3% (upper bound, C++ name bug in v3 rows). Given the
+      right file the function is right 72.8%. In the 4,470 right-file
+      wrong-function runs: gold function never on screen 32.0%, fix touches
+      2+ functions of that file 39.1%. Changes: (1) EXAMINE shows the whole
+      file or whole functions up to `C7_WF_FILE_CHARS` (24,000), (2) up to
+      3 functions per file from the file's own list, (3) both arms: 2
+      BM25-ranked functions per file after the agent's own, marked
+      `lexical` (replayed on the main run by name: region acc@5 0.607 ->
+      0.678, acc@10 0.607 -> 0.724, acc@1 0.482 unchanged).
+
+- [ ] **T42. FULL RUN of the workflow arm, SUBMITTED 2026-11-10 ~02:15 on FOUR clusters.**
+      Same five shards queued on nibi (26684057, 59-62), fir (3264075-79),
+      rorqual (26266450-54) and trillium (1282728-32); narval left out (no
+      agent venv, A100-40GB would serve at TP=2). The first five Nibi jobs
+      (26681423-27) were cancelled while pending and replaced, because the
+      job script changed.
+      Each job runs, in order, skipping any tag another cluster already
+      started: `wf-sN` (seed 42) -> `lc1000-sN`, `wfoff1000-sN`,
+      `wfnoise-{generic_x2,cascade_x2,decisive}-sN` on its part of the fixed
+      1,000 sample -> `wf-sN-seed7` -> `wf-sN-seed123` -> then it KEEPS the
+      server hosted and takes tasks from `queue/pending/<name>.task` (one
+      line = the arguments of one `run_agent.py` call) until 15 min before
+      walltime. Output `data/agent/agent-<tag>.jsonl` on whichever cluster
+      ran it; the v3 main run (`agent-full-*`, trillium) is untouched.
+      One run per tag: `c7_fleet.sh monitor` (WSL, started 02:20, log
+      `c7-fleet-monitor.log` in the repo root, runs 24 h) reads
+      `queue/started/<tag>` on every cluster and writes `queue/skip/<tag>`
+      on the others. It dies if the laptop sleeps or the SSH sockets expire;
+      restart with `wsl bash ~/c7_fleet.sh monitor 1440`. Without it the
+      only harm is duplicated work.
+      Checked before submitting: code identical file by file on all four
+      clusters and the laptop (89 files); the 194 input files (benchmark,
+      instances, summaries, noise dumps, sample ids) byte-identical
+      everywhere; 405 sampled snapshot commits present in each cluster's
+      repos; `test_e2e_v4.py` 43/43 in each cluster's venv.
+      Scheduler estimates at submission (`--test-only`): nibi at once, rorqual
+      2026-11-11 02:36, fir 2026-11-12 17:14, trillium 2026-11-22.
+      Commands: `wsl bash ~/c7_fleet.sh status | stage | verify | submit`.
+      Pilot 4 (login node, same 20 ids, before the `why` change): all forms
+      answered; file acc@1 0.80 (pilot 3: 0.95; three flips in three
+      different stages), region acc@1 0.579 in both; lc on the same ids
+      0.85 / 0.368. Output tokens per run 2,690 -> 2,024.
+
+**Login-node pilot 3 (2026-11-10, T41 design, debugging only, NOT paper numbers):**
+same 20 ids, rows `data/agent/login/agent-login3-{wf,lc}.jsonl`. Bug found:
+the model copies names as `name@line` from the function list and 17 of 39
+cards failed to resolve; fixed (`workflow.resolve_listed`) and the code-only
+last stage re-run offline with `scripts/wf_repackage.py` (no GPU, file
+ranking asserted unchanged) -> `agent-login3-wf-repackaged.jsonl`, 39 of 39
+cards resolve. On the 19 ids answered in every run (18 with gold functions):
+file acc@1 wf 0.947 / lc 0.842; region acc@1 wf 0.444 / lc 0.333; region
+acc@5 0.667 / 0.667; region MRR 0.530 / 0.461. Paired wf - lc (n=20): file
+acc@1 +0.10 (CI 0.00..0.25), region acc@1 +0.105 (CI -0.105..+0.316): the
+direction is right, 18 instances cannot confirm it. lc itself moved by one
+instance between pilot 2 and 3 (region acc@1 0.389 -> 0.333), which is the
+noise floor here. Cost per run: wf 14.6 calls / 101,271 input tokens / 219 s,
+lc 14.2 / 109,573 / 170 s -- the whole-file view spends the token saving of
+pilot 2 (48,798).
+
+**Login-node pilot (2026-11-09/10, debugging only, NOT paper numbers):**
+20 ids = `baseline-pilot.json[:20]`, Qwen served TP=2 on two shared login
+GPUs at 65,536. Rows: `data/agent/login/agent-login2-{wf,lc}.jsonl`.
+19 paired (one wf row died on the login node's 1,024-process cap,
+`BlockingIOError`): top-1 wf 15/19, lc 16/19 (diff -0.05, CI -0.21..+0.11);
+hit@5 19/19 both; region acc@1 0.389 both; module 19/19 both;
+no_answer 0 both. Cost per run: wf 15.0 calls / 46,358 input tokens / 209 s,
+lc 13.6 / 106,150 / 184 s. wf stages: gold in table 0.95, examined 0.95,
+verdict on gold 22 cause / 6 unrelated, on non-gold 62 unrelated / 7 cause /
+2 detects; walk-back added nothing, tier rule moved nothing.
+First attempt found a bug: the "must answer" check (and `commit_check` in
+lc) treated the framework's ToolMessage after a structured answer as prose,
+so every answered step was sent back (36 calls per run). Fixed with a
+`type == "ai"` test; in the v3 main run `commit_check` therefore never had
+any effect (its question was appended to an already finished run).
+
+**Main run check (2026-11-09):** the 26,544-row seed-42 run has 26,541
+`submitted`, 3 `error:GraphRecursionError` and 0 `no_answer`, so the
+`commit_check` bug below cost no rows there.
+
+**Found while building P6 (fix is in v4, both arms):** `commit_check` in
+`lc_agent.py` appended its question but never returned `jump_to`, so when
+the model answered in prose first the graph ended and the row became
+`no_answer`, scored on the lexical fallback. Check the `no_answer` count in
+every earlier `--arm lc` result before any of those numbers is reused.
+Regression test in `test_lc_agent.py`.
+
+**Local check before any GPU time:** `python industry-c7/agent/test_e2e_v4.py`
+drives the real runner and scorer with a scripted model through ON, OFF and
+a noise arm (22/22 on 2026-11-09).
+
+**Run commands (from the cluster, after staging the tree + the
+`data/results/*-noise-dump.jsonl` files; the dumps now also cover the 30
+pilot ids, 4,120 rows = 1,030 instances x 4 conditions):**
+
+```bash
+# (a) pilot: 30 instances through EVERY arm shape, so one job debugs all.
+#     Add --test-only as a last argument first to dry-run the submission.
+WALL=4:00:00 MIN_FOLLOW_ON_S=600 FOLLOW_ON_SEEDS= TAG=v4-pilot-on SUBSET=data/results/baseline-pilot.json ARMS="v5-pilot-wf=--arm wf;v4-pilot-off=--no-log-layer;v4-pilot-generic_x2=--noise generic_x2;v4-pilot-cascade_x2=--noise cascade_x2;v4-pilot-decisive=--noise decisive"   bash industry-c7/cluster/submit-shard.sh s1
+# what to read first: stop reasons, no_answer rate, tool use, module validity
+python industry-c7/scripts/c7_coverage.py --run industry-c7/data/agent/agent-v4-pilot-on.jsonl   --base industry-c7/data/agent/agent-v4-pilot-off.jsonl
+# (b)+(c) one 24h job: log layer ON, then OFF, then the three noise arms
+TAG=v4-on SUBSET=data/results/baseline-sample.json FOLLOW_ON_SEEDS= ARMS="v4-off=--no-log-layer;v4-noise-generic_x2=--noise generic_x2;v4-noise-cascade_x2=--noise cascade_x2;v4-noise-decisive=--noise decisive"   bash industry-c7/cluster/submit-shard.sh s1
+# score: ablation, then each noise arm against the clean ON run
+python industry-c7/scripts/c7_coverage.py --run industry-c7/data/agent/agent-v4-on.jsonl   --base industry-c7/data/agent/agent-v4-off.jsonl
+for c in generic_x2 cascade_x2 decisive; do
+  python industry-c7/scripts/c7_coverage.py --run industry-c7/data/agent/agent-v4-noise-$c.jsonl     --base industry-c7/data/agent/agent-v4-on.jsonl; done
+# earlier lc runs hit by the commit_check bug: how many rows lost their answer
+grep -c '"stop_reason": "no_answer"' industry-c7/data/agent/agent-full-*.jsonl industry-c7/data/agent/agent-seed*.jsonl
+```
+
+---
+
 ## Cut line for 11 days
 
 **Must land:** T1–T5, T6, T8, T9, T10–T12, T21.

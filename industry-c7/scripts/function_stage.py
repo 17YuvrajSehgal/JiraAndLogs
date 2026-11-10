@@ -327,7 +327,11 @@ def main() -> int:
                 # depend on which day the row was written.
                 agent_regions[k] = [
                     (g["path"], g.get("symbol") or g.get("resolved") or "")
-                    for g in src if (g.get("symbol") or g.get("resolved"))]
+                    for g in src if (g.get("symbol") or g.get("resolved"))
+                    # v4 rows also carry regions for files that arrived
+                    # through fusion (source=lexical). They are not the
+                    # agent's answer and must not be scored as one.
+                    and g.get("source", "agent") == "agent"]
                 if args.read_boost:
                     agent_read[k] = read_functions(args.project, k)
         # The agent ran the eval split only, so an instance with no agent

@@ -645,6 +645,40 @@ class Workspace:
                         "refactor",
                 "admissible_matches": out}
 
+    # ---- log layer (T30, T31) and component structure (T34) --------------
+    def log_index(self):
+        if getattr(self, "_log_index", None) is None:
+            import logs
+            self._log_index = logs.LogIndex(self)
+        return self._log_index
+
+    def match_log(self, line: str, k: int = 5) -> dict:
+        """The logging statement or exception message in THIS snapshot that
+        printed a given log line, with its enclosing function. That function
+        is where the failure was DETECTED; walk back from it."""
+        line = (line or "").strip()
+        if len(line) < 8:
+            return {"error": "paste a whole log line or exception message"}
+        hits = self.log_index().match(line, k=max(1, min(int(k or 5), 10)))
+        return {"line": line[:200], "printed_by": hits,
+                "note": ("no statement in this snapshot prints this text; it "
+                         "may come from a library or be built at runtime")
+                if not hits else
+                "the printing site reports the failure; the cause is often "
+                "one call earlier (callers_of on the function)"}
+
+    def dependencies(self, path: str) -> dict:
+        """Files this file imports, and files that import it."""
+        path = (path or "").strip().replace("\\", "/").lstrip("./")
+        if path not in self.snap.blob_of:
+            return {"error": f"not in snapshot: {path}",
+                    "did_you_mean": self._near_paths(path)}
+        if getattr(self, "_graph", None) is None:
+            from codegraph import Graph
+            self._graph = Graph(self)
+        return {"file": path, "imports": self._graph.imports_of(path),
+                "imported_by": self._graph.imported_by(path)}
+
     def note_candidate(self, path: str, reason: str,
                        confidence: float = 0.5) -> dict:
         raw = (path or "").strip().replace("\\", "/").lstrip("./")
@@ -739,7 +773,8 @@ _DISPATCH = {"search_symbol": "search_symbol", "callers_of": "callers_of",
              "read_skeleton": "read_skeleton", "read_code": "read_code",
              "recall_incidents": "recall_incidents",
              "note_candidate": "note_candidate",
-             "data_flow_back": "data_flow_back"}
+             "data_flow_back": "data_flow_back",
+             "match_log": "match_log", "dependencies": "dependencies"}
 
 
 def dispatch(ws: Workspace, name: str, args: dict) -> dict:

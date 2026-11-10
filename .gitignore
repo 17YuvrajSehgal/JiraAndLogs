@@ -82,3 +82,6 @@ ThePublicJiraDataset/
 WoL/
 industry-c7/papers/pdfs/
 /build.log
+
+# multi-cluster monitor output
+c7-fleet-monitor.log

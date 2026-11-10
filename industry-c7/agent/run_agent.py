@@ -212,7 +212,7 @@ def main() -> int:
                          "Default stays 2 so an unflagged re-run cannot "
                          "silently change what the reported numbers mean.")
     ap.add_argument("--arm", default="ours",
-                    choices=["ours", "lc"] + sorted(ARMS),
+                    choices=["ours", "lc", "wf"] + sorted(ARMS),
                     help="T25. 'locagent' and 'cosil' are reimplementations "
                          "of the two published agentic localizers on our "
                          "graph layer; neither runs on this benchmark as "
@@ -220,7 +220,11 @@ def main() -> int:
                          "same model, snapshot, report and turn budget, and "
                          "no incident memory. See agent/BASELINES.md. "
                          "'lc' is our own agent rebuilt on LangGraph, with "
-                         "the full run capture of agent/lc_trace.py.")
+                         "the full run capture of agent/lc_trace.py. 'wf' is "
+                         "the staged workflow (agent/workflow.py): the same "
+                         "evidence pass and validation as 'lc', with the free "
+                         "loop replaced by shortlist / examine / walk back / "
+                         "rank.")
     ap.add_argument("--repo-tree", action="store_true",
                     help="Put the repository structure in phase 0. The "
                          "agent calls list_dir 0.07 times per run, so it "
@@ -254,6 +258,18 @@ def main() -> int:
                     help="validity check: randomise the lexical seed order "
                          "handed to the agent (LLM4FL report up to 22%% Top-1 "
                          "sensitivity to initial ordering)")
+    ap.add_argument("--no-log-layer", action="store_true",
+                    help="--arm lc only. T38 ablation: drop log-event "
+                         "selection, report compression, the log-to-code "
+                         "probe and the match_log tool. Everything else, "
+                         "schema included, stays identical.")
+    ap.add_argument("--noise", default="",
+                    help="T36. A condition key such as generic_x2, cascade_x2 "
+                         "or decisive. Reads data/results/{p}-noise-dump.jsonl "
+                         "(noise_robustness.py --dump): the perturbed report "
+                         "AND the lexical seeds recomputed on it, so clean "
+                         "retrieval never leaks into a noisy run. Use a "
+                         "separate --tag per condition.")
     args = ap.parse_args()
     projects = args.project or list(P)
     AGENT_OUT.mkdir(parents=True, exist_ok=True)
@@ -321,6 +337,23 @@ def main() -> int:
             tmp.replace(out_path)
             print(f"resume: dropped {dropped} errored row(s) for retry; "
                   f"previous file kept as {out_path.name}.bak", flush=True)
+    noisy: dict = {}
+    if args.noise:
+        for p_ in projects:
+            f = OUT / f"{p_}-noise-dump.jsonl"
+            if not f.exists():
+                continue
+            for line in f.open(encoding="utf-8"):
+                r = json.loads(line)
+                if r["noise"] == args.noise:
+                    noisy[r["id"]] = r
+        before = len(pop)
+        pop = [x for x in pop if f"{x[0]}:{x[1]['issue_key']}" in noisy]
+        print(f"noise={args.noise}: {len(pop)}/{before} instances have a dump",
+              flush=True)
+        if not pop:
+            print("REFUSING: no dump rows for this condition", file=sys.stderr)
+            return 1
     todo = [x for x in pop if f"{x[0]}:{x[1]['issue_key']}" not in done]
     print(f"population={len(pop)} full={args.full} arm={args.arm} "
           f"v{args.version} "
@@ -345,10 +378,12 @@ def main() -> int:
             r = json.loads(line)
             tree_rank[f"{r['project']}:{r['issue_key']}"] = r.get("ranking") or []
         print(f"seed source: fused (file-tree LLM for {len(tree_rank)} instances)")
-    trace_dir = AGENT_OUT / "runs" / args.tag if args.arm == "lc" else None
-    if args.arm == "lc":
+    trace_dir = AGENT_OUT / "runs" / args.tag if args.arm in ("lc", "wf") else None
+    if args.arm in ("lc", "wf"):
         import lc_agent as LC  # noqa: F841 - local: langchain_openai is
+        import workflow as WF  # noqa: F841
         globals()["LC"] = LC   # not installed on the cluster side
+        globals()["WF"] = WF
         trace_dir.mkdir(parents=True, exist_ok=True)
         print(f"full run capture -> {trace_dir}")
     fcaches = {p: {} for p in projects}
@@ -367,10 +402,13 @@ def main() -> int:
         started = time.time()
         try:
             seeds = build_seeds(row, rid, args.seed_source, tree_rank)
+            qtext = b["query_text"]
+            if args.noise:
+                qtext, seeds = noisy[rid]["text"], list(noisy[rid]["seeds"])
             if args.shuffle_seeds:
                 random.Random(hash(rid) & 0xffff).shuffle(seeds)
             ws = T.Workspace(
-                proj, b["snapshot_sha"], b["query_text"], mem, dup,
+                proj, b["snapshot_sha"], qtext, mem, dup,
                 parse_iso_epoch(b.get("created")) or created.get(b["issue_key"])
                 or b["fix_time"], b["issue_key"], set(b["fix_shas"]),
                 fcaches[proj], seeds)
@@ -379,7 +417,12 @@ def main() -> int:
                                      repo_tree=args.repo_tree)
             elif args.arm == "lc":
                 res = LC.run_lc(ws, seed=args.seed, model=lc_model(args.seed),
-                                repo_tree=args.repo_tree, trace_dir=trace_dir)
+                                repo_tree=args.repo_tree, trace_dir=trace_dir,
+                                log_layer=not args.no_log_layer)
+            elif args.arm == "wf":
+                res = WF.run_wf(ws, seed=args.seed, model=lc_model(args.seed),
+                                trace_dir=trace_dir,
+                                log_layer=not args.no_log_layer)
             else:
                 res = ARMS[args.arm](ws, seed=args.seed)
             err = None
@@ -466,6 +509,14 @@ def main() -> int:
                    if "empty" in res else {}),
                 "version": res.get("version", 2),
                 "causal_chain": res.get("causal_chain", []),
+                # T29-T33 (version 4). Kept in the row, not the transcript.
+                **{k: res[k] for k in
+                   ("module", "module_raw", "log_layer", "log_events",
+                    "log_printed_by", "log_back", "report_compression",
+                    "wf_route", "wf_table", "wf_cards", "wf_decisions")
+                   if k in res},
+                "noise": args.noise,
+                "has_stack_trace": b.get("has_stack_trace"),
                 "prewalk_symbols": res.get("prewalk_symbols", []),
                 "seed": args.seed, "shuffled_seeds": args.shuffle_seeds,
                 "seed_source": args.seed_source, "repo_tree": args.repo_tree,

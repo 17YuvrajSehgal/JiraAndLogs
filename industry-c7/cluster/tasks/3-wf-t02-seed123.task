@@ -1,0 +1,1 @@
+--arm wf --full --seed 123 --tag wf-t02-seed123 --workers 24 --project hadoop

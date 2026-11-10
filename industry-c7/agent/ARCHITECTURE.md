@@ -1,5 +1,13 @@
 # Localization agent: architecture and why each part exists
 
+> **v4 update (2026-11-09, `lc_agent.py`).** Added for challenge coverage
+> (todolist P6, T29–T38): a log layer (`logs.py`: event selection, report
+> compression, log-statement index, `match_log` tool, printing-site probe
+> with one hop back), a `dependencies` tool, a required `module` and
+> per-step `log_event` in the submission, and a ranked list of code
+> regions. `--no-log-layer` is the ablation. The tool count below (8) is
+> the v2/v3 count; v4 has 10.
+
 Written 2026-11-01, before any evaluation run. Every design choice below
 is tied either to a measurement we made on this benchmark tonight, to a
 documented failure in the user's earlier agent, or to a published result.

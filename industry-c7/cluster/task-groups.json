@@ -1,0 +1,49 @@
+{
+ "t01": [
+  "hive"
+ ],
+ "t02": [
+  "hadoop"
+ ],
+ "t03": [
+  "hbase",
+  "keycloak"
+ ],
+ "t04": [
+  "geode",
+  "infinispan",
+  "pdfbox",
+  "sakai"
+ ],
+ "t05": [
+  "camel",
+  "cassandra",
+  "pig",
+  "wildfly"
+ ],
+ "t06": [
+  "mongodb"
+ ],
+ "t07": [
+  "ambari",
+  "beam"
+ ],
+ "t08": [
+  "kafka",
+  "mariadb",
+  "qt",
+  "solr"
+ ],
+ "t09": [
+  "drill",
+  "ignite",
+  "impala",
+  "spark"
+ ],
+ "t10": [
+  "derby",
+  "flink",
+  "groovy",
+  "phoenix"
+ ]
+}

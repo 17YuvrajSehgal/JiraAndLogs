@@ -109,7 +109,7 @@ for sh in "${SHARDS[@]}"; do
   # the other seeds, since that is the work we always want next and it
   # needs no coordination between shards. Set it empty for the old way.
   FOLLOW_ON_SEEDS="${FOLLOW_ON_SEEDS-42 7 123}"
-  sbatch "${TEST[@]}" "${FLAGS[@]}" -t 24:00:00 --job-name="$NAME" \
+  sbatch "${TEST[@]}" "${FLAGS[@]}" -t "${WALL:-24:00:00}" --job-name="$NAME" \
     --export=ALL,SHARD="$sh",C7_PROJECTS="$PROJECTS",TP="$TP",MAXLEN=65536,SEED="$SEED",WORKERS="${WORKERS:-24}",FOLLOW_ON_SEEDS="$FOLLOW_ON_SEEDS" \
     "$JOB" 2>&1 | grep -v -E "^SBATCH (WARNING|:)|^ You have requested|^ need this amount"
 done
