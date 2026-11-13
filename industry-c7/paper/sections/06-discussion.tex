@@ -1,11 +1,11 @@
 \section{Discussion and Threats to Validity}
 \label{sec:discussion}
 
-\subsection{The three difficulties, measured}
+\subsection{Three difficulties, measured}
 \label{sec:discussion:difficulties}
 
-\textbf{Root cause beyond symptoms.} The challenge calls this the
-hardest part, and the benchmark agrees in a form that can be counted:
+\textbf{Root cause beyond symptoms.} This is the hardest part of the
+task, and the benchmark shows it in a form that can be counted:
 in \nHardPct{} of real reports no file the fix changed is named
 anywhere in the text, and a method that matches the report against the
 code it mentions scores zero there by construction. On those
@@ -15,9 +15,8 @@ no log line names. Incident memory does it statistically: a past fix
 points at code the present report never mentions. Reading the code does
 it causally: the agent judges whether a file creates the bad state or
 only reports it, and walks from a file that detects to the callers that
-could have caused. Neither is control-flow or data-flow analysis in the
-sense the challenge describes, and we do not claim it; the walk-back is
-one hop. At \hardFive{} the hard stratum is where future work should be
+could have caused. Neither is control-flow or data-flow analysis, and
+we do not claim it; the walk-back is one hop. At \hardFive{} the hard stratum is where future work should be
 judged, and it is not solved.
 
 \textbf{Noisy and incomplete logs.} Here the benchmark is kinder than
@@ -33,9 +32,9 @@ runtime bundles; a system fed production bundles should segment them by
 incident first, and our architecture assumes nothing that prevents it,
 because every signal consumes plain text.
 
-\textbf{Evidence-to-code semantic retrieval.} The challenge asks for a
-method that understands log and code semantics together, and our
-results say where that understanding has to sit. A small dense
+\textbf{Evidence-to-code semantic retrieval.} A method for this task
+has to understand log and code semantics together, and our results say
+where that understanding has to sit. A small dense
 retriever helps in the memory slot, where the task is comparing one
 report with another, and loses to full-text BM25 in the code slot on
 every one of the \nProjects{} projects, because matching a log line to

@@ -4,11 +4,10 @@
 When a production issue is reported, an engineer receives two things: a
 description of what went wrong, and logs. There is no failing test, no
 debugger session, and often no way to reproduce the problem. From this
-evidence alone the engineer must find the code that caused it. The
-challenge this paper answers asks for techniques that do this step
-automatically: given an issue report, logs and a source snapshot,
-produce the affected module, a ranked list of suspicious code regions,
-and the evidence that connects them.
+evidence alone the engineer must find the code that caused it. This
+paper is about doing that step automatically: given an issue report,
+its logs and a source snapshot, produce the affected module, a ranked
+list of suspicious code regions, and the evidence that connects them.
 
 The core difficulty is that logs show where a failure was
 \emph{detected}, not where it was \emph{caused}. Kafka issue KAFKA-6624

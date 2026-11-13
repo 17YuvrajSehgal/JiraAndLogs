@@ -44,7 +44,7 @@ function is one the fix changed, it reaches \regOne{} Acc@1 and
 \regFive{} Acc@5 on the \nRegion{} instances that have a gold
 function.
 
-The hard stratum is where the challenge puts the difficulty, and it is
+The hard stratum is where the difficulty of the task lies, and it is
 half the benchmark. On the \nEvalHard{} reports that name no faulty
 file, \sys{} reaches \hardOne{} Acc@1 and \hardFive{} Acc@5; on the easy
 half it reaches 83.3\% and 97.4\%. The retrieval layer, which has no
@@ -235,7 +235,7 @@ own regions.}
 \end{tabular}
 \end{table}
 
-The challenge asks for code regions, not files. Gold functions are
+Engineers need code regions, not files. Gold functions are
 derived mechanically: tree-sitter lists every function span in the
 snapshot, and a function is gold when its span overlaps a hunk of the
 fix diff; 93.9\% of instances yield at least one. \Cref{tab:functions}
@@ -290,8 +290,9 @@ leave the building, still has a pipeline with no GPU, no training and no
 network that puts a changed file in the top five for seven issues in
 ten.
 
-The challenge asks for joint log and code semantics, so we also measured
-what a small dense retriever buys inside the retrieval layer. On
+Log-to-code matching is often framed as a semantic retrieval problem,
+so we also measured what a small dense retriever buys inside the
+retrieval layer. On
 200-instance samples per project, replacing BM25 with bge-small
 embeddings in the content slot loses on every one of the \nProjects{}
 projects (58.4\% to 44.9\% mean Acc@5): matching a log line to code is

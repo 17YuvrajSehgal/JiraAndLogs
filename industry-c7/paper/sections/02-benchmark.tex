@@ -1,8 +1,8 @@
 \section{A Benchmark from Issues, Logs, and Fix Commits}
 \label{sec:benchmark}
 
-The challenge asks for evaluation on issue descriptions, logs, source
-code and ground-truth faulty code regions. Existing resources supply
+Evaluating this task needs issue descriptions, logs, source code and
+ground-truth faulty code regions together. Existing resources supply
 some of these but not the combination. Defects4J supplies failing
 tests, which is exactly the execution evidence missing when an issue is
 first reported~\cite{just2014defects4j}. Bench4BL pairs reports with
@@ -80,8 +80,8 @@ query length in characters, median / p95 & 902 / 6{,}577 \\
 The parent of the fix commit is a known-defective revision, not the
 revision deployed when the report was filed; the two differ by whatever
 landed in between. What we measure is therefore localization on a
-revision that contains the defect, which is the setting the challenge
-describes, and not a replay of the exact tree an engineer faced at
+revision that contains the defect, which is the setting this paper
+studies, and not a replay of the exact tree an engineer faced at
 triage. Report-time admissibility is enforced where we claim it: the
 incident memory of \cref{sec:approach:memory} admits nothing resolved
 after the report.
@@ -89,8 +89,8 @@ after the report.
 \subsection{Easy and hard instances}
 \label{sec:benchmark:strata}
 
-The challenge notes that logs often show where a failure was detected
-rather than where it originated. We make this measurable. An instance
+Logs often show where a failure was detected rather than where it
+originated. We make this measurable. An instance
 is \emph{easy} if the issue text names at least one gold file, for
 example in a pasted stack trace, and \emph{hard} otherwise: the report
 describes the failure, but no file the fix changed is named anywhere in

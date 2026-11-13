@@ -17,9 +17,9 @@ are code; orange steps are the model.}
 \sys{} runs on one general-purpose 27B open-weights model, self-hosted,
 at temperature zero with a fixed seed. Its inputs are the issue report
 with its logs, the code snapshot, and the project's incident memory
-behind the firewall of \cref{sec:approach:firewall}. Its outputs are the
-three the challenge asks for: the affected module, a ranked list of code
-regions (file and function), and a chain of steps from the reported
+behind the firewall of \cref{sec:approach:firewall}. Its outputs are
+the affected module, a ranked list of code regions (file and
+function), and a chain of steps from the reported
 symptom to the named cause, each step citing a log event from the
 report where one applies.
 
