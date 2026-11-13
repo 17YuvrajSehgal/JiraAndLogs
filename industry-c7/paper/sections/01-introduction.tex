@@ -1,154 +1,93 @@
 \section{Introduction}
 \label{sec:intro}
 
-\begin{figure*}[t]
-\centering
-\includegraphics[width=0.98\textwidth]{figures/research.pdf}
-\caption{How the study is built. Two public issue datasets and four git
-histories are joined and filtered into a benchmark of \nInstances{}
-incidents, each pairing a report and its logs with the code of that day
-and the files its fix later changed. Four families of localization
-method are then compared on one population under one protocol and one
-temporal firewall, and three checks test whether the result can be
-believed.}
-\label{fig:research}
-\end{figure*}
+When a production issue is reported, an engineer receives two things: a
+description of what went wrong, and logs. There is no failing test, no
+debugger session, and often no way to reproduce the problem. From this
+evidence alone the engineer must find the code that caused it. The
+challenge this paper answers asks for techniques that do this step
+automatically: given an issue report, logs and a source snapshot,
+produce the affected module, a ranked list of suspicious code regions,
+and the evidence that connects them.
 
-When a production issue is reported, an engineer typically receives two
-things: a natural-language description of what went wrong, and logs. There
-is no failing test, no debugger session, and often no way to reproduce the
-problem. From this evidence alone, the engineer must find the code that
-caused it. The challenge this paper answers calls for techniques that
-perform this step automatically: given an issue report, logs, and a source
-code snapshot, produce the affected module, a ranked list of suspicious
-code regions, and the evidence that connects them.
+The core difficulty is that logs show where a failure was
+\emph{detected}, not where it was \emph{caused}. Kafka issue KAFKA-6624
+reports that a disk is wrongly marked offline, and its stack trace
+points at \texttt{FileChannelImpl.force} and \texttt{FileRecords.flush},
+the code that hit a closed file channel. The fix landed in
+\texttt{LogManager.scala}, which allowed a log to be deleted while it
+was still being flushed. Every file the trace names is innocent, and a
+method that matches the report against the code it mentions, which is
+what an engineer grepping the codebase does, starts from the wrong
+files. In the benchmark we mined, \nHardPct{} of real reports name none
+of the files the fix later touched.
 
-The core difficulty is that logs show where a failure was \emph{detected},
-not where it was \emph{caused}. A real example from our benchmark makes
-this concrete. Kafka issue KAFKA-6624 reports that a disk is wrongly
-marked offline, and its stack trace points at
-\texttt{FileChannelImpl.force} and \texttt{FileRecords.flush}, the code
-that hit a closed file channel. The actual fix landed in
-\texttt{LogManager.scala}, which allowed a log to be deleted while it was
-still being flushed. Every file the trace names is innocent. Any method
-that works by matching the report against the code it mentions, which is
-what an engineer grepping the codebase does, starts from the wrong files.
-In our benchmark, \nHardPct{} of real reports name none of the files the
-fix later touched.
-
-Existing techniques approach this from two sides, and both stop short.
-Classical fault localization ranks suspicious code using failing tests or
+Existing techniques approach this from two sides and stop short.
+Classical fault localization ranks code using failing tests or
 coverage, execution evidence that does not exist at report
-time~\cite{just2014defects4j}. Recent agent-based variants retrieve over
-the codebase itself~\cite{rafi2024multiagent}, treating every issue as if
-it were the project's first. Log-based root cause analysis in cloud
-operations~\cite{wang2024rcagent} identifies the faulty service or
-component, but stops above the level of code regions.
+time~\cite{just2014defects4j,rafi2024multiagent}. Log-based root cause
+analysis in cloud operations identifies the faulty service or
+component but stops above the level of code~\cite{wang2024rcagent}.
+Agents that localize from an issue alone exist, but they are built and
+evaluated on Python repositories~\cite{chen2025locagent,jiang2025cosil},
+and they treat every issue as if it were the project's first. One source
+of evidence is missing from all of them: the project's own resolved
+history. Failures recur, and when an issue arrives, some past issue has
+often failed in a similar way and its fix commit records exactly which
+files were at fault. We call this \emph{incident memory}, and every use
+of it here sits behind a temporal firewall that admits only incidents
+resolved before the report was filed.
 
-One source of evidence is missing from both: the project's own resolved
-history. Software failures recur. When an issue arrives, some past issue
-has often failed in a similar way, and its fix commit records exactly
-which files were at fault that time. We call this \emph{incident
-memory}. Past incidents whose reports resemble the new one vote for the
-files their fixes touched. A memory used carelessly would cheat, because
-the history of a project contains fixes that did not exist when the
-report was filed, so every use of it here sits behind a temporal
-firewall that admits only incidents resolved before that moment.
+Studying this required a benchmark that did not exist. We mined one
+from two public datasets and \nProjects{} git histories: \nInstances{}
+real incidents from Apache and Red Hat projects, MongoDB, MariaDB, Qt
+and Sakai, mainly in Java, Scala, C and C++, each pairing a report and
+its logs with
+the code at a revision where the defect is still present and the files
+the fix later changed. The ground truth is the set of non-test files
+the fix commit modified. That is a proxy for causation, not a
+measurement of it: a fix also touches files hardened against
+recurrence or refactored in passing, so where this paper says a system
+localizes the root cause, the evidence is that it ranks the files the
+fix changed.
 
-Studying any of this required a benchmark that was not available: issue
-reports with logs, the code at a revision where the defect is still
-present, and ground-truth faulty files. We mined one from two public datasets and
-project git histories. It contains \nInstances{} real incidents from four
-projects of four organizations (Apache Kafka, MariaDB, MongoDB, Qt),
-where the ground truth of each instance is the set of source files its
-fix commit modified, and the snapshot is the parent of that commit. The
-benchmark is stratified by exactly the difficulty the challenge names:
-whether the report names any faulty file.
+We then built \sys{}, an agent that keeps the retrieval and the
+incident memory as tools and reads code. Its first version was an agent
+of the usual shape, one model choosing freely among tools for up to
+fourteen turns. We ran it on all \nEval{} evaluation instances and
+measured what it does: it rarely stops on its own, it re-reads what it
+has read, it ranks the file it read last and most, and it never walks
+back from the code that detected a failure to the code that caused it.
+The version this paper presents moves those decisions into code. A
+fixed procedure gathers the evidence, and the model decides only three
+things inside it: which files to open, what role one file plays, and
+the order of the files. On \nEval{} incidents \sys{} ranks a file the
+fix changed first for \accOne{} and in the top five for \accFive{},
+names the correct module for \modOne{}, and names a function the fix
+changed first for \regOne{}. Against the free loop on the same
+instances, the structure changes the file-level result by less than a
+point and lifts function-level accuracy by fourteen points.
 
-\textbf{What ``root-cause localization'' means here, and what it does
-not.} We use the term for the task the challenge names: given a report,
-its logs, and a snapshot, rank the source files that must be changed to
-resolve the issue. The ground truth is therefore the set of
-\emph{non-test files the fix commit modified}, which is a proxy for
-causation, not a measurement of it. A fix commit mixes four different
-things: the file that held the defect, a file changed so the failure is
-reported better, a file hardened to stop the fault recurring, and
-incidental refactoring carried along. To find out how much of the proxy
-is the first kind, we annotated \nAnnotated{} instances against a
-pre-registered rubric (\cref{sec:results:causal}). Across them
-\nCausalPct{} of fix-modified gold files are the defect site, and the
-share depends sharply on how large the fix is: \nCausalOne{} when the
-fix touches one file, falling to \nCausalEight{} at eight or more. The
-answer key is accurate for small fixes and increasingly diluted for
-large ones. We therefore report every headline number against
-fix-modified gold, re-score the systems against the annotated causal
-subset, and state both. Where this paper says a system localizes the
-root cause, the evidence is that it ranks the files the fix changed, and
-on the annotated subset that those files are predominantly the defect
-site. It is not evidence of a verified causal mechanism for each
-instance, and the title's ``root-cause'' is the challenge's own framing
-rather than a stronger claim than this paragraph supports.
-
-We then use the benchmark to compare four families of method on the same
-instances, under one protocol and one firewall: classic
-information-retrieval bug localization, lexical log-to-code retrieval
-fused with incident memory, a general-purpose open 27B model prompted
-with the report and the file tree, and that model used to re-rank
-retrieved candidates. Accuracy in the top five rises across the families
-from 18.0\% to 83.9\%. The more useful result is that no family
-dominates. Retrieval alone and the model alone solve different
-instances: retrieval is the only one of the two to succeed on 6.1\% of
-instances, the model alone on 21.1\%, and the union of their top-five
-lists reaches 89.2\% where each alone reaches 68.1\% and 83.2\%.
-
-That gap between what the parts find separately and what either finds
-alone is the opening this paper takes. We present \sys{}, an agent that
-keeps the retrieval and the incident memory as tools and adds tools that
-read code, resolve a symbol from a stack trace to the file that defines
-it, and consult past incidents behind the same firewall. \sys{} runs on
-the same 27B model used in the study, so what it adds is the
-architecture, not a larger model. Kafka issue KAFKA-7693 shows the
-pattern. The report is a crash on a negative sequence number, and
-retrieval returns nothing useful. \sys{} resolves the symbol in the
-trace, reads the code that produces that number, and ranks
-\texttt{TransactionManager.java} first, the file whose arithmetic
-creates the negative value. On 105 of the 375 hard instances it ranks the
-faulty file first where retrieval does not place it in the top five at
-all.
-
-This paper makes four contributions.
+This paper makes three contributions.
 \begin{itemize}
 \item \textbf{A benchmark} of \nInstances{} issue--log--code--fix
-  instances across four organizations, with a per-filter datasheet and a
-  per-project incident-memory pool, released for reuse
-  (\cref{sec:benchmark}).
-\item \textbf{A comparative study} of four families of localization
-  method on those instances, under one protocol and one temporal
-  firewall (\cref{sec:results}). It reports what each family achieves,
-  where each fails, and that they fail on different instances. It also
-  measures what the firewall is worth: the classic similar-report
-  signal, evaluated without report-time admissibility, overstates Acc@5
-  by 9\% to 43\% relative (\cref{sec:results:leakage}).
-\item \textbf{\sys{}}, an agent that turns the retrieval, the incident
-  memory, and the code itself into tools (\cref{sec:agent}). Evaluated
-  on the whole \nEval{}-instance split rather than a sample, it reaches
-  Acc@5 \accFive{} and Acc@1 \accOne{}, improving on every family in the
-  study and on the best combination of them, with the widest margins on
-  the reports that name no faulty file. Every prediction carries a
-  causal chain from symptom to named cause, and 99.7\% of the files
-  those explanations cite exist in the snapshot
-  (\cref{sec:results:explanations}). Its cost is reported next to its
-  accuracy.
-\item \textbf{Three validity checks} that a reviewer of an
-  LLM-based result should expect, each of which could have invalidated
-  the result and did not (\cref{sec:results:validity}). The model cannot
-  recall these public fixes from the issue key alone. Shuffling the
-  order of the retrieved candidates changes no outcome. Every baseline
-  is rescored on the exact instances the agent ran, because the
-  evaluation sample is easier than the full split.
+  instances across \nProjects{} projects in four main languages, stratified
+  by whether the report names any faulty file, with a per-project
+  incident-memory pool of \nMemoryPool{} resolved issues and a datasheet
+  for every filter (\cref{sec:benchmark}).
+\item \textbf{\sys{}}, a staged localization agent whose design is
+  derived from measurements of a free agent loop on \nEval{} runs, and
+  whose every decision is bounded and recorded (\cref{sec:agent}). It
+  returns the module, ranked file and function regions, and a causal
+  chain whose steps cite the report's log events.
+\item \textbf{An evaluation on the whole evaluation split}
+  (\cref{sec:results}): \sys{} against the free loop and the retrieval
+  layer on \nEval{} instances, and against two reimplemented published
+  agents and the same model used without tools on a \nSample-instance
+  sample, with the cost of every system and the run-to-run variation
+  of the agent measured rather than assumed.
 \end{itemize}
 
-The lexical parts of the system are deterministic, and the agent's tools
-are pure functions of the snapshot, so a recorded run replays to
-identical tool results. Every reported number traces to a result file
-through a released script.
+The retrieval layer is deterministic, every agent tool is a pure
+function of the snapshot, every run is recorded in full, and every
+number in this paper traces to a result file through a released script.

@@ -1,160 +1,146 @@
-\section{\sys{}: localization as an investigation}
+\section{\sys{}: a staged investigation}
 \label{sec:agent}
 
 \begin{figure*}[t]
 \centering
-\includegraphics[width=0.98\textwidth]{figures/agent.pdf}
-\caption{\sys{}. The report, the snapshot and the project's firewalled
-incident memory go in (left). One model call restates the symptom as the
-behaviour the code would use, and a deterministic step hands the agent
-its starting evidence rather than waiting to be asked for it. The agent
-then investigates with eight tools, each a pure function of the
-snapshot, for at most fourteen turns. It may only finish by submitting a
-ranked list in which every file carries the evidence that put it there.}
-\label{fig:agent}
+\includegraphics[width=0.98\textwidth]{figures/workflow.pdf}
+\caption{\sys{}. Code gathers the evidence and builds a candidate table
+(1, 2). The model then makes three kinds of decision, each in a bounded
+step with a fixed answer form: which files to open (3), what role one
+file plays (4, one file per step, the code on screen), and the order of
+the files (6, from the verdict cards only). Code walks back from files
+that only detect the failure (5) and checks the answer (7). Green steps
+are code; orange steps are the model.}
+\label{fig:workflow}
 \end{figure*}
 
-The comparative study leaves a specific gap. The retrieval layer and the
-model alone fail on different instances, and a perfect choice between
-their shortlists would reach 89.2\% where each alone reaches 68.1\%
-and 83.2\% (\cref{sec:results:study}). Fusion cannot claim that gap,
-because it can only reorder files the two already produced. Closing it
-needs a method that can look for evidence rather than rank a fixed list.
+\sys{} runs on one general-purpose 27B open-weights model, self-hosted,
+at temperature zero with a fixed seed. Its inputs are the issue report
+with its logs, the code snapshot, and the project's incident memory
+behind the firewall of \cref{sec:approach:firewall}. Its outputs are the
+three the challenge asks for: the affected module, a ranked list of code
+regions (file and function), and a chain of steps from the reported
+symptom to the named cause, each step citing a log event from the
+report where one applies.
 
-A second measurement says what that method should look for. We
-decomposed the plain model's misses on the evaluation split. In $73.2\%$
-of them the model had already selected the directory containing the
-faulty file and then chose the wrong file from it. Only $26.8\%$ were
-failures to search in the right place at all. The reason is structural:
-prompted with a file tree, the model sees path names and never a line of
-code. The useful addition is therefore evidence about candidates, not
-broader search.
+\subsection{What a free investigation loop does, measured}
+\label{sec:agent:loop}
 
-\sys{} is an agent built on that reading. It runs on the same 27B
-open-weights model used in the study, self-hosted on one GPU, at
-temperature zero with a fixed seed.
+The first version of \sys{} was an agent of the usual shape: one model,
+ten tools (search a symbol, search text, read code, list callers,
+recall incidents, match a log line, and so on), up to fourteen turns in
+any order, and a structured submission at the end. It is a strong
+system, and it is the baseline the staged version is compared with in
+\cref{sec:results:structure}. We ran it on all \nEval{} evaluation
+instances and recorded every call, then measured what the loop actually
+does. Six findings decided the design that follows.
 
-\subsection{The shape of a run}
+\emph{It does not stop.} 83.2\% of runs end only because the budget
+removed the tools; runs that stop on their own are right at rank one
+95.8\% of the time, forced ones 62.2\%. \emph{It re-reads.} 72.7\% of
+code reads go to a file already read. \emph{It searches too long.} A
+tool names a gold file on the first turn in 82.8\% of runs, and turns
+four to fourteen together add 5.1 points. \emph{It ranks by attention.}
+In 55.8\% of its failures the gold file is in the answer but not first;
+in 79.2\% of those it had read the gold file, and in 67.7\% the file it
+ranked first was simply the one it had read later, and on average more
+often (5.0 against 3.2 reads).
+\emph{It forgets.} At the answering call a median 55.7\% of all tool
+output has already been trimmed from the context. \emph{It skips.} It
+called the caller-lookup tool in 3.8\% of runs, and 890 of its failures
+had the gold file in the evidence it was handed and never opened it.
 
-One issue goes in and a ranked list of files comes out, through four
-stages.
+None of these is a prompt problem. Each is a consequence of letting the
+model decide the procedure, and each can be removed by moving that
+decision into code.
 
-\textbf{Preparation, without the model.} The retrieval layer produces
-its ranked candidates, as in \cref{sec:approach}. Symbols are parsed out
-of the report: stack frames first, then identifiers. Symbols that do not
-occur anywhere in this snapshot are dropped, which keeps the agent from
-spending turns resolving library names such as
-\texttt{NullPointerException}.
+\subsection{The staged workflow}
+\label{sec:agent:stages}
 
-\textbf{Restating the problem.} One model call rewrites the report as a
-description of the faulty \emph{behaviour} in the vocabulary the code
-would use, together with the identifiers and error strings it mentions.
-The raw report is symptom-shaped, so searching code with it tends to
-return the detection site. That restatement then drives a content search
-and a query into incident memory, both run before the agent starts.
+\Cref{fig:workflow} shows the result. The procedure is fixed; the model
+decides only inside it, three times, and every decision is written to
+the trace.
 
-\textbf{Investigation.} The model works with the tools below for at most
-fourteen turns. It averages $12.2$ model calls and $16.2$ tool calls per
-issue.
+\textbf{1. Gather (code).} The same evidence pass the free loop used.
+The logs in the report are grouped into events and labelled
+\texttt{E1}, \texttt{E2}, \ldots; for each event the code finds the
+statement that printed it and that statement's callers; every symbol in
+the report is resolved to the file that defines it; the retrieval layer
+of \cref{sec:approach} supplies its top twenty files; the incident
+memory is queried, behind the firewall, for similar past incidents and
+the files their fixes touched; a behaviour search and a title search run
+over file content.
 
-\textbf{Commitment.} The run ends when the model submits a ranked list.
-Every file in that list must carry the evidence that put it there; the
-submission is rejected by the tool schema otherwise. If the model has
-not submitted by the final turn, the submission tool is forced. All
-\nEval{} runs in our evaluation ended in a submission, with no errors.
+\textbf{2. Route and table (code).} The report is routed by what it
+contains: stack frames, else log lines that match a statement in the
+code, else prose. Every file any channel named goes into one candidate
+table of up to thirty rows, each with the reasons it is there
+(``declares \texttt{SequenceNumber}'', ``fixed in past incident
+KAFKA-5342'', ``prints log event E2''). The table is sorted by how many
+kinds of evidence point at a file.
 
-A deterministic backstop sits behind the result: if the agent returns
-fewer than ten files, the retrieval layer's ranking fills the remaining
-slots. It never reorders what the agent produced. An earlier design
-blended the two rankings instead, and that was measurably worse, because
-the lexical votes displaced correct answers the agent had ranked highly.
+\textbf{3. Shortlist (model, at most three calls).} The model sees the
+compressed report, the events and the table, may run at most two
+searches if the table clearly misses the described behaviour, and must
+answer with up to five paths to examine. Code keeps only paths that are
+in the table or that the model's own searches returned, and always adds
+the top two retrieval files and the route's lead file, whether or not
+the model picked them.
 
-\subsection{The tools}
+\textbf{4. Examine (model, one file per step, at most three calls
+each).} Each queued file is judged alone, in a fresh context that holds
+only the report and that file: the whole file when it fits 24{,}000
+characters, otherwise its most relevant functions whole, most relevant
+first, until the budget is full, plus the list of every function the
+file declares. The model may read another part of the same file, list a
+symbol's callers, or ask where a value is set, and must answer with a
+fixed-form verdict: the file's role (\emph{cause}: code here creates
+the bad state; \emph{detects}: code here only reports or checks a bad
+state made elsewhere; \emph{unrelated}), up to three function names
+copied from the list, and the line the verdict rests on. A function name
+the file does not contain is dropped, never repaired. At most eight
+files are examined per run.
 
-\begin{table}[t]
-\caption{What the agent can ask, and how often it asks. Usage is the
-mean number of calls per issue over the \nEval{} evaluation instances. Incident
-memory is also queried once for every issue before the loop begins, so
-it is consulted on every run regardless of the figure shown here.}
-\label{tab:tools}
-\centering
-\footnotesize
-\setlength{\tabcolsep}{4pt}
-\begin{tabular}{@{}llc@{}}
-\toprule
-tool & question it answers & uses \\
-\midrule
-\texttt{read\_code}        & what does this code actually do?      & 7.08 \\
-\texttt{search\_symbol}    & where is this defined, used, called?  & 3.18 \\
-\texttt{search\_text}      & which file's code matches this?       & 2.62 \\
-\texttt{note\_candidate}   & record a suspect and the evidence     & 2.31 \\
-\texttt{recall\_incidents} & which past fixes resemble this?       & 0.23 \\
-\texttt{read\_skeleton}    & what does this file declare?          & 0.14 \\
-\texttt{list\_dir}         & what is in this directory?            & 0.07 \\
-\texttt{callers\_of}       & who calls this symbol?                & 0.01 \\
-\bottomrule
-\end{tabular}
-\end{table}
+\textbf{5. Walk back (code, once).} For every file judged to
+\emph{detect} the failure, code looks up the callers of the function the
+verdict named and sends up to two caller files back to step 4. The free
+loop almost never walked back on its own; here it is not asked to.
 
-\Cref{tab:tools} lists the tools and how heavily each is used. Two
-deserve explanation.
+\textbf{6. Rank (model, no tools).} The model sees the report and the
+verdict cards, never raw code or tool output, and answers with the order
+of the files, the affected module copied from the snapshot's module
+list, and the causal chain, each step naming a log event id or none.
+Code then applies one rule the prompt also states: files judged
+\emph{cause} come before \emph{detects}, and those before
+\emph{unrelated}, with the model's order kept inside each group.
 
-\texttt{search\_symbol} is the one that addresses the ranking failure
-directly. A stack frame names a symbol, not a file, and the file that
-raises an exception is usually not the file that caused it. The tool
-resolves a symbol across the whole snapshot into the places that define
-it and the places that use it, and returns the functions that call it in
-the same result. Those callers were originally a separate tool,
-\texttt{callers\_of}, and the model almost never chose it: one call in
-168 runs. The tool is still offered, and is still almost never chosen
-(0.01 calls per issue). What changed is that the same evidence now
-arrives inside a tool the model already uses three times per issue, so
-obtaining it no longer depends on the model asking.
+\textbf{7. Build regions and check (code).} Regions are built per file
+in rank order: the card's functions first (two for each of the first
+three files, one after that), then two functions ranked by keyword
+match against the report, marked as such. Every path must exist in the
+snapshot, every function in its file, the module in the module list, and
+every cited log event in the report; a citation that fails is removed.
+If fewer than ten files were examined, the retrieval ranking fills the
+remaining file slots without reordering what the agent produced.
 
-\texttt{recall\_incidents} carries the incident memory of
-\cref{sec:approach:memory} into the agent, behind the same four firewall
-rules. A past incident is admissible only if it is not the query itself,
-not in its duplicate cluster, does not share its fix commit, and was
-resolved before the query was filed. Votes are divided by the number of
-files that past fix touched, so a forty-file refactor cannot outweigh a
-one-file fix, and are weighted by recency.
-
-Every tool is a pure function of the snapshot, the memory pool and the
-query. None can reach the ground truth: the gold files of the instance
-under investigation are not in the memory pool, in any index, or on any
-path a tool will read.
-
-\subsection{What the model is not trusted to remember}
-
-Three behaviours matter to the design, and in an earlier version all
-three were written in the instructions and skipped in practice
-(\cref{sec:results:ablation}). Incident memory was consulted in $0.32$
-calls per run. The caller tool was used once in 168 runs. Evidence was
-recorded in under two thirds of runs.
-
-The current version does not instruct those behaviours, it builds them
-in. Incident memory is retrieved before the loop and handed to the model
-as evidence. Callers arrive inside the symbol lookup, whether or not the
-model thinks to ask for them. Evidence is a required field of the
-submission schema. The principle generalises
-beyond this system: if a result depends on the agent doing something,
-asking it in the prompt is not a mechanism, and the gap between asking
-and getting is large enough to measure.
+The whole run spends \calls{} model calls on average: one to restate
+the symptom in code vocabulary during gathering, up to three to
+shortlist, up to three per examined file, and one or two to rank. The
+model is never asked to remember what it read in an earlier step,
+because every step receives what it needs in full, and it is never
+asked to decide when to stop, because the procedure stops.
 
 \subsection{Reproducing an agent}
 \label{sec:agent:repro}
 
-An agent is not deterministic in the way the retrieval layer is, and we
-do not claim otherwise. Four things make its results checkable anyway.
-Every call uses temperature zero and a fixed seed. That bounds the
-variation but does not remove it: under continuous batching the
-composition of a batch depends on what else is in flight, which changes
-the order of floating-point reductions, so two runs of the same instance
-with the same seed can return different text. Re-running whole batches
-unchanged, we see a minority of rankings move. Every tool is a pure
-function of the snapshot, so a recorded run replays to identical tool
-results, and the only remaining source of variation is the model. Every
-run is persisted in full: the system prompt, each response, each tool
-call and its result, the recorded evidence, and the final ranking. The
-harness is restart-safe, so an interrupted batch resumes without
-repeating or losing work.
+Every tool is a pure function of the snapshot, the memory pool and the
+query, so a recorded run replays to identical tool results, and every
+run is persisted in full: each prompt, each response, each decision and
+its reason, the cards, and the final answer. What is not reproducible is
+the model: under continuous batching the composition of a batch changes
+the order of floating-point reductions, so two runs of one instance with
+the same seed can return different text. We measured that variation
+rather than assuming it away, and report it with the results
+(\cref{sec:results:negatives}). No tool can reach the ground truth: the
+gold files of the instance under investigation are not in the memory
+pool, in any index, or on any path a tool will read.

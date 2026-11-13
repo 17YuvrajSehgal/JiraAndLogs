@@ -1,884 +1,325 @@
 \section{Results}
 \label{sec:results}
 
-This section reports three things: what each family of method achieves
-on the same instances, what \sys{} adds on top of them, and the checks
-that decide whether those numbers can be believed.
+Every number in this section is from the \nProjects-project benchmark.
+The agents and the retrieval layer are scored on the full \nEval-instance
+evaluation split; the two reimplemented published agents, which cost
+more to run, are scored on a stratified \nSample-instance sample of that
+split (\cref{sec:setup:populations}). All systems in one table are
+scored on identical instances. Intervals are 95\% paired bootstrap
+intervals over instances; ``significant'' means the interval excludes
+zero. Every agent number comes from one run with one seed; what that
+costs in precision is measured in \cref{sec:results:negatives}.
 
-Every headline number is on the full \nEval{}-instance evaluation
-split, with every system scored on those same instances. The
-790-instance study population survives only for the experiments that
-need repeated runs rather than one, and wherever it is used it is named
-(\cref{sec:setup:populations}).
-Significance always means $q < 0.05$ after Benjamini--Hochberg
-correction within the test family (\cref{sec:setup:stats}).
-
-\begin{table}[t]
-\caption{The comparative study, and \sys{}. Accuracy is the percentage
-of instances with a faulty file in the top $K$; MRR is a mean
-reciprocal rank and stays on its own scale. All systems scored on the
-full \nEval{}-instance evaluation split ($2{,}278$ of them hard,
-meaning the report names no faulty file). The classic methods use the firewalled SimiScore of
-\cref{sec:setup:systems}; ``fusion'' is reciprocal-rank fusion of the
-retrieval layer with the model used alone. \sys{} and the two model rows
-use the same 27B model.}
-\label{tab:study}
+\begin{table*}[t]
+\caption{File, module and region localization on the full evaluation
+split (\nEval{} instances, \nEvalHard{} of them hard, meaning the report
+names no file the fix changed). The three systems share the same
+evidence pass; the two agents also share the model. Region metrics are
+on the \nRegion{} instances whose fix diff yields a gold function.
+Cost is per issue: model calls / prompt tokens.}
+\label{tab:headline}
 \centering
 \footnotesize
 \setlength{\tabcolsep}{4pt}
-\begin{tabular}{@{}lcccc@{}}
+\begin{tabular}{@{}lccc cc c c c@{}}
 \toprule
- & Acc@1 & Acc@5 & MRR & Acc@5 \\
- & (\%) & (\%) & & hard (\%) \\
+ & \multicolumn{3}{c}{file, all} & \multicolumn{2}{c}{file, hard} & module & region & cost \\
+\cmidrule(lr){2-4}\cmidrule(lr){5-6}
+ & Acc@1 & Acc@5 & MRR & Acc@1 & Acc@5 & Acc@1 & Acc@1 / Acc@5 & calls / tokens \\
 \midrule
-rVSM                        & 5.8  & 16.4 & .131 & 15.9 \\
-BugLocator                  & 9.2  & 25.7 & .181 & 25.1 \\
-BRTracer-style              & 28.3 & 47.3 & .381 & 18.6 \\
-\midrule
-retrieval + memory          & 40.8 & 68.6 & .528 & 48.3 \\
-model as re-ranker          & 60.3 & 77.2 & .674 & 59.5 \\
-model alone                 & 55.8 & 77.8 & .649 & 63.3 \\
-fusion (best non-agent)     & 53.7 & 80.5 & .652 & 66.4 \\
-\midrule
-\sys{}                      & \textbf{68.7} & \textbf{88.8} & \textbf{.773} & \textbf{80.3} \\
+\tablebody{headline}
 \bottomrule
 \end{tabular}
-\end{table}
+\end{table*}
+
+\subsection{What the agent reaches}
+\label{sec:results:headline}
+
+\Cref{tab:headline} gives the headline. On \nEval{} real incidents
+\sys{} ranks a file the fix changed first for \accOne{} of them and in
+the top five for \accFive{} (MRR \mrr). The module it names is correct
+for \modOne{}. At the region level, where a hit means the top-ranked
+function is one the fix changed, it reaches \regOne{} Acc@1 and
+\regFive{} Acc@5 on the \nRegion{} instances that have a gold
+function.
+
+The hard stratum is where the challenge puts the difficulty, and it is
+half the benchmark. On the \nEvalHard{} reports that name no faulty
+file, \sys{} reaches \hardOne{} Acc@1 and \hardFive{} Acc@5; on the easy
+half it reaches 83.3\% and 97.4\%. The retrieval layer, which has no
+model, reaches \retrOne{} and \retrFive{} overall and 20.3\% and
+\retrHardFive{} on the hard stratum. The agent's margin over it is
+$+27.4$ points of Acc@1 overall and $+32.5$ on the hard stratum: reading
+the code closes most of the gap that the report leaves open.
+
+By report type the picture is flat. Reports with a stack trace score
+66.5\% Acc@1, reports with log lines but no trace 66.6\%, and reports
+with prose only 70.8\%. A trace does not make the file easier to find at
+rank one, because the file it names is usually the one that detected the
+failure (\cref{sec:intro}). Across the \nProjects{} projects Acc@1 ranges
+from 54.3\% (Infinispan) to 79.6\% (Hadoop). The projects rank the same
+way for the retrieval layer (Spearman $\rho = 0.87$ between the two
+systems' per-project Acc@1), so project difficulty is largely a property
+of the reports rather than of the agent; the per-project table is in the
+artifact.
+
+\subsection{What the structure changes}
+\label{sec:results:structure}
+
+The free-loop agent of \cref{sec:agent:loop} ran on the same split with
+the same model and the same evidence pass. Paired on the 26{,}537
+instances both completed, the staged workflow changes the file-level
+result very little: Acc@1 $+0.7$ points $[+0.2, +1.2]$, Acc@5
+$-0.9$ $[-1.2, -0.6]$, MRR unchanged. Both differences are significant
+and both are small. The loop finds files as well as the workflow does.
+
+What the structure changes is everything below the file. Region Acc@1
+rises from \loopRegOne{} to \regOne{} ($+14.1$ points $[+13.5, +14.7]$)
+and region Acc@5 from \loopRegFive{} to \regFive{} ($+19.2$
+$[+18.6, +19.9]$). The loop names 3.2 regions per answer, one function
+per file; the workflow judges every examined file with its functions on
+screen and names up to three of them. The explanation changes in kind as well: in
+the loop's chains no step cites a log event, because nothing required
+it; in the workflow 57.4\% of chain steps cite one of the report's
+selected log events, and 85.7\% of those citations exist in the report
+word for word. The price is \calls{} model calls and \tokens{} prompt
+tokens per issue against the loop's 13.6 and 99k, and 286 against 199
+seconds of wall time at the same concurrency.
+
+By report type the file-level change is nil on reports with a trace
+($-0.3$ $[-1.3, +0.7]$) and small but positive on reports with logs only
+($+1.4$ $[+0.3, +2.4]$) and prose only ($+1.1$ $[+0.3, +1.8]$). On the
+hard stratum the workflow is $0.5$ points below the loop at Acc@1
+$[-1.3, +0.3]$, not significant, and $1.1$ below at Acc@5
+$[-1.7, -0.5]$, while its region Acc@1 is $+13.4$ $[+12.5, +14.2]$ and
+region Acc@5 $+20.9$ $[+19.9, +21.9]$ above.
+
+\subsection{Against reimplemented published agents}
+\label{sec:results:agents}
 
 \begin{table}[t]
-\caption{File-level results on the full evaluation split, given as
-Acc@5 (\%)\,/\,MRR. S1--S4 are the standalone signals of
-\cref{sec:approach}; rVSM, BugLocator, and BRTracer-style are the
-classic IRBL baselines of \cref{sec:setup:systems} (firewalled
-SimiScore); ``fused'' is unweighted fusion; ``cond.'' is
-regime-conditioned weighted fusion. These rows describe the retrieval
-layer across the whole benchmark; the agent comparison is
-\cref{tab:study}.}
-\label{tab:files}
+\caption{On the \nSample-instance stratified sample (\nSampleHard{}
+hard), all systems completed, all on the same 27B model. Hard columns
+are Acc@1 and Acc@5 on the hard stratum; cost is model calls and prompt
+tokens per issue. LocAgent-style and CoSIL-style are our
+reimplementations of the two published agents on our tree-sitter layer;
+``model alone'' is the two-stage Agentless procedure over the file
+tree; the re-ranker reorders the retrieval layer's top twenty
+(\cref{sec:setup:systems}).}
+\label{tab:agents}
 \centering
 \footnotesize
-\setlength{\tabcolsep}{2pt}
-\begin{tabular}{@{}lcccc@{}}
+\setlength{\tabcolsep}{3pt}
+\begin{tabular}{@{}lcccccc@{}}
 \toprule
- & Kafka & MariaDB & MongoDB & Qt \\
+system & Acc@1 & Acc@5 & hard@1 & hard@5 & calls & tokens \\
 \midrule
-S1 trace mentions & 65.8\,/\,.477 & 44.2\,/\,.327 & 34.7\,/\,.314 & 26.3\,/\,.226 \\
-S2 path           & 48.1\,/\,.379 & 25.9\,/\,.198 & 36.0\,/\,.259 & 26.6\,/\,.195 \\
-S3 content        & 70.8\,/\,.545 & 47.1\,/\,.330 & 64.3\,/\,.472 & 45.6\,/\,.350 \\
-S4 memory         & 48.3\,/\,.361 & 46.1\,/\,.342 & 38.0\,/\,.299 & 27.8\,/\,.211 \\
-\midrule
-rVSM              & 21.4\,/\,.192 & 23.9\,/\,.188 & 12.4\,/\,.095 & 12.2\,/\,.101 \\
-BugLocator        & 26.7\,/\,.199 & 30.0\,/\,.250 & 24.5\,/\,.151 & 16.6\,/\,.131 \\
-BRTracer-style    & 59.9\,/\,.479 & 51.6\,/\,.382 & 44.9\,/\,.375 & 31.6\,/\,.284 \\
-\midrule
-fused, no memory  & 76.7\,/\,.611 & 44.3\,/\,.342 & 52.2\,/\,.410 & 35.3\,/\,.292 \\
-fused, +memory    & 79.0\,/\,.600 & 56.2\,/\,.408 & 62.3\,/\,.496 & 46.3\,/\,.351 \\
-cond., no memory  & 79.2\,/\,.625 & 64.2\,/\,.479 & 69.0\,/\,.562 & 45.6\,/\,.350 \\
-retrieval layer & \textbf{79.4}\,/\,.625 & \textbf{65.8}\,/\,.479 & \textbf{69.8}\,/\,.550 & \textbf{54.1}\,/\,.408 \\
+\tablebody{agents}
 \bottomrule
 \end{tabular}
 \end{table}
 
-\subsection{What each family achieves, and where they differ}
-\label{sec:results:study}
+\Cref{tab:agents} compares \sys{} with two agents from the literature,
+reimplemented because neither released system runs on Java, Scala, C or
+C++ (\cref{sec:setup:systems}), and with the same model used without
+tools, alone and as a re-ranker of the retrieval layer's candidates.
+\sys{} leads every system on every column. Against LocAgent-style, the
+stronger published agent, the paired difference is $+0.072$ Acc@1
+$[+0.045, +0.100]$ and $+0.136$ Acc@5 $[+0.110, +0.162]$; on the hard
+stratum $+0.118$ $[+0.074, +0.164]$ and $+0.197$ $[+0.153, +0.240]$.
+Against CoSIL-style it is $+0.199$ and $+0.257$ overall and $+0.350$
+and $+0.443$ on the hard stratum. Against the model alone it is
+$+0.144$ Acc@1 $[+0.113, +0.176]$ and $+0.141$ Acc@5
+$[+0.116, +0.167]$; against the re-ranker, the strongest baseline at
+rank one, $+0.063$ $[+0.038, +0.088]$ and $+0.061$ $[+0.042, +0.082]$.
+Every difference is significant. Because all five systems share the
+model, what separates them is the architecture.
 
-\Cref{tab:study} gives the comparative study. Accuracy in the top five
-rises from 18.0\% for rVSM to 83.9\% for the best non-agent
-combination. Three things in that ordering are worth stating plainly.
+Cost reads the other way. The re-ranker reaches 0.608 Acc@1 for one
+model call and 2.8k prompt tokens per issue, a fortieth of what \sys{}
+spends, and it is the right choice where that budget is the
+constraint. LocAgent-style spends the same tokens as \sys{} (106k
+against 108k) for seven points less at rank one; CoSIL-style spends a
+quarter of the tokens and loses most of the hard stratum. The
+re-ranker's limit is its candidate set: it can only reorder the twenty
+files retrieval found, and on the hard stratum it falls to 0.393
+against \sys{}'s 0.522.
 
-First, the classic methods are far behind on this data. rVSM and
-BugLocator reach 18.0\% and 25.1\%. BRTracer-style reaches 48.1\%,
-and nearly all of its advantage comes from the stack-trace boost: on
-hard reports, which carry no usable file name in the trace, it falls to
-17.1\%, below BugLocator. A trace boost helps exactly when the trace
-already names the answer.
-
-Second, a general-purpose model prompted with the report and the file
-tree reaches 83.2\%, above the retrieval layer at 68.1\%. The model
-has never seen this repository's history and uses no retrieval, yet it
-is the stronger single system. On hard reports the gap is wider still,
-72.5\% against 42.4\%.
-
-Third, and most useful for what follows, neither of those two is
-redundant. On the study population they both succeed on 62.0\% of
-instances and both fail on 10.8\%. The retrieval layer is the only one
-of the two to succeed on 6.1\% of instances, and the model alone on
-21.1\%. Taking the union of their top-five lists would reach 89.2\%.
-They are reading different evidence: retrieval knows what this project
-has had to fix before, and the model can read the report as prose.
-Fusing them with reciprocal-rank fusion captures part of that, reaching
-83.9\%, but fusion can only reorder files the two already found.
-
-\subsection{\sys{}}
-\label{sec:results:agent}
-
-\sys{} is evaluated on the \emph{entire} evaluation split, all \nEval{}
-instances, not on a sample, and every system it is compared against is
-scored on exactly those instances. It reaches Acc@5 \accFive{} and
-Acc@1 \accOne{}, improving on every family in \cref{tab:study}. Against
-the model used alone it gains $+10.9$ points of Acc@5 $[+9.8, +12.2]$
-and $+12.9$ points of Acc@1 $[+11.5, +14.4]$. Against the best
-non-agent combination it gains $+8.3$ points of Acc@5 $[+7.3, +9.3]$
-and $+15.0$ points of Acc@1 $[+13.4, +16.5]$. Against the retrieval
-layer it gains $+20.1$ points of Acc@5 $[+18.9, +21.4]$. Every interval
-is a paired bootstrap on the same instances and every one excludes
-zero. Because \sys{} runs on the same 27B model as those two model
-rows, the difference is the architecture rather than the model.
-
-The shape of the gain is as informative as its size. The Acc@1 margin
-exceeds the Acc@5 margin in every comparison --- by $1.2\times$ against
-the model alone, $1.4\times$ against the retrieval layer and
-$1.8\times$ against the best non-agent combination. \sys{} is not
-mainly finding files the other systems miss; it is deciding which
-candidate is actually at fault. That is the behaviour the tools were
-built for, because the plain model, which sees only path names, loses
-most of its instances by choosing wrongly from a list that already
-contains the answer.
-
-It also passes the ceiling that fusion cannot. A perfect selector
-choosing among the ten files in the two systems' top-five lists would
-reach $86.5\%$; \sys{} reaches \accFive{} using five. It finds files
-that appear in neither system's shortlist, which is what having tools
-rather than a fixed candidate set buys.
-
-The margins are widest where the challenge locates the difficulty. On
-the $2{,}278$ hard reports --- those naming no gold file anywhere in
-their text --- \sys{} reaches $80.3\%$ Acc@5 and $59.5\%$ Acc@1,
-against $66.4\%$ and $34.6\%$ for the best non-agent combination
-($+13.9$ $[+12.1, +15.8]$ and $+24.9$ $[+22.6, +27.2]$) and $63.3\%$
-and $38.8\%$ for the model alone ($+16.9$ $[+14.9, +18.9]$ and $+20.7$
-$[+18.5, +23.0]$). The retrieval layer reaches $48.3\%$ there. On $530$
-of those $2{,}278$ instances \sys{} ranks the faulty file first when
-retrieval does not place it in the top five at all.
-
-\subsection{What the result costs}
-\label{sec:results:cost}
-
-Accuracy without cost is not an industrial result. \sys{} spends a mean
-of $12.1$ model calls and $94$k prompt tokens per issue, and makes
-$15.7$ tool calls. On a shared H100 a single issue takes $319$ seconds
-of wall time at the concurrency we ran. The retrieval layer, by
-contrast, answers from one CPU core with no model at all, in a median
-of $0.07$ to $0.41$ seconds per issue depending on the project, with the
-95th percentile under $0.7$ seconds.
-
-The gap is four orders of magnitude in compute for $+20.1$ points of
-Acc@5. Which
-side of that trade is right depends on the deployment. A team that can
-host a 27B model, or send reports and source to an external one, should
-prefer the agent. A team that cannot, because source code and production
-logs may not leave the building, still gets 68.6\% Acc@5 from a
-pipeline that needs no GPU, no training, and no network.
-
-\subsection{Three checks on the result}
-\label{sec:results:validity}
-
-An LLM result on public repositories invites three specific objections.
-We tested all three, and report them whether or not they were kind to
-us.
+Two observations about the ports. LocAgent-style called its graph
+traversal tool 0.09 times per run against 14.5 keyword searches, so the
+multi-hop traversal that distinguishes LocAgent in its own paper goes
+almost unused under this model. And both arms returned no parseable
+location for 8\% to 10\% of instances (LocAgent-style 8.2\%, CoSIL-style
+10.1\%). CoSIL's reflective alignment step exists to repair exactly that
+failure, so we expected CoSIL-style to show the lower rate; it does not,
+and we record that as a property of our port we cannot explain rather
+than as a finding about CoSIL. \sys{} returned an answer on every
+instance, because its submission is a schema the run cannot end
+without.
 
 \textbf{The model does not remember these fixes.} These are public
 projects, and the model may simply have memorised their histories. We
-asked it directly: given only an issue key such as KAFKA-6624 and no
-report text, which files did that fix touch? Over the 4{,}409
-evaluation instances it claimed to recall nothing and scored 0.0\%
-Acc@5. Given the issue title as well, it claimed recall for $0.5\%$ of
-instances and scored 0.3\%. For comparison, naming each project's most
-frequently fixed files without reading anything scores 3.6\% to
-18.1\%. The model performs an order of magnitude \emph{below} that
-prior, so it is not reciting these fixes; what it contributes is
-inference from the report and the code.
+asked it directly on the same \nSample{} instances: given only an issue
+key such as KAFKA-6624 and no report text, which files did that fix
+touch? It claimed to recall nothing and scored 0.0\% Acc@5. Given the
+issue title as well, it claimed recall for 2.1\% of instances and scored
+1.6\%. What the model-based systems contribute is inference from the
+report and the code, not recitation.
 
-\textbf{The agent does not simply echo the retrieval.} \sys{} is handed
-the retrieval layer's ranked candidates, so its accuracy could be an
-artifact of that ordering. Prior work found the initial ordering given
-to an LLM localizer can move Top-1 accuracy by up to 22
-points~\cite{rafi2024multiagent}. We re-ran 200 instances with the seed
-order randomised. Nothing moved: Acc@1 $+1.5$ points ($p = 0.59$),
-Acc@5 $-0.5$ points ($p = 0.87$), and on hard instances Acc@5 was identical. The
-agent's own answers did change: the overlap between its top five and the
-seed top five fell from $59.8\%$ to $20.5\%$. It selected different
-files and reached equally good answers, which is what using the tools
-rather than the list looks like.
-
-\textbf{Every system is scored on the same instances.} The study
-population is easier than the full evaluation split, and by a margin
-large enough to matter. Reciprocal-rank fusion scores 83.9\% here and
-80.4\% on the full split; the model alone scores 83.2\% here and
-77.5\% there. Had we compared the agent against baselines measured on
-the full split, it would have appeared roughly three points better than
-it is. Every number in \cref{tab:study} is recomputed on the 790
-instances the agent ran.
-
-\subsection{Which design decisions earned the result}
-\label{sec:results:ablation}
-
-An earlier version of the agent had the same tools but left three things
-to the model's discretion: consulting incident memory, walking back to a
-symbol's callers, and recording the evidence for a candidate. Measured
-over 168 instances, all three were skipped at scale. Incident memory was
-consulted in $0.32$ calls per run, the caller tool was used once in 168
-runs, and $37\%$ of runs recorded no evidence at all. Runs that recorded
-nothing were also the ones that failed: runs that missed the fault
-entirely recorded $0.8$ candidates on average, against $2.2$ for runs
-that placed it in the top five.
-
-The current version makes those three structural rather than
-instructed. Incident memory is retrieved before the loop and handed over
-as evidence, callers are returned inside the symbol lookup, and evidence
-is a required field of the submission, so a ranking cannot be submitted
-without it. Paired on the same 168 instances, this is worth $+7.7$
-points of Acc@1 ($q = 0.042$) and $+0.062$ MRR ($q = 0.010$) overall,
-and $+14.0$ points of Acc@1 ($q = 0.010$) and $+0.121$ MRR on hard
-instances. Acc@5 moves $+3.0$ points overall and $+7.0$ on hard
-instances, neither significant.
-The behavioural change is unambiguous: runs recording no evidence fell
-from $37\%$ to zero, and recorded evidence per run rose from $1.99$ to
-$5.77$, at an unchanged $16$ tool calls and $12$ model calls. The agent
-is not working harder. It is being given the memory it would otherwise
-skip, and made to justify what it ranks.
-
-\subsection{The retrieval layer across the whole benchmark}
+\subsection{The retrieval layer, and what memory is worth}
 \label{sec:results:retrieval}
 
-\sys{} uses the retrieval layer as one of its tools, so how that layer
-behaves on its own, across all \nInstances{} instances rather than the
-sample, is worth reporting. \Cref{tab:files} gives it.
+\begin{table}[t]
+\caption{The retrieval layer's signals and their fusion, pooled over the
+\nProjects{} projects on the evaluation split (\nEval{} instances;
+\nEvalHard{} hard). ``Conditioned'' is the regime-conditioned weighted
+fusion of \cref{sec:approach:fusion}.}
+\label{tab:retrieval}
+\centering
+\scriptsize
+\setlength{\tabcolsep}{2.5pt}
+\begin{tabular}{@{}lccc cc c@{}}
+\toprule
+ & \multicolumn{3}{c}{all} & \multicolumn{2}{c}{hard} & easy \\
+\cmidrule(lr){2-4}\cmidrule(lr){5-6}
+ & Acc@1 & Acc@5 & MRR & Acc@1 & Acc@5 & Acc@5 \\
+\midrule
+\tablebody{retrieval}
+\bottomrule
+\end{tabular}
+\end{table}
 
-The conditioned retrieval layer beats the per-project strongest
-classical baseline on all four projects: Acc@5 improves by $+8.6$
-points $[+5.5, +11.8]$ on Kafka, $+14.2$ $[+11.9, +16.7]$ on MariaDB,
-$+5.5$ $[+4.4, +6.6]$ on MongoDB, and $+8.4$ $[+5.3, +11.9]$
-on Qt, every test significant. Incident memory is what carries it on the
-hard stratum: adding memory to unweighted fusion lifts hard-stratum
-Acc@5 by $+20.9$ points on MariaDB, $+16.6$ on MongoDB, and $+15.3$ on
-Qt, and on MariaDB's hard instances memory alone (44.2\%) beats every
-other standalone signal including content retrieval (40.6\%). A project's
-resolved history can be a better guide to an unnamed faulty file than
-the content of the files themselves.
+\sys{} uses the retrieval layer as a tool, so \cref{tab:retrieval}
+reports how that layer behaves on its own across the whole benchmark.
+The signals divide cleanly by stratum. Trace mentions (S1) are the best
+single signal on easy reports and score exactly zero on hard ones, by
+definition. Content retrieval (S3) is the best standalone signal
+overall. Incident memory (S4) is the one signal whose accuracy barely
+moves between the strata (43.8\% against 40.2\% Acc@5), because a past
+fix can point at a file the present report never names, and on the hard
+stratum it is the second-best standalone signal.
 
-\Cref{tab:files} also shows unweighted fusion below S3 on MariaDB and
-MongoDB. The cause is dilution: equal weights give trace stem-matches,
-path votes, and the sparse first memory variant the same say as content
-retrieval. The conditioned weights recover by zeroing those signals in
-the regimes where they hurt.
+That is where memory earns its place. Adding it to unweighted fusion
+lifts hard-stratum Acc@5 from 26.4\% to 41.8\%; adding it to the
+conditioned fusion, which already down-weights the mention signals in
+the no-mention regime, lifts it from 46.5\% to 48.7\%. The increment is
+small once the weights are tuned per regime and large when they are
+not, which is the practical reading: memory is cheap insurance against
+a report that names nothing.
+
+The memory signal is evaluated behind the firewall of
+\cref{sec:approach:firewall}. Pooled over the projects, the
+future-reports rule alone removes \firewallPct{} of the candidate votes
+the index proposes, and the numbers above are what survives that cut.
+
+\subsection{Regions and modules}
+\label{sec:results:regions}
 
 \begin{table}[t]
-\caption{Module-level results on the evaluation split (challenge output
-(i)), in percent, with sanity baselines: expected accuracy of a RANDOM
-module ranking (analytical, using each snapshot's true module count) and
-of ranking modules by their defect FREQUENCY on the development split.}
+\caption{Function-level results on the evaluation instances whose fix
+diff yields at least one gold function. ``Oracle'' is the share whose
+gold function is anywhere in the candidate set; it is the ceiling of
+the BM25 stage and is not defined for the agents, which choose their
+own regions.}
+\label{tab:functions}
+\centering
+\scriptsize
+\setlength{\tabcolsep}{2.5pt}
+\begin{tabular}{@{}lcccccc@{}}
+\toprule
+ & eligible & Acc@1 & Acc@5 & Acc@10 & MRR & oracle \\
+\midrule
+\tablebody{functions}
+\bottomrule
+\end{tabular}
+\end{table}
+
+The challenge asks for code regions, not files. Gold functions are
+derived mechanically: tree-sitter lists every function span in the
+snapshot, and a function is gold when its span overlaps a hunk of the
+fix diff; 93.9\% of instances yield at least one. \Cref{tab:functions}
+compares three ways of getting there. A BM25 stage that ranks the
+function bodies in the retrieval layer's top ten files reaches 21.9\%
+Acc@1 with a 77.0\% ceiling, so its problem is ranking inside large
+files, not finding them. The free-loop agent reaches 39.8\%, and \sys{}
+53.8\%, because its \textsc{examine} step reads each candidate file
+whole, or in whole functions, and names the functions that hold the
+fault while the code is on screen. On the hard stratum \sys{} reaches
+39.2\% region Acc@1 and 55.2\% Acc@5.
+
+At the module level, where modules are the leading path components of a
+file at a fixed per-project depth, \sys{} names the correct module for
+\modOne{} of instances (85.5\% hard, 94.5\% easy), and the module of its
+top-ranked file is correct for 90.9\%. The retrieval layer's top file
+gives \moduleRetr{}. Module spaces are small and defects concentrate, so
+these numbers need the sanity baselines of \cref{tab:modules}: ranking
+the modules that exist in the snapshot by their defect frequency on the
+development split already reaches \moduleFreq{} Acc@1, and the agent's
+margin over that prior, 41 points, is what counts as localization.
+
+\begin{table}[t]
+\caption{Module level on the evaluation split, with two sanity
+baselines: the expected accuracy of a random module ranking
+(analytical, per snapshot) and ranking the snapshot's modules by their
+defect frequency on the development split.}
 \label{tab:modules}
 \centering
 \footnotesize
-\setlength{\tabcolsep}{3pt}
-\begin{tabular}{@{}lcccc@{}}
+\begin{tabular}{@{}lcc@{}}
 \toprule
- & Kafka & MariaDB & MongoDB & Qt \\
+ & Acc@1 & Acc@5 \\
 \midrule
-modules (median) & 8 & 78 & 35 & 116 \\
-\midrule
-random, Acc@1 (\%)     & 12.9 & 1.5  & 3.2  & 3.7 \\
-frequency, Acc@1 (\%)  & 36.1 & 61.2 & 76.5 & 33.4 \\
-S3 content, Acc@1 (\%) & 83.0 & 77.1 & 81.0 & 61.3 \\
-\retr{}, Acc@1 (\%) & \textbf{86.1} & \textbf{84.3} & \textbf{84.2} & \textbf{66.9} \\
-\midrule
-random, Acc@5 (\%)     & 61.0 & 7.7  & 15.5 & 9.9 \\
-frequency, Acc@5 (\%)  & 76.3 & 90.5 & 91.8 & 80.9 \\
-\retr{}, Acc@5 (\%) & \textbf{99.8} & \textbf{98.3} & \textbf{97.9} & \textbf{92.5} \\
+\tablebody{modules}
 \bottomrule
 \end{tabular}
 \end{table}
 
-The module level needs sanity baselines before any claim, because module
-spaces are small and defects concentrate in few modules
-(\cref{tab:modules}). Ranking modules by their past defect frequency
-alone reaches 76\% to 92\% Acc@5, and Kafka's eight-module space makes
-even a random top five succeed 61\% of the time. The informative number
-is therefore Acc@1: \retr{} places a correct module first for 66.9\% to
-86.1\% of instances, beating the frequency baseline by $+7.7$ points
-(MongoDB) to $+50.0$ (Kafka). At $K = 5$ \retr{} still clears the frequency baseline on
-every project, but the margin there partly reflects concentration rather
-than localization.
+\subsection{Cost, and a dense alternative}
+\label{sec:results:cost}
 
-\subsection{RQ2: What memory contributes}
-\label{sec:results:rq2}
+\sys{} spends \calls{} model calls and \tokens{} prompt tokens per
+issue and 286 seconds of wall time at 32 concurrent issues on one H100,
+which came to about six issues per minute per GPU over the run. The
+retrieval layer answers from one CPU core with no model, in a median of
+under 0.2 seconds per issue on every project. That
+is a gap of four orders of magnitude for $+27.4$ points of Acc@1, and
+which side of it is right depends on whether a team can host a 27B
+model. A team that cannot, because source and production logs may not
+leave the building, still has a pipeline with no GPU, no training and no
+network that puts a changed file in the top five for seven issues in
+ten.
 
-The memory signal's contribution depends on the stratum. On easy
-instances, where the report already names a gold file, trace mentions and
-content retrieval suffice and memory adds little. The decisive case is
-the hard stratum: the 2{,}278 evaluation instances whose reports name no
-gold file, where grep returns nothing useful by definition.
+The challenge asks for joint log and code semantics, so we also measured
+what a small dense retriever buys inside the retrieval layer. On
+200-instance samples per project, replacing BM25 with bge-small
+embeddings in the content slot loses on every one of the \nProjects{}
+projects (58.4\% to 44.9\% mean Acc@5): matching a log line to code is
+mostly identifier matching, and the embedder reads at most 1,400 words
+of a file where BM25 sees all of it. In the incident-memory slot, where
+the task is report-to-report similarity, dense retrieval wins on 22 of
+27 projects (37.6\% to 40.4\%) and lifts the full system from 67.7\% to
+69.1\% with weights tuned for the lexical signal. Semantics pays in the
+memory slot first; the code slot needs the model to read the code, which
+is what the agent does.
 
-Three results describe memory's value there. First, standalone: on
-MariaDB's hard instances, memory alone (Acc@5 44.2\%) beats every other
-standalone signal including content retrieval (40.6\%). A project's
-resolved history can be a better guide to unnamed faulty files than the
-content of the files themselves. Second, in unweighted fusion, adding
-memory lifts hard-stratum Acc@5 by $+20.9$ points on MariaDB, $+16.6$ on
-MongoDB, and $+15.3$ on Qt, all significant; on Kafka the direction is
-the same ($+8.1$) but the test misses significance ($q = 0.068$,
-$n = 124$, the smallest hard population). Third, in the fully tuned
-conditioned system, memory's increment is significant on three of four
-projects overall (MariaDB $+1.6$, MongoDB $+0.8$, Qt $+8.4$ points), and
-on Qt it is the entire margin over the strongest baseline: conditioning
-without memory only matches content retrieval there (45.6\%), while
-adding memory reaches 54.1\%. Qt is the project whose reports carry the
-least usable text (68\% hard, 24\% with any stack trace), and it is where
-memory matters most.
-
-\subsection{RQ3: When memory matters}
-\label{sec:results:rq3}
-
-The pattern across projects and strata supports one working rule: memory
-earns its place where textual evidence is weakest. Projects with few
-traces and many hard instances (Qt, MongoDB) gain significantly from
-memory even after conditioning; the project with the most trace-rich
-reports (Kafka, 28\% hard) gains the least. Within projects, the gains
-concentrate on the hard stratum. Two further observations support the
-same rule. The strict firewall blocks 67\% to 71\% of candidate memory
-votes as resolved after the query's creation, and the gains above are
-what survives that cut. And in three of four projects, memory's
-standalone accuracy is at its minimum in the earliest quarter of the
-evaluation period, when the project's admissible history is smallest. We
-do not claim a general scaling law; these are consistent observations on
-four projects.
-
-\subsection{What the firewall is worth}
-\label{sec:results:leakage}
-
-The firewall is the design decision this paper leans on most, so we
-measure what happens without it. The vehicle is classic SimiScore, which
-we run in two ways on identical instances. The firewalled run admits only
-reports an engineer could have found at query time, under the same four
-rules as our memory signal. The leaky run admits every fixed report in
-the corpus, which is what an evaluation gets when it mines history
-without checking resolution dates against the query.
-
-Leakage inflates SimiScore on every project. Leaky minus firewalled
-Acc@5 is $+4.4$ points on Kafka, $+3.1$ on MariaDB, $+5.8$ on MongoDB,
-and $+9.4$ on Qt, all significant. Relative to the firewalled score,
-that is an overstatement of 9\% to 43\%, largest on Qt, the project
-where similar-report evidence matters most. A per-rule decomposition
-shows where the leak lives: re-opening only the future-reports rule
-reproduces the leaky score almost exactly on three projects (Kafka
-36.8\% versus 36.8\%), while re-opening only the duplicate rule or the
-shared-fix-commit rule recovers nothing, because a future duplicate
-stays blocked by the future-reports rule. The dominant leak is reports
-that were resolved after the query was created. Inside full BugLocator
-the leak survives but diluted by the $\alpha$ blend: significant on
-Kafka and MariaDB ($+1.9$, $+1.4$ points), not on MongoDB and Qt.
-
-The firewall also does not explain our margin. Under the identical
-firewall, on the same admissible history, our memory signal S4 beats
-classic SimiScore on all four projects ($+16.0$, $+12.2$, $+10.4$,
-and $+5.9$ points of Acc@5, all significant). The two signals share the idea of
-past fixes voting for files; they differ in the similarity function and
-the vote weighting. The practical reading is simple: a deployed system
-only ever sees the firewalled number, so evaluations of similar-report
-signals that skip report-time admissibility overstate what a team will
-get.
-
-\subsection{From files to functions}
-\label{sec:results:functions}
-
-The challenge asks for code regions, so we add a second stage below the
-file level. Gold functions are derived mechanically: tree-sitter lists
-every function span in the snapshot, and a function is gold when its span
-overlaps a snapshot-side hunk of the fix diff. To keep line numbers
-exact we use only fix commits whose parent is the snapshot; later
-commits of multi-commit fixes are skipped and counted. This derivation
-yields at least one gold function for 87\% to 95\% of instances per
-project. The stage itself is deliberately simple: every function in
-the retrieval layer's top ten files becomes a candidate, and BM25 ranks the function
-bodies against the report text. Nothing is tuned.
-
-\begin{table}[t]
-\caption{Function-level results on eligible evaluation instances (a gold
-function is derivable from the fix diff), in percent except MRR. Oracle
-is the share whose gold function appears anywhere in the top-10-file
-candidate set, the ceiling the file stage imposes.}
-\label{tab:functions}
-\centering
-\footnotesize
-\setlength{\tabcolsep}{3pt}
-\begin{tabular}{@{}lcccc@{}}
-\toprule
- & Kafka & MariaDB & MongoDB & Qt \\
-\midrule
-eligible instances (\%) & 95.4 & 91.9 & 94.4 & 86.8 \\
-\midrule
-Acc@1 (\%)  & 24.0 & 13.2 & 25.8 & 14.0 \\
-Acc@5 (\%)  & 47.8 & 27.4 & 46.4 & 28.8 \\
-Acc@10 (\%) & 60.0 & 34.8 & 54.9 & 34.5 \\
-MRR         & .357 & .199 & .353 & .211 \\
-\midrule
-oracle (file stage, \%) & 85.6 & 71.8 & 74.2 & 57.6 \\
-\bottomrule
-\end{tabular}
-\end{table}
-
-\Cref{tab:functions} gives the results. A correct function ranks in the
-top five for 27\% to 48\% of eligible instances, from a report and logs
-alone. The oracle row separates the two bottlenecks. On Qt the file
-stage is the limit: the gold function reaches the candidate set for only
-58\% of instances, so no function ranker could pass that. On MariaDB the
-candidate set contains the gold function for 72\% of instances but
-Acc@5 is 0.27: its large C++ files hold hundreds of functions each, and
-ranking inside them is the open problem. \textbf{Two changes fix most of this, and only one of them is about
-ranking.} Both are free once \sys{} has run on the full split. First,
-take the candidate functions from \sys{}'s top ten files instead of the
-retrieval layer's. The file stage is far stronger (\accFive{} Acc@5
-against 68.6\%), and the oracle rises accordingly, from 73.7\% to
-88.8\% pooled over the 4{,}132 eligible evaluation instances --- but
-Acc@1 moves only $+1.9$ points $[+1.2, +2.7]$. BM25 over function bodies
-cannot exploit the better pool it is handed. Second, promote the
-functions the agent actually opened. \texttt{read\_code} takes a symbol,
-so a region the agent read is already identified the same way a
-candidate is, and ranking those first is $+5.4$ points $[+4.3, +6.5]$
-on the same candidate set. Together they take pooled function-level
-Acc@1 from 21.5\% to 28.8\% and Acc@5 from 40.4\% to 52.9\%, every
-comparison significant under a paired bootstrap on identical instances.
-
-The second signal is \emph{attention}, not relevance: it records that
-the agent looked at a function while forming its answer, and it leaks
-nothing, because \texttt{read\_code} targets are chosen from the report
-and the tools under the same firewall as everything else, while gold
-functions come from a fix diff the agent never sees. We still report
-this stage as a baseline rather than a solved component --- the ceiling
-is 88.8\%, not 100\%, and a function-level miss caused by a file-stage
-miss counts as a miss here --- but the open problem is narrower than it
-looked: the candidate set was never the main bottleneck, the ranker
-inside it was.
-
-\subsection{Do the explanations point at anything real?}
-\label{sec:results:explanations}
-
-The challenge asks for evidence connecting symptom, log event and code.
-\sys{} produces one for every instance, and an explanation that is never
-checked is a liability rather than a contribution. We check it two ways,
-neither of which needs a judge.
-
-\textbf{The chain is the same claim as the ranking.} All \nEval{}
-predictions carry a causal chain, because the submission schema requires
-one: between two and six ordered steps from symptom to named cause, each
-citing the tool result that shows it. Chains average $4.15$ steps.
-$69.6\%$ bind at least one step to a file path, and of those,
-\textbf{$99.9\%$ contain the system's own top-ranked file}. That number
-is what separates an explanation from decoration: a chain that named
-files unrelated to the answer would be text written to satisfy a schema.
-The remaining $30.4\%$ reason over the report and the code they read
-without binding a step to a path, which the schema permits and we do not
-count as a file-level claim.
-
-\textbf{What the explanations cite exists.} Three mechanical checks run
-against the exact snapshot the agent was given, with no model in the
-loop: does the cited file exist, does a quoted line number fall inside
-it, does a quoted identifier occur there.
-
-\begin{center}
-\begin{tabular}{lcc}
-\toprule
-check & count & rate \\
-\midrule
-cited paths that exist      & 15{,}050 / 15{,}098 & \textbf{99.68\%} \\
-quoted lines inside the file & 16{,}756 / 16{,}852 & \textbf{99.43\%} \\
-quoted symbols found there   & 20{,}857 / 25{,}005 & 83.41\% \\
-\bottomrule
-\end{tabular}
-\end{center}
-
-\noindent The path check is the strict one: a cited path absent from the
-snapshot is a file the agent could not have opened. Forty-eight of
-$15{,}098$ citations fail it, and they are not noise but plausible paths
-with the wrong directory --- the agent writes
-\texttt{src/widgets/widgets/qwidget.cpp} where Qt keeps that file under
-\texttt{src/widgets/kernel/}. \textbf{The symbol rate is a floor on
-groundedness, not an error rate.} Evidence legitimately names symbols
-declared elsewhere, so the $16.6\%$ not found in the cited file are
-overwhelmingly correct statements about other files, and we do not read
-them as hallucinations.
-
-\textbf{Where an independent causal label exists, the chains point at
-the defect.} On the annotated subset (\cref{sec:results:causal}), every
-chain that named a fix-modified file named one the annotation calls
-causal: $36$ of $36$. We give the count rather than the percentage,
-because the interval around $100\%$ at $n = 36$ is wide.
-
-None of that shows the reasoning is \emph{right}. An explanation can
-cite a file that exists, quote a line that exists, name a symbol that
-occurs there, and still give the wrong cause.
-
-\textbf{A judge on $400$ chains.} We sampled $400$ of the \nEval{}
-predictions and had a model grade each chain on a three-point rubric:
-\emph{sound} if every step follows from the one before it and from
-something the report or logs actually say, \emph{partial} if the
-direction is right but a step is asserted rather than supported, and
-\emph{unsound} if the chain does not connect the symptom to the named
-code. The judge never sees the gold files, whether the ranking was
-correct, or which system produced the chain; the prompt is rebuilt with
-the answer key replaced by a sentinel and the run refuses to start if
-the sentinel reaches it. Grades: $211$ sound, $188$ partial, $1$
-unsound.
-
-\textbf{Right answer, wrong reason.} Joining the grades to correctness
-\emph{after} judging, $64.5\%$ of correct top-1 predictions carry a
-sound chain, against $25.6\%$ of incorrect ones. The ratio is the useful
-part: a chain is about two and a half times more likely to be sound when
-the ranking is right, which is evidence the grades track something real
-rather than rewarding fluent prose. It also means roughly a third of our
-correct answers rest on reasoning a careful reader would not accept --
-the honest form of the "right answer, wrong reason" rate, and a caution
-against reading Acc@1 as understanding.
-
-\textbf{Two limits we do not paper over.} The judge used
-\emph{unsound} once in $400$ grades, so in practice it separates
-\emph{sound} from \emph{partial} and the third category carries almost
-no weight; a rubric a rater declines to use is a rubric that needs
-rewriting. And the judge is the same model family as the system under
-test, which is exactly the setting where self-preference is documented.
-A human pass over a $50$-instance calibration subset is pre-registered
-and prepared but not yet run, so these grades are uncalibrated and we
-report them as a single rater's opinion, not as measured correctness.
-
-\subsection{Against published localization agents}
-\label{sec:results:agentic}
-
-Every baseline so far is a retrieval pipeline or a non-agent LLM
-procedure. The obvious question is what an \emph{agent} from the
-literature achieves on the same reports and snapshots. We compare
-against two: LocAgent~\cite{chen2025locagent} and
-CoSIL~\cite{jiang2025cosil}.
-
-\textbf{Why not the challenge's own references.} The multi-agent
-localizer of Rafi et al.~\cite{rafi2024multiagent} ranks the methods
-covered by failing tests, ordered by a spectrum-based score. Failing
-tests and coverage do not exist when an issue is first reported, which
-is the premise of this challenge, so it cannot run on our inputs.
-RCAgent~\cite{wang2024rcagent} explains a failed cloud job in prose. It
-does not output a ranked list of code regions, so Acc@K and MRR do not
-apply, and its evaluation data are private. LocAgent and CoSIL take
-exactly our inputs, an issue and a repository, and return ranked code
-locations. They are the closest published agents we can run.
-
-\textbf{Neither released system runs on this benchmark, and the reason
-is not an adapter.} Both build their code graph with Python's \texttt{ast}
-module, and both say so: LocAgent states it focuses on Python
-repositories and leaves other languages to future work, and CoSIL lists
-generalisation to other languages as an open threat. Our four projects
-are Java, Scala, C and C++. The graph layer \emph{is} the contribution in
-both papers, so replacing it is the port. We therefore reimplement their
-search strategies on our tree-sitter layer and call the arms
-\textbf{LocAgent-style} and \textbf{CoSIL-style}, the same convention
-this paper already uses for BRTracer-style. They are not the published
-systems and we never claim they are.
-
-Held constant: the same served model, temperature zero, the same seed,
-the same snapshots, the same reports \emph{with} their logs, the same
-context window, and a turn budget at least as large as ours. Withheld
-from both, because neither design has it: incident memory, our phase-0
-pre-searches, and our structured submission schema. Both papers parse a
-free-text answer, and repairing that with our engineering would measure
-our harness rather than their design.
-
-\begin{table}[t]
-\centering
-\caption{Against reimplemented published agents, on the
-$1{,}000$-instance stratified sample all three systems completed.
-Wall time is per instance.}
-\label{tab:agentic}
-\small
-\begin{tabular}{@{}lccccc@{}}
-\toprule
-system & Acc@1 & Acc@5 & hard@1 & hard@5 & wall \\
-\midrule
-\sys{}          & \textbf{0.667} & \textbf{0.885} & \textbf{0.562} & \textbf{0.798} & 321\,s \\
-LocAgent-style  & 0.644 & 0.769 & 0.512 & 0.636 & \textbf{90\,s} \\
-CoSIL-style     & 0.505 & 0.660 & 0.298 & 0.440 & 94\,s \\
-\bottomrule
-\end{tabular}
-\end{table}
-
-On this sample LocAgent-style is the \emph{strongest} baseline we have,
-ahead of the LLM re-ranker that leads every other table in this paper.
-That makes the comparison harder for us, which is the point of running
-it.
-
-\cref{tab:agentic} gives the result, and the honest headline is mixed.
-\textbf{At Acc@1 against LocAgent-style the difference is not
-significant}: $+0.023$, paired bootstrap interval
-$[-0.004, +0.049]$. A reimplemented published agent matches us at
-rank one. Every other contrast favours \sys{} and is significant:
-Acc@5 $+0.116$ $[+0.093, +0.139]$, and on the hard stratum
-$+0.050$ $[+0.012, +0.091]$ at rank one and $+0.163$
-$[+0.124, +0.202]$ at rank five. The margin is widest exactly where the
-report does not name the answer, which is the regime this paper is
-about.
-
-\textbf{What it costs is the other half of the comparison.}
-LocAgent-style reaches its Acc@1 in $90$ seconds per instance against
-our $321$. For a practitioner choosing between them, a tie at rank one
-for a third of the wall time is a real argument, and we would rather
-state it than let a table of accuracies imply otherwise. What \sys{}
-buys for the extra time is the Acc@5 and hard-stratum margins above, and
-a causal chain that neither baseline produces.
-
-\textbf{Two observations about the ported agents.} First, LocAgent-style
-called its graph traversal tool $0.06$ times per run -- $60$ calls
-across $1{,}000$ instances, against $14.45$ keyword searches. Multi-hop
-traversal is the property LocAgent's own comparison table uses to
-separate it from prior graph-based methods, and under this model it goes
-almost unused. That is a fourth instance of a pattern this paper
-measures repeatedly: behaviour that is instructed but optional gets
-skipped. Second, both arms left a final answer with no parseable
-location in $3$--$4\%$ of instances ($3.2\%$ LocAgent-style, $3.9\%$
-CoSIL-style), far below the $13$--$22\%$ empty rate CoSIL reports for
-LocAgent under comparable open models. We expected CoSIL-style to show
-the \emph{lower} rate, since its reflective alignment step exists to
-repair unparseable output; it did not, and we record that as a property
-of our port we cannot explain rather than as a finding about CoSIL.
-
-\subsection{Noise robustness}
-\label{sec:results:noise}
-
-Our reports carry log excerpts a human already selected, and the
-challenge stresses noisy industrial bundles, so we measure how accuracy
-degrades as noise grows. For a seeded sample of 200 evaluation instances
-per project we perturb the report text and re-run the whole pipeline
-with the clean-tuned weights frozen, as a deployed system would face it.
-Three perturbations add lines at a noise ratio $r$ (added lines equal
-$r$ times the original line count, interleaved at random positions):
-\textsc{dup} repeats the report's own lines, \textsc{generic} adds
-template infrastructure chatter (timeouts, retries, garbage-collection
-pauses, health checks), and \textsc{foreign} adds lines sampled from
-other issues of the same project. A fourth, \textsc{drop}, deletes every
-line carrying a file mention or stack frame. Three more are shaped like
-production bundles rather than like synthetic dilution: \textsc{mixed}
-merges $k$ concurrent incidents of the project with each stream keeping
-its own order, \textsc{cascade} appends the downstream consequences of
-the fault naming a symbol the report contains, and \textsc{drop
-decisive} removes the single line whose tokens alone rank a gold file
-highest.
-
-\begin{table}[t]
-\caption{Acc@5 (\%) under noise (200-instance evaluation samples,
-clean-tuned weights frozen). Ratio $\times 2$ values sit between
-$\times 1$ and $\times 5$ on every project and are in the artifact.}
-\label{tab:noise}
-\centering
-\footnotesize
-\setlength{\tabcolsep}{3.5pt}
-\begin{tabular}{@{}lcccc@{}}
-\toprule
- & Kafka & MariaDB & MongoDB & Qt \\
-\midrule
-clean                      & 80.0 & 63.5 & 68.5 & 55.5 \\
-\midrule
-dup $\times 1$             & 79.0 & 59.0 & 69.0 & 54.5 \\
-dup $\times 5$             & 77.0 & 58.0 & 67.0 & 51.0 \\
-generic $\times 1$         & 78.0 & 58.5 & 63.5 & 47.0 \\
-generic $\times 5$         & 72.5 & 57.0 & 53.0 & 42.0 \\
-foreign $\times 1$         & 53.5 & 29.0 & 55.5 & 42.0 \\
-foreign $\times 5$         & 28.5 & 12.5 & 29.5 & 20.0 \\
-drop mentions              & 73.0 & 47.5 & 59.0 & 40.5 \\
-\midrule
-mixed $k = 2$              & 59.0 & 41.0 & 54.0 & 42.0 \\
-mixed $k = 5$              & 33.0 & 28.5 & 30.0 & 25.5 \\
-cascade $\times 1$         & 77.5 & 60.5 & 60.0 & 46.5 \\
-cascade $\times 5$         & 74.0 & 59.5 & 52.0 & 42.5 \\
-drop decisive line         & 74.0 & 60.5 & 58.0 & 52.0 \\
-\bottomrule
-\end{tabular}
-\end{table}
-
-\Cref{tab:noise} shows a clear split. Volume noise is almost free:
-quintupling the text with repeats costs at most $5.5$ points of Acc@5,
-because BM25's term-frequency saturation absorbs repetition. Generic
-chatter at ratio five costs $6.5$ to $13.5$ points on three projects and
-$15.5$ on MongoDB. Deleting every mention and stack frame, which forces
-every instance into the no-mention regime, costs $7$ to $16$ points: the
-remaining signals absorb most of the loss. The failure mode is content
-noise. Lines from other incidents cost up to half of clean accuracy
-already at a one-to-one ratio (MariaDB 63.5\% to 29.0\%) and cut
-every project to at most 44\% of clean at ratio five, because foreign
-lines carry other incidents' file mentions: they flip between 27\% and
-52\% of the sampled instances into the mention regime at ratio one,
-and up to 63\% at ratio five, with confidently wrong files, poisoning
-exactly the signal the easy stratum relies on.
-
-Three further arms model bundles the first four do not. \textsc{mixed}
-merges $k$ concurrent incidents of the same project while keeping each
-stream in its own order, which is what a shared log pipeline produces;
-\textsc{foreign} by contrast scatters other issues' lines at independent
-positions. Mixed is consistently the milder of the two at matched volume
-($+4.0$ to $+6.6$ points pooled), and the reason is lexical rather than
-positional: a bag-of-words retriever cannot read order, but drawing
-whole incidents introduces fewer distinct vocabularies than sampling
-lines from every issue in the pool. \textsc{cascade} appends the
-downstream consequences of the fault -- timeouts, retries, circuit
-breakers -- that name a symbol the report already contains. We expected
-on-topic noise to compete with the real evidence and cost more than
-unrelated noise; it does not, landing within $0.9$ points of generic
-noise at every ratio. On-topic lines add no new vocabulary, so they
-barely move a lexical score, while generic chatter introduces fresh
-terms that do. We report this as a negative result for the hypothesis
-that motivated the arm.
-
-\textsc{drop decisive} removes a single line: the one whose tokens
-alone rank a gold file highest. Pooled, that one line costs $5.8$ points
-of Acc@5, against $11.9$ for deleting every mention and frame.
-\textbf{One line is worth $48\%$ of the entire mention-and-frame
-channel.} Log
-evidence is concentrated rather than distributed, which cuts two ways:
-a bundle that truncates before one line, or a logger whose level hides
-it, costs half of what losing the whole channel costs, and our benchmark
-is easier than production partly because that line is reliably present.
-
-For deployment the reading is concrete: dedup and generic-noise
-filtering are not the hard part of preprocessing; separating interleaved
-incidents is, and a system that feeds our pipeline should segment logs
-by incident before matching.
-
-\subsection{Dense retrieval in the same slots}
-\label{sec:results:dense}
-
-The challenge asks for joint log and code semantics, so we measure what
-a dense retriever buys inside our architecture. On the same 200-instance
-samples, a small general-purpose embedding model (bge-small-en-v1.5,
-33M parameters, CPU) replaces BM25 in one slot at a time: the content
-slot (S3), a file represented by up to four 350-word chunks with
-max-pooled cosine, and the memory slot (S4), incidents retrieved by
-embedding cosine under the identical firewall. Swapped variants reuse
-the clean-tuned weights, which slightly favors the lexical incumbents.
-
-\begin{table}[t]
-\caption{Dense versus lexical in each slot: Acc@5 (\%) on the
-200-instance samples. ``cond.+dense S4'' swaps dense incident retrieval
-into the full conditioned system with frozen weights.}
-\label{tab:dense}
-\centering
-\footnotesize
-\setlength{\tabcolsep}{3pt}
-\begin{tabular}{@{}lcccc@{}}
-\toprule
- & Kafka & MariaDB & MongoDB & Qt \\
-\midrule
-S3 content, BM25   & 69.0 & 42.5 & 66.5 & 46.0 \\
-S3 content, dense  & 48.5 & 35.0 & 46.0 & 42.5 \\
-\midrule
-S4 memory, BM25    & 46.0 & 45.5 & 41.0 & 30.5 \\
-S4 memory, dense   & 53.0 & 51.5 & 42.5 & 29.0 \\
-\midrule
-\retr{} (sample) & 79.0 & 63.0 & 71.5 & 55.5 \\
-cond.\,+\,dense S4 & 79.5 & 67.5 & 72.0 & 55.5 \\
-\bottomrule
-\end{tabular}
-\end{table}
-
-\Cref{tab:dense} shows that semantics pays off in one slot and not the
-other. In the code slot, dense retrieval loses to full-text BM25 on
-every project, by up to $20.5$ points of Acc@5: the embedder reads at
-most 1,400
-words of a file while BM25 sees all of it, and matching a log line to
-code is largely identifier matching, which is lexical's strength. In
-the memory slot, where the task is report-to-report similarity, dense
-retrieval wins on three of four projects ($+7.0$ points Kafka, $+6.0$
-MariaDB, $+1.5$ MongoDB, $-1.5$ Qt), and swapping it into the full
-system lifts MariaDB by $+4.5$ points of Acc@5 even with weights tuned
-for the
-lexical signal. The practical reading: a mature embedding stack upgrades
-the incident-memory side first; the code side needs code-trained models
-with full-file coverage before it beats a well-fed BM25.
-
-\subsection{Honest negatives}
+\subsection{What goes against us}
 \label{sec:results:negatives}
 
-Three results go against us, and we report them. First, in
-\cref{tab:files}, adding memory to the conditioned system lowers MRR on
-MongoDB ($0.552$ versus $0.566$) while raising Acc@5: memory pulls extra
-gold files into the top five but sometimes above-ranks a wrong file, a
-reminder that its increment at full tuning is small outside Qt. Second,
-on Kafka's hard stratum, \retr{} is significantly below standalone
-content retrieval
-($-6.5$ points $[-11.3, -2.4]$): fusion still pays a price for mixing in
-signals that are weak on that stratum, and on the other three projects
-the same comparison is a statistical tie rather than a win. The loss is
-concentrated and diagnosable: exactly eight hard instances where content
-retrieval hits the top five and fusion misses, none in the other
-direction, and in every one of the eight a file that the trace signal
-matched by basename stem sits in the fused top five, displacing the gold
-file. Localizing
-files that no text names remains the open part of this problem. Third,
-on Qt's easy instances the conditioned system without memory collapses to
-content-retrieval level (65.4\% Acc@5 versus 90.4\% for unweighted
-fusion); Qt's development split holds few mention-regime instances, so
-its tuned weights are noisy. The full system recovers (91.3\%) because
-memory compensates, but small development splits make per-regime tuning
-fragile, which practitioners adopting this design should know.
-
-\subsection{Is the answer key the root cause?}
-\label{sec:results:causal}
-
-Every number above is scored against fix-modified files. That key is a
-proxy, and \cref{sec:intro} promised to measure how good a proxy it is.
-We drew \nAnnotated{} instances and labelled every gold file against a
-pre-registered rubric, assigning each one of six roles: the file held
-the defect (\emph{causal}), it was changed so the failure reports
-better (\emph{symptom-handling}), it was hardened against recurrence
-(\emph{preventive}), it was \emph{refactored} incidentally, it is a
-\emph{test}, or the evidence is \emph{unclear}. The labels, the rubric,
-and the conventions that emerged while applying it are released.
-
-\textbf{The annotator is a model, and we report it as one.} No second
-human was available, so the first pass is one model against the rubric
-and the second is a blind pass by a \emph{different} model family that
-saw the rubric and schema but neither the first pass nor its
-conventions. Agreement on causal-versus-not is Cohen's
-$\kappa = 0.885$, and the two raters produce an identical causal set on
-$136$ of \nAnnotated{} instances. On the full six-role scheme
-$\kappa = 0.793$. This is model--model agreement under a fixed rubric.
-It is evidence that the rubric is applied consistently; it is
-\emph{not} human reliability, and must not be read as such.
-
-\textbf{Half of the answer key is the defect site, and the half depends
-on fix size.} Across the \nAnnotated{} instances, \nCausalPct{} of
-fix-modified gold files are labelled causal ($171$ of $349$). The
-aggregate hides the result that matters:
-
-\begin{center}
-\begin{tabular}{lcccc}
-\toprule
-fix touches & 1 file & 2--3 & 4--7 & 8+ \\
-\midrule
-causal share of gold & \nCausalOne{} & 57\% & 30\% & \nCausalEight{} \\
-\bottomrule
-\end{tabular}
-\end{center}
-
-\noindent The curve falls monotonically under both raters. A one-file
-fix is almost always the defect itself; a large fix carries bundled
-hardening and refactoring that the key cannot distinguish. Fourteen of
-\nAnnotated{} instances have no causal file at all, and we report those
-rather than score them: ``no file in this fix is causal'' is a finding
-about the benchmark, not a ranking any system can get right.
-
-This interacts directly with \cref{sec:results:agent}. Accuracy
-\emph{rises} with fix size --- \sys{} scores $66.9\%$ Acc@1 where the
-fix touches one file and $73.2\%$ at eight or more --- because a larger
-fix offers more chances to hit one of its files. That is the answer key
-loosening, not better localization, and the two curves run in opposite
-directions. Large-fix instances are the easiest to score and the least
-trustworthy.
-
-\textbf{Re-scoring against causal gold changes little.} On the $84$
-annotated instances that exist in the study with the same gold and the
-same snapshot and have at least one causal file, every system was
-re-scored with the causal subset as the key. No system was re-run: the
-same stored ranking is simply graded against a stricter answer. Every
-system loses between $1.2$ and $4.8$ points of Acc@5, and \sys{} loses
-the least ($1.2$), with $95\%$ of its top-one hits landing on a file the
-annotation calls causal. Nine pairs of systems change order, and all
-nine were already statistically tied on both keys at $n = 84$, so this
-subset confirms nothing about the top of the table and we do not claim
-it does. The subset is also harder than the benchmark by construction,
-so its absolute numbers must not be compared with \cref{tab:study}.
+Five things. First, the staged workflow is below the free loop at
+Acc@5 by 0.9 points, significantly, and gains only 0.7 at Acc@1: at the
+file level the structure buys nothing, and a reader who wants files only
+should take the loop. Second, on reports with a stack trace the
+workflow is not better at all. Third, four of \nEval{} instances
+(0.015\%) ended without an answer in two runs each, because the final
+step's structured output failed to parse twice; they are scored as
+misses and not retried. Fourth, the port check for CoSIL-style fails,
+as stated above. Fifth, the agent is not deterministic and we report one
+seed. On 20 instances run twice with the same seed on the same machine,
+the top-ranked file agreed on 18 and the top ten on 12; across two
+machines with identical software and model checksums, the top file
+agreed on 14 to 15 and the module on all 20, and Acc@1 moved between
+0.65 and 0.70. A difference below about two points of Acc@1 between two
+agent runs should be read as noise, which is why the file-level
+differences in \cref{sec:results:structure} are reported as small even
+where they are significant.

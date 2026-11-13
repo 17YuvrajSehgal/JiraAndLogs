@@ -1,152 +1,67 @@
 \section{The Retrieval Layer: Log-to-Code Matching Plus Incident Memory}
 \label{sec:approach}
 
-This section describes the retrieval layer. It is one of the systems in
-the comparative study of \cref{sec:results:study}, and it is also the
-component \sys{} uses as a tool, so its construction matters twice.
+The retrieval layer is a system in its own right in
+\cref{sec:results:retrieval}, and it is the component \sys{} uses as a
+tool, so its construction matters twice. It is lexical and
+deterministic: no model, nothing trained, one CPU core, a tenth of a
+second per issue. Four signals each produce a ranked list over the
+snapshot's non-test source files, and a weighted fusion merges them.
 
-It follows one observation: software failures recur. When a new issue
-arrives, some past issue in the same project has often failed in a
-similar way, and its fix commit names the code that was at fault. The
-layer therefore combines two kinds of evidence. The first is
-\emph{log-to-code retrieval}: matching the report's text and logs against
-the snapshot's files. The second is \emph{incident memory}: retrieving
-similar resolved incidents and letting their fix commits vote for files.
-Below we describe both, the firewall that keeps the memory honest, and
-the fusion that produces a ranking.
+\textbf{Trace mentions (S1)} finds files named in the report itself:
+file names with an extension (\texttt{KafkaChannel.java},
+\texttt{row0mysql.cc:123}) and class names inside stack-trace frames,
+ranked by where they first appear, since reporters paste the decisive
+trace early. If no file is named, S1 falls back to bare file-name
+stems. S1 is deliberately simple because it doubles as a baseline: it
+is the automated form of an engineer grepping the report.
+\textbf{Path retrieval (S2)} scores every file path against the report
+with BM25 after splitting identifiers on case and underscores.
+\textbf{Content retrieval (S3)} scores file contents, where the
+identifiers, string literals and logging statements that produced the
+reported lines live. To avoid a global index that leaks across time, S3
+scores a per-instance pool, the files found by S1, the top 200 from S2
+and the files proposed by memory, with term statistics computed inside
+that pool only.
 
-Everything here is lexical and deterministic. No model is involved, and
-nothing is trained. That is what allows the layer to run on one CPU core
-in under a second per issue, and it is why it remains useful even where
-the agent cannot be deployed.
-
-\begin{figure*}[t]
-\centering
-\includegraphics[width=0.96\textwidth]{figures/architecture.pdf}
-\caption{The retrieval layer. An issue report with its logs and the snapshot
-feed four ranked signals (1); the project's incident memory feeds the
-memory vote through the temporal firewall (2); regime-conditioned
-weighted reciprocal rank fusion merges the four lists (3) into ranked
-files, the affected module, and per-file provenance (4).}
-\label{fig:arch}
-\end{figure*}
-
-\subsection{Overview}
-\label{sec:approach:overview}
-
-The input matches the challenge (\cref{fig:arch}): an issue report with
-its logs, and the code snapshot. The output is a ranked list of the snapshot's source
-files, the affected module derived from that list, and, for every ranked
-file, the evidence that put it there. Four signals each produce a ranked
-list over the snapshot's non-test source files. A weighted fusion merges
-the four lists into one. All components run on CPU, use no training, and
-are deterministic: the same input always yields the same ranking.
-
-\subsection{Log-to-code signals}
-\label{sec:approach:signals}
-
-\textbf{Trace mentions (S1).} The most direct evidence is a file named in
-the report itself. S1 finds explicit mentions: file names with an
-extension (\texttt{KafkaChannel.java}, \texttt{row0mysql.cc:123}) and
-class names inside stack-trace frames (\texttt{at
-org.apache.kafka...}). Mentioned files are ranked by where they first
-appear in the text, since reporters tend to paste the decisive trace
-early. If the text names no file explicitly, S1 falls back to counting
-occurrences of bare file-name stems. S1 is deliberately simple because it
-doubles as a baseline: it is the automated form of an engineer grepping
-the report.
-
-\textbf{Path retrieval (S2).} Path names carry meaning: a report about a
-stale SSL factory shares words with
-\texttt{security/ssl/SslFactory.java}. S2 scores every file path against
-the report with BM25, a standard lexical ranking function, after
-splitting identifiers on case and underscores.
-
-\textbf{Content retrieval (S3).} The strongest textual evidence sits
-inside the files: identifiers, string literals, and the logging
-statements that produced the reported log lines. Scoring every file's
-content in every snapshot would be slow and, worse, would tempt a global
-index that leaks information across time. S3 therefore scores a
-per-instance candidate pool: the files found by S1, the top 200 files
-from S2, and the files proposed by memory (below). Term statistics are
-computed inside this pool only, so nothing from any other snapshot or any
-later version influences the score.
-
-\subsection{The incident memory signal}
 \label{sec:approach:memory}
+\textbf{Incident memory (S4)} searches the project's pool
+(\cref{sec:benchmark:memory}) for past incidents whose summary and
+description read like the current report, with BM25 over an inverted
+index. The twenty most similar admissible incidents vote: an incident
+at similarity rank $r$ adds $1/r$ to every gold file of its own fix,
+provided the file still exists in the current snapshot. Unlike S1 to
+S3, S4 can point at a file that no log line and no trace ever names,
+which is what the hard stratum requires.
 
-\textbf{Memory retrieval and voting (S4).} S4 searches the project's
-memory pool (\cref{sec:benchmark:memory}) for past incidents whose
-summary and description read like the current report, again with BM25
-over an inverted index. The twenty most similar admissible incidents then
-vote: an incident at similarity rank $r$ adds $1/r$ to every gold file of
-its own fix commit, provided that file still exists in the current
-snapshot. The intuition is the on-call engineer's: ``this looks like the
-broker bug from last spring, and that one ended in
-\texttt{KafkaChannel}.'' Unlike S1 to S3, S4 can point at a file that no
-log line and no trace ever names, which is exactly what the hard stratum
-requires.
-
-\subsection{The memory firewall}
 \label{sec:approach:firewall}
+\textbf{The memory firewall.} A memory signal evaluated on historical
+data can cheat in ways that are invisible if they are not controlled.
+A past incident is excluded from voting on a query when (1) it is the
+query issue itself, (2) it belongs to the query's duplicate cluster,
+(3) it shares a fix commit with the query, or (4) it was resolved after
+the query was created. Rule 4 is strict and it costs real signal:
+pooled over the benchmark it removes \firewallPct{} of the candidate
+votes the index proposes. We accept the cost because the remaining
+signal is one a deployed system would truly have had. One residual
+channel remains and we state it: the index's corpus statistics are
+computed once over the full pool, so the text of excluded incidents
+still influences term weights; excluded incidents never vote.
 
-A memory signal evaluated on historical data can cheat in ways that are
-invisible if they are not controlled. We exclude a past incident from
-voting on a query when any of the following holds, and we count every
-exclusion:
-
-\begin{enumerate}
-\item it is the query issue itself;
-\item it belongs to the query's duplicate cluster, so it describes the
-  same incident under another key;
-\item it shares a fix commit with the query, which happens when one
-  commit closes several issues;
-\item it was resolved after the query was created. The memory an
-  engineer could actually search at report time contains only incidents
-  resolved before the report existed.
-\end{enumerate}
-
-Rule 4 is strict and it costs real signal: in our runs it blocks roughly
-two thirds of candidate votes. We accept the cost because the remaining
-signal is one a deployed system would truly have had.
-
-One residual channel remains, and we state it. The index that retrieves
-similar incidents computes its corpus statistics (inverse document
-frequency, average length) once over the full pool, so the text of
-excluded incidents still influences how terms are weighted. Excluded
-incidents never vote. The second-order effect cuts both ways: the
-direction of the term-weighting influence is unknown, while the slot
-effect is strictly against us, because S4 retrieves four times the
-voting depth of twenty before filtering and still ends with fifteen to
-seventeen admissible voters per query on average, fewer than a
-time-sliced index would return. Closing the channel entirely would
-require rebuilding the index for every query.
-
-\subsection{Fusion, modules, and evidence}
 \label{sec:approach:fusion}
-
-\textbf{Weighted fusion.} The four lists are merged by reciprocal rank
-fusion: file $f$ receives $\sum_i w_i / (60 + \mathrm{rank}_i(f))$, where
-$\mathrm{rank}_i(f)$ is $f$'s position in signal $i$'s list. The weights
-$w_i$ are the only tuned parameters in the retrieval layer.
-
-\textbf{Conditioning on an observable regime.} The right weights depend
-on the report. When the text names files explicitly, S1 is nearly always
-right and should dominate. When it names none, S1 is noise and memory
-matters more. The easy/hard strata of \cref{sec:benchmark:strata} cannot
-be used for this decision, because they are defined through the gold
-answer. We instead condition on a property that is visible at inference
-time: whether S1 found at least one explicit file mention. Weights are
-tuned separately for the two regimes, by grid search over
-$\{0, 0.5, 1, 2\}$ per signal, on a development split only
-(\cref{sec:setup:protocol}). The ablation without memory is tuned the
-same way, so the comparison in \cref{sec:results} is fair to both sides.
-
-\textbf{Module and evidence outputs.} The affected module is read off the
-file ranking: files collapse to their leading path components (one to
-three, fixed per project since two of the four keep all code under
-\texttt{src/}), and a module's rank is the rank of its first file. For
-the explanation output, every ranked file carries its provenance: which
-signals ranked it, the matching log lines or mentions for S1 to S3, and
-for S4 the past incidents that voted for it with their issue keys. An
-engineer can follow these links directly to the prior fix.
+\textbf{Fusion, conditioned on an observable regime.} The four lists
+are merged by reciprocal rank fusion, file $f$ receiving
+$\sum_i w_i / (60 + \mathrm{rank}_i(f))$. The weights $w_i$ are the only
+tuned parameters. The right weights depend on the report: when the text
+names files, S1 is nearly always right and should dominate; when it
+names none, S1 is noise and memory matters more. The easy and hard
+strata cannot drive this choice, because they are defined through the
+gold answer, so we condition on a property visible at inference time,
+whether S1 found an explicit file mention, and tune the weights per
+regime by grid search over $\{0, 0.5, 1, 2\}$ on the development split
+only (\cref{sec:setup:protocol}). The variant without memory is tuned
+the same way, so the memory ablation compares two equally tuned
+systems. The affected module is read off the file ranking at a fixed
+per-project path depth, and every ranked file carries its provenance:
+the signals that ranked it, the matching mentions or terms, and for S4
+the keys of the past incidents that voted for it.

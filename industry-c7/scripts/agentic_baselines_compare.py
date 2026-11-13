@@ -59,7 +59,13 @@ def rows(f: Path) -> dict:
 
 
 def main() -> int:
-    ours = {r["id"]: r for r in agent_run_rows(AG)}
+    import argparse
+    ap = argparse.ArgumentParser(description=__doc__)
+    ap.add_argument("--ours", help="rows of the system under test, one "
+                    "file (default: the main-run glob of localize.py)")
+    args, _ = ap.parse_known_args()
+    ours = rows(Path(args.ours)) if args.ours \
+        else {r["id"]: r for r in agent_run_rows(AG)}
     arms = {a: rows(AG / f"agent-{a}-eval.jsonl") for a in ARMS}
     missing = [a for a, d in arms.items() if not d]
     if missing:
@@ -108,7 +114,7 @@ def main() -> int:
            "completed": {a: len(d) for a, d in arms.items()},
            "systems": {}, "vs_ours": {}}
 
-    for name, d in [("remember_v3", ours)] + [(a, arms[a]) for a in ARMS]:
+    for name, d in [("ours", ours)] + [(a, arms[a]) for a in ARMS]:
         cost = [d[i]["cost"] for i in ids]
         ent = {"acc@1": round(acc(d, ids, 1), 4),
                "acc@5": round(acc(d, ids, 5), 4),
@@ -118,7 +124,7 @@ def main() -> int:
                "wall_s": round(st.fmean(c["wall_s"] for c in cost), 1),
                "prompt_tokens": round(st.fmean(c["prompt_tokens"]
                                                for c in cost))}
-        if name != "remember_v3":
+        if name != "ours":
             ent["empty"] = sum(1 for i in ids if d[i].get("empty"))
             ent["empty_rate"] = round(ent["empty"] / len(ids), 4)
             tools = Counter(t for i in ids for t in d[i].get("tools_used") or [])
@@ -152,9 +158,9 @@ def main() -> int:
     hdr = f"{'system':22s}{'Acc@1':>8s}{'Acc@5':>8s}{'h@1':>7s}{'h@5':>7s}"
     print(hdr + f"{'calls':>8s}{'wall':>8s}{'empty':>7s}")
     print("-" * len(hdr + "        wall   empty"))
-    for name in ("remember_v3", "locagent", "cosil"):
+    for name in ("ours", "locagent", "cosil"):
         e = out["systems"][name]
-        lbl = "REMEMBER (ours)" if name == "remember_v3" else ARMS[name]
+        lbl = "REMEMBER (ours)" if name == "ours" else ARMS[name]
         print(f"{lbl:22s}{e['acc@1']:>8.3f}{e['acc@5']:>8.3f}"
               f"{e['hard_acc@1'] or 0:>7.3f}{e['hard_acc@5'] or 0:>7.3f}"
               f"{e['llm_calls']:>8.1f}{e['wall_s']:>7.0f}s"

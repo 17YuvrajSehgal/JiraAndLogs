@@ -1,52 +1,30 @@
 \section{Conclusion}
 \label{sec:conclusion}
 
-This paper answered the challenge by measuring what different methods
-can do with a production issue report, and then building the method that
-did it best.
+This paper answered the challenge with a benchmark and an agent, and
+measured both at a scale that leaves little room for sampling
+arguments. The benchmark pairs \nInstances{} real incidents from
+\nProjects{} projects with their logs, the code while the defect was
+present, and the files the fix changed, and half of its reports name
+no faulty file at all. \sys{} localizes those incidents by a fixed
+procedure in which the model decides only which files to open, what
+role each plays, and their order. On \nEval{} evaluation instances it
+puts a changed file first for \accOne{} and in the top five for
+\accFive{}, names the module for \modOne{} and the function for
+\regOne{}, and it does so for \calls{} model calls per issue.
 
-We first mined a benchmark that did not exist: \nInstances{} real
-incidents from four organizations, each pairing an issue report and its
-logs with the code as it stood at the time and the files the fix later
-changed, stratified by whether the report names any faulty file. On it
-we compared four families of method under one protocol and one temporal
-firewall. Accuracy in the top five rises from 18.0\% for classic
-information-retrieval localization to 83.9\% for the best combination
-of a retrieval pipeline and a general-purpose model. The more useful
-finding is that the retrieval and the model fail on different instances.
-Each solves cases the other misses, and the union of their shortlists
-reaches 89.2\%, which no reordering of their output can claim.
-
-\sys{} claims it by investigating instead of ranking. It keeps the
-retrieval and the firewalled incident memory as tools, and adds tools
-that read code, resolve a symbol from a stack trace to the file that
-defines it, and consult past incidents. On the whole \nEval{}-instance
-evaluation split and the same 27B model it reaches Acc@5 \accFive{} and
-Acc@1 \accOne{}, improving on every family in the study, with its
-widest margins on the reports that name no faulty file: $+13.9$ points
-of Acc@5 and $+24.9$ of Acc@1 over the best non-agent combination. The gain is concentrated in ranking rather than
-recall, which is what an engineer who opens files in order actually
-needs.
-
-Three results survive independently of which system a reader prefers.
-Removing the temporal firewall inflates the classic similar-report
-signal by 9\% to 43\%, so an evaluation that ignores report-time
-admissibility overstates what a deployed system will see. The model
-cannot recall these public fixes from an issue key, scoring below a
-defect-frequency prior, so its contribution is inference and not memory.
-And an agent skips what it is merely asked to do: making incident
-recall, caller lookup and evidence recording structural rather than
-instructed was worth $+14.0$ points of Acc@1 on hard instances, and
-raised the
-share of runs recording any evidence from 63\% to all of them.
-
-For practice the paper leaves two systems and a clear basis for choosing
-between them. A team that can host a 27B model should, and gains
-$+22.2$ points of Acc@5 for 12.2 model calls per issue. A team that
-cannot, or
-whose source and logs may not leave the building, still has a pipeline
-that answers from one CPU core in under a second and whose every ranked
-file carries a citation an engineer can check. Both need only what a
-team with an issue tracker and linked fix commits already has. The
-benchmark, both systems, the recorded agent runs, and a script that
-traces every number in this paper to its result file are released.
+Two results survive independently of which system a reader prefers.
+Structure does not find files better than a free agent loop with the
+same tools: the two tie at the file level on 26{,}537 paired instances.
+What structure buys is below the file, fourteen points of
+function-level accuracy and an explanation whose steps cite the
+report's own log events, because a file judged alone with its code on
+screen is judged by what it does rather than by how often it was read.
+And incident memory, admitted only when it would have existed at report
+time, is the one retrieval signal whose accuracy does not collapse when
+the report names nothing. A team that can host a 27B model should run
+the agent; a team that cannot still has a pipeline that answers from
+one CPU core in a tenth of a second and puts a changed file in the top
+five for seven issues in ten. The benchmark, both systems, every run
+transcript and the script that ties each number here to its result
+file are released.

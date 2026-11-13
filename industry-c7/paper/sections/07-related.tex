@@ -3,87 +3,62 @@
 
 \textbf{Localization that needs execution.} Spectrum-based and
 mutation-based fault localization rank code by how it behaves under
-failing and passing tests~\cite{just2014defects4j}. Recent agent-based
-variants keep that dependency, using coverage or a reproduction
-test~\cite{rafi2024multiagent,yu2025orcaloca}. The evidence they need
-does not exist when an issue is filed. A measurement on crash reports
-makes the point concretely: only 2 of 60 bugs had a fault-triggering
-test available at report time~\cite{rafi2025sbest}. Our setting
-excludes execution evidence by construction.
+failing and passing tests~\cite{just2014defects4j}, and recent
+agent-based variants keep that dependency, using coverage or a
+reproduction test~\cite{rafi2024multiagent,yu2025orcaloca}. The
+evidence they need does not exist when an issue is filed: on crash
+reports, only 2 of 60 bugs had a fault-triggering test available at
+report time~\cite{rafi2025sbest}. Our setting excludes execution
+evidence by construction.
 
-\textbf{Information-retrieval bug localization.} The BugLocator
-lineage ranks files by textual similarity to the report, combining a
-length-normalised vector-space score with SimiScore, a vote from
-similar past reports~\cite{zhou2012buglocator}; BRTracer adds stack-trace
-boosting and file segmentation~\cite{wong2014brtracer}; later work adds
-learned rankers~\cite{ye2014learning} and deep
-variants~\cite{niu2025deepirbl}. Bench4BL established the reproduction
-baseline for this family~\cite{lee2018bench4bl}, and BLAZE extends it
-across languages with dynamic chunking~\cite{chakraborty2025blaze}. We
-re-implement rVSM, BugLocator and a BRTracer-style method for all four
-of our languages and place them in the same study
-(\cref{tab:study}). Two of our results concern this family directly.
-Its similar-report vote is the same mechanism as our incident memory,
-which is why we measure what that vote is worth once report-time
-admissibility is enforced. And file segmentation, which helps the
-vector-space scorers it was designed for, measured worse than whole-file
-BM25 on our data, so we do not use it (\cref{sec:results:dense}).
+\textbf{Information-retrieval bug localization.} The BugLocator lineage
+ranks files by textual similarity to the report and adds SimiScore, a
+vote from similar past reports~\cite{zhou2012buglocator}; BRTracer adds
+stack-trace boosting~\cite{wong2014brtracer}; later work adds learned
+rankers~\cite{ye2014learning} and deep variants~\cite{niu2025deepirbl}.
+Bench4BL established the reproduction baseline~\cite{lee2018bench4bl},
+and BLAZE extends it across languages~\cite{chakraborty2025blaze}.
+SimiScore is the same mechanism as our incident memory, and our
+firewall is what that mechanism needs once report-time admissibility
+is taken seriously. Pathidea is the closest prior work on logs: it
+scores files using the traces and log lines in the report and
+reconstructs execution paths between log statements, on Java
+only~\cite{chen2022pathidea}; its log score informs our trace signal.
 
-\textbf{Logs as localization evidence.} Pathidea is the closest prior
-work: it scores files using the stack traces and log lines in the report
-and reconstructs execution paths between log statements to reach files
-that logged nothing~\cite{chen2022pathidea}. Its log score and its
-finding that gains track logging density inform our trace signal. Two
-differences matter. Its path reconstruction is built on Java-specific
-machinery, and three of our four projects are C or C++. And it does not
-use the project's resolved history, which is the signal our study finds
-the model cannot replicate.
-
-\textbf{LLM and agent localization.} Agentless showed that a simple
-two-stage procedure over the repository tree is a strong
-baseline~\cite{xia2025agentless}, and it is the design we adopt for the
-model-alone arm of our study. Agents improve on it by navigating
-structure: LocAgent over a code graph with an entity
+\textbf{LLM and agent localization.} Agentless showed that a two-stage
+procedure over the repository tree is a strong
+baseline~\cite{xia2025agentless}, and it is our model-alone arm. Agents
+navigate structure: LocAgent over a code graph with an entity
 index~\cite{chen2025locagent}, CoSIL over dynamically built call
 graphs~\cite{jiang2025cosil}, GenLoc by seeding an LLM with retrieval
-candidates and letting it explore~\cite{asad2026genloc}. \sys{} follows
-GenLoc's seed-then-explore shape and LocAgent's entity resolution. What
-it adds is the project's own resolved history as a tool behind a
-temporal firewall, and a design discipline these systems do not report
-on: we measure which instructed behaviours the model actually performs,
-and make the ones the result depends on structural rather than
-instructed (\cref{sec:results:ablation}). CoSIL's analysis of LLM
-localizer failure modes, in particular malformed tool arguments and
-hallucinated paths, matches what we saw and shaped our tool interface.
+candidates and letting it explore~\cite{asad2026genloc}. \sys{} shares
+GenLoc's seed-then-explore shape. What it adds is the project's own
+resolved history as a tool behind a temporal firewall, and a design
+discipline these systems do not report: we measured what a free loop
+does on \nEval{} runs and moved the decisions it gets wrong into code.
+CoSIL's analysis of LLM localizer failures, malformed tool arguments
+and hallucinated paths, matches what we saw and shaped our fixed
+answer forms.
 
 \textbf{Incident history in operations.} Retrieving similar past
 incidents is established practice in cloud operations. RCACopilot
 retrieves prior incidents by embedding similarity with time decay and
-reports that 93.8\% of recurring incidents reappear within 20
-days~\cite{chen2024rcacopilot}; its vote weighting informs ours. RCAgent
-performs tool-augmented root-cause analysis~\cite{wang2024rcagent}, and
-LLM-based recommendation of root causes and mitigations is deployed at
-scale~\cite{ahmed2023rootcause}. These systems identify a faulty service
-or produce a prose explanation. They stop above the level of source
-files, which is the step this paper takes.
+reports that most recurring incidents reappear within
+days~\cite{chen2024rcacopilot}; RCAgent performs tool-augmented
+root-cause analysis~\cite{wang2024rcagent}; LLM-based recommendation
+of root causes is deployed at scale~\cite{ahmed2023rootcause}. These
+systems identify a faulty service or produce prose and stop above the
+level of source files, which is the step this paper takes.
 
-\textbf{Benchmarks, leakage and contamination.} Our evaluation protocol
-is shaped by three findings. Benchmarks built from public repositories
-leak solutions: a third of SWE-bench instances were found to contain the
-fix in the issue text or comments~\cite{aleithan2024swebenchplus}, and
-models reproduce file paths for repositories they were trained on far
-better than for held-out ones~\cite{liang2025illusion}. Issue-commit
-link recovery inflates when future links are visible to the
-model~\cite{niu2026ablots}, which is the leak our firewall closes and
-measures. And localization accuracy drops sharply on data collected
-after a model's training cutoff~\cite{zhang2025mulocbench}, while
-time-aware rather than release-based evaluation changes which method
-appears best~\cite{ledel2021broccoli}. We therefore use time-based
-splits, a four-rule firewall, and a direct contamination probe
-(\cref{sec:results:validity}).
-
-\textbf{Industrial evaluation.} An evaluation of bug localization on a
-large robotics system found simple term-frequency methods competitive
-with transformer models and reported the practical constraints that
-dominate adoption~\cite{hall2026industrial}. Our cost reporting and our
-recommendation to retain a CPU-only fallback follow the same concern.
+\textbf{Benchmarks, leakage and contamination.} Benchmarks built from
+public repositories leak solutions~\cite{aleithan2024swebenchplus},
+models reproduce file paths better for repositories they were trained
+on~\cite{liang2025illusion}, issue-commit link recovery inflates when
+future links are visible~\cite{niu2026ablots}, localization accuracy
+drops on data collected after a model's training
+cutoff~\cite{zhang2025mulocbench}, and time-aware evaluation changes
+which method appears best~\cite{ledel2021broccoli}. We therefore use a
+time-based split and a four-rule firewall. An industrial evaluation of
+bug localization found simple term-frequency methods competitive and
+reported the constraints that dominate adoption~\cite{hall2026industrial};
+our cost reporting and our CPU-only fallback follow the same concern.

@@ -1,0 +1,122 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1780 530"
+     font-family="Helvetica, Arial, sans-serif">
+  <defs>
+    <marker id="m-green" viewBox="0 0 10 10" refX="7" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#3E9B5F"/></marker>
+  </defs>
+
+  <!-- ===== INPUT ===== -->
+  <rect x="20" y="195" width="150" height="150" rx="10" fill="#EEF1F6" stroke="#4B5563" stroke-width="2"/>
+  <text x="95" y="222" font-size="17" font-weight="bold" fill="#2F3A4A" text-anchor="middle">INPUT</text>
+  <text x="95" y="249" font-size="14" fill="#555" text-anchor="middle">issue report</text>
+  <text x="95" y="271" font-size="14" fill="#555" text-anchor="middle">with its logs</text>
+  <text x="95" y="293" font-size="14" fill="#555" text-anchor="middle">code snapshot</text>
+  <text x="95" y="315" font-size="14" fill="#555" text-anchor="middle">past incidents</text>
+  <text x="95" y="337" font-size="14" fill="#555" text-anchor="middle">(firewalled)</text>
+
+  <!-- ===== GROUP A: evidence (code) ===== -->
+  <rect x="210" y="46" width="426" height="444" rx="14" fill="#FDFDFB" stroke="#333" stroke-width="2.2" stroke-dasharray="9 6"/>
+  <rect x="287" y="30" width="272" height="32" rx="8" fill="#FFF" stroke="#333" stroke-width="2"/>
+  <text x="423" y="52" font-size="20" font-weight="bold" text-anchor="middle" fill="#222">1-2  Evidence (code)</text>
+
+  <rect x="226" y="129" width="394" height="156" rx="10" fill="#EAF6EE" stroke="#3E9B5F" stroke-width="2"/>
+  <circle cx="252" cy="149" r="12" fill="#3E9B5F"/>
+  <text x="252" y="154.5" font-size="15" font-weight="bold" fill="#FFF" text-anchor="middle">1</text>
+  <text x="272" y="155" font-size="17" font-weight="bold" fill="#246B40">Gather</text>
+  <text x="606" y="155" font-size="13" font-style="italic" fill="#246B40" text-anchor="end">code</text>
+  <text x="242" y="181" font-size="14" fill="#555">logs grouped into events E1..En</text>
+  <text x="242" y="203" font-size="14" fill="#555">code that printed each event, and its callers</text>
+  <text x="242" y="225" font-size="14" fill="#555">report symbols resolved to their files</text>
+  <text x="242" y="247" font-size="14" fill="#555">retrieval top-20; behaviour and title search</text>
+  <text x="242" y="269" font-size="14" fill="#555">similar past incidents fixed before the report</text>
+
+  <rect x="226" y="299" width="394" height="112" rx="10" fill="#EAF6EE" stroke="#3E9B5F" stroke-width="2"/>
+  <circle cx="252" cy="319" r="12" fill="#3E9B5F"/>
+  <text x="252" y="324.5" font-size="15" font-weight="bold" fill="#FFF" text-anchor="middle">2</text>
+  <text x="272" y="325" font-size="17" font-weight="bold" fill="#246B40">Route and table</text>
+  <text x="606" y="325" font-size="13" font-style="italic" fill="#246B40" text-anchor="end">code</text>
+  <text x="242" y="351" font-size="14" fill="#555">route: stack frames, matched log lines, prose</text>
+  <text x="242" y="373" font-size="14" fill="#555">up to 30 candidates, each with its reasons</text>
+  <text x="242" y="395" font-size="14" fill="#555">sorted by how many kinds of evidence agree</text>
+
+  <!-- ===== GROUP B: investigation ===== -->
+  <rect x="676" y="46" width="426" height="444" rx="14" fill="#FDFDFB" stroke="#333" stroke-width="2.2" stroke-dasharray="9 6"/>
+  <rect x="764" y="30" width="249" height="32" rx="8" fill="#FFF" stroke="#333" stroke-width="2"/>
+  <text x="889" y="52" font-size="20" font-weight="bold" text-anchor="middle" fill="#222">3-5  Investigation</text>
+
+  <rect x="700" y="66" width="378" height="134" rx="10" fill="#FDEFE6" stroke="#E8794A" stroke-width="2"/>
+  <circle cx="726" cy="86" r="12" fill="#E8794A"/>
+  <text x="726" y="91.5" font-size="15" font-weight="bold" fill="#FFF" text-anchor="middle">3</text>
+  <text x="746" y="92" font-size="17" font-weight="bold" fill="#A54B22">Shortlist</text>
+  <text x="1064" y="92" font-size="13" font-style="italic" fill="#A54B22" text-anchor="end">model, at most 3 calls</text>
+  <text x="716" y="118" font-size="14" fill="#555">sees the report, the events and the table</text>
+  <text x="716" y="140" font-size="14" fill="#555">may run at most two searches, then must pick</text>
+  <text x="716" y="162" font-size="14" fill="#555">answer: up to 5 files to open, and one reason</text>
+  <text x="716" y="184" font-size="14" fill="#555">code adds top-2 retrieval files + route lead</text>
+
+  <rect x="700" y="214" width="378" height="156" rx="10" fill="#FDEFE6" stroke="#E8794A" stroke-width="2"/>
+  <circle cx="726" cy="234" r="12" fill="#E8794A"/>
+  <text x="726" y="239.5" font-size="15" font-weight="bold" fill="#FFF" text-anchor="middle">4</text>
+  <text x="746" y="240" font-size="17" font-weight="bold" fill="#A54B22">Examine</text>
+  <text x="1064" y="240" font-size="13" font-style="italic" fill="#A54B22" text-anchor="end">model, at most 3 calls per file</text>
+  <text x="716" y="266" font-size="14" fill="#555">one file per step, fresh context; 8 files max</text>
+  <text x="716" y="288" font-size="14" fill="#555">whole file, or its most relevant functions</text>
+  <text x="716" y="310" font-size="14" fill="#555">tools: read_code, callers_of, data_flow_back</text>
+  <text x="716" y="332" font-size="14" fill="#555">verdict: cause / detects / unrelated</text>
+  <text x="716" y="354" font-size="14" fill="#555">quoted line; up to 3 functions from the list</text>
+
+  <rect x="700" y="384" width="378" height="90" rx="10" fill="#EAF6EE" stroke="#3E9B5F" stroke-width="2"/>
+  <circle cx="726" cy="404" r="12" fill="#3E9B5F"/>
+  <text x="726" y="409.5" font-size="15" font-weight="bold" fill="#FFF" text-anchor="middle">5</text>
+  <text x="746" y="410" font-size="17" font-weight="bold" fill="#246B40">Walk back</text>
+  <text x="1064" y="410" font-size="13" font-style="italic" fill="#246B40" text-anchor="end">code, once</text>
+  <text x="716" y="436" font-size="14" fill="#555">a 'detects' file sends up to 2 of its callers</text>
+  <text x="716" y="458" font-size="14" fill="#555">back to step 4; the free loop never did this</text>
+
+  <!-- walk-back loop: 5 -> 4 -->
+  <path d="M700,429 H688 V292 H697" fill="none" stroke="#3E9B5F" stroke-width="2.4" marker-end="url(#m-green)"/>
+
+  <!-- ===== GROUP C: answer ===== -->
+  <rect x="1142" y="46" width="426" height="444" rx="14" fill="#FDFDFB" stroke="#333" stroke-width="2.2" stroke-dasharray="9 6"/>
+  <rect x="1271" y="30" width="168" height="32" rx="8" fill="#FFF" stroke="#333" stroke-width="2"/>
+  <text x="1355" y="52" font-size="20" font-weight="bold" text-anchor="middle" fill="#222">6-7  Answer</text>
+
+  <rect x="1158" y="140" width="394" height="134" rx="10" fill="#FDEFE6" stroke="#E8794A" stroke-width="2"/>
+  <circle cx="1184" cy="160" r="12" fill="#E8794A"/>
+  <text x="1184" y="165.5" font-size="15" font-weight="bold" fill="#FFF" text-anchor="middle">6</text>
+  <text x="1204" y="166" font-size="17" font-weight="bold" fill="#A54B22">Rank</text>
+  <text x="1538" y="166" font-size="13" font-style="italic" fill="#A54B22" text-anchor="end">model, no tools</text>
+  <text x="1174" y="192" font-size="14" fill="#555">sees the report and the cards, never raw code</text>
+  <text x="1174" y="214" font-size="14" fill="#555">answer: file order, module (from the list),</text>
+  <text x="1174" y="236" font-size="14" fill="#555">and a causal chain citing log event ids</text>
+  <text x="1174" y="258" font-size="14" fill="#555">tier rule: cause, then detects, then unrelated</text>
+
+  <rect x="1158" y="288" width="394" height="112" rx="10" fill="#EAF6EE" stroke="#3E9B5F" stroke-width="2"/>
+  <circle cx="1184" cy="308" r="12" fill="#3E9B5F"/>
+  <text x="1184" y="313.5" font-size="15" font-weight="bold" fill="#FFF" text-anchor="middle">7</text>
+  <text x="1204" y="314" font-size="17" font-weight="bold" fill="#246B40">Build regions and check</text>
+  <text x="1538" y="314" font-size="13" font-style="italic" fill="#246B40" text-anchor="end">code</text>
+  <text x="1174" y="340" font-size="14" fill="#555">regions: card functions, then 2 keyword-ranked</text>
+  <text x="1174" y="362" font-size="14" fill="#555">paths, functions, module and events verified</text>
+  <text x="1174" y="384" font-size="14" fill="#555">retrieval ranking fills to ten, never reorders</text>
+
+  <!-- ===== OUTPUT ===== -->
+  <rect x="1608" y="195" width="150" height="150" rx="10" fill="#FFF8E4" stroke="#D9A520" stroke-width="2"/>
+  <text x="1683" y="222" font-size="17" font-weight="bold" fill="#8A6A10" text-anchor="middle">OUTPUT</text>
+  <text x="1683" y="249" font-size="14" fill="#555" text-anchor="middle">(i) module</text>
+  <text x="1683" y="271" font-size="14" fill="#555" text-anchor="middle">(ii) ranked</text>
+  <text x="1683" y="293" font-size="14" fill="#555" text-anchor="middle">code regions</text>
+  <text x="1683" y="315" font-size="14" fill="#555" text-anchor="middle">(iii) causal</text>
+  <text x="1683" y="337" font-size="14" fill="#555" text-anchor="middle">chain, full trace</text>
+
+  <!-- ===== main flow: fat chevrons in the gaps ===== -->
+  <polygon points="172,259 178,259 178,247 208,270 178,293 178,281 172,281" fill="#EAF2FB" stroke="#4A7FC1" stroke-width="2" stroke-linejoin="round"/>
+  <polygon points="638,259 644,259 644,247 674,270 644,293 644,281 638,281" fill="#EAF2FB" stroke="#4A7FC1" stroke-width="2" stroke-linejoin="round"/>
+  <polygon points="1104,259 1110,259 1110,247 1140,270 1110,293 1110,281 1104,281" fill="#EAF2FB" stroke="#4A7FC1" stroke-width="2" stroke-linejoin="round"/>
+  <polygon points="1570,259 1576,259 1576,247 1606,270 1576,293 1576,281 1570,281" fill="#EAF2FB" stroke="#4A7FC1" stroke-width="2" stroke-linejoin="round"/>
+
+  <!-- ===== legend ===== -->
+  <rect x="226" y="504" width="14" height="14" rx="3" fill="#EAF6EE" stroke="#3E9B5F" stroke-width="2"/>
+  <text x="248" y="516" font-size="14" fill="#444">code decides</text>
+  <rect x="380" y="504" width="14" height="14" rx="3" fill="#FDEFE6" stroke="#E8794A" stroke-width="2"/>
+  <text x="402" y="516" font-size="14" fill="#444">the model decides, in a bounded step with a fixed answer form; every decision is written to the trace</text>
+</svg>

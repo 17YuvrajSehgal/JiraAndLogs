@@ -137,12 +137,24 @@ def main() -> int:
                     choices=["a1", "a2", "rr", "cp", "a1d", "a2d"])
     ap.add_argument("--responses", help="stage-1 responses (for a2/a2d)")
     ap.add_argument("--limit", type=int, default=0)
+    ap.add_argument("--subset", help="JSON file with an 'ids' list of "
+                    "project:issue_key; build prompts for those only")
+    ap.add_argument("--out", help="output path (default data/llm/"
+                    "prompts-<stage>.jsonl); lets parallel builders "
+                    "write one part each")
     args = ap.parse_args()
     LLM.mkdir(parents=True, exist_ok=True)
     deid = args.stage.endswith("d")
     base = args.stage.rstrip("d")
+    out_path = Path(args.out) if args.out else LLM / f"prompts-{args.stage}.jsonl"
 
     items = ordered_instances()
+    if args.subset:
+        keep = set(json.load(open(args.subset, encoding="utf-8"))["ids"])
+        items = [it for it in items if f"{it[0]}:{it[1]['issue_key']}" in keep]
+        if len(items) != len(keep):
+            print(f"warning: {len(keep) - len(items)} subset ids are not in "
+                  "the population", file=sys.stderr)
     if deid:  # de-identified ablation runs on the 200/project sample only
         seen: dict[str, int] = defaultdict(int)
         keep = []
@@ -165,7 +177,7 @@ def main() -> int:
                        if base == "rr" and (OUT / f"funcs-{p}.pkl").exists()
                        else {}) for p in P}
     n_written = 0
-    with (LLM / f"prompts-{args.stage}.jsonl").open("w", encoding="utf-8") as f:
+    with out_path.open("w", encoding="utf-8") as f:
         for project, b, r in items:
             pid = f"{project}:{b['issue_key']}"
             rep = report_block(b["query_text"], deid)
@@ -268,9 +280,8 @@ def main() -> int:
     if base == "rr":
         for p in P:
             (OUT / f"funcs-{p}.pkl").write_bytes(pickle.dumps(fcache_by_p[p]))
-    size = (LLM / f"prompts-{args.stage}.jsonl").stat().st_size
-    print(f"wrote {n_written} prompts, {size / 1e6:.1f} MB -> "
-          f"{LLM / f'prompts-{args.stage}.jsonl'}")
+    size = out_path.stat().st_size
+    print(f"wrote {n_written} prompts, {size / 1e6:.1f} MB -> {out_path}")
     print(f"approx input tokens: {size / 4 / 1e6:.1f}M")
     return 0
 

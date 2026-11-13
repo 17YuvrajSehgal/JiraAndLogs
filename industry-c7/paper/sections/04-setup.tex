@@ -1,188 +1,102 @@
 \section{Evaluation Setup}
 \label{sec:setup}
 
-This section fixes the protocol: how the benchmark is split, which
-instances each experiment runs on, what is measured, which systems are
-compared, and how significance is decided.
-
-\subsection{Time-based split}
+\subsection{Split and populations}
 \label{sec:setup:protocol}
-
-Each project's instances are ordered by the time of their fix commit. The
-earliest 30\% form the development split, and the later 70\% form the
-evaluation split. All tuning happens on the development split. In
-\retr{} that means only the fusion weights of
-\cref{sec:approach:fusion}; \sys{} has no tuned parameters at all, and
-the classic baselines are tuned as described below. Every number
-reported in \cref{sec:results} comes from the evaluation split. We chose
-a time split rather than a random one because it mirrors deployment: a
-system is configured on the project's past and then meets the project's
-future. A random split would let instances from the future inform the
-configuration used on the past.
-
-The time split has a side effect worth recording, because any system that
-uses historical memory will meet it. The development split holds the
-oldest issues, and the oldest issues have the least history behind them.
-Tuned on that slice, the fusion weights undervalue memory relative to its
-worth on later data. We report this as a property of the protocol and
-keep the split anyway; the alternative, tuning on recent data and
-evaluating on older data, would be the deployment scenario backwards.
-
-\subsection{Two evaluation populations}
 \label{sec:setup:populations}
 
-Two populations carry the results, and no comparison mixes them.
+Each project's instances are ordered by the time of their fix commit.
+The earliest 30\% form the development split and the later 70\% the
+evaluation split. All tuning happens on the development split: in the
+retrieval layer that means the fusion weights, and \sys{} has no tuned
+parameters at all. We chose a time split rather than a random one
+because it mirrors deployment: a system is configured on the project's
+past and then meets its future. The split has a side effect any system
+with historical memory will meet: the development split holds the
+oldest issues, which have the least history behind them, so the tuned
+weights undervalue memory relative to its worth on later data. We keep
+the split anyway; the alternative is the deployment scenario backwards.
 
-The \emph{evaluation split} is the later 70\% of every project: 476,
-1{,}179, 2{,}434, and 320 instances for Kafka, MariaDB, MongoDB, and Qt,
-\nEval{} in total. It carries every measurement that describes the
-benchmark as a whole, including \cref{tab:files}, the firewall,
-function, noise, and module results, \textbf{and the headline agent
-result}: \sys{} is evaluated on all \nEval{} instances, and every system
-it is compared against is scored on exactly those instances.
-
-The \emph{study population} is a seeded sample of 200 instances per
-project, minus ten described below, leaving 790 instances, 375 of them
-hard. It survives for the experiments that need many runs rather than
-one: the dense-retrieval arm, the noise arms, and the agent ablations
-that compare successive agent designs against each other. Every system
-compared within it is rescored on exactly these 790.
-
-\textbf{How the sample was drawn, and when.} The draw is
-\texttt{random.sample} over the time-ordered evaluation split with seed
-$42$, taken \emph{before any system had been run}, so no instance could
-be selected for being one a system got right or wrong. The seed, the
-draw, and the resulting key list are in the released harness, and the
-draw is reproduced exactly rather than re-derived: filtering the
-benchmark before sampling would change the list length, hence the
-indices, hence the sample, so the code samples on the unfiltered list at
-the original split boundary and intersects with the scored set
-afterwards.
-
-\textbf{The sample is easier than the split it came from, and both
-numbers are reported.} It is close to balanced across projects at
-roughly 200 each, whereas the real split is MongoDB-heavy (55\%) and
-MariaDB-heavy (27\%), and MariaDB is the weakest project for every
-system. \sys{} scores $70.1\%$ Acc@1 on the 790 and \accOne{} on the
-full \nEval{}. Any figure quoted from the sample is therefore optimistic
-relative to the benchmark, which is why the headline moved to the full
-split and why a baseline measured on the other population would
-overstate the agent by roughly three points
-(\cref{sec:results:validity}).
-
-The ten removed instances are those whose ground truth consists entirely
-of test files, and they are part of a benchmark-wide exclusion we apply
-before any system is scored. The benchmark excludes test files from the
-gold set by a path and name rule (\cref{sec:benchmark:linkage}), and the
-same rule defines the candidate files a system may rank. Some projects
-use conventions the rule does not catch, among them Maven Failsafe's
-\texttt{src/it/} source root and its \texttt{*IT.java} naming. Where
-\emph{every} gold file escapes the rule, the gold set and the candidate
-pool are both test code, and a system scores by ranking tests rather
-than by localizing the code that holds the defect. That is not the task
-we claim to measure, so we drop those instances from the scored set
-while leaving the mined gold untouched, and we rescore every system on
-the reduced population so no comparison crosses populations.
-
-This removes 123 of the 6{,}437 instances (1.9\%), all MongoDB, and
-takes the evaluation split from 4{,}508 to 4{,}409. The excluded list is
-published with the benchmark. \textbf{The removal is conservative, and
-we measured the direction rather than asserting it}: those instances are
-\emph{rankable} and in fact easier than average, because the gold files
-sit inside the candidate pool. \retr{} scores 74.0\% Acc@5 on the 123
-removed instances against 68.6\% on the evaluation instances we keep, so
-dropping them lowers every reported score rather than raising it. No
-system moves by more than half a point and the ordering of
-\cref{tab:files} is unchanged.
+Two populations carry the results, and no comparison mixes them. The
+\emph{evaluation split} is the later 70\% of every project,
+\nEval{} instances, \nEvalHard{} of them hard. \sys{}, the free-loop
+agent and the retrieval layer are scored on all of it. The
+\emph{sample} is \nSample{} instances drawn from the evaluation split
+with a fixed seed before any agent had run, stratified to match the
+split's project mix and hard fraction (\nSampleHard{} hard against the
+split's 48\%). It carries the two reimplemented published agents and
+the model baselines, which were too costly to run on the whole split,
+and every system on it, \sys{} included, is scored on exactly those
+instances. The 101 benchmark instances whose gold consists entirely of
+test files are excluded from both populations before any system is
+scored (\cref{tab:funnel}); they are rankable and easier than average,
+so the exclusion lowers every score rather than raising it.
 
 \subsection{Metrics}
 \label{sec:setup:metrics}
 
-We report the challenge's metrics at the file level: Acc@K, the fraction
-of instances with at least one gold file in the top $K$; Recall@K, the
-average fraction of an instance's gold files found in the top $K$; and
-MRR, the mean reciprocal rank of the first gold file. We use
-$K \in \{1, 5, 10\}$ and treat Acc@5 as primary, since five files is a
-realistic number for an engineer to open. At the module level we report
-Acc@K and MRR for the module ranking defined in
-\cref{sec:approach:fusion}; the function-level stage of
-\cref{sec:results:functions} reuses the same metrics over function
-candidates.
+At the file level we report the challenge's metrics: Acc@K, the
+fraction of instances with at least one gold file in the top $K$, and
+MRR, the mean reciprocal rank of the first gold file, with
+$K \in \{1, 5\}$ and Acc@5 as the practical target, since five files is
+a realistic number for an engineer to open. At the module level a
+module is a file's leading path components at a fixed per-project
+depth, and Acc@1 asks whether the module the system names, or the
+module of its top file, contains a gold file. At the region level a
+candidate is a function, identified by file, name and start line, gold
+functions are those whose span overlaps a hunk of the fix diff, and
+Acc@K is computed on the instances for which at least one gold function
+is derivable.
 
 \subsection{Compared systems}
 \label{sec:setup:systems}
 
-Four families appear in \cref{tab:study}. All of them see the same
-input, the issue report with its logs and the code snapshot, and none
-of them sees a gold file, a memory vote, or a difficulty label.
+All systems see the same input, the issue report with its logs and the
+code snapshot, and none sees a gold file, a memory vote or a difficulty
+label. \textbf{The retrieval layer} is \cref{sec:approach}. \textbf{The
+free-loop agent} is \cref{sec:agent:loop}: the same model, evidence
+pass and final checks as \sys{}, with a free tool loop in between.
+\textbf{LocAgent-style} and \textbf{CoSIL-style} are reimplementations
+of the two published localization agents that take exactly our inputs,
+an issue and a repository, and return ranked
+locations~\cite{chen2025locagent,jiang2025cosil}. Neither released
+system runs on this benchmark, and the reason is not an adapter: both
+build their code graph with Python's \texttt{ast} module and say so,
+while our projects are mainly Java, Scala, C and C++. The graph layer
+is the contribution in both papers, so replacing it is the port; we
+reimplement their search strategies on our tree-sitter layer and name
+the arms accordingly, as this paper does for BRTracer-style methods.
+Held constant: the served model, temperature zero, the seed, the
+snapshots, the reports with their logs, the context window and a turn
+budget at least as large as ours. Withheld from both, because neither
+design has it: incident memory, our evidence pass and our structured
+submission. Both parse a free-text answer, and an instance where that
+answer names no file counts as a miss. \textbf{The model alone} is the
+two-stage procedure Agentless introduced~\cite{xia2025agentless}: one
+call picks up to fifteen directories from the snapshot's directory
+list, a second ranks ten files from the source files in those
+directories. \textbf{The model as re-ranker} is given the retrieval
+layer's top twenty candidates with their function names and returns a
+ranked ten. All model-based systems use one general-purpose
+open-weights model, Qwen3.8-27B, self-hosted on H100 GPUs at
+temperature zero with a fixed seed and thinking disabled, so what
+separates them is the architecture.
 
-\textbf{Classic IRBL.} We re-implement three, since the original tools
-are Java-only. \textbf{rVSM} scores every file of the full
-snapshot with a length-favoring tf--idf cosine. \textbf{BugLocator}
-combines rVSM with SimiScore, the 2012 similar-report
-signal~\cite{zhou2012buglocator} that later rankers also build
-on~\cite{ye2014learning}: every past fixed report votes for its
-fix's files with weight $\mathrm{sim}(q,b)/n_b$; the blend weight uses
-the replication-standard $\alpha = 0.3$, with
-$\alpha \in \{0.2, 0.3, 0.5\}$ tuned on the development split as a
-variant. \textbf{BRTracer-style} adds the stack-trace boost of
-BRTracer~\cite{wong2014brtracer} ($+1/r$ for the file at trace rank
-$r \le 10$); we omit the original's file segmentation and state so.
-Unless noted otherwise, their SimiScore runs under the SAME firewall as
-our memory signal, so the comparison is honest on both sides;
-\cref{sec:results:leakage} measures what happens without it.
-
-\textbf{The retrieval layer.} Each signal of \cref{sec:approach} also
-runs standalone as a baseline: trace mentions (S1), path retrieval
-(S2), content retrieval (S3), and memory alone (S4). S1 represents what
-an engineer gets by grepping the report. The layer itself is evaluated
-in four forms: unweighted fusion and regime-conditioned weighted
-fusion, each with and without the memory signal. The without-memory
-variants are tuned with the same grid and the same development split as
-the full system, so the memory ablation compares two equally tuned
-systems rather than a tuned system against a crippled one. The row
-named ``retrieval + memory'' in \cref{tab:study} is the conditioned
-form with memory.
-
-\textbf{The model.} We evaluate one general-purpose open-weights model,
-Qwen3.8-27B, self-hosted on a single H100 at temperature zero with a
-fixed seed. It appears in two roles. \emph{Used alone}, it localizes
-without any retrieval, in the two-stage form Agentless
-introduced~\cite{xia2025agentless}: a first call picks up to fifteen
-directories from the snapshot's directory list, and a second call ranks
-ten files from the source files inside those directories. \emph{Used as
-a re-ranker}, it is given \retr{}'s top twenty candidates, each shown
-with its path and up to twenty-five function and class names extracted
-with tree-sitter, and returns a ranked ten. The first role tests the
-model without this paper's retrieval; the second tests whether the
-retrieval and the model combine by reordering alone.
-
-\textbf{Combination and agent.} ``Fusion'' is reciprocal rank fusion
-($k = 60$) of \retr{}'s ranking with the model-alone ranking. It is the
-strongest system in the study that is not an agent, and it is the bar
-\sys{} has to clear. \sys{} itself is \cref{sec:agent}, and it runs on
-the same model, at the same temperature and seed, as the two model rows.
-
-\subsection{Statistical treatment}
+\subsection{Statistics, and what one run means}
 \label{sec:setup:stats}
 
-Every comparison in \cref{sec:results} is tested with a paired bootstrap
-over instances: 2{,}000 resamples, identical resample indices for all
-comparisons within a population, two-sided $p$-values from the bootstrap
-distribution, and 95\% confidence intervals. The paper reports four test
-families, each corrected with the Benjamini--Hochberg procedure over the
-whole family: 64 tests for the retrieval comparisons (four comparisons,
-two metrics, two populations, four projects), 96 for the baseline and
-leakage experiment of \cref{sec:results:leakage}, 42 for \sys{} against
-every other system in \cref{tab:study} (seven systems, three metrics,
-two populations), and 6 for the agent ablation of
-\cref{sec:results:ablation}. We call a result significant only when the
-corrected $q < 0.05$.
-
-The retrieval layer is deterministic from end to end: fixed seeds,
-greedy decisions, and no GPU training, so re-running it reproduces
-\cref{tab:files} and every retrieval number in this paper bit for bit.
-The model-based rows do not carry that guarantee, and we do not claim
-it; \cref{sec:agent:repro} states what replaces it. The released
-artifact contains every run transcript and a script that traces each
-reported number to the result file it came from.
+Every comparison is paired over instances and tested with a bootstrap
+of 2{,}000 resamples; we report the mean difference with its 95\%
+interval and call it significant when the interval excludes zero. We do
+not correct for multiple comparisons: the differences the paper builds
+on are far from zero, and the one that is not, the file-level
+difference between the two agents, is reported as small. Every agent
+number is from one run with one seed. The model is not deterministic
+under continuous batching even at temperature zero, so we measured the
+run-to-run variation directly and report it with the results; the
+retrieval layer is deterministic end to end and reproduces its tables
+bit for bit. The agent rows were produced on two sites, academic cluster
+nodes and a rented cloud machine, with identical software versions and
+model checksums, and the same twenty instances run on both sites agree
+on the module every time and on the top file in three cases out of four
+(\cref{sec:results:negatives}).
