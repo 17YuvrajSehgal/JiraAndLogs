@@ -67,14 +67,20 @@ not run.
 \subsection{Threats to validity}
 \label{sec:discussion:threats}
 
-\textbf{Construct.} The answer key is the set of files a fix modified,
-which mixes the defect site with files hardened or refactored in
-passing (\cref{sec:benchmark:memory}). Accuracy therefore rises with
-fix size for every system, because a larger fix offers more files to
-hit, and that is the key loosening rather than better localization. The
-module metric depends on a per-project depth fixed before evaluation.
-Gold functions are derived from diff hunks and miss a defect fixed by
-adding a function.
+\textbf{Construct.} The answer key is the set of non-test files a fix
+modified, a proxy for causation rather than a measurement of it. A
+commit subject can name an issue it does not fix, although reverts,
+merges and long multi-commit efforts are removed; a fix can touch files
+hardened or refactored in passing; and the file the developers chose
+to repair is occasionally not where the defect originated. With a
+median of one gold file per instance the effect is bounded but not
+zero, and it is the imperfection of real resolved histories, so a
+method that works here works on what projects actually record.
+Accuracy rises with fix size for every system, because a larger fix
+offers more files to hit, and that is the key loosening rather than
+better localization. The module metric depends on a per-project depth
+fixed before evaluation. Gold functions are derived from diff hunks and
+miss a defect fixed by adding a function.
 
 \textbf{Internal.} Every agent number is from one run with one seed,
 and the model is not deterministic: on the same instances the top file

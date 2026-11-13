@@ -119,14 +119,3 @@ their gold files. PJD's typed links also give duplicate clusters,
 groups of issues marked as duplicates of one another. Timestamps and
 clusters are what keep the memory honest during evaluation
 (\cref{sec:approach:firewall}).
-
-Mined gold is not perfect, and we state its known weaknesses. A commit
-subject can mention an issue it does not fix, although reverts, merges
-and long multi-commit efforts are removed. A fix can touch files beyond
-the faulty one, and the file a fix modifies is the place the developers
-chose to repair, which is occasionally not where the defect originated;
-with a median of one gold file per instance the effect is bounded but
-not zero, and the answer key is a proxy for causation, not a
-measurement of it. We accept these imperfections because they are the
-imperfections of real resolved histories: a method that works on this
-benchmark works on what projects actually record.
