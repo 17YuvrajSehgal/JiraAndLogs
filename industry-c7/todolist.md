@@ -616,6 +616,21 @@ switched off (`--no-log-layer`) so its value is an ablation, not a claim.
       Scheduler estimates at submission (`--test-only`): nibi at once, rorqual
       2026-11-11 02:36, fir 2026-11-12 17:14, trillium 2026-11-22.
       Commands: `wsl bash ~/c7_fleet.sh status | stage | verify | submit`.
+      **REPLACED 2026-11-10 16:33 by short workers.** None of the 20 jobs
+      started in 14 h (nibi estimate 11-17, rorqual 11-13 22:39, fir and
+      trillium none), so all 20 were cancelled while pending. Now queued:
+      42 queue-only workers (`WORKER=1`, `c7_submit_workers.sh`): rorqual
+      6x3h + 6x12h (16 cores), fir 10x3h + 5x12h (12 cores), nibi 10x3h +
+      5x12h (14 cores); none on trillium (a 3 h job there is also estimated
+      11-21). Cores are one GPU's share of its node, not 24. Work is the 30
+      tasks in `cluster/tasks/` (10 project groups x seeds 42, 7, 123; tags
+      `wf-tNN`, `wf-tNN-seed7`, `wf-tNN-seed123`), copied to `queue/pending`
+      on those three clusters. Monitor restarted from `~/c7_fleet2.sh`.
+      Known limit: a task cut off by walltime can only be resumed on the
+      cluster that started it (the others hold a skip marker); remove
+      `queue/skip/<name>` there by hand if that cluster has no worker left.
+      Code staged is commit 1aba0cf plus the core-count change in
+      `c7_submit_workers.sh`.
       Pilot 4 (login node, same 20 ids, before the `why` change): all forms
       answered; file acc@1 0.80 (pilot 3: 0.95; three flips in three
       different stages), region acc@1 0.579 in both; lc on the same ids

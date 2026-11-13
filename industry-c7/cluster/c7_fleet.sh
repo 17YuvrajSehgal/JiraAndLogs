@@ -15,8 +15,8 @@ R=/scratch/yuvraj17/c7-data
 W=/mnt/c/workplace/JiraAndLogs
 
 rsh () {  # run stdin as a script on a cluster
-  if [ "$1" = trillium-gpu ]; then timeout "${T:-120}" ssh trillium 'ssh trig-login01 bash -s'
-  else timeout "${T:-120}" ssh "$1" bash -s; fi
+  if [ "$1" = trillium-gpu ]; then timeout -k 10 "${T:-120}" ssh -o BatchMode=yes trillium 'ssh trig-login01 bash -s'
+  else timeout -k 10 "${T:-120}" ssh -o BatchMode=yes "$1" bash -s; fi
 }
 rhost () { [ "$1" = trillium-gpu ] && echo trillium || echo "$1"; }   # rsync target
 
@@ -129,14 +129,20 @@ monitor)
   # job that starts late is spare capacity for the seeds.
   mins="${2:-600}"; end=$(( $(date +%s) + mins * 60 ))
   mkdir -p /tmp/c7mon
+  # cluster task state rows, rewritten every poll (state: running, stopped = cut
+  # off and resumable, done, FAILED). An unreachable cluster keeps its old lines.
+  TRACK="${TRACK:-/mnt/c/workplace/JiraAndLogs/c7-task-tracker.txt}"
   while [ "$(date +%s)" -lt "$end" ]; do
     : > /tmp/c7mon/started.txt
     beat="$(date +%m-%d\ %H:%M)"
     for h in $CLUSTERS; do
       echo 'cd /scratch/$USER/c7-data/queue/started 2>/dev/null && for f in *; do [ -e "$f" ] && echo "$f $(cut -d" " -f1 $f)"; done
+            cd /scratch/$USER/c7-data && for f in queue/started/*; do n=${f##*/}; [ -e "$f" ] || continue; st=stopped; [ -d queue/claimed/$n ] && st=running; [ -e queue/failed/$n ] && st=FAILED; [ -e queue/done/$n ] && st=done; echo "#T $n $st $(wc -l < industry-c7/data/agent/agent-${n#*-}.jsonl 2>/dev/null || echo 0)"; done
             echo "#Q $(squeue -u $USER -h -t R | wc -l) $(squeue -u $USER -h -t PD | wc -l) $(cat /scratch/$USER/c7-data/industry-c7/data/agent/agent-wf-t*.jsonl 2>/dev/null | wc -l)"' \
         | T=60 rsh "$h" 2>/dev/null > /tmp/c7mon/$h.raw
-      grep -v '^#Q' /tmp/c7mon/$h.raw | sed "s/^/$h /" >> /tmp/c7mon/started.txt
+      grep -v '^#' /tmp/c7mon/$h.raw | sed "s/^/$h /" >> /tmp/c7mon/started.txt
+      # which task is where: one line per (task, cluster) that has started it
+      grep -q '^#Q' /tmp/c7mon/$h.raw && { grep -v "^$h " "$TRACK" 2>/dev/null; grep '^#T' /tmp/c7mon/$h.raw | sed "s/^#T/$h/"; } | sort -k2,2 -k1,1 > "$TRACK.new" && mv "$TRACK.new" "$TRACK"
       q=$(grep '^#Q' /tmp/c7mon/$h.raw | cut -d' ' -f2-)
       # one heartbeat line per poll: running / pending / rows written
       beat="$beat | $h R/PD/rows ${q:-UNREACHABLE}"
