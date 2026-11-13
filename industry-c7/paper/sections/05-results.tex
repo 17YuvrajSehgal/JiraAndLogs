@@ -67,8 +67,8 @@ artifact.
 \subsection{What the structure changes}
 \label{sec:results:structure}
 
-The free-loop agent of \cref{sec:agent:loop} ran on the same split with
-the same model and the same evidence pass. Paired on the 26{,}537
+The unconstrained loop of \cref{sec:setup:systems} ran on the same split
+with the same model and the same evidence pass. Paired on the 26{,}537
 instances both completed, the staged workflow changes the file-level
 result very little: Acc@1 $+0.7$ points $[+0.2, +1.2]$, Acc@5
 $-0.9$ $[-1.2, -0.6]$, MRR unchanged. Both differences are significant
@@ -242,7 +242,7 @@ fix diff; 93.9\% of instances yield at least one. \Cref{tab:functions}
 compares three ways of getting there. A BM25 stage that ranks the
 function bodies in the retrieval layer's top ten files reaches 21.9\%
 Acc@1 with a 77.0\% ceiling, so its problem is ranking inside large
-files, not finding them. The free-loop agent reaches 39.8\%, and \sys{}
+files, not finding them. The unconstrained loop reaches 39.8\%, and \sys{}
 53.8\%, because its \textsc{examine} step reads each candidate file
 whole, or in whole functions, and names the functions that hold the
 fault while the code is on screen. On the hard stratum \sys{} reaches
@@ -306,7 +306,7 @@ is what the agent does.
 \subsection{What goes against us}
 \label{sec:results:negatives}
 
-Five things. First, the staged workflow is below the free loop at
+Five things. First, the staged workflow is below the unconstrained loop at
 Acc@5 by 0.9 points, significantly, and gains only 0.7 at Acc@1: at the
 file level the structure buys nothing, and a reader who wants files only
 should take the loop. Second, on reports with a stack trace the

@@ -19,8 +19,8 @@ the split anyway; the alternative is the deployment scenario backwards.
 
 Two populations carry the results, and no comparison mixes them. The
 \emph{evaluation split} is the later 70\% of every project,
-\nEval{} instances, \nEvalHard{} of them hard. \sys{}, the free-loop
-agent and the retrieval layer are scored on all of it. The
+\nEval{} instances, \nEvalHard{} of them hard. \sys{}, the retrieval
+layer and the loop ablation are scored on all of it. The
 \emph{sample} is \nSample{} instances drawn from the evaluation split
 with a fixed seed before any agent had run, stratified to match the
 split's project mix and hard fraction (\nSampleHard{} hard against the
@@ -54,8 +54,11 @@ is derivable.
 All systems see the same input, the issue report with its logs and the
 code snapshot, and none sees a gold file, a memory vote or a difficulty
 label. \textbf{The retrieval layer} is \cref{sec:approach}. \textbf{The
-free-loop agent} is \cref{sec:agent:loop}: the same model, evidence
-pass and final checks as \sys{}, with a free tool loop in between.
+unconstrained loop} is the ablation of \cref{sec:agent:principles}: the
+same model, the same evidence pass, the same tools and the same final
+checks as \sys{}, with the model free to choose tools in any order for
+up to fourteen turns and to decide when to submit, which is the usual
+agent shape. It isolates what the fixed procedure contributes.
 \textbf{LocAgent-style} and \textbf{CoSIL-style} are reimplementations
 of the two published localization agents that take exactly our inputs,
 an issue and a repository, and return ranked

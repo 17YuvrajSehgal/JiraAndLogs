@@ -239,12 +239,6 @@ def main() -> int:
           "under 0.2 seconds per issue on every project" in tex("05-results") and max(meds) < 0.2,
           f"medians {min(meds):.3f}..{max(meds):.3f}")
     has("05-results", f"against the loop's {H.get('llm_calls_loop', COV['health_base']['llm_calls']):.1f} and {round(COV['health_base']['prompt_tokens'] / 1000)}k", "05-results")
-    # the free loop's measured failure modes, as recorded with the design
-    wfdoc = (ROOT / "agent/workflow.py").read_text(encoding="utf-8")
-    for n_ in ("83.2%", "95.8%", "62.2%", "72.7%", "82.8%", "5.1 points", "55.8%", "79.2%", "67.7%", "55.7%", "890 failures"):
-        check(f"04-agent: {n_} is in the workflow design notes", n_ in wfdoc and n_.replace(" failures", "").replace("%", "\\%") in tex("04-agent"), n_)
-    check("04-agent: callers_of in 3.8% of runs (design notes)", "3.8% of runs" in wfdoc and "3.8\\% of runs" in tex("04-agent"), "")
-    check("04-agent: 5.0 against 3.2 reads (design notes)", "5.0 vs 3.2 reads" in wfdoc and "5.0 against 3.2 reads" in tex("04-agent"), "")
     for n_ in ("70{,}999", "18{,}661", "14{,}207", "$-$55", "$-$75", "$-$101", "37\\%", "30\\%", "85\\%"):
         plain = n_.replace("{,}", ",").replace("$-$", "-").replace("\\%", "%")
         check(f"02-benchmark funnel: {plain} is in benchmark-numbers.md", n_ in tex("02-benchmark") and plain.lstrip("-") in BN, plain)

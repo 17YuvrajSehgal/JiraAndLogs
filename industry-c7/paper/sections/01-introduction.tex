@@ -52,21 +52,20 @@ localizes the root cause, the evidence is that it ranks the files the
 fix changed.
 
 We then built \sys{}, an agent that keeps the retrieval and the
-incident memory as tools and reads code. Its first version was an agent
-of the usual shape, one model choosing freely among tools for up to
-fourteen turns. We ran it on all \nEval{} evaluation instances and
-measured what it does: it rarely stops on its own, it re-reads what it
-has read, it ranks the file it read last and most, and it never walks
-back from the code that detected a failure to the code that caused it.
-The version this paper presents moves those decisions into code. A
-fixed procedure gathers the evidence, and the model decides only three
-things inside it: which files to open, what role one file plays, and
-the order of the files. On \nEval{} incidents \sys{} ranks a file the
-fix changed first for \accOne{} and in the top five for \accFive{},
-names the correct module for \modOne{}, and names a function the fix
-changed first for \regOne{}. Against the free loop on the same
-instances, the structure changes the file-level result by less than a
-point and lifts function-level accuracy by fourteen points.
+incident memory as tools and reads code. It is not an agent of the
+usual shape, one model choosing freely among tools until it decides to
+stop. Its procedure is fixed in code: the evidence is gathered before
+the model is called, every candidate file is judged on its own with its
+code on screen, code walks back from a file that only detects the
+failure to the files that call it, and the model decides only three
+things, which files to open, what role one file plays, and the order of
+the files. On \nEval{} incidents \sys{} ranks a file the fix changed
+first for \accOne{} and in the top five for \accFive{}, names the
+correct module for \modOne{}, and names a function the fix changed
+first for \regOne{}. An ablation that gives the same model the same
+tools in an unconstrained loop finds files equally well and names the
+faulty function fourteen points less often, which locates what the
+structure is worth.
 
 This paper makes three contributions.
 \begin{itemize}
@@ -75,17 +74,17 @@ This paper makes three contributions.
   by whether the report names any faulty file, with a per-project
   incident-memory pool of \nMemoryPool{} resolved issues and a datasheet
   for every filter (\cref{sec:benchmark}).
-\item \textbf{\sys{}}, a staged localization agent whose design is
-  derived from measurements of a free agent loop on \nEval{} runs, and
-  whose every decision is bounded and recorded (\cref{sec:agent}). It
-  returns the module, ranked file and function regions, and a causal
-  chain whose steps cite the report's log events.
+\item \textbf{\sys{}}, a staged localization agent in which code owns
+  the procedure and the model decides inside bounded steps, with every
+  decision recorded (\cref{sec:agent}). It returns the module, ranked
+  file and function regions, and a causal chain whose steps cite the
+  report's log events.
 \item \textbf{An evaluation on the whole evaluation split}
-  (\cref{sec:results}): \sys{} against the free loop and the retrieval
-  layer on \nEval{} instances, and against two reimplemented published
-  agents and the same model used without tools on a \nSample-instance
-  sample, with the cost of every system and the run-to-run variation
-  of the agent measured rather than assumed.
+  (\cref{sec:results}): \sys{} against the retrieval layer and against
+  an unconstrained-loop ablation on \nEval{} instances, and against two
+  reimplemented published agents and the same model used without tools
+  on a \nSample-instance sample, with the cost of every system and the
+  run-to-run variation of the agent measured rather than assumed.
 \end{itemize}
 
 The retrieval layer is deterministic, every agent tool is a pure

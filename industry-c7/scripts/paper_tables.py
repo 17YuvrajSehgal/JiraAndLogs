@@ -96,7 +96,7 @@ def main() -> int:
     regs = lambda d: f"{pct(d['all']['region_acc@1'])} / {pct(d['all']['region_acc@5'])}"  # noqa: E731
     body = [
         row("retrieval layer (no model)", R, "--", "--", "0 / 0"),
-        row("free-loop agent", L, pct(L["all"]["module_from_ranking_acc@1"]), regs(L),
+        row("unconstrained loop (ablation)", L, pct(L["all"]["module_from_ranking_acc@1"]), regs(L),
             f"{cl[0]:.1f} / {cl[1]:.0f}k"),
         row("\\sys{} (staged workflow)", W, pct(W["all"]["module_agent_acc@1"]), regs(W),
             f"{cw[0]:.1f} / {cw[1]:.0f}k"),
@@ -195,7 +195,7 @@ def main() -> int:
     e = fp["eval_eligible"]
     lines = [f"BM25 over the layer's top-10 files & {fp['n_eval_eligible']:,} & {pct(e['acc@1'])} & {pct(e['acc@5'])} & "
              f"{pct(e['acc@10'])} & {e['mrr']:.3f} & {pct(fp['oracle_in_candidates'])} \\\\"]
-    for name, d in (("free-loop agent", L), ("\\sys{}", W)):
+    for name, d in (("unconstrained loop (ablation)", L), ("\\sys{}", W)):
         x = d["all"]
         lines.append(f"{name} & {x['n_region_eligible']:,} & {pct(x['region_acc@1'])} & {pct(x['region_acc@5'])} & "
                      f"{pct(x.get('region_acc@10'))} & {x['region_mrr']:.3f} & -- \\\\")
@@ -230,7 +230,7 @@ def main() -> int:
             src.setdefault("modules_baselines", {})[key] = {"acc@1": round(a1 / nb, 4), "acc@5": round(a5 / nb, 4), "n": nb}
         lines.append("\\midrule")
     lines.append(f"\\retr{{}} (module of the top file) & {pct(tot['cond_ours'][0] / N)} & {pct(tot['cond_ours'][1] / N)} \\\\")
-    lines.append(f"free-loop agent (module of the top file) & {pct(L['all']['module_from_ranking_acc@1'])} & -- \\\\")
+    lines.append(f"unconstrained loop (module of the top file) & {pct(L['all']['module_from_ranking_acc@1'])} & -- \\\\")
     lines.append(f"\\sys{{}} (module named by the agent) & {pct(W['all']['module_agent_acc@1'])} & -- \\\\")
     (TAB / "modules.tex").write_text("\n".join(lines) + "\n", encoding="utf-8", newline="\n")
     src["modules"] = {"file": str(RES / "module-metrics.json"), "n": N,

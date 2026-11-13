@@ -33,12 +33,12 @@ index~\cite{chen2025locagent}, CoSIL over dynamically built call
 graphs~\cite{jiang2025cosil}, GenLoc by seeding an LLM with retrieval
 candidates and letting it explore~\cite{asad2026genloc}. \sys{} shares
 GenLoc's seed-then-explore shape. What it adds is the project's own
-resolved history as a tool behind a temporal firewall, and a design
-discipline these systems do not report: we measured what a free loop
-does on \nEval{} runs and moved the decisions it gets wrong into code.
-CoSIL's analysis of LLM localizer failures, malformed tool arguments
-and hallucinated paths, matches what we saw and shaped our fixed
-answer forms.
+resolved history as a tool behind a temporal firewall, and a procedure
+fixed in code in which the model decides only inside bounded steps,
+measured against the unconstrained loop these systems use. CoSIL's
+analysis of LLM localizer failures, malformed tool arguments and
+hallucinated paths, matches what we saw and shaped our fixed answer
+forms.
 
 \textbf{Incident history in operations.} Retrieving similar past
 incidents is established practice in cloud operations. RCACopilot

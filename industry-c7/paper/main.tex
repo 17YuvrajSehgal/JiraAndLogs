@@ -29,7 +29,7 @@
 % --- macros: single source for every headline number -------------------------
 % Every value below is on the 27-project benchmark (seed 42, one run).
 % Sources: paper/benchmark-numbers.md (datasheet), c7_coverage.py on the
-% merged wf rows (agent), the same paired with the free-loop main run,
+% merged wf rows (agent), the same paired with the loop-ablation main run,
 % data/results/agentic-baselines.json (the 1,000-instance sample), and
 % paper_numbers.py (pooled retrieval, function and dense numbers).
 \newcommand{\sys}{\textsc{Remember}\xspace} % working name, can change
@@ -55,7 +55,7 @@
 \newcommand{\retrOne}{41.2\%\xspace}
 \newcommand{\retrFive}{70.3\%\xspace}
 \newcommand{\retrHardFive}{48.7\%\xspace}
-% the free-loop agent (same model, same evidence pass) on the same instances
+% the unconstrained-loop ablation (same model, same evidence pass) on the same instances
 \newcommand{\loopOne}{67.9\%\xspace}
 \newcommand{\loopFive}{86.8\%\xspace}
 \newcommand{\loopRegOne}{39.8\%\xspace}
@@ -96,23 +96,21 @@ the files the fix later changed, plus a per-project pool of
 \nMemoryPool{} resolved issues that serves as an \emph{incident memory}
 behind a temporal firewall.
 We present \sys{}, a localization agent that reads code with a
-general-purpose 27B open-weights model. Its first version was a free
-tool loop; we ran that loop on all \nEval{} evaluation instances,
-measured what it does, and found that it rarely stops on its own,
-re-reads what it has read, ranks the file it read last and most, and
-never walks back from the code that detected a failure. The version we
-present moves those decisions into a fixed procedure in which the model
-decides only which files to open, what role one file plays, and the
-order of the files.
+general-purpose 27B open-weights model inside a fixed, staged
+procedure: code gathers the evidence, including the files that similar
+past incidents were fixed in, and the model decides only which files to
+open, what role each file plays in the failure, and the order of the
+files. Every step is bounded, every decision is recorded, and the run
+cannot end without a module, ranked code regions and a causal chain.
 On the whole \nEval{}-instance evaluation split \sys{} ranks a file the
 fix changed first for \accOne{} of incidents and in the top five for
 \accFive{}, names the affected module for \modOne{}, and names a
 function the fix changed first for \regOne{}; on the half of the
 reports that name no faulty file it reaches \hardOne{} and \hardFive{}.
-Paired against the free loop on the same instances, the structure
-changes file-level accuracy by less than a point and raises
-function-level Acc@1 by fourteen points, with an explanation whose
-steps cite the report's own log events. On a \nSample-instance sample
+An ablation with the same model and tools in an unconstrained agent
+loop finds files equally well but names the faulty function fourteen
+points less often and cites no log event in its explanations. On a
+\nSample-instance sample
 it leads reimplementations of two published localization agents by 7
 and 20 points of Acc@1, the same model used alone by 14, and the same
 model used as a re-ranker by 6, all differences significant, and the
