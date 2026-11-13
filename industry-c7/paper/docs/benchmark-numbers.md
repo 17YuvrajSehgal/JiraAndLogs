@@ -22,7 +22,7 @@ and the agent have none of them run on v2.
 | with stack trace | not stated | 30% |
 | single fix commit | not stated | 85% |
 
-In `main.tex`: `\nInstances` becomes **38,001**, `\nHardPct` becomes **49\%**, `\nProjects` becomes **twenty-seven**.
+In `../main.tex`: `\nInstances` becomes **38,001**, `\nHardPct` becomes **49\%**, `\nProjects` becomes **twenty-seven**.
 
 The hard fraction moving 53% to 49% should be stated, not quietly
 swapped. The expanded set is marginally easier, not different in kind, and

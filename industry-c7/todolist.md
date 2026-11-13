@@ -4,8 +4,8 @@
 **Branch:** `v2-industry-track-review-2`
 **Deadline:** 2026-11-13 AoE · **Started:** 2026-11-02 · **Days left: 10**
 **Now:** Borderline / Weak Reject, 6.8/10, 35–45% accept
-**Design doc:** `paper/review-2-plan.md` (why each task exists)
-**Review:** `paper/review-2.md`
+**Design doc:** `paper/docs/review-2-plan.md` (why each task exists)
+**Review:** `paper/docs/review-2.md`
 
 Legend: `[ ]` todo · `[~]` in progress · `[x]` done · `[!]` blocked · `[-]` dropped
 Needs: **CPU** (laptop, no cluster) · **GPU** (needs vLLM job) · **HUMAN** (user effort)
@@ -54,7 +54,7 @@ review follow from this one gap.
       causal set on 136 of 151 instances. T3 is 49.0% under rater 1 and
       50.1% under rater 2, and the size curve falls monotonically under
       both. T4 re-scored under rater 2 gives the same gaps to within a tenth
-      of a point. Written up in `paper/annotation-agreement.md`. Reported as
+      of a point. Written up in `paper/docs/annotation-agreement.md`. Reported as
       model-model agreement, never as human reliability. **Still owed:** the
       human-verified subset that RUBRIC.md pre-registers.
 - [x] **T3. Headline number.** 49.0% of fix-modified gold files are causal
@@ -70,7 +70,7 @@ review follow from this one gap.
       (+1.2) with 95% of its top-1 hits landing on a causal file. Nine pairs
       change order, all of them already tied on both keys at n=84, so the
       subset confirms nothing about the top of the table and the paper says
-      so. Written up in `paper/causal-gold-results.md`. **CPU**
+      so. Written up in `paper/docs/causal-gold-results.md`. **CPU**
 - [x] **T5. Scope the claim.** Done. New paragraph in §1 ("What
       'root-cause localization' means here, and what it does not") defines the
       task, states that the ground truth is fix-modified files and is a proxy
@@ -88,7 +88,7 @@ review follow from this one gap.
       0 hard errors, 0 `llm_error`, every row `version: 3`, 0 duplicates,
       0 instances outside the population and none missed. Agent v3 scores
       **Acc@1 0.6870, Acc@5 0.8877**. Ran in ~11 h wall at 40 workers
-      (~6.5/min) on one H100. `paper/agent-v3-full-results.md`. **GPU**
+      (~6.5/min) on one H100. `paper/docs/agent-v3-full-results.md`. **GPU**
 - [x] **T8. Per-project and per-stratum breakdown.** Done:
       `scripts/full_split_breakdown.py` scores **36 systems on the identical
       4,409**, including the IRBL family (their per-instance metrics live in
@@ -162,7 +162,7 @@ of evidence from symptom to suspected cause.
       over v2 on that subset is **selection, not skill** - on the full 790 the
       two are indistinguishable (Acc@5 delta -0.0025, CI [-0.0165, +0.0114]),
       in every stratum including hard. The scorer now prints a warning and
-      `paper/causal-lift-v3.md` states it. **CPU**
+      `paper/docs/causal-lift-v3.md` states it. **CPU**
 
 ---
 
@@ -283,7 +283,7 @@ We produce one and never score it.
       **The symbol rate is a floor on groundedness, not an error rate** --
       evidence may correctly name a symbol declared elsewhere, so it must
       never be written as "17% hallucinated". verify_claims asserts the doc
-      carries that caveat. `paper/explanation-checks.md`. **CPU**
+      carries that caveat. `paper/docs/explanation-checks.md`. **CPU**
 - [x] **T17. Judged correctness. MODEL RATER DONE 2026-11-04; the
       human calibration pass is still open.** `scripts/judge_explanations.py`. A model other than the one
       under test grades whether the chain actually runs from the reported
@@ -475,7 +475,7 @@ We produce one and never score it.
       0.140 -> 0.216 (gains mostly from candidates, oracle 0.576 -> 0.853).
       No leak: `read_code` targets are chosen from the report and tools under
       the memory firewall, and gold functions come from the fix diff the
-      agent never sees. `paper/function-stage-t20.md`. **CPU**
+      agent never sees. `paper/docs/function-stage-t20.md`. **CPU**
 - [x] **T21. Engineer-facing walkthrough.** Done: new
       §VI "What this changes at triage", built on a real run rather than an
       invented one. KAFKA-9747 is hard (the report names no gold file), the

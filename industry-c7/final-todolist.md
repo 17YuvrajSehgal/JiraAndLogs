@@ -33,7 +33,7 @@ Work through the tasks in order. Tick each one when it is done.
 
 | Paper item | Status |
 |---|---|
-| Benchmark datasheet | HAVE. `paper/benchmark-numbers.md`: 38,001 final, 37,900 scored, **26,544 in the evaluation split**, 49% hard, 30% with a trace, 85% single fix commit. Per-project table included there. |
+| Benchmark datasheet | HAVE. `paper/docs/benchmark-numbers.md`: 38,001 final, 37,900 scored, **26,544 in the evaluation split**, 49% hard, 30% with a trace, 85% single fix commit. Per-project table included there. |
 | Headline agent (`wf`) on the full split | HAVE. 26,544 instances, 26,540 answered, 4 scored as misses. |
 | Retrieval layer on the same instances | HAVE. `metrics_lexical` in the wf rows; per-project `data/results/<p>-summary.json` (27 files, Nov 7). |
 | Free-loop agent (old design, `--arm lc`) on the full split | HAVE. 26,541 rows in `data/agent/full/agent-full-*.jsonl`. Paired with wf below. |
@@ -329,12 +329,22 @@ Do not compare wall time (different GPU load during the runs).
       Gotchas found: every file this session wrote had CRLF (fixed with
       `sed -i 's/\r$//'`; `paper_tables.py` now writes LF); `\input`
       inside a tabular fails (use `\tablebody`).
-- [ ] 16. `scripts/verify_claims.py`: replace the T25 pins (old
-      .644/.769 etc.) with the new numbers; fix the ZeroDivisionError
-      that stops it at 214/267; retire checks for dropped claims.
-- [ ] 17. Final read for anonymity (no cluster names, no Ciena, no
-      author names), references within 2 pages, figures readable.
-- [ ] 18. Commit the paper. Rows and result files stay gitignored.
+- [x] 16. Superseded by `scripts/verify_paper.py` (117 checks, all
+      pass, tables regenerated and byte-identical). `verify_claims.py` is
+      left as the record of the old four-project paper.
+- [x] 17. Anonymity grep clean (no cluster, vendor or author names);
+      references end on page 11 (allowed); figure checked at print
+      resolution.
+- [x] 18. Committed Nov 13 17:52: `2725f7c` (paper, tables, figure,
+      paper scripts) and `65d6bde` (fleet scripts, todolist). Not pushed;
+      `1aba0cf` was not pushed either.
+
+### Submission
+- PDF: `industry-c7/paper/main.pdf` (11 pages; body ends mid page 10).
+- Rebuild: `wsl.exe -d Ubuntu -- bash -lc 'cd /mnt/c/workplace/JiraAndLogs/industry-c7/paper && latexmk -pdf main.tex'`
+- Re-verify: `python industry-c7/scripts/verify_paper.py --wf <wf rows> --loop <loop rows>`
+  (rows: `C:\Users\17yuv\AppData\Local\Temp\c7cmp\lcwf\{wf-seed42,lc-main}.jsonl`;
+  rebuild them from `data/agent/` if the temp folder is gone).
 
 ### F5. After submission (not today)
 - [ ] Delete the Nebius disk `c7-boot` (250 GB, still billed).
