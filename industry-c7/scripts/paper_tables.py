@@ -18,6 +18,7 @@ Rows files: one row per instance (c7_coverage.load_rows drops dead rows).
 from __future__ import annotations
 
 import argparse
+from decimal import Decimal, ROUND_HALF_UP
 import glob
 import json
 import random
@@ -41,7 +42,14 @@ SEED, N_BOOT = 20261104, 2000
 
 
 def pct(x, d=1):
-    return "--" if x is None else f"{100 * x:.{d}f}"
+    """Percent with d decimals, ties rounded up as a reader would (0.5385 -> 53.9);
+    f-string formatting sees 53.849999... and prints 53.8."""
+    return "--" if x is None else str((Decimal(repr(x)) * 100).quantize(Decimal(1).scaleb(-d), rounding=ROUND_HALF_UP))
+
+
+def f3(x):
+    """Three decimals, same tie rule (MRR columns)."""
+    return str(Decimal(repr(x)).quantize(Decimal("0.001"), rounding=ROUND_HALF_UP))
 
 
 def boot(diff, k):
@@ -102,22 +110,31 @@ def main() -> int:
         reg = [s["region"]["acc@10"] for s in sc.values() if "region" in s]
         d["all"]["region_acc@10"] = st.fmean(reg)
         d["all"]["file_acc@10"] = st.fmean(r["metrics"]["acc@10"] for r in rows_.values())
+    # the ablation table compares the two arms on the instances both ran, the
+    # population the text's paired deltas and \loop* macros use
+    P = set(ids)
+    Wp = {k: summ(s_wf, [i for i in v if i in P]) for k, v in S_wf.items()}
+    Lp = {k: summ(s_lp, [i for i in v if i in P]) for k, v in S_lp.items()}
+    for d, sc, rows_ in ((Wp, s_wf, wf), (Lp, s_lp, lp)):
+        d["all"]["region_acc@10"] = st.fmean(s["region"]["acc@10"] for i, s in sc.items() if i in P and "region" in s)
+        d["all"]["file_acc@10"] = st.fmean(r["metrics"]["acc@10"] for i, r in rows_.items() if i in P)
+    src["headline"]["Wp"], src["headline"]["Lp"] = Wp, Lp
 
     # ---- ablation: the unconstrained loop against the staged workflow ------
     cite = lambda d: "--" if d["all"]["steps_citing_log"] is None else pct(d["all"]["steps_citing_log"])  # noqa: E731
     abl = [
-        f"unconstrained loop & {pct(L['all']['file_acc@1'])} & {pct(L['all']['file_acc@5'])} & {pct(L['hard']['file_acc@1'])} & "
-        f"{pct(L['all']['region_acc@1'])} & {pct(L['all']['region_acc@5'])} & {pct(L['all']['region_acc@10'])} & "
-        f"{cite(L)} & {cl[0]:.1f} / {cl[1]:.0f}k \\\\",
-        f"\\sys{{}} & {pct(W['all']['file_acc@1'])} & {pct(W['all']['file_acc@5'])} & {pct(W['hard']['file_acc@1'])} & "
-        f"{pct(W['all']['region_acc@1'])} & {pct(W['all']['region_acc@5'])} & {pct(W['all']['region_acc@10'])} & "
-        f"{cite(W)} & {cw[0]:.1f} / {cw[1]:.0f}k \\\\",
+        f"unconstrained loop & {pct(Lp['all']['file_acc@1'])} & {pct(Lp['all']['file_acc@5'])} & {pct(Lp['hard']['file_acc@1'])} & "
+        f"{pct(Lp['all']['region_acc@1'])} & {pct(Lp['all']['region_acc@5'])} & {pct(Lp['all']['region_acc@10'])} & "
+        f"{cite(Lp)} & {cl[0]:.1f} / {cl[1]:.0f}k \\\\",
+        f"\\sys{{}} & {pct(Wp['all']['file_acc@1'])} & {pct(Wp['all']['file_acc@5'])} & {pct(Wp['hard']['file_acc@1'])} & "
+        f"{pct(Wp['all']['region_acc@1'])} & {pct(Wp['all']['region_acc@5'])} & {pct(Wp['all']['region_acc@10'])} & "
+        f"{cite(Wp)} & {cw[0]:.1f} / {cw[1]:.0f}k \\\\",
         "\\midrule",
         "\\sys{} minus loop, paired & "
         + " & ".join(f"{100 * pair[k]['delta']:+.1f} [{100 * pair[k]['lo']:+.1f}, {100 * pair[k]['hi']:+.1f}]"
                      for k in ("all:file_acc@1", "all:file_acc@5", "hard:file_acc@1",
                                "all:region_acc@1", "all:region_acc@5", "all:region_acc@10"))
-        + f" & {100 * ((W['all']['steps_citing_log'] or 0) - (L['all']['steps_citing_log'] or 0)):+.1f} & -- \\\\",
+        + f" & {100 * ((Wp['all']['steps_citing_log'] or 0) - (Lp['all']['steps_citing_log'] or 0)):+.1f} & -- \\\\",
     ]
     (TAB / "ablation.tex").write_text("\n".join(abl) + "\n", encoding="utf-8", newline="\n")
 
@@ -152,11 +169,11 @@ def main() -> int:
     lines, src["agents"] = [], {"file": str(RES / "agentic-baselines.json"), "extra": {}}
     sysr = AB["systems"]["ours"]
     # seven columns; the paired intervals go in the text, from sources.json
-    lines.append(f"\\sys{{}} & {sysr['acc@1']:.3f} & {sysr['acc@5']:.3f} & {sysr['hard_acc@1']:.3f} & "
-                 f"{sysr['hard_acc@5']:.3f} & {sysr['llm_calls']:.1f} & {sysr['prompt_tokens'] / 1000:.0f}k \\\\")
+    lines.append(f"\\sys{{}} & {f3(sysr['acc@1'])} & {f3(sysr['acc@5'])} & {f3(sysr['hard_acc@1'])} & "
+                 f"{f3(sysr['hard_acc@5'])} & {sysr['llm_calls']:.1f} & {sysr['prompt_tokens'] / 1000:.0f}k \\\\")
     for key, name in (("locagent", "LocAgent-style"), ("cosil", "CoSIL-style")):
         e = AB["systems"][key]
-        lines.append(f"{name} & {e['acc@1']:.3f} & {e['acc@5']:.3f} & {e['hard_acc@1']:.3f} & {e['hard_acc@5']:.3f} & "
+        lines.append(f"{name} & {f3(e['acc@1'])} & {f3(e['acc@5'])} & {f3(e['hard_acc@1'])} & {f3(e['hard_acc@5'])} & "
                      f"{e['llm_calls']:.1f} & {e['prompt_tokens'] / 1000:.0f}k \\\\")
     for key, (name, d, path) in extra.items():
         common = sorted(set(d) & set(sw))
@@ -170,7 +187,7 @@ def main() -> int:
         for stage in (("a1", "a2") if key == "llm_alone" else ("rr",)):
             us = [json.loads(l).get("usage") or {} for l in (ROOT / "data/llm-27" / f"resp-{stage}.jsonl").open(encoding="utf-8")]
             toks += st.fmean(u.get("prompt_tokens", 0) for u in us) / 1000
-        lines.append(f"{name} & {acc(common, 1):.3f} & {acc(common, 5):.3f} & {acc(hk, 1):.3f} & {acc(hk, 5):.3f} & "
+        lines.append(f"{name} & {f3(acc(common, 1))} & {f3(acc(common, 5))} & {f3(acc(hk, 1))} & {f3(acc(hk, 5))} & "
                      f"{calls:.1f} & {toks:.0f}k \\\\")
         src["agents"]["extra"][key] = {"file": path, "n": len(common), "n_hard": len(hk),
                                        "prompt_tokens_k": round(toks, 2),
@@ -224,7 +241,7 @@ def main() -> int:
             for c, v in enumerate(vals):
                 if v is None:
                     cells.append("--"); continue
-                s = f"{v:.3f}" if c == 3 else pct(v)
+                s = f"{f3(v)}" if c == 3 else pct(v)
                 if best[c] is not None and abs(v - best[c]) < 1e-9:
                     s = f"\\win{{{s}}}" if ours else f"\\textbf{{{s}}}"
                 cells.append(s)
@@ -285,7 +302,7 @@ def main() -> int:
     lines = []
     for k, name in order:
         d = rp[k]
-        lines.append(f"{name} & {pct(d['all']['acc@1'])} & {pct(d['all']['acc@5'])} & {d['all']['mrr']:.3f} & "
+        lines.append(f"{name} & {pct(d['all']['acc@1'])} & {pct(d['all']['acc@5'])} & {f3(d['all']['mrr'])} & "
                      f"{pct(d['hard']['acc@1'])} & {pct(d['hard']['acc@5'])} & {pct(d['easy']['acc@5'])} \\\\")
     (TAB / "retrieval.tex").write_text("\n".join(lines) + "\n", encoding="utf-8", newline="\n")
     src["retrieval"] = {"file": str(TMP / "paper-numbers.json"), "n": rp["cond_ours"]["all"]["n"],
@@ -295,11 +312,11 @@ def main() -> int:
     fp = PN["functions_pooled"]
     e = fp["eval_eligible"]
     lines = [f"BM25 over the layer's top-10 files & {fp['n_eval_eligible']:,} & {pct(e['acc@1'])} & {pct(e['acc@5'])} & "
-             f"{pct(e['acc@10'])} & {e['mrr']:.3f} & {pct(fp['oracle_in_candidates'])} \\\\"]
+             f"{pct(e['acc@10'])} & {f3(e['mrr'])} & {pct(fp['oracle_in_candidates'])} \\\\"]
     for name, d in (("unconstrained loop (ablation)", L), ("\\sys{}", W)):
         x = d["all"]
         lines.append(f"{name} & {x['n_region_eligible']:,} & {pct(x['region_acc@1'])} & {pct(x['region_acc@5'])} & "
-                     f"{pct(x.get('region_acc@10'))} & {x['region_mrr']:.3f} & -- \\\\")
+                     f"{pct(x.get('region_acc@10'))} & {f3(x['region_mrr'])} & -- \\\\")
     (TAB / "functions.tex").write_text("\n".join(lines) + "\n", encoding="utf-8", newline="\n")
 
     # ---- module level -------------------------------------------------------

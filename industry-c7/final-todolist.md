@@ -379,6 +379,16 @@ Do not compare wall time (different GPU load during the runs).
   without pilots 53.8 % (was 53.9), LocAgent-parsed wf Acc@1 68.8 % (was 68.9).
 - Known: Fig. 1 is the full draw.io diagram at text width; its 9 pt
   labels print at about 1.7 pt. The author chose it over a compact variant.
+- Nov 14 02:10: `paper_tables.py` rounds with the same tie rule as the
+  verifier and the ablation table compares both arms on the 26,537 paired
+  instances (its loop row now reads 39.8 like the text). Tables regenerated;
+  cells that moved by the tie rule: MRR 0.538→0.539, cites 57.4→57.3,
+  BM25 MRR 0.314→0.313, sample retrieval hard Acc@5 48.6→48.7, LocAgent MRR
+  0.646→0.647, model-alone hard Acc@5 51.5→51.6. Verifier 127 of 127 with
+  table regeneration; refs still start on page 10.
+- Artifact: `C:\workplace\remember-artifact` (own git repo, author "The
+  Authors"); benchmark zip built (96 MB); code+results zip on hold until the
+  system name is settled.
 
 ### Verification
 - `scripts/verify_paper.py --wf <rows> --loop <rows>` checks every macro,
