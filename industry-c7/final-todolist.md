@@ -398,6 +398,14 @@ Do not compare wall time (different GPU load during the runs).
   common instances). Stated in the threats paragraph, four verifier checks.
   The system is now called INQUEST (title: "Inquest: Log-Guided Root-Cause
   Code Localization with a Staged Agent").
+- Nov 14 09:58 UTC: Figure 2 (`paper/figures/easy-hard.pdf`, drawn by
+  `scripts/fig_easy_hard.py` from the result files): every system's Acc@1 and
+  Acc@5 split by whether the report names a faulty file, plus the two agents at
+  the function level on the paired instances. ~25 lines cut from discussion,
+  threats, related work and conclusion to fit; body still ends on page 10;
+  verifier 130 of 130. Zenodo drafts (not published): benchmark
+  10.5281/zenodo.24217071, code+results+transcripts 10.5281/zenodo.24217136;
+  archives in `C:\workplace\inquest-artifact-zenodo\` (56 + 109 + 162 MB).
 
 ### Verification
 - `scripts/verify_paper.py --wf <rows> --loop <rows>` checks every macro,
