@@ -331,6 +331,9 @@ def main() -> int:
     flips = sorted(v["file_acc@1"]["flips"] for v in SV["paired_vs_42"].values())
     has("06-discussion", f"while {flips[0]} to {flips[-1]} instances change their top file between two seeds", "06-discussion")
 
+    for d in ("10.5281/zenodo.24217071", "10.5281/zenodo.24217136"):
+        check(f"08-conclusion: Zenodo DOI {d}", d in tex("08-conclusion"), "")
+
     print(f"\n{n_pass} passed, {n_fail} failed")
     return 1 if n_fail else 0
 
