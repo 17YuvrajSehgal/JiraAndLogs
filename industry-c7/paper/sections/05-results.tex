@@ -48,7 +48,8 @@ the top five for \accFive{} (MRR \mrr). The module it names is correct
 for \modOne{}. At the region level, where a hit means the top-ranked
 function is one the fix changed, it reaches \regOne{} Acc@1 and
 \regFive{} Acc@5 on the \nRegion{} instances that have a gold
-function.
+function (24{,}847 of them when paired with the loop in
+\cref{tab:ablation,tab:functions}).
 
 The hard stratum is where the difficulty of the task lies, and it is
 half the benchmark. On the \nEvalHard{} reports that name no faulty
@@ -180,7 +181,7 @@ parsing. On the 918 instances where LocAgent-style did return a
 location, it scores 65.3\% Acc@1 and 77.9\% Acc@5 against \sys{}'s
 68.8\% and 86.8\% on the same instances: the paired margin is $+3.6$
 points $[+0.7, +6.4]$ at rank one and $+8.9$ $[+6.5, +11.4]$ at rank
-five, so half of the rank-one margin is parse failures and the Acc@5
+five (paired per instance before rounding), so half of the rank-one margin is parse failures and the Acc@5
 margin is not. On CoSIL-style's 899 answered instances the margins are
 $+15.9$ $[+12.8, +19.0]$ and $+19.9$ $[+16.9, +22.9]$ points. CoSIL's
 reflective alignment step exists to repair exactly that failure, so we
@@ -271,8 +272,10 @@ own regions.}
 Engineers need code regions, not files. Gold functions are
 derived mechanically: tree-sitter lists every function span in the
 snapshot, and a function is gold when its span overlaps a hunk of the
-fix diff; 93.9\% of the instances the retrieval layer ranked yield at
-least one (24,820). \Cref{tab:functions}
+fix diff; a gold function exists for 93.6\% of the evaluation
+instances (24,850 of the 26,540 \sys{} answered), and the function
+stage ranks 26,442 instances, 24,820 of them with a gold function.
+\Cref{tab:functions}
 compares three ways of getting there. A BM25 stage that ranks the
 function bodies in the retrieval layer's top ten files reaches 21.9\%
 Acc@1 with a 77.0\% ceiling, so its problem is ranking inside large

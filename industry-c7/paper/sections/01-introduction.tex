@@ -54,7 +54,7 @@ We then built \sys{}, an agent that keeps the retrieval and the
 incident memory as tools and reads code. It is not an agent of the
 usual shape, one model choosing freely among tools until it decides to
 stop. Its procedure is fixed in code: the evidence is gathered before
-the model is called, every candidate file is judged on its own with its
+the model makes any decision, every candidate file is judged on its own with its
 code on screen, code walks back from a file that only detects the
 failure to the files that call it, and the model decides only three
 things, which files to open, what role one file plays, and the order of

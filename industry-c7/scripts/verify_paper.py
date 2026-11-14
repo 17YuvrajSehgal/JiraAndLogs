@@ -261,7 +261,8 @@ def main() -> int:
     has("05-results", f"from {exp(R['fused_no_memory']['hard']['acc@5'])}\\% to {exp(R['fused_ours']['hard']['acc@5'])}\\%", "05-results")
     has("05-results", f"from {exp(R['cond_no_memory']['hard']['acc@5'])}\\% to {exp(R['cond_ours']['hard']['acc@5'])}\\%", "05-results")
     F = PN["functions_pooled"]
-    has("05-results", f"{exp(F['eligible_fraction_all_rows'])}\\% of the instances the retrieval layer ranked yield", "05-results")
+    has("05-results", f"a gold function exists for {exp(S['all']['n_region_eligible'] / S['all']['n'])}\\% of the evaluation instances ({S['all']['n_region_eligible']:,} of the {S['all']['n']:,} \\sys{{}} answered)", "05-results")
+    has("05-results", f"stage ranks {round(F['n_eval_eligible'] / F['eligible_fraction_all_rows']):,} instances, {F['n_eval_eligible']:,} of them with a gold function", "05-results")
     has("05-results", f"reaches {exp(F['eval_eligible']['acc@1'])}\\%\nAcc@1 with a {exp(F['oracle_in_candidates'])}\\% ceiling", "05-results")
     has("05-results", f"{exp(hard['region_acc@1'])}\\% region Acc@1 and {exp(hard['region_acc@5'])}\\% Acc@5", "05-results")
     easy = PN["wf_by_difficulty"]["easy"]
