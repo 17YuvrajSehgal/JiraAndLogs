@@ -56,7 +56,7 @@ def rank_metrics(ranked: list, gold: set) -> dict:
 
 def mean(xs):
     xs = [x for x in xs if x is not None]
-    return round(sum(xs) / len(xs), 4) if xs else None
+    return round(sum(xs) / len(xs), 6) if xs else None
 
 
 def boot(diffs: list[float], n: int = 2000, seed: int = 0):
@@ -64,7 +64,7 @@ def boot(diffs: list[float], n: int = 2000, seed: int = 0):
     k = len(diffs)
     s = sorted(sum(diffs[rng.randrange(k)] for _ in range(k)) / k
                for _ in range(n))
-    return round(sum(diffs) / k, 4), round(s[int(.025 * n)], 4), round(s[int(.975 * n)], 4)
+    return round(sum(diffs) / k, 6), round(s[int(.025 * n)], 6), round(s[int(.975 * n)], 6)
 
 
 def load_rows(path: Path) -> dict:
@@ -91,7 +91,7 @@ def health(path: Path) -> dict:
     return {
         "rows": len(rows), "live": len(live), "stop_reasons": dict(stops),
         "no_answer_rate": round(stops.get("no_answer", 0) / max(1, len(rows)), 4),
-        "runs_using_tool": {t: round(used[t] / n, 4) for t in
+        "runs_using_tool": {t: round(used[t] / n, 6) for t in
                             ("match_log", "dependencies", "callers_of",
                              "data_flow_back", "recall_incidents")},
         "module_empty_raw": round(sum(not (r.get("module_raw") or "").strip()
@@ -222,9 +222,9 @@ def summarise(scored: dict) -> dict:
         for k in ("acc@1", "acc@5", "mrr"):
             res[f"region_agent_only_{k}"] = mean([m[k] for m in rega])
         res["chain_steps"] = steps
-        res["steps_citing_log"] = round(cited / steps, 4) if steps else None
+        res["steps_citing_log"] = round(cited / steps, 6) if steps else None
         res["log_cites_grounded"] = (round(sum(s["cites_grounded"] for s in rows)
-                                           / cited, 4) if cited else None)
+                                           / cited, 6) if cited else None)
         with_ev = [s for s in rows if s["has_events"]]
         res["runs_with_events_that_cite_one"] = mean(
             [float(s["steps_citing_log"] > 0) for s in with_ev])
@@ -289,8 +289,8 @@ def log_sites(projects: list[str], limit: int) -> dict:
                 c["hard_site_is_gold"] += bool(gold & set(sites))
         c = dict(c)
         if c.get("matched"):
-            c["share_site_is_gold"] = round(c["site_is_gold"] / c["matched"], 4)
-            c["share_site_not_gold"] = round(1 - c["share_site_is_gold"], 4)
+            c["share_site_is_gold"] = round(c["site_is_gold"] / c["matched"], 6)
+            c["share_site_not_gold"] = round(1 - c["share_site_is_gold"], 6)
         res[p] = c
         print(p, c, flush=True)
     return res

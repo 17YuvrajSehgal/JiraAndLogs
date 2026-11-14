@@ -2,11 +2,10 @@
 \label{sec:conclusion}
 
 This paper presented a benchmark and an agent for log-guided root-cause
-localization, and measured both at a scale that leaves little room for
-sampling arguments. The benchmark pairs \nInstances{} real incidents from
+localization. The benchmark pairs \nInstances{} real incidents from
 \nProjects{} projects with their logs, the code while the defect was
-present, and the files the fix changed, and half of its reports name
-no faulty file at all. \sys{} localizes those incidents by a fixed
+present, and the files the fix changed; half of its reports name
+no faulty file. \sys{} localizes those incidents by a fixed
 procedure in which the model decides only which files to open, what
 role each plays, and their order. On \nEval{} evaluation instances it
 puts a changed file first for \accOne{} and in the top five for
@@ -23,9 +22,6 @@ report's own log events, because a file judged alone with its code on
 screen is judged by what it does rather than by how often it was read.
 And incident memory, admitted only when it would have existed at report
 time, is the one retrieval signal whose accuracy does not collapse when
-the report names nothing. A team that can host a 27B model should run
-the agent; a team that cannot still has a pipeline that answers from
-one CPU core in a tenth of a second and puts a changed file in the top
-five for seven issues in ten. The benchmark, both systems, every run
+the report names nothing. The benchmark, both systems, every run
 transcript and the script that ties each number here to its result
 file are released.

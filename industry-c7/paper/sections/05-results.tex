@@ -122,7 +122,7 @@ functions. Region Acc@1, where list length plays no part, is the number
 to read, and on the workflow's own regions alone, without the keyword
 fill, it reaches 53.5\% Acc@1 and 69.4\% Acc@5. The explanation changes
 in kind as well. In the loop's chains no step cites a log event; in the
-workflow 57.4\% of chain steps cite one of the report's selected log
+workflow 57.3\% of chain steps cite one of the report's selected log
 events, and 85.7\% of those citations are grounded, meaning the step
 names an event id from the report or quotes a line from it word for
 word, while the rest paraphrase a line and are kept, flagged. The
@@ -178,7 +178,7 @@ location for 8\% to 10\% of instances (LocAgent-style 8.2\%, CoSIL-style
 10.1\%), which the table scores as misses. Part of the margin is that
 parsing. On the 918 instances where LocAgent-style did return a
 location, it scores 65.3\% Acc@1 and 77.9\% Acc@5 against \sys{}'s
-68.9\% and 86.8\% on the same instances: the paired margin is $+3.6$
+68.8\% and 86.8\% on the same instances: the paired margin is $+3.6$
 points $[+0.7, +6.4]$ at rank one and $+8.9$ $[+6.5, +11.4]$ at rank
 five, so half of the rank-one margin is parse failures and the Acc@5
 margin is not. On CoSIL-style's 899 answered instances the margins are
@@ -281,7 +281,7 @@ fault while the code is on screen. On the hard stratum \sys{} reaches
 
 At the module level, where modules are the leading path components of a
 file at a fixed per-project depth, \sys{} names the correct module for
-\modOne{} of instances (85.5\% hard, 94.5\% easy), and the module of its
+\modOne{} of instances (85.5\% hard, 94.6\% easy), and the module of its
 top-ranked file is correct for 90.9\%. The retrieval layer's top file
 gives \moduleRetr{}. Module spaces are small and defects concentrate, so
 these numbers need the sanity baselines of \cref{tab:modules}: ranking

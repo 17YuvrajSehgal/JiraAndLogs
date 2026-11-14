@@ -365,6 +365,20 @@ Do not compare wall time (different GPU load during the runs).
 | Nov 13 17:05 | main.pdf | 10 | first full build of the rewrite; two tables too wide |
 | Nov 13 17:20 | main.pdf | 11 | tables fixed, model-baseline rows and text added; body ends mid page 10, refs run to page 11 (allowed: 10 + up to 2 pages of refs) |
 | Nov 13 17:48 | main.pdf | 11 | FINAL: module baselines in; 0 overfull; `verify_paper.py` 117 of 117 (tables regenerated and identical) |
+| Nov 14 01:50 | main.pdf | 11 | final review: new agent figure (`figures/final.pdf`) + author's prose abstract; conclusion trimmed so the body ends on page 10 and refs start there; 0 overfull; `verify_paper.py` 121 of 121 |
+
+### Final review (Nov 14)
+- Abstract is now hand-typed prose; its 13 numbers are pinned in
+  `verify_paper.py` (new block "abstract") against the macros and result files.
+- `paper_numbers.py` and `c7_coverage.py` stored percentages rounded to
+  4 decimals, so exact ties (0.5385, 0.6525) were rounded twice and the
+  verifier disagreed with the text by 0.1. Both now store 6 decimals,
+  the verifier rounds half-up like a reader, and three sentences were
+  corrected to the exact values: chain steps citing a log event 57.3 %
+  (was 57.4), module on easy reports 94.6 % (was 94.5), region Acc@1
+  without pilots 53.8 % (was 53.9), LocAgent-parsed wf Acc@1 68.8 % (was 68.9).
+- Known: Fig. 1 is the full draw.io diagram at text width; its 9 pt
+  labels print at about 1.7 pt. The author chose it over a compact variant.
 
 ### Verification
 - `scripts/verify_paper.py --wf <rows> --loop <rows>` checks every macro,

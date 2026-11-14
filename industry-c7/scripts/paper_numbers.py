@@ -66,14 +66,14 @@ for p in projects:
             if in_sample:
                 t = modS.setdefault(st, [0.0, 0]); t[0] += hit; t[1] += 1
 out["retrieval_pooled"] = {
-    s: {st: {"n": a[4], "acc@1": round(a[0] / a[4], 4), "acc@5": round(a[1] / a[4], 4),
-             "acc@10": round(a[2] / a[4], 4), "mrr": round(a[3] / a[4], 4)} for st, a in d.items()}
+    s: {st: {"n": a[4], "acc@1": round(a[0] / a[4], 6), "acc@5": round(a[1] / a[4], 6),
+             "acc@10": round(a[2] / a[4], 6), "mrr": round(a[3] / a[4], 6)} for st, a in d.items()}
     for s, d in acc.items()}
-out["retrieval_module_top_file"] = {st: {"n": t[1], "acc@1": round(t[0] / t[1], 4)} for st, t in mod.items()}
+out["retrieval_module_top_file"] = {st: {"n": t[1], "acc@1": round(t[0] / t[1], 6)} for st, t in mod.items()}
 out["retrieval_sample"] = {
-    st: {"n": b[4], "acc@1": round(b[0] / b[4], 4), "acc@5": round(b[1] / b[4], 4),
-         "acc@10": round(b[2] / b[4], 4), "mrr": round(b[3] / b[4], 4),
-         "module_acc@1": round(modS[st][0] / modS[st][1], 4)} for st, b in accS.items()}
+    st: {"n": b[4], "acc@1": round(b[0] / b[4], 6), "acc@5": round(b[1] / b[4], 6),
+         "acc@10": round(b[2] / b[4], 6), "mrr": round(b[3] / b[4], 6),
+         "module_acc@1": round(modS[st][0] / modS[st][1], 6)} for st, b in accS.items()}
 print("retrieval module (top file):", out["retrieval_module_top_file"]["all"], "sample:", out["retrieval_sample"]["all"])
 print("retrieval: projects", len(projects), "n all", acc["cond_ours"]["all"][3],
       "hard", acc["cond_ours"]["hard"][3])
@@ -99,10 +99,10 @@ for p in projects:
         fs["hard"][i] += h[k] * n
     fs["oracle_hard"] += h["oracle_in_candidates"] * n; fs["hard_n"] += n
 out["functions_pooled"] = {
-    "n_eval_eligible": fs["n"], "eligible_fraction_all_rows": round(fs["eligible_sum"] / fs["n_rows"], 4),
-    "eval_eligible": dict(zip(("acc@1", "acc@5", "acc@10", "mrr"), [round(x / fs["n"], 4) for x in fs["all"]])),
-    "oracle_in_candidates": round(fs["oracle"] / fs["n"], 4),
-    "eval_eligible_hard_weighted_by_n_eligible(approx)": dict(zip(("acc@1", "acc@5", "acc@10", "mrr"), [round(x / fs["hard_n"], 4) for x in fs["hard"]])),
+    "n_eval_eligible": fs["n"], "eligible_fraction_all_rows": round(fs["eligible_sum"] / fs["n_rows"], 6),
+    "eval_eligible": dict(zip(("acc@1", "acc@5", "acc@10", "mrr"), [round(x / fs["n"], 6) for x in fs["all"]])),
+    "oracle_in_candidates": round(fs["oracle"] / fs["n"], 6),
+    "eval_eligible_hard_weighted_by_n_eligible(approx)": dict(zip(("acc@1", "acc@5", "acc@10", "mrr"), [round(x / fs["hard_n"], 6) for x in fs["hard"]])),
 }
 print("functions pooled:", out["functions_pooled"])
 
@@ -119,7 +119,7 @@ for p in projects:
     wins["s3_dense_beats_bm25"] += d["content_dense"]["acc@5"] > d["content_bm25"]["acc@5"]
     wins["s4_dense_beats_bm25"] += d["memory_dense"]["acc@5"] > d["memory_bm25"]["acc@5"]
     wins["cond_dense_s4_beats_cond"] += d["cond_dense_s4"]["acc@5"] > d["cond_ours"]["acc@5"]
-out["dense_pooled"] = {s: {"acc@5": round(a[0] / a[2], 4), "mrr": round(a[1] / a[2], 4), "projects": a[2]} for s, a in ds.items()}
+out["dense_pooled"] = {s: {"acc@5": round(a[0] / a[2], 6), "mrr": round(a[1] / a[2], 6), "projects": a[2]} for s, a in ds.items()}
 out["dense_wins_of_27"] = wins
 print("dense pooled:", {s: v["acc@5"] for s, v in out["dense_pooled"].items()}, wins)
 
@@ -144,10 +144,10 @@ for p, rs in byp.items():
     n = len(rs)
     out["per_project"][p] = {
         "n": n, "hard_share": round(sum(bool(r.get("hard")) for r in rs) / n, 4),
-        "wf_acc@1": round(sum(r["metrics"]["acc@1"] for r in rs) / n, 4),
-        "wf_acc@5": round(sum(r["metrics"]["acc@5"] for r in rs) / n, 4),
-        "lexical_acc@1": round(sum(r["metrics_lexical"]["acc@1"] for r in rs) / n, 4),
-        "lexical_acc@5": round(sum(r["metrics_lexical"]["acc@5"] for r in rs) / n, 4)}
+        "wf_acc@1": round(sum(r["metrics"]["acc@1"] for r in rs) / n, 6),
+        "wf_acc@5": round(sum(r["metrics"]["acc@5"] for r in rs) / n, 6),
+        "lexical_acc@1": round(sum(r["metrics_lexical"]["acc@1"] for r in rs) / n, 6),
+        "lexical_acc@5": round(sum(r["metrics_lexical"]["acc@5"] for r in rs) / n, 6)}
 lo = min(out["per_project"].items(), key=lambda kv: kv[1]["wf_acc@1"])
 hi = max(out["per_project"].items(), key=lambda kv: kv[1]["wf_acc@1"])
 print("per project wf acc@1: min", lo, "max", hi)
@@ -165,7 +165,7 @@ def boot(diff, seed, n_boot=2000):
     rs = random.Random(seed)
     n = len(diff)
     s = sorted(st.fmean(diff[rs.randrange(n)] for _ in range(n)) for _ in range(n_boot))
-    return [round(st.fmean(diff), 4), round(s[int(.025 * n_boot)], 4), round(s[int(.975 * n_boot)], 4)]
+    return [round(st.fmean(diff), 6), round(s[int(.025 * n_boot)], 6), round(s[int(.975 * n_boot)], 6)]
 
 
 out["parsed_only"] = {}
@@ -176,8 +176,8 @@ for arm in ("locagent", "cosil"):
     m = lambda rs, k, src=None: sum((src[r["id"]] if src else r)["metrics"][k] for r in rs) / len(rs)  # noqa: E731
     out["parsed_only"][arm] = {
         "n_all": len(rows), "n_parsed": len(ok), "n_empty": len(rows) - len(ok),
-        "arm_acc@1": round(m(ok, "acc@1"), 4), "arm_acc@5": round(m(ok, "acc@5"), 4),
-        "wf_acc@1": round(m(ok, "acc@1", wf), 4), "wf_acc@5": round(m(ok, "acc@5", wf), 4),
+        "arm_acc@1": round(m(ok, "acc@1"), 6), "arm_acc@5": round(m(ok, "acc@5"), 6),
+        "wf_acc@1": round(m(ok, "acc@1", wf), 6), "wf_acc@5": round(m(ok, "acc@5", wf), 6),
         "wf_minus_arm_acc@1": boot([wf[r["id"]]["metrics"]["acc@1"] - r["metrics"]["acc@1"] for r in ok], 20261104),
         "wf_minus_arm_acc@5": boot([wf[r["id"]]["metrics"]["acc@5"] - r["metrics"]["acc@5"] for r in ok], 20261105)}
     print("parsed-only", arm, out["parsed_only"][arm])

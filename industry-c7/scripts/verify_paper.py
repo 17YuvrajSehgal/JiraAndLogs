@@ -12,7 +12,7 @@ Sources: data/results/c7-coverage-wf-seed42.json (wf paired with the
 free loop), data/results/paper-numbers.json (pooled retrieval, function,
 dense and per-project numbers), data/results/agentic-baselines.json,
 paper/tables/sources.json, data/llm-27/results/llm-cp-summary.json,
-paper/benchmark-numbers.md, data/benchmark/*-memory.jsonl and
+paper/docs/benchmark-numbers.md, data/benchmark/*-memory.jsonl and
 data/results/*-summary.json.
 
 Usage (from the repository root):
@@ -21,6 +21,7 @@ Usage (from the repository root):
 from __future__ import annotations
 
 import argparse
+from decimal import Decimal, ROUND_HALF_UP
 import filecmp
 import glob
 import json
@@ -55,7 +56,8 @@ def tex(name: str) -> str:
 
 
 def flat(s: str) -> str:
-    return re.sub(r"\s+", " ", s)
+    """Whitespace collapsed; LaTeX's 7{,}808 reads as 7,808."""
+    return re.sub(r"\s+", " ", s).replace("{,}", ",")
 
 
 def has(name: str, needle: str, where: str) -> None:
@@ -82,7 +84,7 @@ def main() -> int:
     AB = json.loads((RES / "agentic-baselines.json").read_text(encoding="utf-8"))
     SRC = json.loads((PAPER / "tables/sources.json").read_text(encoding="utf-8"))
     CP = json.loads((ROOT / "data/llm-27/results/llm-cp-summary.json").read_text(encoding="utf-8"))
-    BN = (PAPER / "benchmark-numbers.md").read_text(encoding="utf-8")
+    BN = (PAPER / "docs" / "benchmark-numbers.md").read_text(encoding="utf-8")
     S, SW, SL, H = COV["summary"], COV["summary_run_paired"], COV["summary_base_paired"], COV["health"]
     n_eval = PN["retrieval_pooled"]["cond_ours"]["all"]["n"]
     scale = S["all"]["n"] / n_eval          # scored rows -> full population (misses count as 0)
@@ -102,7 +104,9 @@ def main() -> int:
     check("nMemoryPool = entries in data/benchmark/*-memory.jsonl", num(M["nMemoryPool"]) == pool, f"{pool}")
     check("nEval = evaluation-split rows", num(M["nEval"]) == n_eval, n_eval)
     check("nEvalHard", num(M["nEvalHard"]) == PN["retrieval_pooled"]["cond_ours"]["hard"]["n"], M["nEvalHard"])
-    exp = lambda v, k=1: round(100 * v, k)  # noqa: E731
+    # percent with k decimals, ties rounded up as a reader would (0.5385 -> 53.9),
+    # not Python's round(), which sees 53.849999... and prints 53.8
+    exp = lambda v, k=1: float((Decimal(repr(v)) * 100).quantize(Decimal(1).scaleb(-k), rounding=ROUND_HALF_UP))  # noqa: E731
     check("accOne = wf file Acc@1 on all 26,544 (misses as 0)", num(M["accOne"]) == exp(S["all"]["file_acc@1"] * scale), exp(S["all"]["file_acc@1"] * scale))
     check("accFive", num(M["accFive"]) == exp(S["all"]["file_acc@5"] * scale), exp(S["all"]["file_acc@5"] * scale))
     check("mrr", num(M["mrr"]) == round(S["all"]["file_mrr"] * scale, 3), round(S["all"]["file_mrr"] * scale, 3))
@@ -214,15 +218,31 @@ def main() -> int:
     has("05-results", f"the paired margin is ${pm(b1[0])}$ points $[{pm(b1[1])}, {pm(b1[2])}]$ at rank one and ${pm(b5[0])}$ $[{pm(b5[1])}, {pm(b5[2])}]$ at rank five", "05-results")
     c1, c5 = co_["wf_minus_arm_acc@1"], co_["wf_minus_arm_acc@5"]
     has("05-results", f"On CoSIL-style's {co_['n_parsed']} answered instances the margins are ${pm(c1[0])}$ $[{pm(c1[1])}, {pm(c1[2])}]$ and ${pm(c5[0])}$ $[{pm(c5[1])}, {pm(c5[2])}]$ points", "05-results")
-    check("abstract: lead over the ports on answered instances (4 and 16)",
-          f"({round(100 * b1[0])} and {round(100 * c1[0])} on the instances the ports answered)" in main_tex, f"{b1[0]}, {c1[0]}")
+    # ---- abstract: its numbers are typed by hand, so each one is pinned here -----
+    print("== abstract (literal numbers vs macros and result files)")
+    AT = flat(main_tex.split("\\begin{abstract}")[1].split("\\end{abstract}")[0])
+    lit = lambda k: M[k].replace("{,}", ",").strip()  # noqa: E731
+    for k, phrase in [("nHardPct", "in {} of the real reports"), ("nProjects", "{} open-source projects"),
+                      ("nInstances", "holds {} resolved issue reports"), ("nEval", "On {} evaluation reports"),
+                      ("accOne", "changed file first for {}"), ("accFive", "in the top five for {}"),
+                      ("modOne", "correct module for {}"), ("regOne", "changed function first for {}"),
+                      ("hardOne", "it reaches {} and"), ("hardFive", "and {}. A free agent loop"),
+                      ("nSample", "On a {}-report sample")]:
+        check(f"abstract: {k} as '{phrase.format(lit(k))}'", phrase.format(lit(k)) in AT, lit(k))
+    gap = round(num(M["regOne"]) - num(M["loopRegOne"]))
+    check(f"abstract: function-level gap over the free loop ({gap} points)", f"faulty function {gap} points less often" in AT, gap)
+    check("abstract: leads over the ports, on answered instances, and over the re-ranker",
+          f"by {round(100 * la['all']['acc@1']['delta'])} and {round(100 * co['all']['acc@1']['delta'])} points of top-1 accuracy "
+          f"({round(100 * b1[0])} and {round(100 * c1[0])} counting only the reports those agents answered), "
+          f"and the same model used as a re-ranker by {round(100 * rr['vs_wf_acc@1'][0])}." in AT,
+          (la['all']['acc@1']['delta'], co['all']['acc@1']['delta'], b1[0], c1[0], rr['vs_wf_acc@1'][0]))
     NP = PN["without_pilots"]
     has("06-discussion", f"on the {NP['n']:,} instances outside the pilots changes nothing at the paper's precision: file Acc@1 {exp(NP['file_acc@1'])}\\% and Acc@5 {exp(NP['file_acc@5'])}\\%, module {exp(NP['module_agent_acc@1'])}\\%, region {exp(NP['region_acc@1'])}\\% and {exp(NP['region_acc@5'])}\\%", "06-discussion")
     check("06-discussion: without-pilot headline is within 0.1 point of the macros",
-          abs(exp(NP["file_acc@1"]) - num(M["accOne"])) <= 0.1 and abs(exp(NP["file_acc@5"]) - num(M["accFive"])) <= 0.1
-          and abs(exp(NP["region_acc@1"]) - num(M["regOne"])) <= 0.1, NP)
+          abs(exp(NP["file_acc@1"]) - num(M["accOne"])) <= 0.1001 and abs(exp(NP["file_acc@5"]) - num(M["accFive"])) <= 0.1001
+          and abs(exp(NP["region_acc@1"]) - num(M["regOne"])) <= 0.1001, NP)
     has("05-results", f"66.5\\% Acc@1 ({S['trace']['n']:,} instances)", "05-results")
-    has("05-results", f"neither 70.8\\% ({S['prose']['n']:,}, half the split)", "05-results")
+    has("05-results", f"neither 70.8\\% ({S['prose']['n']:,}, half the split;", "05-results")
     check("05-results: 'half the split' for the no-event reports", 0.45 <= S["prose"]["n"] / S["all"]["n"] <= 0.55, S["prose"]["n"] / S["all"]["n"])
     has("05-results", f"it reaches {exp(S['all']['region_agent_only_acc@1'])}\\% Acc@1 and {exp(S['all']['region_agent_only_acc@5'])}\\% Acc@5", "05-results")
     has("05-results", f"the module of its own top-ranked file ({exp(SW['all']['module_from_ranking_acc@1'])}\\%) and of the loop's ({exp(SL['all']['module_from_ranking_acc@1'])}\\%)", "05-results")
