@@ -331,6 +331,13 @@ def main() -> int:
     flips = sorted(v["file_acc@1"]["flips"] for v in SV["paired_vs_42"].values())
     has("06-discussion", f"while {flips[0]} to {flips[-1]} instances change their top file between two seeds", "06-discussion")
 
+    # ---- the easy/hard figure's caption --------------------------------------
+    ours, la = AB["systems"]["ours"], AB["systems"]["locagent"]
+    rr5 = SRC["agents"]["extra"]["llm_rerank"]["hard_acc@5"]
+    best_h1 = max(v["hard_acc@1"] for k, v in AB["systems"].items() if k != "ours")
+    best_h1 = max(best_h1, SRC["agents"]["extra"]["llm_rerank"]["hard_acc@1"], SRC["agents"]["extra"]["llm_alone"]["hard_acc@1"])
+    has("05-results", f"leads the best alternative by {round(100 * (ours['hard_acc@1'] - best_h1))} points at Acc@1 and {round(100 * ours['hard_acc@5'])} to {round(100 * rr5)} at Acc@5", "05-results")
+    check("fig:easyhard: the re-ranker is the best alternative at hard Acc@5", rr5 >= max(v["hard_acc@5"] for k, v in AB["systems"].items() if k != "ours"), rr5)
     for d in ("10.5281/zenodo.24217071", "10.5281/zenodo.24217136"):
         check(f"08-conclusion: Zenodo DOI {d}", d in tex("08-conclusion"), "")
 

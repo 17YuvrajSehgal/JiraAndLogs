@@ -32,9 +32,8 @@ navigate structure: LocAgent over a code graph with an entity
 index~\cite{chen2025locagent}, CoSIL over dynamically built call
 graphs~\cite{jiang2025cosil}, GenLoc by seeding an LLM with retrieval
 candidates and letting it explore~\cite{asad2026genloc}. \sys{} shares
-GenLoc's seed-then-explore shape. What it adds is the project's own
-resolved history as a tool behind a temporal firewall, and a procedure
-fixed in code in which the model decides only inside bounded steps,
+GenLoc's seed-then-explore shape and adds the project's own resolved
+history behind a temporal firewall and a procedure fixed in code,
 measured against the unconstrained loop these systems use. CoSIL's
 analysis of LLM localizer failures, malformed tool arguments and
 hallucinated paths, matches what we saw and shaped our fixed answer

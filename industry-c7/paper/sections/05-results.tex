@@ -145,11 +145,25 @@ region Acc@5 $+20.9$ $[+19.9, +21.9]$ above.
 \subsection{Against reimplemented published agents}
 \label{sec:results:agents}
 
+\begin{figure}[t]
+\centering
+\includegraphics[width=\columnwidth]{figures/easy-hard.pdf}
+\caption{Acc@1 and Acc@5 split by whether the report names a file
+the fix changed (easy) or none (hard). Top: every system on the
+\nSample-instance sample. Bottom: the two agents at the function level
+on the 26{,}537 paired evaluation instances. Where the report names a
+faulty file, a re-ranker matches \sys{}; where it names none, \sys{}
+leads the best alternative by 12 points at Acc@1 and 72 to 60 at
+Acc@5.}
+\label{fig:easyhard}
+\end{figure}
+
 The lower block of \cref{tab:all} compares \sys{} with two agents from
 the literature, reimplemented because neither released system runs on
 Java, Scala, C or C++ (\cref{sec:setup:systems}), and with the same
 model used without tools, alone and as a re-ranker of the retrieval
-layer's candidates.
+layer's candidates; \cref{fig:easyhard} splits every score by whether
+the report names a faulty file.
 \sys{} leads every system on every column. Against LocAgent-style, the
 stronger published agent, the paired difference is $+7.2$ points of
 Acc@1 $[+4.5, +10.0]$ and $+13.6$ of Acc@5 $[+11.0, +16.2]$; on the
@@ -347,9 +361,8 @@ Acc@5 by 0.9 points, significantly, and gains only 0.7 at Acc@1: at the
 file level the structure buys nothing, and a reader who wants files only
 should take the loop. Second, on reports with a stack trace the
 workflow is not better at all. Third, four of \nEval{} instances
-(0.015\%) ended without an answer in two runs each, because the final
-step's structured output failed to parse twice; they are scored as
-misses and not retried. Fourth, the port check for CoSIL-style fails,
+ended without an answer in two runs each (the final step's output
+failed to parse) and are scored as misses. Fourth, the port check for CoSIL-style fails,
 as stated above. Fifth, the module the agent names (\modOne{}) is below
 the module of its own top-ranked file (90.9\%) and of the loop's
 (90.8\%): naming the module is a separate decision in the rank step,
