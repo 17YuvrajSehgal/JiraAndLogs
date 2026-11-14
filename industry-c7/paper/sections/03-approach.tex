@@ -4,8 +4,8 @@
 The retrieval layer is a system in its own right in
 \cref{sec:results:retrieval}, and it is the component \sys{} uses as a
 tool, so its construction matters twice. It is lexical and
-deterministic: no model, nothing trained, one CPU core, a tenth of a
-second per issue. Four signals each produce a ranked list over the
+deterministic: no model, nothing trained, one CPU core, a median of under
+0.2 seconds per issue on every project. Four signals each produce a ranked list over the
 snapshot's non-test source files, and a weighted fusion merges them.
 
 \textbf{Trace mentions (S1)} finds files named in the report itself:

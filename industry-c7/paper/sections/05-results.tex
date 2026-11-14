@@ -249,7 +249,9 @@ the index proposes, and the numbers above are what survives that cut.
 
 \begin{table}[t]
 \caption{Function-level results on the evaluation instances whose fix
-diff yields at least one gold function. ``Oracle'' is the share whose
+diff yields at least one gold function: the BM25 stage on the instances
+the retrieval layer ranked, the two agents on the instances both
+answered. ``Oracle'' is the share whose
 gold function is anywhere in the candidate set; it is the ceiling of
 the BM25 stage and is not defined for the agents, which choose their
 own regions.}
@@ -269,7 +271,8 @@ own regions.}
 Engineers need code regions, not files. Gold functions are
 derived mechanically: tree-sitter lists every function span in the
 snapshot, and a function is gold when its span overlaps a hunk of the
-fix diff; 93.9\% of instances yield at least one. \Cref{tab:functions}
+fix diff; 93.9\% of the instances the retrieval layer ranked yield at
+least one (24,820). \Cref{tab:functions}
 compares three ways of getting there. A BM25 stage that ranks the
 function bodies in the retrieval layer's top ten files reaches 21.9\%
 Acc@1 with a 77.0\% ceiling, so its problem is ranking inside large

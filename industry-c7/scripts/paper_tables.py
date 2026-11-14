@@ -313,7 +313,7 @@ def main() -> int:
     e = fp["eval_eligible"]
     lines = [f"BM25 over the layer's top-10 files & {fp['n_eval_eligible']:,} & {pct(e['acc@1'])} & {pct(e['acc@5'])} & "
              f"{pct(e['acc@10'])} & {f3(e['mrr'])} & {pct(fp['oracle_in_candidates'])} \\\\"]
-    for name, d in (("unconstrained loop (ablation)", L), ("\\sys{}", W)):
+    for name, d in (("unconstrained loop (ablation)", Lp), ("\\sys{}", Wp)):
         x = d["all"]
         lines.append(f"{name} & {x['n_region_eligible']:,} & {pct(x['region_acc@1'])} & {pct(x['region_acc@5'])} & "
                      f"{pct(x.get('region_acc@10'))} & {f3(x['region_mrr'])} & -- \\\\")
@@ -348,7 +348,7 @@ def main() -> int:
             src.setdefault("modules_baselines", {})[key] = {"acc@1": round(a1 / nb, 4), "acc@5": round(a5 / nb, 4), "n": nb}
         lines.append("\\midrule")
     lines.append(f"\\retr{{}} (module of the top file) & {pct(tot['cond_ours'][0] / N)} & {pct(tot['cond_ours'][1] / N)} \\\\")
-    lines.append(f"unconstrained loop (module of the top file) & {pct(L['all']['module_from_ranking_acc@1'])} & -- \\\\")
+    lines.append(f"unconstrained loop (module of the top file) & {pct(Lp['all']['module_from_ranking_acc@1'])} & -- \\\\")
     lines.append(f"\\sys{{}} (module named by the agent) & {pct(W['all']['module_agent_acc@1'])} & -- \\\\")
     (TAB / "modules.tex").write_text("\n".join(lines) + "\n", encoding="utf-8", newline="\n")
     src["modules"] = {"file": str(RES / "module-metrics.json"), "n": N,

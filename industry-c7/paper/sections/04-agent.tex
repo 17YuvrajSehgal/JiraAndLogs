@@ -35,7 +35,7 @@ Localization agents are usually built as a loop: one model, a set of
 tools, a turn budget, and the model deciding at every turn what to do
 next and when to stop. \sys{} is built on four principles that take
 those decisions away from the model. The evidence is gathered by code
-before the model is called, so no turn is spent searching for what the
+before the model makes any decision, so no turn is spent searching for what the
 report already names. Every candidate file is judged on its own, in a
 fresh context with its code on screen, so a file's rank depends on what
 its code does rather than on how often or how recently it was read.
@@ -54,14 +54,15 @@ only inside it, three times, and every decision is written to the
 trace.
 
 \textbf{1. Gather (code).} Code collects the evidence before the model
-is called. The logs in the report are grouped into events and labelled
+makes any decision. The logs in the report are grouped into events and labelled
 \texttt{E1}, \texttt{E2}, \ldots; for each event the code finds the
 statement that printed it and that statement's callers; every symbol in
 the report is resolved to the file that defines it; the retrieval layer
 of \cref{sec:approach} supplies its top twenty files; the incident
 memory is queried, behind the firewall, for similar past incidents and
 the files their fixes touched; a behaviour search and a title search run
-over file content.
+over file content, the behaviour query being the one model call of this
+step, a restatement of the symptom in code vocabulary.
 
 \textbf{2. Route and table (code).} The report is routed by what it
 contains: stack frames, else log lines that match a statement in the
@@ -77,7 +78,8 @@ searches if the table clearly misses the described behaviour, and must
 answer with up to five paths to examine. Code keeps only paths that are
 in the table or that the model's own searches returned, and always adds
 the top two retrieval files and the route's lead file, whether or not
-the model picked them.
+the model picked them; the queue is capped at six files, which leaves
+two of the eight examination slots for walk-back.
 
 \textbf{4. Examine (model, one file per step, at most three calls
 each).} Each queued file is judged alone, in a fresh context that holds

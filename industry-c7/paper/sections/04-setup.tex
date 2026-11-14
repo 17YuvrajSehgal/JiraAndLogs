@@ -24,7 +24,9 @@ the split anyway; the alternative is the deployment scenario backwards.
 Two populations carry the results, and no comparison mixes them. The
 \emph{evaluation split} is the later 70\% of every project,
 \nEval{} instances, \nEvalHard{} of them hard. \sys{}, the retrieval
-layer and the loop ablation are scored on all of it. The
+layer and the loop ablation are scored on all of it; the paired
+ablation of \cref{tab:ablation} uses the 26{,}537 instances both arms
+answered. The
 \emph{sample} is \nSample{} instances drawn from the evaluation split
 with a fixed seed before any agent had run, stratified to match the
 split's project mix and hard fraction (\nSampleHard{} hard against the
@@ -71,7 +73,7 @@ repositories and parse Python files only, while our projects are
 mainly Java, Scala, C and C++. The graph layer
 is the contribution in both papers, so replacing it is the port; we
 reimplement their search strategies on our tree-sitter layer and name
-the arms accordingly, as this paper does for BRTracer-style methods.
+the arms accordingly.
 Held constant: the served model, temperature zero, the seed, the
 snapshots, the reports with their logs, the context window and a turn
 budget at least as large as ours. Withheld from both, because neither

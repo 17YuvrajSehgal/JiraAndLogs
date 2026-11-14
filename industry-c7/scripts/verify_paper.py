@@ -237,7 +237,7 @@ def main() -> int:
           f"and the same model used as a re-ranker by {round(100 * rr['vs_wf_acc@1'][0])}." in AT,
           (la['all']['acc@1']['delta'], co['all']['acc@1']['delta'], b1[0], c1[0], rr['vs_wf_acc@1'][0]))
     NP = PN["without_pilots"]
-    has("06-discussion", f"on the {NP['n']:,} instances outside the pilots changes nothing at the paper's precision: file Acc@1 {exp(NP['file_acc@1'])}\\% and Acc@5 {exp(NP['file_acc@5'])}\\%, module {exp(NP['module_agent_acc@1'])}\\%, region {exp(NP['region_acc@1'])}\\% and {exp(NP['region_acc@5'])}\\%", "06-discussion")
+    has("06-discussion", f"on the {NP['n']:,} answered instances outside the pilots changes nothing at the paper's precision: file Acc@1 {exp(NP['file_acc@1'])}\\% and Acc@5 {exp(NP['file_acc@5'])}\\%, module {exp(NP['module_agent_acc@1'])}\\%, region {exp(NP['region_acc@1'])}\\% and {exp(NP['region_acc@5'])}\\%", "06-discussion")
     check("06-discussion: without-pilot headline is within 0.1 point of the macros",
           abs(exp(NP["file_acc@1"]) - num(M["accOne"])) <= 0.1001 and abs(exp(NP["file_acc@5"]) - num(M["accFive"])) <= 0.1001
           and abs(exp(NP["region_acc@1"]) - num(M["regOne"])) <= 0.1001, NP)
@@ -261,7 +261,7 @@ def main() -> int:
     has("05-results", f"from {exp(R['fused_no_memory']['hard']['acc@5'])}\\% to {exp(R['fused_ours']['hard']['acc@5'])}\\%", "05-results")
     has("05-results", f"from {exp(R['cond_no_memory']['hard']['acc@5'])}\\% to {exp(R['cond_ours']['hard']['acc@5'])}\\%", "05-results")
     F = PN["functions_pooled"]
-    has("05-results", f"{exp(F['eligible_fraction_all_rows'])}\\% of instances yield", "05-results")
+    has("05-results", f"{exp(F['eligible_fraction_all_rows'])}\\% of the instances the retrieval layer ranked yield", "05-results")
     has("05-results", f"reaches {exp(F['eval_eligible']['acc@1'])}\\%\nAcc@1 with a {exp(F['oracle_in_candidates'])}\\% ceiling", "05-results")
     has("05-results", f"{exp(hard['region_acc@1'])}\\% region Acc@1 and {exp(hard['region_acc@5'])}\\% Acc@5", "05-results")
     easy = PN["wf_by_difficulty"]["easy"]
