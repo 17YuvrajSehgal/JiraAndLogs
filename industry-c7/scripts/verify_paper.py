@@ -157,7 +157,7 @@ def main() -> int:
             r = subprocess.run([sys.executable, str(HERE / "paper_tables.py"), "--wf", a.wf, "--loop", a.loop],
                                env=env, capture_output=True, text=True)
             check("paper_tables.py runs", r.returncode == 0, r.stderr[-300:])
-            for f in ("headline", "agents", "retrieval", "functions", "modules"):
+            for f in ("all", "ablation", "retrieval", "functions", "modules"):
                 same = filecmp.cmp(Path(td) / f"{f}.tex", PAPER / "tables" / f"{f}.tex", shallow=False)
                 check(f"tables/{f}.tex is what the result files give", same, "differs: rerun paper_tables.py")
 

@@ -25,9 +25,8 @@ layer and the loop ablation are scored on all of it. The
 with a fixed seed before any agent had run, stratified to match the
 split's project mix and hard fraction (\nSampleHard{} hard against the
 split's 48\%). It carries the two reimplemented published agents and
-the model baselines, which were too costly to run on the whole split,
-and every system on it, \sys{} included, is scored on exactly those
-instances. The 101 benchmark instances whose gold consists entirely of
+the model baselines, and every system on it, \sys{} included, is scored
+on exactly those instances. The 101 benchmark instances whose gold consists entirely of
 test files are excluded from both populations before any system is
 scored (\cref{tab:funnel}); they are rankable and easier than average,
 so the exclusion lowers every score rather than raising it.
@@ -85,7 +84,7 @@ open-weights model, Qwen3.8-27B, self-hosted on H100 GPUs at
 temperature zero with a fixed seed and thinking disabled, so what
 separates them is the architecture.
 
-\subsection{Statistics, and what one run means}
+\subsection{Statistics}
 \label{sec:setup:stats}
 
 Every comparison is paired over instances and tested with a bootstrap
@@ -93,13 +92,8 @@ of 2{,}000 resamples; we report the mean difference with its 95\%
 interval and call it significant when the interval excludes zero. We do
 not correct for multiple comparisons: the differences the paper builds
 on are far from zero, and the one that is not, the file-level
-difference between the two agents, is reported as small. Every agent
-number is from one run with one seed. The model is not deterministic
-under continuous batching even at temperature zero, so we measured the
-run-to-run variation directly and report it with the results; the
-retrieval layer is deterministic end to end and reproduces its tables
-bit for bit. The agent rows were produced on two sites, academic cluster
-nodes and a rented cloud machine, with identical software versions and
-model checksums, and the same twenty instances run on both sites agree
-on the module every time and on the top file in three cases out of four
-(\cref{sec:results:negatives}).
+difference between the two agents, is reported as small. The retrieval
+layer is deterministic end to end and reproduces its tables bit for
+bit; the agents run at temperature zero with a fixed seed, and the
+residual variation of the model is reported in
+\cref{sec:discussion:threats}.

@@ -89,21 +89,7 @@ def main() -> int:
     src["headline"] = {"wf": a.wf, "loop": a.loop, "n_wf": len(wf), "n_loop": len(lp),
                        "W": W, "L": L, "R": R, "cost_wf": cw, "cost_loop": cl}
 
-    def row(name, d, mod, reg, c):
-        return (f"{name} & {pct(d['all']['file_acc@1'])} & {pct(d['all']['file_acc@5'])} & "
-                f"{d['all']['file_mrr']:.3f} & {pct(d['hard']['file_acc@1'])} & {pct(d['hard']['file_acc@5'])} & "
-                f"{mod} & {reg} & {c} \\\\")
-    regs = lambda d: f"{pct(d['all']['region_acc@1'])} / {pct(d['all']['region_acc@5'])}"  # noqa: E731
-    body = [
-        row("retrieval layer (no model)", R, "--", "--", "0 / 0"),
-        row("unconstrained loop (ablation)", L, pct(L["all"]["module_from_ranking_acc@1"]), regs(L),
-            f"{cl[0]:.1f} / {cl[1]:.0f}k"),
-        row("\\sys{} (staged workflow)", W, pct(W["all"]["module_agent_acc@1"]), regs(W),
-            f"{cw[0]:.1f} / {cw[1]:.0f}k"),
-    ]
-    (TAB / "headline.tex").write_text("\n".join(body) + "\n", encoding="utf-8", newline="\n")
-
-    # paired wf minus free loop, file and region, all / hard
+    # paired wf minus the loop, file and region, all / hard
     pair = {}
     for k in ("all", "hard"):
         keep = [i for i in ids if i in S_wf[k]]
@@ -112,9 +98,28 @@ def main() -> int:
             d, lo, hi = boot([s_wf[i][grp][m] - s_lp[i][grp][m] for i in ok], (len(grp) * 7 + int(m[-1])) % 97)
             pair[f"{k}:{grp}_{m}"] = {"delta": round(d, 4), "lo": round(lo, 4), "hi": round(hi, 4), "n": len(ok)}
     src["headline"]["paired_wf_minus_loop"] = pair
-    for d, sc in ((W, s_wf), (L, s_lp)):   # region Acc@10, which summarise() leaves out
+    for d, sc, rows_ in ((W, s_wf, wf), (L, s_lp, lp)):   # Acc@10s, which summarise() leaves out
         reg = [s["region"]["acc@10"] for s in sc.values() if "region" in s]
         d["all"]["region_acc@10"] = st.fmean(reg)
+        d["all"]["file_acc@10"] = st.fmean(r["metrics"]["acc@10"] for r in rows_.values())
+
+    # ---- ablation: the unconstrained loop against the staged workflow ------
+    cite = lambda d: "--" if d["all"]["steps_citing_log"] is None else pct(d["all"]["steps_citing_log"])  # noqa: E731
+    abl = [
+        f"unconstrained loop & {pct(L['all']['file_acc@1'])} & {pct(L['all']['file_acc@5'])} & {pct(L['hard']['file_acc@1'])} & "
+        f"{pct(L['all']['region_acc@1'])} & {pct(L['all']['region_acc@5'])} & {pct(L['all']['region_acc@10'])} & "
+        f"{cite(L)} & {cl[0]:.1f} / {cl[1]:.0f}k \\\\",
+        f"\\sys{{}} & {pct(W['all']['file_acc@1'])} & {pct(W['all']['file_acc@5'])} & {pct(W['hard']['file_acc@1'])} & "
+        f"{pct(W['all']['region_acc@1'])} & {pct(W['all']['region_acc@5'])} & {pct(W['all']['region_acc@10'])} & "
+        f"{cite(W)} & {cw[0]:.1f} / {cw[1]:.0f}k \\\\",
+        "\\midrule",
+        "\\sys{} minus loop, paired & "
+        + " & ".join(f"{100 * pair[k]['delta']:+.1f} [{100 * pair[k]['lo']:+.1f}, {100 * pair[k]['hi']:+.1f}]"
+                     for k in ("all:file_acc@1", "all:file_acc@5", "hard:file_acc@1", "all:region_acc@1", "all:region_acc@5"))
+        + f" & {100 * (W['all']['region_acc@10'] - L['all']['region_acc@10']):+.1f} & "
+        f"{100 * ((W['all']['steps_citing_log'] or 0) - (L['all']['steps_citing_log'] or 0)):+.1f} & -- \\\\",
+    ]
+    (TAB / "ablation.tex").write_text("\n".join(abl) + "\n", encoding="utf-8", newline="\n")
 
     # ---- agents on the 1,000 sample ---------------------------------------
     AB = json.loads((RES / "agentic-baselines.json").read_text(encoding="utf-8"))
@@ -168,11 +173,103 @@ def main() -> int:
         lines.append(f"{name} & {acc(common, 1):.3f} & {acc(common, 5):.3f} & {acc(hk, 1):.3f} & {acc(hk, 5):.3f} & "
                      f"{calls:.1f} & {toks:.0f}k \\\\")
         src["agents"]["extra"][key] = {"file": path, "n": len(common), "n_hard": len(hk),
+                                       "prompt_tokens_k": round(toks, 2),
                                        "acc@1": round(acc(common, 1), 4), "acc@5": round(acc(common, 5), 4),
                                        "hard_acc@1": round(acc(hk, 1), 4), "hard_acc@5": round(acc(hk, 5), 4),
                                        "vs_wf_acc@1": [round(x, 4) for x in delta],
                                        "vs_wf_acc@5": [round(x, 4) for x in paired_vs_wf(d, common, 5)]}
-    (TAB / "agents.tex").write_text("\n".join(lines) + "\n", encoding="utf-8", newline="\n")
+    # ---- every system and every metric in one table ------------------------
+    # Two blocks: the full evaluation split and the 1,000-instance sample. In
+    # each column the best value of a block is bold; when it is ours it is
+    # also set in the win colour (\win, defined in main.tex). Module is the
+    # module of the top-ranked file for every row. Cost is not scored.
+    import module_metrics as MM
+    sys.path.insert(0, str(HERE))
+    from localize import is_dead_row  # noqa: E402
+
+    def gold_mods(r):
+        return {MM.module_of(f, MM.DEPTH.get(r["project"], 1)) for f in r["gold_files"]}
+
+    def block_rows(systems, keep):
+        """systems: list of (name, rows dict, scored dict, is_ours, calls, tokens, region_override).
+        Returns rows of cell values (None = not available) and the names."""
+        out = []
+        for name, rows_, sc, ours, calls, toks, reg_over in systems:
+            ks = [i for i in keep if i in rows_]
+            hk = [i for i in ks if wf[i].get("hard")]
+            S = CC.summarise({i: sc[i] for i in ks})["all"]
+            Sh = CC.summarise({i: sc[i] for i in hk})["all"]
+            # only our agent names regions; the ports carry a lexical fill
+            # that is not their output, and the model baselines rank files
+            has_regions = ours
+            vals = [S["file_acc@1"], S["file_acc@5"], st.fmean(rows_[i]["metrics"]["acc@10"] for i in ks), S["file_mrr"],
+                    Sh["file_acc@1"], Sh["file_acc@5"], S["module_from_ranking_acc@1"],
+                    (S["region_acc@1"] if has_regions else (reg_over or (None, None))[0]),
+                    (S["region_acc@5"] if has_regions else (reg_over or (None, None))[1]),
+                    S["steps_citing_log"]]
+            out.append((name, ours, vals, calls, toks, len(ks)))
+        return out
+
+    def render_block(title, rows_):
+        lines_ = [f"\\multicolumn{{12}}{{@{{}}l}}{{\\emph{{{title}}}}} \\\\"]
+        ncol = len(rows_[0][2])
+        best = [max((r[2][c] for r in rows_ if r[2][c] is not None), default=None) for c in range(ncol)]
+        for name, ours, vals, calls, toks, n in rows_:
+            cells = []
+            for c, v in enumerate(vals):
+                if v is None:
+                    cells.append("--"); continue
+                s = f"{v:.3f}" if c == 3 else pct(v)
+                if best[c] is not None and abs(v - best[c]) < 1e-9:
+                    s = f"\\win{{{s}}}" if ours else f"\\textbf{{{s}}}"
+                cells.append(s)
+            cells.append("0 / 0" if calls is None else f"{calls:.1f} / {toks:.0f}k")
+            lines_.append(f"{name} & " + " & ".join(cells) + " \\\\")
+        return lines_
+
+    # the retrieval layer as a scored system: its ranking is the seed list
+    # carried in the wf rows, its metrics are metrics_lexical
+    lex = {}
+    for i, r in wf.items():
+        seed = r.get("lexical_seed") if isinstance(r.get("lexical_seed"), list) else []
+        lex[i] = {"project": r["project"], "issue_key": r["issue_key"], "gold_files": r["gold_files"],
+                  "ranking": seed, "metrics": r["metrics_lexical"], "hard": r.get("hard"),
+                  "has_stack_trace": r.get("has_stack_trace")}
+    s_lex = {i: CC.score_row(r) for i, r in lex.items()}
+    fp_ = PN_FUNCS = json.loads((TMP / "paper-numbers.json").read_text(encoding="utf-8"))["functions_pooled"]
+    full_sys = [("retrieval layer (no model)", lex, s_lex, False, None, None,
+                 (fp_["eval_eligible"]["acc@1"], fp_["eval_eligible"]["acc@5"])),
+                ("\\sys{}", wf, s_wf, True, cw[0], cw[1], None)]
+    full = block_rows(full_sys, sorted(wf))
+    arms = {}
+    for key, name in (("locagent", "LocAgent-style"), ("cosil", "CoSIL-style")):
+        rows_ = {}
+        for line in (ROOT / "data/agent" / f"agent-{key}-eval.jsonl").open(encoding="utf-8"):
+            if line.strip():
+                r = json.loads(line)
+                if r["id"] in sample and not is_dead_row(r):
+                    rows_[r["id"]] = r
+        arms[key] = (name, rows_, {i: CC.score_row(r) for i, r in rows_.items()},
+                     AB["systems"][key]["llm_calls"], AB["systems"][key]["prompt_tokens"] / 1000)
+    sample_sys = [("retrieval layer (no model)", lex, s_lex, False, None, None, None)]
+    for key in ("locagent", "cosil"):
+        name, rows_, sc, calls, toks = arms[key]
+        sample_sys.append((name, rows_, sc, False, calls, toks, None))
+    for key, (name, d, path) in extra.items():
+        sc = {i: CC.score_row(r) for i, r in d.items()}
+        calls = 2.0 if key == "llm_alone" else 1.0
+        toks = src["agents"]["extra"][key].get("prompt_tokens_k") or 0.0
+        sample_sys.append((name, d, sc, False, calls, toks, None))
+    sample_sys.append(("\\sys{}", sw, {i: s_wf[i] for i in sw}, True, cw[0], cw[1], None))
+    samp = block_rows(sample_sys, sorted(sample))
+    # the population counts (the four unanswered instances count as misses)
+    npop = json.loads((TMP / "paper-numbers.json").read_text(encoding="utf-8"))["retrieval_pooled"]["cond_ours"]
+    alltab = render_block(f"evaluation split, {npop['all']['n']:,} instances ({npop['hard']['n']:,} hard)", full)
+    alltab.append("\\midrule")
+    alltab += render_block(f"stratified sample, {len(sample):,} instances ({len(hard):,} hard)", samp)
+    (TAB / "all.tex").write_text("\n".join(alltab) + "\n", encoding="utf-8", newline="\n")
+    src["all"] = {"full": [(r[0], r[5]) for r in full], "sample": [(r[0], r[5]) for r in samp],
+                  "retrieval_module_from_seed_top1": round(full[0][2][6], 4) if full[0][2][6] is not None else None}
 
     # ---- retrieval signals pooled -------------------------------------------
     PN = json.loads((TMP / "paper-numbers.json").read_text(encoding="utf-8"))
@@ -237,7 +334,7 @@ def main() -> int:
                       "baselines_file": str(RES / "module-baselines.json") if mb else None}
 
     (TAB / "sources.json").write_text(json.dumps(src, indent=1, default=str), encoding="utf-8")
-    for f in ("headline", "agents", "retrieval", "functions", "modules"):
+    for f in ("all", "ablation", "retrieval", "functions", "modules"):
         print(f"--- {f}.tex"); print((TAB / f"{f}.tex").read_text(encoding="utf-8"))
     print("paired wf minus free loop:", json.dumps(pair))
     return 0

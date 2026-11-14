@@ -24,7 +24,8 @@
     "steps_citing_log": 0.5735,
     "log_cites_grounded": 0.8569,
     "runs_with_events_that_cite_one": 0.9999,
-    "region_acc@10": 0.7483299798792756
+    "region_acc@10": 0.7483299798792756,
+    "file_acc@10": 0.8811981914091936
    },
    "hard": {
     "n": 12797,
@@ -87,7 +88,8 @@
     "steps_citing_log": 0.0,
     "log_cites_grounded": null,
     "runs_with_events_that_cite_one": null,
-    "region_acc@10": 0.5071023298861213
+    "region_acc@10": 0.5071023298861213,
+    "file_acc@10": 0.8884744357786066
    },
    "hard": {
     "n": 12797,
@@ -216,6 +218,7 @@
     "file": "C:\\workplace\\JiraAndLogs\\industry-c7\\data\\llm-27\\scored-a2.jsonl",
     "n": 1000,
     "n_hard": 483,
+    "prompt_tokens_k": 15.65,
     "acc@1": 0.527,
     "acc@5": 0.71,
     "hard_acc@1": 0.2981,
@@ -235,6 +238,7 @@
     "file": "C:\\workplace\\JiraAndLogs\\industry-c7\\data\\llm-27\\scored-rr.jsonl",
     "n": 1000,
     "n_hard": 483,
+    "prompt_tokens_k": 2.76,
     "acc@1": 0.608,
     "acc@5": 0.79,
     "hard_acc@1": 0.3934,
@@ -251,6 +255,45 @@
     ]
    }
   }
+ },
+ "all": {
+  "full": [
+   [
+    "retrieval layer (no model)",
+    26540
+   ],
+   [
+    "\\sys{}",
+    26540
+   ]
+  ],
+  "sample": [
+   [
+    "retrieval layer (no model)",
+    1000
+   ],
+   [
+    "LocAgent-style",
+    1000
+   ],
+   [
+    "CoSIL-style",
+    1000
+   ],
+   [
+    "model alone",
+    1000
+   ],
+   [
+    "model as re-ranker",
+    1000
+   ],
+   [
+    "\\sys{}",
+    1000
+   ]
+  ],
+  "retrieval_module_from_seed_top1": 0.7655
  },
  "retrieval": {
   "file": "C:\\workplace\\JiraAndLogs\\industry-c7\\data\\results\\paper-numbers.json",

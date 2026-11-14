@@ -41,7 +41,8 @@ every one of the \nProjects{} projects, because matching a log line to
 code is mostly identifier matching (\cref{sec:results:cost}). What
 supplies the semantics in our system is a model that reads the code,
 paired with a procedure that puts the right code in front of it.
-\Cref{tab:agents} is a ladder of how much code the same model sees: path
+The lower block of \cref{tab:all} is a ladder of how much code the same
+model sees: path
 names only, 0.527 Acc@1; paths with function names, 0.608; the files
 themselves, read whole or in whole functions, 0.671. The semantics are
 in the source, not in the file names, and a method has to open the file
@@ -81,15 +82,18 @@ better localization. The module metric depends on a per-project depth
 fixed before evaluation. Gold functions are derived from diff hunks and
 miss a defect fixed by adding a function.
 
-\textbf{Internal.} Every agent number is from one run with one seed,
-and the model is not deterministic: on the same instances the top file
-agrees across repeats in 70\% to 90\% of cases
-(\cref{sec:results:negatives}), so differences of a point or two
-between agent runs are inside the noise. The agent rows were produced
-on two sites with identical software and model checksums. Four
-instances ended without an answer and are scored as misses. Thinking
-was disabled for every model-based system, which is a fair comparison
-and may understate what the model can do with it.
+\textbf{Internal.} The agents run at temperature zero with a fixed
+seed, but the model is not bit-reproducible under continuous batching.
+On 20 instances run twice, the top-ranked file agreed on 18 on the same
+machine and on 14 to 15 across two machines with identical software and
+model checksums, and the module on all 20: the top file agrees across
+repeats in 70\% to 90\% of cases, so differences of a point or two
+between agent runs are inside the noise, which is why the file-level
+differences in \cref{sec:results:structure} are called small even where
+they are significant. Four instances ended without an answer and are
+scored as misses. Thinking was disabled for every model-based system,
+which is a fair comparison and may understate what the model can do
+with it.
 
 \textbf{External.} Twenty-seven projects with disciplined issue-commit
 linkage, mainly in four languages, under one ecosystem of conventions; a

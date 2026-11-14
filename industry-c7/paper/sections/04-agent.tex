@@ -125,8 +125,7 @@ run is persisted in full: each prompt, each response, each decision and
 its reason, the cards, and the final answer. What is not reproducible is
 the model: under continuous batching the composition of a batch changes
 the order of floating-point reductions, so two runs of one instance with
-the same seed can return different text. We measured that variation
-rather than assuming it away, and report it with the results
-(\cref{sec:results:negatives}). No tool can reach the ground truth: the
+the same seed can return different text (\cref{sec:discussion:threats}).
+No tool can reach the ground truth: the
 gold files of the instance under investigation are not in the memory
 pool, in any index, or on any path a tool will read.

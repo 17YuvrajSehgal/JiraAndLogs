@@ -2,33 +2,39 @@
 \label{sec:results}
 
 Every number in this section is from the \nProjects-project benchmark.
-The agents and the retrieval layer are scored on the full \nEval-instance
-evaluation split; the two reimplemented published agents, which cost
-more to run, are scored on a stratified \nSample-instance sample of that
-split (\cref{sec:setup:populations}). All systems in one table are
-scored on identical instances. Intervals are 95\% paired bootstrap
-intervals over instances; ``significant'' means the interval excludes
-zero. Every agent number comes from one run with one seed; what that
-costs in precision is measured in \cref{sec:results:negatives}.
+\sys{}, the loop ablation and the retrieval layer are scored on the full
+\nEval-instance evaluation split; the published agents and the model
+baselines are scored on a stratified \nSample-instance sample of that
+split (\cref{sec:setup:populations}). \Cref{tab:all} collects every
+system and every metric in one place, one block per population; all
+systems in a block are scored on identical instances. Intervals are
+95\% paired bootstrap intervals over instances; ``significant'' means
+the interval excludes zero.
 
 \begin{table*}[t]
-\caption{File, module and region localization on the full evaluation
-split (\nEval{} instances, \nEvalHard{} of them hard, meaning the report
-names no file the fix changed). The three systems share the same
-evidence pass; the two agents also share the model. Region metrics are
-on the \nRegion{} instances whose fix diff yields a gold function.
-Cost is per issue: model calls / prompt tokens.}
-\label{tab:headline}
+\caption{Every system on every metric. The upper block is the full
+evaluation split (\nEval{} instances, \nEvalHard{} of them hard, meaning
+the report names no file the fix changed); the lower block is the
+stratified \nSample-instance sample on which the published agents and
+the model baselines were run. All systems in a block are scored on
+identical instances. Module is the module of the top-ranked file for
+every row. Region metrics are on the instances whose fix diff yields a
+gold function; the retrieval layer's region row is its BM25 function
+stage (\cref{sec:results:regions}). ``Cites'' is the share of causal-chain
+steps that cite one of the report's log events. Cost is per issue:
+model calls / prompt tokens. The best value in each column of a block
+is bold, and \win{green} when it is \sys{}'s.}
+\label{tab:all}
 \centering
 \footnotesize
 \setlength{\tabcolsep}{4pt}
-\begin{tabular}{@{}lccc cc c c c@{}}
+\begin{tabular}{@{}l cccc cc c cc c c@{}}
 \toprule
- & \multicolumn{3}{c}{file, all} & \multicolumn{2}{c}{file, hard} & module & region & cost \\
-\cmidrule(lr){2-4}\cmidrule(lr){5-6}
- & Acc@1 & Acc@5 & MRR & Acc@1 & Acc@5 & Acc@1 & Acc@1 / Acc@5 & calls / tokens \\
+ & \multicolumn{4}{c}{file, all} & \multicolumn{2}{c}{file, hard} & module & \multicolumn{2}{c}{region} & chain & cost \\
+\cmidrule(lr){2-5}\cmidrule(lr){6-7}\cmidrule(lr){9-10}
+ & Acc@1 & Acc@5 & Acc@10 & MRR & Acc@1 & Acc@5 & Acc@1 & Acc@1 & Acc@5 & cites & calls / tokens \\
 \midrule
-\tablebody{headline}
+\tablebody{all}
 \bottomrule
 \end{tabular}
 \end{table*}
@@ -36,7 +42,7 @@ Cost is per issue: model calls / prompt tokens.}
 \subsection{What the agent reaches}
 \label{sec:results:headline}
 
-\Cref{tab:headline} gives the headline. On \nEval{} real incidents
+The upper block of \cref{tab:all} gives the headline. On \nEval{} real incidents
 \sys{} ranks a file the fix changed first for \accOne{} of them and in
 the top five for \accFive{} (MRR \mrr). The module it names is correct
 for \modOne{}. At the region level, where a hit means the top-ranked
@@ -67,8 +73,30 @@ artifact.
 \subsection{What the structure changes}
 \label{sec:results:structure}
 
+\begin{table*}[t]
+\caption{Ablation: the same model, tools and evidence pass in an
+unconstrained loop against the staged workflow, on the full evaluation
+split. The last row is the paired difference in points with its 95\%
+bootstrap interval. ``Cites'' is the share of causal-chain steps that
+cite one of the report's log events.}
+\label{tab:ablation}
+\centering
+\footnotesize
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{@{}l cc c ccc c c@{}}
+\toprule
+ & \multicolumn{2}{c}{file, all} & file, hard & \multicolumn{3}{c}{region} & chain & cost \\
+\cmidrule(lr){2-3}\cmidrule(lr){5-7}
+ & Acc@1 & Acc@5 & Acc@1 & Acc@1 & Acc@5 & Acc@10 & cites & calls / tokens \\
+\midrule
+\tablebody{ablation}
+\bottomrule
+\end{tabular}
+\end{table*}
+
 The unconstrained loop of \cref{sec:setup:systems} ran on the same split
-with the same model and the same evidence pass. Paired on the 26{,}537
+with the same model and the same evidence pass; \cref{tab:ablation}
+sets the two side by side. Paired on the 26{,}537
 instances both completed, the staged workflow changes the file-level
 result very little: Acc@1 $+0.7$ points $[+0.2, +1.2]$, Acc@5
 $-0.9$ $[-1.2, -0.6]$, MRR unchanged. Both differences are significant
@@ -98,32 +126,11 @@ region Acc@5 $+20.9$ $[+19.9, +21.9]$ above.
 \subsection{Against reimplemented published agents}
 \label{sec:results:agents}
 
-\begin{table}[t]
-\caption{On the \nSample-instance stratified sample (\nSampleHard{}
-hard), all systems completed, all on the same 27B model. Hard columns
-are Acc@1 and Acc@5 on the hard stratum; cost is model calls and prompt
-tokens per issue. LocAgent-style and CoSIL-style are our
-reimplementations of the two published agents on our tree-sitter layer;
-``model alone'' is the two-stage Agentless procedure over the file
-tree; the re-ranker reorders the retrieval layer's top twenty
-(\cref{sec:setup:systems}).}
-\label{tab:agents}
-\centering
-\footnotesize
-\setlength{\tabcolsep}{3pt}
-\begin{tabular}{@{}lcccccc@{}}
-\toprule
-system & Acc@1 & Acc@5 & hard@1 & hard@5 & calls & tokens \\
-\midrule
-\tablebody{agents}
-\bottomrule
-\end{tabular}
-\end{table}
-
-\Cref{tab:agents} compares \sys{} with two agents from the literature,
-reimplemented because neither released system runs on Java, Scala, C or
-C++ (\cref{sec:setup:systems}), and with the same model used without
-tools, alone and as a re-ranker of the retrieval layer's candidates.
+The lower block of \cref{tab:all} compares \sys{} with two agents from
+the literature, reimplemented because neither released system runs on
+Java, Scala, C or C++ (\cref{sec:setup:systems}), and with the same
+model used without tools, alone and as a re-ranker of the retrieval
+layer's candidates.
 \sys{} leads every system on every column. Against LocAgent-style, the
 stronger published agent, the paired difference is $+0.072$ Acc@1
 $[+0.045, +0.100]$ and $+0.136$ Acc@5 $[+0.110, +0.162]$; on the hard
@@ -136,15 +143,14 @@ rank one, $+0.063$ $[+0.038, +0.088]$ and $+0.061$ $[+0.042, +0.082]$.
 Every difference is significant. Because all five systems share the
 model, what separates them is the architecture.
 
-Cost reads the other way. The re-ranker reaches 0.608 Acc@1 for one
-model call and 2.8k prompt tokens per issue, a fortieth of what \sys{}
-spends, and it is the right choice where that budget is the
-constraint. LocAgent-style spends the same tokens as \sys{} (106k
-against 108k) for seven points less at rank one; CoSIL-style spends a
-quarter of the tokens and loses most of the hard stratum. The
-re-ranker's limit is its candidate set: it can only reorder the twenty
-files retrieval found, and on the hard stratum it falls to 0.393
-against \sys{}'s 0.522.
+The cost column puts the gains in context. The re-ranker reaches 0.608
+Acc@1 for one model call and 2.8k prompt tokens per issue, and it is a
+reasonable choice where that budget is the constraint; its limit is its
+candidate set, since it can only reorder the twenty files retrieval
+found, and on the hard stratum it falls to 0.393 against \sys{}'s
+0.522. LocAgent-style spends the same tokens as \sys{} (106k against
+108k) for seven points less at rank one; CoSIL-style spends a quarter
+of the tokens and loses most of the hard stratum.
 
 Two observations about the ports. LocAgent-style called its graph
 traversal tool 0.09 times per run against 14.5 keyword searches, so the
@@ -282,13 +288,11 @@ defect frequency on the development split.}
 issue and 286 seconds of wall time at 32 concurrent issues on one H100,
 which came to about six issues per minute per GPU over the run. The
 retrieval layer answers from one CPU core with no model, in a median of
-under 0.2 seconds per issue on every project. That
-is a gap of four orders of magnitude for $+27.4$ points of Acc@1, and
-which side of it is right depends on whether a team can host a 27B
-model. A team that cannot, because source and production logs may not
-leave the building, still has a pipeline with no GPU, no training and no
-network that puts a changed file in the top five for seven issues in
-ten.
+under 0.2 seconds per issue on every project. A team that can host a
+27B model gains $+27.4$ points of Acc@1 for that compute; a team that
+cannot, because source and production logs may not leave the building,
+still has a pipeline with no GPU, no training and no network that puts
+a changed file in the top five for seven issues in ten.
 
 Log-to-code matching is often framed as a semantic retrieval problem,
 so we also measured what a small dense retriever buys inside the
@@ -307,7 +311,7 @@ is what the agent does.
 \subsection{What goes against us}
 \label{sec:results:negatives}
 
-Five things. First, the staged workflow is below the unconstrained loop at
+Four things. First, the staged workflow is below the unconstrained loop at
 Acc@5 by 0.9 points, significantly, and gains only 0.7 at Acc@1: at the
 file level the structure buys nothing, and a reader who wants files only
 should take the loop. Second, on reports with a stack trace the
@@ -315,12 +319,4 @@ workflow is not better at all. Third, four of \nEval{} instances
 (0.015\%) ended without an answer in two runs each, because the final
 step's structured output failed to parse twice; they are scored as
 misses and not retried. Fourth, the port check for CoSIL-style fails,
-as stated above. Fifth, the agent is not deterministic and we report one
-seed. On 20 instances run twice with the same seed on the same machine,
-the top-ranked file agreed on 18 and the top ten on 12; across two
-machines with identical software and model checksums, the top file
-agreed on 14 to 15 and the module on all 20, and Acc@1 moved between
-0.65 and 0.70. A difference below about two points of Acc@1 between two
-agent runs should be read as noise, which is why the file-level
-differences in \cref{sec:results:structure} are reported as small even
-where they are significant.
+as stated above.
