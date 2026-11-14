@@ -66,9 +66,9 @@ agent shape. It isolates what the fixed procedure contributes.
 of the two published localization agents that take exactly our inputs,
 an issue and a repository, and return ranked
 locations~\cite{chen2025locagent,jiang2025cosil}. Neither released
-system runs on this benchmark, and the reason is not an adapter: both
-build their code graph with Python's \texttt{ast} module and say so,
-while our projects are mainly Java, Scala, C and C++. The graph layer
+system runs on this benchmark as released: both are built for Python
+repositories and parse Python files only, while our projects are
+mainly Java, Scala, C and C++. The graph layer
 is the contribution in both papers, so replacing it is the port; we
 reimplement their search strategies on our tree-sitter layer and name
 the arms accordingly, as this paper does for BRTracer-style methods.
@@ -77,8 +77,9 @@ snapshots, the reports with their logs, the context window and a turn
 budget at least as large as ours. Withheld from both, because neither
 design has it: incident memory, our evidence pass and our structured
 submission. Both parse a free-text answer, and an instance where that
-answer names no file counts as a miss. \textbf{The model alone} is the
-two-stage procedure Agentless introduced~\cite{xia2025agentless}: one
+answer names no file counts as a miss. \textbf{The model alone} follows
+the shape of Agentless's localization stage~\cite{xia2025agentless},
+narrowing without tools: one
 call picks up to fifteen directories from the snapshot's directory
 list, a second ranks ten files from the source files in those
 directories. \textbf{The model as re-ranker} is given the retrieval

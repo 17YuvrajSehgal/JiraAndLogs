@@ -10,7 +10,7 @@
   title     = {{RCAgent}: Cloud Root Cause Analysis by Autonomous Agents with Tool-Augmented Large Language Models},
   booktitle = {Proceedings of the 33rd ACM International Conference on Information and Knowledge Management (CIKM)},
   year      = {2024},
-  pages     = {4966--4974}
+  pages     = {4966--4974}, doi = {10.1145/3627673.3680016}
 }
 
 @inproceedings{just2014defects4j,
@@ -34,7 +34,7 @@
   title     = {Boosting Bug-Report-Oriented Fault Localization with Segmentation and Stack-Trace Analysis},
   booktitle = {Proceedings of the 30th IEEE International Conference on Software Maintenance and Evolution (ICSME)},
   year      = {2014},
-  pages     = {181--190}
+  pages     = {181--190}, doi = {10.1109/ICSME.2014.40}
 }
 
 @inproceedings{ye2014learning,
@@ -56,13 +56,16 @@
 @inproceedings{wang2026wol,
   author    = {Wang, Xiaohui and Yao, Kundi and Liao, Lizhi and Nie, Pengyu and Zhang, Xuan and Shang, Weiyi},
   title     = {World of Logs: A Dataset of Logs from Online Documents},
-  booktitle = {Proceedings of the 23rd International Conference on Mining Software Repositories (MSR)},
+  booktitle = {Proceedings of the 23rd International Conference on Mining Software Repositories (MSR), Data and Tool Showcase Track},
   year      = {2026}
 }
 
-% TODO before submission: spectrum-based FL survey; Triangle (Yu et al.,
-% ASE 2025); DeepCT; duplicate-bug-report detection survey; RRF (Cormack
-% et al.); BM25 (Robertson & Zaragoza); learned IR-based localization.
+@article{wong2016survey,
+  author  = {Wong, W. Eric and Gao, Ruizhi and Li, Yihao and Abreu, Rui and Wotawa, Franz},
+  title   = {A Survey on Software Fault Localization},
+  journal = {IEEE Transactions on Software Engineering},
+  volume  = {42}, number = {8}, pages = {707--740}, year = {2016}, doi = {10.1109/TSE.2016.2521368}
+}
 
 % ===== related work: log-aware and classic IRBL =====
 @article{chen2022pathidea,
@@ -80,13 +83,13 @@
 }
 @article{niu2025deepirbl,
   author  = {Niu, Feifei and Li, Chuanyi and Liu, Kui and Xia, Xin and Lo, David},
-  title   = {Deep Learning-Based Information Retrieval Bug Localization: A Survey},
+  title   = {When Deep Learning Meets Information Retrieval-Based Bug Localization: A Survey},
   journal = {ACM Computing Surveys},
-  volume  = {57}, number = {11}, year = {2025}
+  volume  = {57}, number = {11}, year = {2025}, doi = {10.1145/3734217}
 }
 @article{niu2026ablots,
   author  = {Niu, Feifei and Zhang, Enshuo and Mayr-Dorn, Christoph and Assun{\c{c}}{\~a}o, Wesley K. G. and Huang, Liguo and Ge, Jidong and Luo, Bin and Egyed, Alexander},
-  title   = {On the Reproducibility and Temporal Validity of Issue-Commit Link Recovery},
+  title   = {An Extensive Replication Study of the {ABLoTS} Approach for Bug Localization},
   journal = {arXiv preprint arXiv:2605.11790}, year = {2026}
 }
 @article{chakraborty2025blaze,
@@ -97,7 +100,7 @@
 }
 @article{rafi2025sbest,
   author  = {Rafi, Md Nakhla and Pacheco, Lorena Barreto Simedo and Chen, An Ran and Yang, Jinqiu and Chen, Tse-Hsun},
-  title   = {Enhancing Fault Localization Through Ordered Code Analysis Using {LLM} Agents and Stack Traces},
+  title   = {{SBEST}: Spectrum-Based Fault Localization Without Fault-Triggering Tests},
   journal = {arXiv preprint arXiv:2405.00565}, year = {2025}
 }
 
@@ -110,22 +113,23 @@
 @inproceedings{chen2025locagent,
   author    = {Chen, Zhaoling and Tang, Xiangru and Deng, Gangda and Wu, Fang and Wu, Jialong and Jiang, Zhiwei and Prasanna, Viktor and Cohan, Arman and Wang, Xingyao},
   title     = {{LocAgent}: Graph-Guided {LLM} Agents for Code Localization},
-  booktitle = {Proceedings of the 63rd Annual Meeting of the Association for Computational Linguistics (ACL)},
-  year      = {2025}
+  booktitle = {Proceedings of the 63rd Annual Meeting of the Association for Computational Linguistics (Volume 1: Long Papers)},
+  pages     = {8697--8727}, year = {2025}, doi = {10.18653/v1/2025.acl-long.426}
 }
 @inproceedings{yu2025orcaloca,
   author    = {Yu, Zhongming and Zhang, Hejia and Zhao, Yujie and Huang, Hanxian and Yao, Matrix and Ding, Ke and Zhao, Jishen},
   title     = {{OrcaLoca}: An {LLM} Agent Framework for Software Issue Localization},
-  booktitle = {Proceedings of the 42nd International Conference on Machine Learning (ICML)}, year = {2025}
+  booktitle = {Proceedings of the 42nd International Conference on Machine Learning (ICML)},
+  series    = {Proceedings of Machine Learning Research}, volume = {267}, pages = {73416--73436}, year = {2025}
 }
 @article{jiang2025cosil,
   author  = {Jiang, Zhonghao and Ren, Xiaoxue and Yan, Meng and Jiang, Wei and Li, Yong and Liu, Zhongxin},
-  title   = {{CoSIL}: Issue Localization via {LLM}-Driven Iterative Code Graph Searching},
+  title   = {Issue Localization via {LLM}-Driven Iterative Code Graph Searching},
   journal = {arXiv preprint arXiv:2503.22424}, year = {2025}
 }
 @article{asad2026genloc,
   author  = {Asad, Moumita and Yasir, Rafed Muhammad and Malek, Sam},
-  title   = {Towards Explorative Information Retrieval-Based Bug Localization},
+  title   = {Towards Explorative {IRBL}: Combining Semantic Retrieval with {LLM}-Driven Iterative Code Exploration},
   journal = {arXiv preprint arXiv:2508.00253}, year = {2026}
 }
 
@@ -142,7 +146,7 @@
 }
 @article{zhang2025mulocbench,
   author  = {Zhang, Zejun and Wang, Jian and Yang, Qingyun and Pan, Yifan and Tang, Yi and Li, Yi and Xing, Zhenchang and Zhang, Tian and Li, Xuandong and Zhang, Guoan},
-  title   = {An Empirical Study of Issue Localization Approaches},
+  title   = {A Benchmark for Localizing Code and Non-Code Issues in Software Projects},
   journal = {arXiv preprint arXiv:2509.25242}, year = {2025}
 }
 @article{ledel2021broccoli,
@@ -158,9 +162,9 @@
 }
 @inproceedings{hall2026industrial,
   author    = {Hall, Pernilla and Ununger, Anton and Rubei, Riccardo and Bucaioni, Alessio},
-  title     = {Bug Localization in Industrial Practice: An Evaluation on a Large-Scale Robotics System},
+  title     = {Bug-Report-Driven Fault Localization: Industrial Benchmarking and Lessons Learned at {ABB} Robotics},
   booktitle = {Proceedings of the International Conference on Evaluation and Assessment in Software Engineering (EASE)},
-  year      = {2026}
+  year      = {2026}, note = {arXiv:2604.25700}
 }
 @inproceedings{cormack2009rrf,
   author    = {Cormack, Gordon V. and Clarke, Charles L. A. and B{\"u}ttcher, Stefan},

@@ -3,7 +3,7 @@
 
 \textbf{Localization that needs execution.} Spectrum-based and
 mutation-based fault localization rank code by how it behaves under
-failing and passing tests~\cite{just2014defects4j}, and recent
+failing and passing tests~\cite{wong2016survey}, and recent
 agent-based variants keep that dependency, using coverage or a
 reproduction test~\cite{rafi2024multiagent,yu2025orcaloca}. The
 evidence they need does not exist when an issue is filed: on crash
@@ -53,10 +53,10 @@ level of source files, which is the step this paper takes.
 \textbf{Benchmarks, leakage and contamination.} Benchmarks built from
 public repositories leak solutions~\cite{aleithan2024swebenchplus},
 models reproduce file paths better for repositories they were trained
-on~\cite{liang2025illusion}, issue-commit link recovery inflates when
-future links are visible~\cite{niu2026ablots}, localization accuracy
-drops on data collected after a model's training
-cutoff~\cite{zhang2025mulocbench}, and time-aware evaluation changes
+on~\cite{liang2025illusion}, a replicated localizer's reported advantage
+came from history that post-dates the report~\cite{niu2026ablots}, the
+best agents lose most of their accuracy on a newer and broader issue
+set~\cite{zhang2025mulocbench}, and time-aware evaluation changes
 which method appears best~\cite{ledel2021broccoli}. We therefore use a
 time-based split and a four-rule firewall. An industrial evaluation of
 bug localization found simple term-frequency methods competitive and

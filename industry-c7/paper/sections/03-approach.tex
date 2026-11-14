@@ -50,7 +50,7 @@ still influences term weights; excluded incidents never vote.
 
 \label{sec:approach:fusion}
 \textbf{Fusion, conditioned on an observable regime.} The four lists
-are merged by reciprocal rank fusion, file $f$ receiving
+are merged by reciprocal rank fusion~\cite{cormack2009rrf}, file $f$ receiving
 $\sum_i w_i / (60 + \mathrm{rank}_i(f))$. The weights $w_i$ are the only
 tuned parameters. The right weights depend on the report: when the text
 names files, S1 is nearly always right and should dominate; when it
