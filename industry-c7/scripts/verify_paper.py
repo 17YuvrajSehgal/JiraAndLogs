@@ -210,7 +210,17 @@ def main() -> int:
     PO = PN["parsed_only"]
     la_, co_ = PO["locagent"], PO["cosil"]
     has("05-results", f"On the {la_['n_parsed']} instances where LocAgent-style did return a location, it scores {exp(la_['arm_acc@1'])}\\% Acc@1 and {exp(la_['arm_acc@5'])}\\% Acc@5 against \\sys{{}}'s {exp(la_['wf_acc@1'])}\\% and {exp(la_['wf_acc@5'])}\\%", "05-results")
-    has("05-results", f"on CoSIL-style's {co_['n_parsed']} answered instances the margins are ${100 * (co_['wf_acc@1'] - co_['arm_acc@1']):+.1f}$ and ${100 * (co_['wf_acc@5'] - co_['arm_acc@5']):+.1f}$ points", "05-results")
+    b1, b5 = la_["wf_minus_arm_acc@1"], la_["wf_minus_arm_acc@5"]
+    has("05-results", f"the paired margin is ${pm(b1[0])}$ points $[{pm(b1[1])}, {pm(b1[2])}]$ at rank one and ${pm(b5[0])}$ $[{pm(b5[1])}, {pm(b5[2])}]$ at rank five", "05-results")
+    c1, c5 = co_["wf_minus_arm_acc@1"], co_["wf_minus_arm_acc@5"]
+    has("05-results", f"On CoSIL-style's {co_['n_parsed']} answered instances the margins are ${pm(c1[0])}$ $[{pm(c1[1])}, {pm(c1[2])}]$ and ${pm(c5[0])}$ $[{pm(c5[1])}, {pm(c5[2])}]$ points", "05-results")
+    check("abstract: lead over the ports on answered instances (4 and 16)",
+          f"({round(100 * b1[0])} and {round(100 * c1[0])} on the instances the ports answered)" in main_tex, f"{b1[0]}, {c1[0]}")
+    NP = PN["without_pilots"]
+    has("06-discussion", f"on the {NP['n']:,} instances outside the pilots changes nothing at the paper's precision: file Acc@1 {exp(NP['file_acc@1'])}\\% and Acc@5 {exp(NP['file_acc@5'])}\\%, module {exp(NP['module_agent_acc@1'])}\\%, region {exp(NP['region_acc@1'])}\\% and {exp(NP['region_acc@5'])}\\%", "06-discussion")
+    check("06-discussion: without-pilot headline is within 0.1 point of the macros",
+          abs(exp(NP["file_acc@1"]) - num(M["accOne"])) <= 0.1 and abs(exp(NP["file_acc@5"]) - num(M["accFive"])) <= 0.1
+          and abs(exp(NP["region_acc@1"]) - num(M["regOne"])) <= 0.1, NP)
     has("05-results", f"66.5\\% Acc@1 ({S['trace']['n']:,} instances)", "05-results")
     has("05-results", f"neither 70.8\\% ({S['prose']['n']:,}, half the split)", "05-results")
     check("05-results: 'half the split' for the no-event reports", 0.45 <= S["prose"]["n"] / S["all"]["n"] <= 0.55, S["prose"]["n"] / S["all"]["n"])

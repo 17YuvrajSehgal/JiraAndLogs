@@ -62,7 +62,8 @@ the code closes most of the gap that the report leaves open.
 By report type the picture is flat. Reports with a stack trace score
 66.5\% Acc@1 (7{,}808 instances), reports with a log line the log layer
 recognises as an event but no trace 66.6\% (5{,}739), and reports with
-neither 70.8\% (12{,}993, half the split). The last group are
+neither 70.8\% (12{,}993, half the split; the four unanswered instances
+are not typed). The last group are
 log-bearing by the source dataset's labelling but quote their evidence
 in prose, an exception name or an error message inside a sentence
 rather than a pasted line, and they are the easiest reports at rank
@@ -89,8 +90,8 @@ bootstrap interval. ``Cites'' is the share of causal-chain steps that
 cite one of the report's log events.}
 \label{tab:ablation}
 \centering
-\footnotesize
-\setlength{\tabcolsep}{4pt}
+\scriptsize
+\setlength{\tabcolsep}{3pt}
 \begin{tabular}{@{}l cc c ccc c c@{}}
 \toprule
  & \multicolumn{2}{c}{file, all} & file, hard & \multicolumn{3}{c}{region} & chain & cost \\
@@ -177,9 +178,11 @@ location for 8\% to 10\% of instances (LocAgent-style 8.2\%, CoSIL-style
 10.1\%), which the table scores as misses. Part of the margin is that
 parsing. On the 918 instances where LocAgent-style did return a
 location, it scores 65.3\% Acc@1 and 77.9\% Acc@5 against \sys{}'s
-68.9\% and 86.8\% on the same instances, so half of the rank-one margin
-is parse failures and the Acc@5 margin is not; on CoSIL-style's 899
-answered instances the margins are $+15.9$ and $+19.9$ points. CoSIL's
+68.9\% and 86.8\% on the same instances: the paired margin is $+3.6$
+points $[+0.7, +6.4]$ at rank one and $+8.9$ $[+6.5, +11.4]$ at rank
+five, so half of the rank-one margin is parse failures and the Acc@5
+margin is not. On CoSIL-style's 899 answered instances the margins are
+$+15.9$ $[+12.8, +19.0]$ and $+19.9$ $[+16.9, +22.9]$ points. CoSIL's
 reflective alignment step exists to repair exactly that failure, so we
 expected CoSIL-style to show the lower rate; it does not, and we record
 that as a property of our port we cannot explain rather than as a

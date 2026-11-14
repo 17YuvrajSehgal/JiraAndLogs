@@ -156,6 +156,18 @@ print("per project wf acc@1: min", lo, "max", hi)
 # A port that leaves an answer unparseable scores a miss there. This scores
 # each port, and wf, on the instances the port did answer, so the margin
 # can be read with and without the parse failures.
+import random
+import statistics as st
+
+
+def boot(diff, seed, n_boot=2000):
+    """Mean of `diff` with its 95% paired bootstrap interval over instances."""
+    rs = random.Random(seed)
+    n = len(diff)
+    s = sorted(st.fmean(diff[rs.randrange(n)] for _ in range(n)) for _ in range(n_boot))
+    return [round(st.fmean(diff), 4), round(s[int(.025 * n_boot)], 4), round(s[int(.975 * n_boot)], 4)]
+
+
 out["parsed_only"] = {}
 for arm in ("locagent", "cosil"):
     rows = [json.loads(l) for l in open(f"{R}/data/agent/agent-{arm}-eval.jsonl", encoding="utf-8") if l.strip()]
@@ -165,8 +177,25 @@ for arm in ("locagent", "cosil"):
     out["parsed_only"][arm] = {
         "n_all": len(rows), "n_parsed": len(ok), "n_empty": len(rows) - len(ok),
         "arm_acc@1": round(m(ok, "acc@1"), 4), "arm_acc@5": round(m(ok, "acc@5"), 4),
-        "wf_acc@1": round(m(ok, "acc@1", wf), 4), "wf_acc@5": round(m(ok, "acc@5", wf), 4)}
+        "wf_acc@1": round(m(ok, "acc@1", wf), 4), "wf_acc@5": round(m(ok, "acc@5", wf), 4),
+        "wf_minus_arm_acc@1": boot([wf[r["id"]]["metrics"]["acc@1"] - r["metrics"]["acc@1"] for r in ok], 20261104),
+        "wf_minus_arm_acc@5": boot([wf[r["id"]]["metrics"]["acc@5"] - r["metrics"]["acc@5"] for r in ok], 20261105)}
     print("parsed-only", arm, out["parsed_only"][arm])
+
+# ---- the headline with the pilot instances removed -------------------------
+# The prompts and step budgets were settled on two pilots drawn from the
+# evaluation split (30 + 81 instances). This scores wf on the split without
+# them, so the headline can be read either way.
+pilot = set()
+for f in ("baseline-pilot.json", "keepfull-pilot.json"):
+    pilot |= set(json.load(open(f"{R}/data/results/{f}"))["ids"])
+keep = {i for i in wf if i not in pilot}
+S_np = CC.summarise({i: s for i, s in sc.items() if i in keep})["all"]
+out["without_pilots"] = {"n_pilot_ids": len(pilot), "n_pilot_in_wf": len(pilot & set(wf)), "n": S_np["n"],
+                         "file_acc@1": S_np["file_acc@1"], "file_acc@5": S_np["file_acc@5"],
+                         "module_agent_acc@1": S_np["module_agent_acc@1"],
+                         "region_acc@1": S_np["region_acc@1"], "region_acc@5": S_np["region_acc@5"]}
+print("without pilots:", out["without_pilots"])
 
 # ---- the sample's own wf cost, for the sample block of the big table ------
 sw = [r for i, r in wf.items() if i in sample]

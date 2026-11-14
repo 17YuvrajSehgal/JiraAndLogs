@@ -57,7 +57,8 @@ and the keys of the past incidents that voted for it, which an engineer
 can open. \sys{} produces an argument: for each file, the verdict and
 the quoted line it rests on, and one chain from the reported symptom to
 the named cause in which 57.4\% of steps cite one of the report's log
-events, 85.7\% of them verbatim. Both are checkable without being
+events, 85.7\% of them grounded, as an event id or a verbatim quote.
+Both are checkable without being
 trusted, and that is as far as our evidence goes. A chain can cite a
 real line and name a real function and still give the wrong cause; the
 agent's evidence is a lead to verify, not a finding. Neither form has
@@ -89,7 +90,10 @@ pilots drawn from the evaluation split, of 30 and 81 instances, both
 disjoint from the \nSample-instance sample, and the staged design was
 informed by aggregate statistics of the loop ablation's traces on the
 split; no parameter was fitted to outcomes on evaluation instances, and
-the pilot instances remain in the split (0.4\% of it). Two ablations
+the pilot instances remain in the split (0.4\% of it). Scoring \sys{}
+on the 26{,}429 instances outside the pilots changes nothing at the
+paper's precision: file Acc@1 68.6\% and Acc@5 85.9\%, module 90.2\%,
+region 53.9\% and 70.0\%. Two ablations
 are missing. No run removes the logs from the reports, so the
 contribution of the log lines themselves, as opposed to the rest of
 the report, is not isolated; and incident memory is ablated in the
@@ -123,9 +127,11 @@ repair unparseable answers, left more answers unparseable than
 LocAgent-style. Both ports leave 8\% to 10\% of instances without a
 parseable answer, which counts as a miss; \cref{sec:results:agents}
 reports the margins with those instances excluded as well. Pathidea,
-the closest log-based prior work, was not run: its path reconstruction
-is built for Java and no implementation exists for the C and C++
-projects. Classic information-retrieval localizers were not run on
+the closest log-based prior work, was not run, on the Java projects or
+the others; its path reconstruction is built for Java and would have
+needed rebuilding for the rest, but we did not run it on the Java
+subset either, and that is a gap. Classic information-retrieval
+localizers were not run on
 this benchmark, and coverage-based fault localization needs execution
 evidence that does not exist at report time. The contamination probe
 asks the model to recall files from an issue key; it does not test

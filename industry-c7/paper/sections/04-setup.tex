@@ -7,9 +7,13 @@
 
 Each project's instances are ordered by the time of their fix commit.
 The earliest 30\% form the development split and the later 70\% the
-evaluation split. All tuning happens on the development split: in the
-retrieval layer that means the fusion weights, and \sys{} has no tuned
-parameters at all. We chose a time split rather than a random one
+evaluation split. The retrieval layer's fusion weights, its only fitted
+parameters, are tuned on the development split. \sys{} has no fitted
+parameters; its prompts and step budgets were settled on two small
+pilots drawn from the evaluation split, which
+\cref{sec:discussion:threats} discloses together with the headline
+scored without those instances. We chose a time split rather than a
+random one
 because it mirrors deployment: a system is configured on the project's
 past and then meets its future. The split has a side effect any system
 with historical memory will meet: the development split holds the
