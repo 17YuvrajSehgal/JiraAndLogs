@@ -105,9 +105,12 @@ On 20 instances run twice, the top-ranked file agreed on 18 on the same
 machine and on 14 to 15 across two machines with identical software and
 model checksums, and the module on all 20: the top file agrees across
 repeats in 70\% to 90\% of cases, so differences of a point or two
-between agent runs are inside the noise, which is why the file-level
-differences in \cref{sec:results:structure} are called small even where
-they are significant. Four instances ended without an answer and are
+between agent runs are inside the noise. Three seeds of \sys{} on
+the \nSample-instance sample bound that noise in the aggregate: on the
+998 instances all three answered, file Acc@1 spans 67.0\% to 67.9\%,
+module 89.4\% to 90.2\% and region Acc@1 53.2\% to 53.3\%, at most
+one point on every headline metric, while 55 to 61 instances change
+their top file between two seeds. Four instances ended without an answer and are
 scored as misses. Thinking was disabled for every model-based system,
 which is a fair comparison and may understate what the model can do
 with it.

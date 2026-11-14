@@ -318,6 +318,19 @@ def main() -> int:
     check("06-discussion: 'agrees across repeats in 70% to 90% of cases'", "70\\% to 90\\%" in tex("06-discussion")
           and (min(cross), agree(V1, V2, 1)) == (14, 18), "")
 
+    # ---- three seeds on the sample (data/results/seed-variation.json) -------
+    print("== seed variation on the sample")
+    SV = json.loads((RES / "seed-variation.json").read_text(encoding="utf-8"))
+    sp = SV["spread"]
+    rng = lambda m: f"{exp(sp[m]['min'])}\\% to {exp(sp[m]['max'])}\\%"  # noqa: E731
+    check("seed variation: three seeds, 998 common instances", sorted(SV["seeds"]) == [7, 42, 123] and SV["n_common"] == 998, (SV["seeds"], SV["n_common"]))
+    has("06-discussion", f"on the {SV['n_common']} instances all three answered, file Acc@1 spans {rng('file_acc@1')}, module {rng('module_agent_acc@1')} and region Acc@1 {rng('region_acc@1')}", "06-discussion")
+    check("seed variation: at most one point on every headline metric",
+          max(sp[m]["range_points"] for m in ("file_acc@1", "file_acc@5", "module_agent_acc@1", "region_acc@1", "region_acc@5", "steps_citing_log")) <= 1.0 + 1e-9,
+          {m: round(sp[m]["range_points"], 2) for m in sp})
+    flips = sorted(v["file_acc@1"]["flips"] for v in SV["paired_vs_42"].values())
+    has("06-discussion", f"while {flips[0]} to {flips[-1]} instances change their top file between two seeds", "06-discussion")
+
     print(f"\n{n_pass} passed, {n_fail} failed")
     return 1 if n_fail else 0
 
