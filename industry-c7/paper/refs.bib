@@ -18,7 +18,7 @@
   title     = {{Defects4J}: A Database of Existing Faults to Enable Controlled Testing Studies for {Java} Programs},
   booktitle = {Proceedings of the 2014 International Symposium on Software Testing and Analysis (ISSTA)},
   year      = {2014},
-  pages     = {437--440}
+  pages     = {437--440}, doi = {10.1145/2610384.2628055}
 }
 
 @inproceedings{zhou2012buglocator,
@@ -26,7 +26,7 @@
   title     = {Where Should the Bugs Be Fixed? More Accurate Information Retrieval-Based Bug Localization Based on Bug Reports},
   booktitle = {Proceedings of the 34th International Conference on Software Engineering (ICSE)},
   year      = {2012},
-  pages     = {14--24}
+  pages     = {14--24}, doi = {10.1109/ICSE.2012.6227210}
 }
 
 @inproceedings{wong2014brtracer,
@@ -42,7 +42,7 @@
   title     = {Learning to Rank Relevant Files for Bug Reports Using Domain Knowledge},
   booktitle = {Proceedings of the 22nd ACM SIGSOFT International Symposium on Foundations of Software Engineering (FSE)},
   year      = {2014},
-  pages     = {689--699}
+  pages     = {689--699}, doi = {10.1145/2635868.2635874}
 }
 
 @inproceedings{montgomery2022jira,
@@ -50,14 +50,14 @@
   title     = {An Alternative Issue Tracking Dataset of Public {Jira} Repositories},
   booktitle = {Proceedings of the 19th International Conference on Mining Software Repositories (MSR)},
   year      = {2022},
-  pages     = {73--77}
+  pages     = {73--77}, doi = {10.1145/3524842.3528486}
 }
 
 @inproceedings{wang2026wol,
   author    = {Wang, Xiaohui and Yao, Kundi and Liao, Lizhi and Nie, Pengyu and Zhang, Xuan and Shang, Weiyi},
   title     = {World of Logs: A Dataset of Logs from Online Documents},
   booktitle = {Proceedings of the 23rd International Conference on Mining Software Repositories (MSR), Data and Tool Showcase Track},
-  year      = {2026}
+  pages     = {652--656}, year = {2026}, doi = {10.1145/3793302.3793319}
 }
 
 @article{wong2016survey,
@@ -85,33 +85,38 @@
   author  = {Niu, Feifei and Li, Chuanyi and Liu, Kui and Xia, Xin and Lo, David},
   title   = {When Deep Learning Meets Information Retrieval-Based Bug Localization: A Survey},
   journal = {ACM Computing Surveys},
-  volume  = {57}, number = {11}, year = {2025}, doi = {10.1145/3734217}
+  volume  = {57}, number = {11}, pages = {1--41}, year = {2025}, doi = {10.1145/3734217}
 }
+% niu2026ablots: key kept so the .tex still compiles; the paper is from 2024
 @article{niu2026ablots,
   author  = {Niu, Feifei and Zhang, Enshuo and Mayr-Dorn, Christoph and Assun{\c{c}}{\~a}o, Wesley K. G. and Huang, Liguo and Ge, Jidong and Luo, Bin and Egyed, Alexander},
   title   = {An Extensive Replication Study of the {ABLoTS} Approach for Bug Localization},
-  journal = {arXiv preprint arXiv:2605.11790}, year = {2026}
+  journal = {Empirical Software Engineering},
+  volume  = {29}, number = {6}, pages = {143}, year = {2024}, doi = {10.1007/s10664-024-10537-6}
 }
 @article{chakraborty2025blaze,
   author  = {Chakraborty, Partha and Alfadel, Mahmoud and Nagappan, Meiyappan},
   title   = {{BLAZE}: Cross-Language and Cross-Project Bug Localization via Dynamic Chunking and Hard Example Learning},
-  journal = {IEEE Transactions on Software Engineering}, year = {2025},
+  journal = {IEEE Transactions on Software Engineering},
+  volume  = {51}, number = {8}, pages = {2254--2267}, year = {2025},
   doi     = {10.1109/TSE.2025.3579574}
 }
 @article{rafi2025sbest,
   author  = {Rafi, Md Nakhla and Pacheco, Lorena Barreto Simedo and Chen, An Ran and Yang, Jinqiu and Chen, Tse-Hsun},
   title   = {{SBEST}: Spectrum-Based Fault Localization Without Fault-Triggering Tests},
-  journal = {arXiv preprint arXiv:2405.00565}, year = {2025}
+  journal = {Empirical Software Engineering},
+  volume  = {31}, number = {1}, pages = {16}, year = {2026}, doi = {10.1007/s10664-025-10761-8}
 }
 
 % ===== related work: LLM and agent localization =====
-@inproceedings{xia2025agentless,
-  author    = {Xia, Chunqiu Steven and Deng, Yinlin and Dunn, Soren and Zhang, Lingming},
-  title     = {Agentless: Demystifying {LLM}-based Software Engineering Agents},
-  booktitle = {Proceedings of the ACM on Software Engineering (FSE)}, year = {2025}
+@article{xia2025agentless,
+  author  = {Xia, Chunqiu Steven and Deng, Yinlin and Dunn, Soren and Zhang, Lingming},
+  title   = {Demystifying {LLM}-Based Software Engineering Agents},
+  journal = {Proceedings of the ACM on Software Engineering},
+  volume  = {2}, number = {FSE}, pages = {801--824}, year = {2025}, doi = {10.1145/3715754}
 }
 @inproceedings{chen2025locagent,
-  author    = {Chen, Zhaoling and Tang, Xiangru and Deng, Gangda and Wu, Fang and Wu, Jialong and Jiang, Zhiwei and Prasanna, Viktor and Cohan, Arman and Wang, Xingyao},
+  author    = {Chen, Zhaoling and Tang, Robert and Deng, Gangda and Wu, Fang and Wu, Jialong and Jiang, Zhiwei and Prasanna, Viktor and Cohan, Arman and Wang, Xingyao},
   title     = {{LocAgent}: Graph-Guided {LLM} Agents for Code Localization},
   booktitle = {Proceedings of the 63rd Annual Meeting of the Association for Computational Linguistics (Volume 1: Long Papers)},
   pages     = {8697--8727}, year = {2025}, doi = {10.18653/v1/2025.acl-long.426}
@@ -122,15 +127,17 @@
   booktitle = {Proceedings of the 42nd International Conference on Machine Learning (ICML)},
   series    = {Proceedings of Machine Learning Research}, volume = {267}, pages = {73416--73436}, year = {2025}
 }
-@article{jiang2025cosil,
-  author  = {Jiang, Zhonghao and Ren, Xiaoxue and Yan, Meng and Jiang, Wei and Li, Yong and Liu, Zhongxin},
-  title   = {Issue Localization via {LLM}-Driven Iterative Code Graph Searching},
-  journal = {arXiv preprint arXiv:2503.22424}, year = {2025}
+@inproceedings{jiang2025cosil,
+  author    = {Jiang, Zhonghao and Ren, Xiaoxue and Yan, Meng and Jiang, Wei and Li, Yong and Liu, Zhongxin},
+  title     = {Issue Localization via {LLM}-Driven Iterative Code Graph Searching},
+  booktitle = {Proceedings of the 40th IEEE/ACM International Conference on Automated Software Engineering (ASE)},
+  pages     = {3034--3045}, year = {2025}, doi = {10.1109/ASE63991.2025.00249}
 }
 @article{asad2026genloc,
   author  = {Asad, Moumita and Yasir, Rafed Muhammad and Malek, Sam},
   title   = {Towards Explorative {IRBL}: Combining Semantic Retrieval with {LLM}-Driven Iterative Code Exploration},
-  journal = {arXiv preprint arXiv:2508.00253}, year = {2026}
+  journal = {Proceedings of the ACM on Software Engineering},
+  volume  = {3}, number = {ISSTA}, pages = {1376--1400}, year = {2026}, doi = {10.1145/3832151}
 }
 
 % ===== related work: benchmarks, contamination, time-aware evaluation =====
@@ -139,10 +146,12 @@
   title   = {{SWE-Bench+}: Enhanced Coding Benchmark for {LLMs}},
   journal = {arXiv preprint arXiv:2410.06992}, year = {2024}
 }
-@article{liang2025illusion,
-  author  = {Liang, Shanchao and Garg, Spandan and Moghaddam, Roshanak Zilouchian},
-  title   = {{SWE}-Bench Illusion: When State-of-the-Art {LLMs} Remember Instead of Reason},
-  journal = {arXiv preprint arXiv:2506.12286}, year = {2025}
+% liang2025illusion: key kept; published at ICSE-SEIP 2026
+@inproceedings{liang2025illusion,
+  author    = {Liang, Shanchao and Garg, Spandan and Moghaddam, Roshanak Zilouchian},
+  title     = {The {SWE-Bench} Illusion: When State-of-the-Art {LLMs} Remember Instead of Reason},
+  booktitle = {Proceedings of the IEEE/ACM 48th International Conference on Software Engineering: Software Engineering in Practice (ICSE-SEIP)},
+  pages     = {395--405}, year = {2026}, doi = {10.1145/3786583.3786882}
 }
 @article{zhang2025mulocbench,
   author  = {Zhang, Zejun and Wang, Jian and Yang, Qingyun and Pan, Yifan and Tang, Yi and Li, Yi and Xing, Zhenchang and Zhang, Tian and Li, Xuandong and Zhang, Guoan},
@@ -169,7 +178,7 @@
 @inproceedings{cormack2009rrf,
   author    = {Cormack, Gordon V. and Clarke, Charles L. A. and B{\"u}ttcher, Stefan},
   title     = {Reciprocal Rank Fusion Outperforms {Condorcet} and Individual Rank Learning Methods},
-  booktitle = {Proceedings of the 32nd International ACM SIGIR Conference},
+  booktitle = {Proceedings of the 32nd International ACM SIGIR Conference on Research and Development in Information Retrieval},
   pages     = {758--759}, year = {2009}, doi = {10.1145/1571941.1572114}
 }
 @inproceedings{ahmed2023rootcause,
