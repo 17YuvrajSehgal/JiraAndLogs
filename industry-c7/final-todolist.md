@@ -386,7 +386,7 @@ Do not compare wall time (different GPU load during the runs).
   BM25 MRR 0.314→0.313, sample retrieval hard Acc@5 48.6→48.7, LocAgent MRR
   0.646→0.647, model-alone hard Acc@5 51.5→51.6. Verifier 127 of 127 with
   table regeneration; refs still start on page 10.
-- Artifact: `C:\workplace\remember-artifact` (own git repo, author "The
+- Artifact: `C:\workplace\inquest-artifact` (own git repo, author "The
   Authors"); benchmark zip built (96 MB); code+results zip on hold until the
   system name is settled.
 

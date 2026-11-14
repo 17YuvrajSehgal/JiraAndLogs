@@ -36,7 +36,7 @@
 % merged wf rows (agent), the same paired with the loop-ablation main run,
 % data/results/agentic-baselines.json (the 1,000-instance sample), and
 % paper_numbers.py (pooled retrieval, function and dense numbers).
-\newcommand{\sys}{\textsc{Remember}\xspace} % working name, can change
+\newcommand{\sys}{\textsc{Inquest}\xspace}
 \newcommand{\retr}{the retrieval layer\xspace}  % lexical+memory pipeline; a tool inside the agent
 \newcommand{\nInstances}{38{,}001\xspace}   % mined
 \newcommand{\nScored}{37{,}900\xspace}      % after the test-only-gold exclusion
@@ -79,15 +79,14 @@
 
 \begin{document}
 
-\title{Log-Guided Root-Cause Code Localization from Production Issues:\\
-A Staged Agent Evaluated on 26{,}544 Real Incidents}
+\title{\textsc{Inquest}: Log-Guided Root-Cause Code Localization\\ with a Staged Agent}
 
 \author{\IEEEauthorblockN{Anonymous Author(s)}}
 
 \maketitle
 
 \begin{abstract}
-When a production issue is reported, engineers get a description and some logs, but no failing test and no way to reproduce the fault. The logs show where the failure was noticed, not where it was caused: in 49\% of the real reports we study, the text names none of the files that the fix later changed. We built a benchmark for this setting from two public datasets and 27 open-source projects (Apache, Red Hat, MongoDB, MariaDB, Qt and Sakai). It holds 38,001 resolved issue reports with their pasted logs, the code as it was while the bug was still present, and the files the fix changed. We present \textsc{Remember}, an agent that finds the faulty code using a 27B open-weights model. Code, not the model, controls the procedure. It first gathers the evidence, including the files fixed in similar past issues that were resolved before the report was filed. The model then makes only three bounded decisions: which files to open, what role each file plays in the failure, and how to rank them. On 26,544 evaluation reports, \textsc{Remember} ranks a changed file first for 68.6\% and in the top five for 85.9\%, names the correct module for 90.2\%, and ranks a changed function first for 53.8\%. On the reports that name no faulty file, it reaches 52.8\% and 73.6\%. A free agent loop with the same model and tools finds files equally well, but names the faulty function 14 points less often. On a 1,000-report sample, \textsc{Remember} beats our reimplementations of two published agents by 7 and 20 points of top-1 accuracy (4 and 16 counting only the reports those agents answered), and the same model used as a re-ranker by 6. We report the cost of every system and the results that go against us, and we release the benchmark, both systems and every run transcript.
+When a production issue is reported, engineers get a description and some logs, but no failing test and no way to reproduce the fault. The logs show where the failure was noticed, not where it was caused: in 49\% of the real reports we study, the text names none of the files that the fix later changed. We built a benchmark for this setting from two public datasets and 27 open-source projects (Apache, Red Hat, MongoDB, MariaDB, Qt and Sakai). It holds 38,001 resolved issue reports with their pasted logs, the code as it was while the bug was still present, and the files the fix changed. We present \sys{}, an agent that finds the faulty code using a 27B open-weights model. Code, not the model, controls the procedure. It first gathers the evidence, including the files fixed in similar past issues that were resolved before the report was filed. The model then makes only three bounded decisions: which files to open, what role each file plays in the failure, and how to rank them. On 26,544 evaluation reports, \sys{} ranks a changed file first for 68.6\% and in the top five for 85.9\%, names the correct module for 90.2\%, and ranks a changed function first for 53.8\%. On the reports that name no faulty file, it reaches 52.8\% and 73.6\%. A free agent loop with the same model and tools finds files equally well, but names the faulty function 14 points less often. On a 1,000-report sample, \sys{} beats our reimplementations of two published agents by 7 and 20 points of top-1 accuracy (4 and 16 counting only the reports those agents answered), and the same model used as a re-ranker by 6. We report the cost of every system and the results that go against us, and we release the benchmark, both systems and every run transcript.
 \end{abstract}
 
 \begin{IEEEkeywords}
