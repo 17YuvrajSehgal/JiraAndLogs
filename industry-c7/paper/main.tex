@@ -87,42 +87,7 @@ A Staged Agent Evaluated on 26{,}544 Real Incidents}
 \maketitle
 
 \begin{abstract}
-When a production issue is reported, engineers receive a description
-and logs, but no failing test and no way to reproduce the fault. The
-logs show where the failure was detected, not where it was caused: in
-\nHardPct{} of the real reports we study, no file touched by the
-eventual fix is named anywhere in the text.
-We mined a benchmark for this setting from two public issue datasets
-and \nProjects{} git histories: \nInstances{} incidents from Apache
-projects, MongoDB, MariaDB, Qt and Sakai, each pairing a report and its
-logs with the code at a revision where the defect is still present and
-the files the fix later changed, plus a per-project pool of
-\nMemoryPool{} resolved issues that serves as an \emph{incident memory}
-behind a temporal firewall.
-We present \sys{}, a localization agent that reads code with a
-general-purpose 27B open-weights model inside a fixed, staged
-procedure: code gathers the evidence, including the files that similar
-past incidents were fixed in, and the model decides only which files to
-open, what role each file plays in the failure, and the order of the
-files. Every step is bounded, every decision is recorded, and the run
-cannot end without a module, ranked code regions and a causal chain.
-On the whole \nEval{}-instance evaluation split \sys{} ranks a file the
-fix changed first for \accOne{} of incidents and in the top five for
-\accFive{}, names the affected module for \modOne{}, and names a
-function the fix changed first for \regOne{}; on the half of the
-reports that name no faulty file it reaches \hardOne{} and \hardFive{}.
-An ablation with the same model and tools in an unconstrained agent
-loop finds files equally well but names the faulty function fourteen
-points less often and cites no log event in its explanations. On a
-\nSample-instance sample
-it leads reimplementations of two published localization agents by 7
-and 20 points of Acc@1 (4 and 16 on the instances the ports answered),
-the same model used alone by 14, and the same model used as a re-ranker
-by 6, all differences significant, and the
-model cannot recall these public fixes from the issue key alone. We
-report the cost of every system and the results that go against us.
-The benchmark, both systems, every run transcript and a script that
-traces each number to its result file are released.
+When a production issue is reported, engineers get a description and some logs, but no failing test and no way to reproduce the fault. The logs show where the failure was noticed, not where it was caused: in 49\% of the real reports we study, the text names none of the files that the fix later changed. We built a benchmark for this setting from two public datasets and 27 open-source projects (Apache, Red Hat, MongoDB, MariaDB, Qt and Sakai). It holds 38,001 resolved issue reports with their pasted logs, the code as it was while the bug was still present, and the files the fix changed. We present \textsc{Remember}, an agent that finds the faulty code using a 27B open-weights model. Code, not the model, controls the procedure. It first gathers the evidence, including the files fixed in similar past issues that were resolved before the report was filed. The model then makes only three bounded decisions: which files to open, what role each file plays in the failure, and how to rank them. On 26,544 evaluation reports, \textsc{Remember} ranks a changed file first for 68.6\% and in the top five for 85.9\%, names the correct module for 90.2\%, and ranks a changed function first for 53.8\%. On the reports that name no faulty file, it reaches 52.8\% and 73.6\%. A free agent loop with the same model and tools finds files equally well, but names the faulty function 14 points less often. On a 1,000-report sample, \textsc{Remember} beats our reimplementations of two published agents by 7 and 20 points of top-1 accuracy (4 and 16 counting only the reports those agents answered), and the same model used as a re-ranker by 6. We report the cost of every system and the results that go against us, and we release the benchmark, both systems and every run transcript.
 \end{abstract}
 
 \begin{IEEEkeywords}

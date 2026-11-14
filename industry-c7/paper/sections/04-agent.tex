@@ -3,14 +3,19 @@
 
 \begin{figure*}[t]
 \centering
-\includegraphics[width=0.98\textwidth]{figures/workflow.pdf}
-\caption{\sys{}. Code gathers the evidence and builds a candidate table
-(1, 2). The model then makes three kinds of decision, each in a bounded
-step with a fixed answer form: which files to open (3), what role one
-file plays (4, one file per step, the code on screen), and the order of
-the files (6, from the verdict cards only). Code walks back from files
-that only detect the failure (5) and checks the answer (7). Green steps
-are code; orange steps are the model.}
+\includegraphics[width=\textwidth]{figures/final.pdf}
+\caption{\sys{}. The issue report and the code snapshot enter on the
+left; the module, the ranked regions and the causal chain leave on the
+right. Everything inside the dashed border is the agent: a fixed
+procedure of seven steps. Code gathers the evidence and builds the
+candidate table (1, 2). The model decides three times, each in a
+bounded step with a fixed answer form: which files to open (3), what
+role one file plays (4, one file per step, with that file on screen),
+and the order of the files (6, from the verdict cards only). Code sends
+the callers of a file that only detects the failure back to step 4,
+once (5), and builds and checks the answer (7). Green boxes and arrows
+are code; orange are the model; dashed arrows carry data that a later
+step uses again.}
 \label{fig:workflow}
 \end{figure*}
 
