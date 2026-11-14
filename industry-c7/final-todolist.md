@@ -389,6 +389,15 @@ Do not compare wall time (different GPU load during the runs).
 - Artifact: `C:\workplace\inquest-artifact` (own git repo, author "The
   Authors"); benchmark zip built (96 MB); code+results zip on hold until the
   system name is settled.
+- Nov 14 07:52-08:52 UTC: seeds 7 and 123 of the staged agent on the
+  1,000-instance sample on Nebius (8xH100, ~$18 by the guard's estimate at
+  $2.40/GPU-h). Rows `data/agent/vm/agent-wf-seed{7,123}-p*.jsonl`,
+  transcripts under `data/agent/vm/runs/wf-seed*`, scored by
+  `scripts/score_seeds.py` into `data/results/seed-variation.json`: every
+  headline metric spans at most one point across the three seeds (998
+  common instances). Stated in the threats paragraph, four verifier checks.
+  The system is now called INQUEST (title: "Inquest: Log-Guided Root-Cause
+  Code Localization with a Staged Agent").
 
 ### Verification
 - `scripts/verify_paper.py --wf <rows> --loop <rows>` checks every macro,
