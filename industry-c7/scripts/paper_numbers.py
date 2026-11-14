@@ -24,6 +24,7 @@ R = str(Path(__file__).resolve().parents[1])
 sys.path.insert(0, f"{R}/scripts")
 sys.path.insert(0, f"{R}/agent")
 import c7_coverage as CC  # noqa: E402
+from localize import is_dead_row  # noqa: E402
 
 ap = argparse.ArgumentParser(description=__doc__)
 ap.add_argument("--wf", required=True)
@@ -32,25 +33,48 @@ OUTF = f"{R}/data/results/paper-numbers.json"
 out = {}
 
 # ---- retrieval systems, pooled, eval split --------------------------------
-acc = {}   # system -> stratum -> [sum acc1, sum acc5, sum mrr, n]
+import module_metrics as MM  # noqa: E402
+
+sample = set(json.load(open(f"{R}/data/results/baseline-sample.json"))["ids"])
+acc = {}    # system -> stratum -> [sum acc1, acc5, acc10, mrr, n]
+accS = {}   # the same on the 1,000-instance sample, cond_ours only
+mod = {}    # cond_ours module of the top-ranked file, per stratum, [hits, n]
+modS = {}
 projects = sorted(os.path.basename(f)[:-len("-instances.jsonl")]
                   for f in glob.glob(f"{R}/data/results/*-instances.jsonl"))
-hard_n = 0
 for p in projects:
     n_dev = json.load(open(f"{R}/data/results/{p}-summary.json"))["n_dev"]
     rows = [json.loads(l) for l in open(f"{R}/data/results/{p}-instances.jsonl", encoding="utf-8")]
     rows.sort(key=lambda r: r["fix_time"])
+    depth = MM.DEPTH.get(p, 1)
     for r in rows[n_dev:]:
         strata = ["all", "easy" if r["strata"]["easy"] else "hard",
                   "trace" if r["strata"].get("trace") else "no_trace"]
+        in_sample = f"{p}:{r['issue_key']}" in sample
         for s, m in r["metrics"].items():
             for st in strata:
-                a = acc.setdefault(s, {}).setdefault(st, [0.0, 0.0, 0.0, 0])
-                a[0] += m["acc@1"]; a[1] += m["acc@5"]; a[2] += m["mrr"]; a[3] += 1
+                a = acc.setdefault(s, {}).setdefault(st, [0.0, 0.0, 0.0, 0.0, 0])
+                a[0] += m["acc@1"]; a[1] += m["acc@5"]; a[2] += m["acc@10"]; a[3] += m["mrr"]; a[4] += 1
+                if in_sample and s == "cond_ours":
+                    b = accS.setdefault(st, [0.0, 0.0, 0.0, 0.0, 0])
+                    b[0] += m["acc@1"]; b[1] += m["acc@5"]; b[2] += m["acc@10"]; b[3] += m["mrr"]; b[4] += 1
+        top = (r["rankings"].get("cond_ours") or [""])[0]
+        gm = {MM.module_of(f, depth) for f in r["gold_files"]}
+        hit = float(bool(top) and MM.module_of(top, depth) in gm)
+        for st in strata:
+            t = mod.setdefault(st, [0.0, 0]); t[0] += hit; t[1] += 1
+            if in_sample:
+                t = modS.setdefault(st, [0.0, 0]); t[0] += hit; t[1] += 1
 out["retrieval_pooled"] = {
-    s: {st: {"n": a[3], "acc@1": round(a[0] / a[3], 4), "acc@5": round(a[1] / a[3], 4),
-             "mrr": round(a[2] / a[3], 4)} for st, a in d.items()}
+    s: {st: {"n": a[4], "acc@1": round(a[0] / a[4], 4), "acc@5": round(a[1] / a[4], 4),
+             "acc@10": round(a[2] / a[4], 4), "mrr": round(a[3] / a[4], 4)} for st, a in d.items()}
     for s, d in acc.items()}
+out["retrieval_module_top_file"] = {st: {"n": t[1], "acc@1": round(t[0] / t[1], 4)} for st, t in mod.items()}
+out["retrieval_sample"] = {
+    st: {"n": b[4], "acc@1": round(b[0] / b[4], 4), "acc@5": round(b[1] / b[4], 4),
+         "acc@10": round(b[2] / b[4], 4), "mrr": round(b[3] / b[4], 4),
+         "module_acc@1": round(modS[st][0] / modS[st][1], 4)} for st, b in accS.items()}
+print("retrieval module (top file):", out["retrieval_module_top_file"]["all"], "sample:", out["retrieval_sample"]["all"])
 print("retrieval: projects", len(projects), "n all", acc["cond_ours"]["all"][3],
       "hard", acc["cond_ours"]["hard"][3])
 for s in ("cond_ours", "cond_no_memory", "fused_ours", "fused_no_memory",
@@ -127,6 +151,28 @@ for p, rs in byp.items():
 lo = min(out["per_project"].items(), key=lambda kv: kv[1]["wf_acc@1"])
 hi = max(out["per_project"].items(), key=lambda kv: kv[1]["wf_acc@1"])
 print("per project wf acc@1: min", lo, "max", hi)
+
+# ---- the ported agents on the instances where they returned a location ----
+# A port that leaves an answer unparseable scores a miss there. This scores
+# each port, and wf, on the instances the port did answer, so the margin
+# can be read with and without the parse failures.
+out["parsed_only"] = {}
+for arm in ("locagent", "cosil"):
+    rows = [json.loads(l) for l in open(f"{R}/data/agent/agent-{arm}-eval.jsonl", encoding="utf-8") if l.strip()]
+    rows = [r for r in rows if r["id"] in wf and not is_dead_row(r)]
+    ok = [r for r in rows if not r.get("empty")]
+    m = lambda rs, k, src=None: sum((src[r["id"]] if src else r)["metrics"][k] for r in rs) / len(rs)  # noqa: E731
+    out["parsed_only"][arm] = {
+        "n_all": len(rows), "n_parsed": len(ok), "n_empty": len(rows) - len(ok),
+        "arm_acc@1": round(m(ok, "acc@1"), 4), "arm_acc@5": round(m(ok, "acc@5"), 4),
+        "wf_acc@1": round(m(ok, "acc@1", wf), 4), "wf_acc@5": round(m(ok, "acc@5", wf), 4)}
+    print("parsed-only", arm, out["parsed_only"][arm])
+
+# ---- the sample's own wf cost, for the sample block of the big table ------
+sw = [r for i, r in wf.items() if i in sample]
+out["wf_sample_cost"] = {"n": len(sw),
+                         "llm_calls": round(sum(r["cost"]["llm_calls"] for r in sw) / len(sw), 2),
+                         "prompt_tokens": round(sum(r["cost"]["prompt_tokens"] for r in sw) / len(sw))}
 
 json.dump(out, open(OUTF, "w"), indent=1)
 print("->", OUTF)

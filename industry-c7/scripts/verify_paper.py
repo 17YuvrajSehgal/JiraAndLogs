@@ -194,21 +194,32 @@ def main() -> int:
     has("02-benchmark", f"{round(100 * pp[lo_h]['hard_share'])}\\% ({'PDFBox' if lo_h == 'pdfbox' else lo_h.capitalize()}", "02-benchmark")
     has("02-benchmark", f"{round(100 * pp[hi_h]['hard_share'])}\\% ({hi_h.capitalize()})", "02-benchmark")
     V = AB["vs_ours"]
-    f3 = lambda x: f"{x:+.3f}"  # noqa: E731
+    iv3 = lambda d: f"$[{pm(d['lo'])}, {pm(d['hi'])}]$"  # noqa: E731
     la = V["locagent"]
-    has("05-results", f"${f3(la['all']['acc@1']['delta'])}$ Acc@1\n$[{f3(la['all']['acc@1']['lo'])}, {f3(la['all']['acc@1']['hi'])}]$", "05-results")
-    has("05-results", f"${f3(la['all']['acc@5']['delta'])}$ Acc@5 $[{f3(la['all']['acc@5']['lo'])}, {f3(la['all']['acc@5']['hi'])}]$", "05-results")
-    has("05-results", f"${f3(la['hard']['acc@1']['delta'])}$ $[{f3(la['hard']['acc@1']['lo'])}, {f3(la['hard']['acc@1']['hi'])}]$", "05-results")
-    has("05-results", f"${f3(la['hard']['acc@5']['delta'])}$ $[{f3(la['hard']['acc@5']['lo'])}, {f3(la['hard']['acc@5']['hi'])}]$", "05-results")
+    has("05-results", f"${pm(la['all']['acc@1']['delta'])}$ points of Acc@1 {iv3(la['all']['acc@1'])} and ${pm(la['all']['acc@5']['delta'])}$ of Acc@5 {iv3(la['all']['acc@5'])}", "05-results")
+    has("05-results", f"hard stratum ${pm(la['hard']['acc@1']['delta'])}$ {iv3(la['hard']['acc@1'])} and ${pm(la['hard']['acc@5']['delta'])}$ {iv3(la['hard']['acc@5'])}", "05-results")
     co = V["cosil"]
-    has("05-results", f"${f3(co['all']['acc@1']['delta'])}$ and\n${f3(co['all']['acc@5']['delta'])}$ overall and ${f3(co['hard']['acc@1']['delta'])}$\nand ${f3(co['hard']['acc@5']['delta'])}$ on the hard stratum", "05-results")
+    has("05-results", f"Against CoSIL-style it is ${pm(co['all']['acc@1']['delta'])}$ and ${pm(co['all']['acc@5']['delta'])}$ overall and ${pm(co['hard']['acc@1']['delta'])}$ and ${pm(co['hard']['acc@5']['delta'])}$ on the hard stratum", "05-results")
     E = SRC["agents"]["extra"]
     al, rr = E["llm_alone"], E["llm_rerank"]
-    has("05-results", f"${f3(al['vs_wf_acc@1'][0])}$ Acc@1 $[{f3(al['vs_wf_acc@1'][1])}, {f3(al['vs_wf_acc@1'][2])}]$", "05-results")
-    has("05-results", f"${f3(al['vs_wf_acc@5'][0])}$ Acc@5\n$[{f3(al['vs_wf_acc@5'][1])}, {f3(al['vs_wf_acc@5'][2])}]$", "05-results")
-    has("05-results", f"${f3(rr['vs_wf_acc@1'][0])}$ $[{f3(rr['vs_wf_acc@1'][1])}, {f3(rr['vs_wf_acc@1'][2])}]$ and ${f3(rr['vs_wf_acc@5'][0])}$ $[{f3(rr['vs_wf_acc@5'][1])}, {f3(rr['vs_wf_acc@5'][2])}]$", "05-results")
-    has("05-results", f"reaches {rr['acc@1']:.3f} Acc@1", "05-results")
-    has("05-results", f"falls to {rr['hard_acc@1']:.3f} against\n\\sys{{}}'s {AB['systems']['ours']['hard_acc@1']:.3f}", "05-results")
+    tri = lambda t: f"${pm(t[0])}$" + " $[" + f"{pm(t[1])}, {pm(t[2])}" + "]$"  # noqa: E731
+    has("05-results", f"${pm(al['vs_wf_acc@1'][0])}$ points of Acc@1 $[{pm(al['vs_wf_acc@1'][1])}, {pm(al['vs_wf_acc@1'][2])}]$ and ${pm(al['vs_wf_acc@5'][0])}$ of Acc@5 $[{pm(al['vs_wf_acc@5'][1])}, {pm(al['vs_wf_acc@5'][2])}]$", "05-results")
+    has("05-results", f"{tri(rr['vs_wf_acc@1'])} and {tri(rr['vs_wf_acc@5'])}", "05-results")
+    has("05-results", f"reaches {exp(rr['acc@1'])}\\% Acc@1", "05-results")
+    has("05-results", f"falls to {exp(rr['hard_acc@1'])}\\% against \\sys{{}}'s {exp(AB['systems']['ours']['hard_acc@1'])}\\%", "05-results")
+    PO = PN["parsed_only"]
+    la_, co_ = PO["locagent"], PO["cosil"]
+    has("05-results", f"On the {la_['n_parsed']} instances where LocAgent-style did return a location, it scores {exp(la_['arm_acc@1'])}\\% Acc@1 and {exp(la_['arm_acc@5'])}\\% Acc@5 against \\sys{{}}'s {exp(la_['wf_acc@1'])}\\% and {exp(la_['wf_acc@5'])}\\%", "05-results")
+    has("05-results", f"on CoSIL-style's {co_['n_parsed']} answered instances the margins are ${100 * (co_['wf_acc@1'] - co_['arm_acc@1']):+.1f}$ and ${100 * (co_['wf_acc@5'] - co_['arm_acc@5']):+.1f}$ points", "05-results")
+    has("05-results", f"66.5\\% Acc@1 ({S['trace']['n']:,} instances)", "05-results")
+    has("05-results", f"neither 70.8\\% ({S['prose']['n']:,}, half the split)", "05-results")
+    check("05-results: 'half the split' for the no-event reports", 0.45 <= S["prose"]["n"] / S["all"]["n"] <= 0.55, S["prose"]["n"] / S["all"]["n"])
+    has("05-results", f"it reaches {exp(S['all']['region_agent_only_acc@1'])}\\% Acc@1 and {exp(S['all']['region_agent_only_acc@5'])}\\% Acc@5", "05-results")
+    has("05-results", f"the module of its own top-ranked file ({exp(SW['all']['module_from_ranking_acc@1'])}\\%) and of the loop's ({exp(SL['all']['module_from_ranking_acc@1'])}\\%)", "05-results")
+    pil = sum(len(json.loads((RES / f).read_text(encoding="utf-8"))["ids"]) for f in ("baseline-pilot.json", "keepfull-pilot.json"))
+    has("06-discussion", f"of 30 and 81 instances", "06-discussion")
+    check("06-discussion: pilot instances are 0.4% of the split", f"{100 * pil / n_eval:.1f}\\% of it" in tex("06-discussion"), f"{100 * pil / n_eval:.2f}%")
+    has("06-discussion", f"path names only, {exp(al['acc@1'])}\\% Acc@1; paths with function names, {exp(rr['acc@1'])}\\%; the files themselves, read whole or in whole functions, {exp(AB['systems']['ours']['acc@1'])}\\%", "06-discussion")
     tc = AB["systems"]["locagent"]["tool_calls_per_run"]
     has("05-results", f"traversal tool {tc['traverse_graph']:.2f} times per run against {tc['search_entity']:.1f} keyword", "05-results")
     has("05-results", f"(LocAgent-style {100 * AB['systems']['locagent']['empty_rate']:.1f}\\%, CoSIL-style\n{100 * AB['systems']['cosil']['empty_rate']:.1f}\\%)", "05-results")

@@ -60,10 +60,18 @@ $+27.4$ points of Acc@1 overall and $+32.5$ on the hard stratum: reading
 the code closes most of the gap that the report leaves open.
 
 By report type the picture is flat. Reports with a stack trace score
-66.5\% Acc@1, reports with log lines but no trace 66.6\%, and reports
-with prose only 70.8\%. A trace does not make the file easier to find at
-rank one, because the file it names is usually the one that detected the
-failure (\cref{sec:intro}). Across the \nProjects{} projects Acc@1 ranges
+66.5\% Acc@1 (7{,}808 instances), reports with a log line the log layer
+recognises as an event but no trace 66.6\% (5{,}739), and reports with
+neither 70.8\% (12{,}993, half the split). The last group are
+log-bearing by the source dataset's labelling but quote their evidence
+in prose, an exception name or an error message inside a sentence
+rather than a pasted line, and they are the easiest reports at rank
+one. A trace does not make the file easier to find, because the file it
+names is usually the one that detected the failure (\cref{sec:intro}).
+Whether the logs themselves carry the result is not something this
+split can show: no run removes the logs from the reports, and we list
+that ablation as missing in \cref{sec:discussion:threats}. Across the
+\nProjects{} projects Acc@1 ranges
 from 54.3\% (Infinispan) to 79.6\% (Hadoop). The projects rank the same
 way for the retrieval layer (Spearman $\rho = 0.87$ between the two
 systems' per-project Acc@1), so project difficulty is largely a property
@@ -105,13 +113,22 @@ and both are small. The loop finds files as well as the workflow does.
 What the structure changes is everything below the file. Region Acc@1
 rises from \loopRegOne{} to \regOne{} ($+14.1$ points $[+13.5, +14.7]$)
 and region Acc@5 from \loopRegFive{} to \regFive{} ($+19.2$
-$[+18.6, +19.9]$). The loop names 3.2 regions per answer, one function
-per file; the workflow judges every examined file with its functions on
-screen and names up to three of them. The explanation changes in kind as well: in
-the loop's chains no step cites a log event, because nothing required
-it; in the workflow 57.4\% of chain steps cite one of the report's
-selected log events, and 85.7\% of those citations exist in the report
-word for word. The price is \calls{} model calls and \tokens{} prompt
+$[+18.6, +19.9]$). The two lists differ in length, and that matters for
+the Acc@5 and Acc@10 columns: the loop names 3.2 regions per answer, one
+function per file, while the workflow names up to three functions for
+each examined file and then fills the list with keyword-ranked
+functions. Region Acc@1, where list length plays no part, is the number
+to read, and on the workflow's own regions alone, without the keyword
+fill, it reaches 53.5\% Acc@1 and 69.4\% Acc@5. The explanation changes
+in kind as well. In the loop's chains no step cites a log event; in the
+workflow 57.4\% of chain steps cite one of the report's selected log
+events, and 85.7\% of those citations are grounded, meaning the step
+names an event id from the report or quotes a line from it word for
+word, while the rest paraphrase a line and are kept, flagged. The
+citation is a property of the fixed answer form, which asks for an
+event id at every step, and not an emergent behaviour of the model; we
+report it because it is what an engineer receives. The price is
+\calls{} model calls and \tokens{} prompt
 tokens per issue against the loop's 13.6 and 99k, and 286 against 199
 seconds of wall time at the same concurrency.
 
@@ -132,23 +149,23 @@ Java, Scala, C or C++ (\cref{sec:setup:systems}), and with the same
 model used without tools, alone and as a re-ranker of the retrieval
 layer's candidates.
 \sys{} leads every system on every column. Against LocAgent-style, the
-stronger published agent, the paired difference is $+0.072$ Acc@1
-$[+0.045, +0.100]$ and $+0.136$ Acc@5 $[+0.110, +0.162]$; on the hard
-stratum $+0.118$ $[+0.074, +0.164]$ and $+0.197$ $[+0.153, +0.240]$.
-Against CoSIL-style it is $+0.199$ and $+0.257$ overall and $+0.350$
-and $+0.443$ on the hard stratum. Against the model alone it is
-$+0.144$ Acc@1 $[+0.113, +0.176]$ and $+0.141$ Acc@5
-$[+0.116, +0.167]$; against the re-ranker, the strongest baseline at
-rank one, $+0.063$ $[+0.038, +0.088]$ and $+0.061$ $[+0.042, +0.082]$.
-Every difference is significant. Because all five systems share the
-model, what separates them is the architecture.
+stronger published agent, the paired difference is $+7.2$ points of
+Acc@1 $[+4.5, +10.0]$ and $+13.6$ of Acc@5 $[+11.0, +16.2]$; on the
+hard stratum $+11.8$ $[+7.4, +16.4]$ and $+19.7$ $[+15.3, +24.0]$.
+Against CoSIL-style it is $+19.9$ and $+25.7$ overall and $+35.0$ and
+$+44.3$ on the hard stratum. Against the model alone it is $+14.4$
+points of Acc@1 $[+11.3, +17.6]$ and $+14.1$ of Acc@5 $[+11.6, +16.7]$;
+against the re-ranker, the strongest baseline at rank one, $+6.3$
+$[+3.8, +8.8]$ and $+6.1$ $[+4.2, +8.2]$. Every difference is
+significant. Because all five systems share the model, what separates
+them is the architecture.
 
-The cost column puts the gains in context. The re-ranker reaches 0.608
+The cost column puts the gains in context. The re-ranker reaches 60.8\%
 Acc@1 for one model call and 2.8k prompt tokens per issue, and it is a
 reasonable choice where that budget is the constraint; its limit is its
 candidate set, since it can only reorder the twenty files retrieval
-found, and on the hard stratum it falls to 0.393 against \sys{}'s
-0.522. LocAgent-style spends the same tokens as \sys{} (106k against
+found, and on the hard stratum it falls to 39.3\% against \sys{}'s
+52.2\%. LocAgent-style spends the same tokens as \sys{} (106k against
 108k) for seven points less at rank one; CoSIL-style spends a quarter
 of the tokens and loses most of the hard stratum.
 
@@ -157,12 +174,17 @@ traversal tool 0.09 times per run against 14.5 keyword searches, so the
 multi-hop traversal that distinguishes LocAgent in its own paper goes
 almost unused under this model. And both arms returned no parseable
 location for 8\% to 10\% of instances (LocAgent-style 8.2\%, CoSIL-style
-10.1\%). CoSIL's reflective alignment step exists to repair exactly that
-failure, so we expected CoSIL-style to show the lower rate; it does not,
-and we record that as a property of our port we cannot explain rather
-than as a finding about CoSIL. \sys{} returned an answer on every
-instance, because its submission is a schema the run cannot end
-without.
+10.1\%), which the table scores as misses. Part of the margin is that
+parsing. On the 918 instances where LocAgent-style did return a
+location, it scores 65.3\% Acc@1 and 77.9\% Acc@5 against \sys{}'s
+68.9\% and 86.8\% on the same instances, so half of the rank-one margin
+is parse failures and the Acc@5 margin is not; on CoSIL-style's 899
+answered instances the margins are $+15.9$ and $+19.9$ points. CoSIL's
+reflective alignment step exists to repair exactly that failure, so we
+expected CoSIL-style to show the lower rate; it does not, and we record
+that as a property of our port we cannot explain rather than as a
+finding about CoSIL. \sys{} returned an answer on every instance,
+because its submission is a schema the run cannot end without.
 
 \textbf{The model does not remember these fixes.} These are public
 projects, and the model may simply have memorised their histories. We
@@ -311,7 +333,7 @@ is what the agent does.
 \subsection{What goes against us}
 \label{sec:results:negatives}
 
-Four things. First, the staged workflow is below the unconstrained loop at
+Five things. First, the staged workflow is below the unconstrained loop at
 Acc@5 by 0.9 points, significantly, and gains only 0.7 at Acc@1: at the
 file level the structure buys nothing, and a reader who wants files only
 should take the loop. Second, on reports with a stack trace the
@@ -319,4 +341,7 @@ workflow is not better at all. Third, four of \nEval{} instances
 (0.015\%) ended without an answer in two runs each, because the final
 step's structured output failed to parse twice; they are scored as
 misses and not retried. Fourth, the port check for CoSIL-style fails,
-as stated above.
+as stated above. Fifth, the module the agent names (\modOne{}) is below
+the module of its own top-ranked file (90.9\%) and of the loop's
+(90.8\%): naming the module is a separate decision in the rank step,
+and it is the weaker of the two.

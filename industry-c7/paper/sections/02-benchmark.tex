@@ -16,7 +16,11 @@ What we add is a set selected for log-bearing reports across
 and Groovy), stratified by whether the
 report names any faulty file, and shipped with a per-project pool of
 past incidents so that history-based methods can be evaluated under a
-stated temporal firewall.
+stated temporal firewall. Throughout, an \emph{incident} is a resolved
+issue report together with the log excerpts its reporter pasted into
+it. These are the logs an engineer is handed at triage, not a raw
+production log bundle; what that leaves out is discussed in
+\cref{sec:discussion:difficulties}.
 
 \subsection{Sources and construction}
 \label{sec:benchmark:linkage}
@@ -66,7 +70,7 @@ log-bearing fixed bugs, uncertainty $\le 0.05$ & 70{,}999 \\
 \quad gold entirely test code (scoring-time exclusion) & $-$101 \\
 scored instances & \nScored \\
 \midrule
-projects / languages & 27 / 5 \\
+projects / main languages & 27 / 4 \\
 hard: report names no gold file & \nHardPct \\
 report contains a stack trace & 30\% \\
 single fix commit & 85\% \\

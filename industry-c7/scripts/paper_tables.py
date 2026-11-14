@@ -93,7 +93,7 @@ def main() -> int:
     pair = {}
     for k in ("all", "hard"):
         keep = [i for i in ids if i in S_wf[k]]
-        for grp, m in (("file", "acc@1"), ("file", "acc@5"), ("region", "acc@1"), ("region", "acc@5")):
+        for grp, m in (("file", "acc@1"), ("file", "acc@5"), ("region", "acc@1"), ("region", "acc@5"), ("region", "acc@10")):
             ok = [i for i in keep if grp in s_wf[i] and grp in s_lp[i]]
             d, lo, hi = boot([s_wf[i][grp][m] - s_lp[i][grp][m] for i in ok], (len(grp) * 7 + int(m[-1])) % 97)
             pair[f"{k}:{grp}_{m}"] = {"delta": round(d, 4), "lo": round(lo, 4), "hi": round(hi, 4), "n": len(ok)}
@@ -115,9 +115,9 @@ def main() -> int:
         "\\midrule",
         "\\sys{} minus loop, paired & "
         + " & ".join(f"{100 * pair[k]['delta']:+.1f} [{100 * pair[k]['lo']:+.1f}, {100 * pair[k]['hi']:+.1f}]"
-                     for k in ("all:file_acc@1", "all:file_acc@5", "hard:file_acc@1", "all:region_acc@1", "all:region_acc@5"))
-        + f" & {100 * (W['all']['region_acc@10'] - L['all']['region_acc@10']):+.1f} & "
-        f"{100 * ((W['all']['steps_citing_log'] or 0) - (L['all']['steps_citing_log'] or 0)):+.1f} & -- \\\\",
+                     for k in ("all:file_acc@1", "all:file_acc@5", "hard:file_acc@1",
+                               "all:region_acc@1", "all:region_acc@5", "all:region_acc@10"))
+        + f" & {100 * ((W['all']['steps_citing_log'] or 0) - (L['all']['steps_citing_log'] or 0)):+.1f} & -- \\\\",
     ]
     (TAB / "ablation.tex").write_text("\n".join(abl) + "\n", encoding="utf-8", newline="\n")
 
@@ -192,9 +192,14 @@ def main() -> int:
 
     def block_rows(systems, keep):
         """systems: list of (name, rows dict, scored dict, is_ours, calls, tokens, region_override).
+        A system given as (name, None, None, False, None, None, vals) is
+        precomputed (the retrieval layer, pooled from the instances files).
         Returns rows of cell values (None = not available) and the names."""
         out = []
         for name, rows_, sc, ours, calls, toks, reg_over in systems:
+            if rows_ is None:
+                out.append((name, ours, list(reg_over), calls, toks, len(keep)))
+                continue
             ks = [i for i in keep if i in rows_]
             hk = [i for i in ks if wf[i].get("hard")]
             S = CC.summarise({i: sc[i] for i in ks})["all"]
@@ -227,18 +232,18 @@ def main() -> int:
             lines_.append(f"{name} & " + " & ".join(cells) + " \\\\")
         return lines_
 
-    # the retrieval layer as a scored system: its ranking is the seed list
-    # carried in the wf rows, its metrics are metrics_lexical
-    lex = {}
-    for i, r in wf.items():
-        seed = r.get("lexical_seed") if isinstance(r.get("lexical_seed"), list) else []
-        lex[i] = {"project": r["project"], "issue_key": r["issue_key"], "gold_files": r["gold_files"],
-                  "ranking": seed, "metrics": r["metrics_lexical"], "hard": r.get("hard"),
-                  "has_stack_trace": r.get("has_stack_trace")}
-    s_lex = {i: CC.score_row(r) for i, r in lex.items()}
-    fp_ = PN_FUNCS = json.loads((TMP / "paper-numbers.json").read_text(encoding="utf-8"))["functions_pooled"]
-    full_sys = [("retrieval layer (no model)", lex, s_lex, False, None, None,
-                 (fp_["eval_eligible"]["acc@1"], fp_["eval_eligible"]["acc@5"])),
+    # the retrieval layer, pooled from the instances files at full ranking
+    # depth (paper_numbers.py), the same source as the retrieval table
+    PNJ = json.loads((TMP / "paper-numbers.json").read_text(encoding="utf-8"))
+    fp_, rpc, rmod, rsm = PNJ["functions_pooled"], PNJ["retrieval_pooled"]["cond_ours"], \
+        PNJ["retrieval_module_top_file"], PNJ["retrieval_sample"]
+    retr_full = [rpc["all"]["acc@1"], rpc["all"]["acc@5"], rpc["all"]["acc@10"], rpc["all"]["mrr"],
+                 rpc["hard"]["acc@1"], rpc["hard"]["acc@5"], rmod["all"]["acc@1"],
+                 fp_["eval_eligible"]["acc@1"], fp_["eval_eligible"]["acc@5"], None]
+    retr_sample = [rsm["all"]["acc@1"], rsm["all"]["acc@5"], rsm["all"]["acc@10"], rsm["all"]["mrr"],
+                   rsm["hard"]["acc@1"], rsm["hard"]["acc@5"], rsm["all"]["module_acc@1"], None, None, None]
+    csw = (PNJ["wf_sample_cost"]["llm_calls"], PNJ["wf_sample_cost"]["prompt_tokens"] / 1000)
+    full_sys = [("retrieval layer (no model)", None, None, False, None, None, retr_full),
                 ("\\sys{}", wf, s_wf, True, cw[0], cw[1], None)]
     full = block_rows(full_sys, sorted(wf))
     arms = {}
@@ -251,7 +256,7 @@ def main() -> int:
                     rows_[r["id"]] = r
         arms[key] = (name, rows_, {i: CC.score_row(r) for i, r in rows_.items()},
                      AB["systems"][key]["llm_calls"], AB["systems"][key]["prompt_tokens"] / 1000)
-    sample_sys = [("retrieval layer (no model)", lex, s_lex, False, None, None, None)]
+    sample_sys = [("retrieval layer (no model)", None, None, False, None, None, retr_sample)]
     for key in ("locagent", "cosil"):
         name, rows_, sc, calls, toks = arms[key]
         sample_sys.append((name, rows_, sc, False, calls, toks, None))
@@ -260,7 +265,7 @@ def main() -> int:
         calls = 2.0 if key == "llm_alone" else 1.0
         toks = src["agents"]["extra"][key].get("prompt_tokens_k") or 0.0
         sample_sys.append((name, d, sc, False, calls, toks, None))
-    sample_sys.append(("\\sys{}", sw, {i: s_wf[i] for i in sw}, True, cw[0], cw[1], None))
+    sample_sys.append(("\\sys{}", sw, {i: s_wf[i] for i in sw}, True, csw[0], csw[1], None))
     samp = block_rows(sample_sys, sorted(sample))
     # the population counts (the four unanswered instances count as misses)
     npop = json.loads((TMP / "paper-numbers.json").read_text(encoding="utf-8"))["retrieval_pooled"]["cond_ours"]
@@ -268,8 +273,7 @@ def main() -> int:
     alltab.append("\\midrule")
     alltab += render_block(f"stratified sample, {len(sample):,} instances ({len(hard):,} hard)", samp)
     (TAB / "all.tex").write_text("\n".join(alltab) + "\n", encoding="utf-8", newline="\n")
-    src["all"] = {"full": [(r[0], r[5]) for r in full], "sample": [(r[0], r[5]) for r in samp],
-                  "retrieval_module_from_seed_top1": round(full[0][2][6], 4) if full[0][2][6] is not None else None}
+    src["all"] = {"full": [(r[0], r[5]) for r in full], "sample": [(r[0], r[5]) for r in samp]}
 
     # ---- retrieval signals pooled -------------------------------------------
     PN = json.loads((TMP / "paper-numbers.json").read_text(encoding="utf-8"))

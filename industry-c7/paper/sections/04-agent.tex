@@ -104,8 +104,10 @@ Code then applies one rule the prompt also states: files judged
 in rank order: the card's functions first (two for each of the first
 three files, one after that), then two functions ranked by keyword
 match against the report, marked as such. Every path must exist in the
-snapshot, every function in its file, the module in the module list, and
-every cited log event in the report; a citation that fails is removed.
+snapshot, every function in its file, and the module in the module
+list; every cited log event is checked against the report and marked as
+grounded when it is one of the report's event ids or a line quoted from
+the report word for word.
 If fewer than ten files were examined, the retrieval ranking fills the
 remaining file slots without reordering what the agent produced.
 

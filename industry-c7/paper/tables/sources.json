@@ -185,6 +185,12 @@
     "hi": 0.1989,
     "n": 24847
    },
+   "all:region_acc@10": {
+    "delta": 0.2412,
+    "lo": 0.2354,
+    "hi": 0.2478,
+    "n": 24847
+   },
    "hard:file_acc@1": {
     "delta": -0.0053,
     "lo": -0.0134,
@@ -207,6 +213,12 @@
     "delta": 0.2088,
     "lo": 0.1993,
     "hi": 0.2185,
+    "n": 11919
+   },
+   "hard:region_acc@10": {
+    "delta": 0.2679,
+    "lo": 0.2581,
+    "hi": 0.2779,
     "n": 11919
    }
   }
@@ -292,8 +304,7 @@
     "\\sys{}",
     1000
    ]
-  ],
-  "retrieval_module_from_seed_top1": 0.7655
+  ]
  },
  "retrieval": {
   "file": "C:\\workplace\\JiraAndLogs\\industry-c7\\data\\results\\paper-numbers.json",
