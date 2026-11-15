@@ -1,0 +1,28 @@
+{
+  "id": "mongodb:SERVER-42061",
+  "project": "mongodb",
+  "issue_key": "SERVER-42061",
+  "annotator": "claude-opus-5",
+  "pass": 1,
+  "file_roles": [
+    {
+      "path": "src/mongo/crypto/aead_encryption.cpp",
+      "role": "preventive",
+      "evidence": "The entire report is the title 'Validate decrypted payload in ESE', which asks for a validation to be added after decryption rather than for wrong logic to be corrected, and RUBRIC.md lists 'a downstream validation' as the first example of preventive. The single non-test gold file is the AEAD encryption implementation, which is where a decrypted payload would be checked. No failure, log or trace is reported."
+    }
+  ],
+  "symptom_location": {
+    "file": null,
+    "function": null,
+    "determinable": false
+  },
+  "log_location": {
+    "file": null,
+    "function": null,
+    "determinable": false
+  },
+  "relation": "unclear",
+  "rationale": "The report is a one-line hardening task, 'Validate decrypted payload in ESE', with no description, no failure, no log and an empty commit message. Nothing in the packet reports a symptom, so there is no surfaced failure for the change to be causal of, and the change the title asks for is literally a downstream validation in the file that performs the decryption. The role is taken from the report title and the single gold path, since no diff was retrieved.",
+  "confidence": "medium",
+  "notes": "NO-DIFF PACKET: every gold file in this packet shows '(no diff retrieved)' and the fix commit message is '(empty)', so the issue report is the only evidence the packet carries. Decision recorded here per CONVENTIONS.md ('If a case is not covered here, follow RUBRIC.md and say in notes what was decided and why'): a role is assigned only where the report itself names the faulty code, the wrong behaviour, or the adopted fix, and every other gold file is 'unclear', per schema.json ('A label without citable evidence is not auditable and must be unclear'). Instance confidence is capped at medium because no diff was shown. REPORT-NAMES-FIX: the one-line report prescribes the adopted fix, 'Validate decrypted payload in ESE'. The instance has no failure: it is a hardening task with no reported symptom, which is why 'preventive' is preferred over 'causal' here, since RUBRIC.md defines causal against 'the reported failure' and there is none. A second rater could reasonably call this 'causal' under the CONVENTIONS.md rule that an unguarded legal input is the defect in the file that owns the feature when no other file was changed, especially since an AEAD decryptor that does not validate its payload is arguably defective by definition. This is the single most contestable label in the ten assigned and is worth putting in the agreement check. ESE is matched to src/mongo/crypto/aead_encryption.cpp by path only; the packet did not show the source tree."
+}

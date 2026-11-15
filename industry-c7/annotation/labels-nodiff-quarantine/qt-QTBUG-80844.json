@@ -1,0 +1,48 @@
+{
+  "id": "qt:QTBUG-80844",
+  "project": "qt",
+  "issue_key": "QTBUG-80844",
+  "annotator": "claude-opus-5",
+  "pass": 1,
+  "file_roles": [
+    {
+      "path": "src/plugins/platforms/cocoa/qcocoabackingstore.h",
+      "role": "unclear",
+      "evidence": "'(no diff retrieved)' for this file and the commit message 7ac4e55cb979 is '(empty)'. The report is a visual complaint, 'connect or disconnect monitor and then move mouse over app -> some problems with main window updating', naming no code. Under the recorded convention a header is causal only if it holds logic that changed, refactor if it only declares; with no hunk that test cannot be applied."
+    },
+    {
+      "path": "src/plugins/platforms/cocoa/qcocoabackingstore.mm",
+      "role": "unclear",
+      "evidence": "'(no diff retrieved)'. The backing store is a plausible home for a redraw defect after a display change, but plausibility is not the standard: nothing in the packet shows what was corrected here, and the report names no function, no log line and no frame."
+    },
+    {
+      "path": "src/plugins/platforms/cocoa/qcocoaintegration.mm",
+      "role": "unclear",
+      "evidence": "'(no diff retrieved)'. Five files changed together across backing store, integration and IOSurface buffer; with no hunks there is no way to say which holds the wrong logic and which was adapted to it, which is exactly the distinction the rubric asks for."
+    },
+    {
+      "path": "src/plugins/platforms/cocoa/qiosurfacegraphicsbuffer.h",
+      "role": "unclear",
+      "evidence": "'(no diff retrieved)'. Same position as the other header: declaration-only changes and an inline body that changed behaviour are different roles, and the packet shows neither."
+    },
+    {
+      "path": "src/plugins/platforms/cocoa/qiosurfacegraphicsbuffer.mm",
+      "role": "unclear",
+      "evidence": "'(no diff retrieved)'. The report never mentions surfaces, buffers or any Qt class, 'Launch qt app on macOS, e.g. qt creator, connect or disconnect monitor and then move mouse over app', so neither the report nor the diff supports a role here."
+    }
+  ],
+  "symptom_location": {
+    "file": null,
+    "function": null,
+    "determinable": false
+  },
+  "log_location": {
+    "file": null,
+    "function": null,
+    "determinable": false
+  },
+  "relation": "unclear",
+  "rationale": "None of the five gold files has a diff in the packet and the commit message is empty, so no role can be decided for any of them. The report is a two-sentence visual complaint about a hardware configuration, 'macbook pro 15 2019 with macOS 10.15.2, monitor DELL P2417H connected via HDMI. macOS settings for displays: Mirror Displays', with no log, no trace and no code named. This is the largest gold set in this batch and the one with the least evidence attached.",
+  "confidence": "low",
+  "notes": "Five gold files, no diff for any of them, no commit message, no log and no trace, so symptom_location, log_location and relation are all undeterminable and every file is unclear. Two of the five are headers, where the recorded header convention cannot be applied without a hunk. The reproducer is a third-party application on specific hardware. Decision recorded for consistency across the diff-less packets in this batch: with no hunk, a role is assigned only when the report itself localises the failure mechanism to the changed file (as in QTBUG-80945, where a sanitizer names the freeing and the using line in it, and QTBUG-81604, where the single changed file owns the operation that failed); otherwise the file is 'unclear' per rubric rule 1 and the instruction to use 'unclear' rather than guess."
+}

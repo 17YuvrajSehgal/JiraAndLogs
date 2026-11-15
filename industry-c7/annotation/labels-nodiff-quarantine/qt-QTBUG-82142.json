@@ -1,0 +1,28 @@
+{
+  "id": "qt:QTBUG-82142",
+  "project": "qt",
+  "issue_key": "QTBUG-82142",
+  "annotator": "claude-opus-5",
+  "pass": 1,
+  "file_roles": [
+    {
+      "path": "src/testlib/qtestlog.cpp",
+      "role": "causal",
+      "evidence": "The compiler names this file as the project-owned source of the bad include, 'In file included from C:/MINGW730/mingw64/lib/gcc/x86_64-w64-mingw32/7.3.0/include/c++/memory:82:0, from .moc/moc_qtestlog_p.cpp:9, from qtestlog.cpp:600', and every error is a standard name looked up inside the Qt namespace, \"error: 'move' is not a member of 'RTA::std'\" and \"'memory_order_seq_cst' was not declared in this scope\". The namespace is the one the reporter configured, '-qtnamespace RTA'. This file is the only one the fix changed, so nothing else was treated as broken, and what it got wrong is pulling a standard header in at line 600 from inside the namespace."
+    }
+  ],
+  "symptom_location": {
+    "file": "src/testlib/qtestlog.cpp",
+    "function": null,
+    "determinable": true
+  },
+  "log_location": {
+    "file": null,
+    "function": null,
+    "determinable": false
+  },
+  "relation": "same-location",
+  "rationale": "The build stops at '.obj/qtestlog.o', 'mingw32-make[3]: *** [Makefile:1349: .obj/qtestlog.o] Error 1', and the include chain the compiler prints runs qtestlog.cpp:600 -> .moc/moc_qtestlog_p.cpp:9 -> <memory>, so a standard header is reached from a point inside the RTA namespace and every name in it is then looked up as RTA::std. The deepest project-owned file in that chain is qtestlog.cpp itself, the generated moc file above it is not source, and the MinGW headers that report the errors are the toolchain's. The single gold file is the same file, so cause and failure sit together.",
+  "confidence": "medium",
+  "notes": "The packet renders this file's diff as '(no diff retrieved)', so no hunk could be cited for any gold file in this instance. The configuration that triggers it is in the report, 'Cannot compile sources with -namespace enabled with mingw' and '-qtnamespace RTA'. The instance has no runtime failure; it is a build break, and the pasted output is compiler and make output, not a program log, so log_location.determinable is false, in the way CONVENTIONS records for JMX values and SHOW output. The role is medium rather than high because the packet does not show whether the fix moved the moc include outside QT_BEGIN_NAMESPACE, hoisted the <memory> include above it, or dropped the include altogether; all three correct the same wrong placement in this file. The errors are reported against MinGW headers, 'shared_ptr_atomic.h:321' and 'auto_ptr.h:308', which belong to the toolchain and not to any project file."
+}

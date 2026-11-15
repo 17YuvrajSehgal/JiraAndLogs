@@ -1,0 +1,28 @@
+{
+ "id": "kafka:KAFKA-5173",
+ "project": "kafka",
+ "issue_key": "KAFKA-5173",
+ "annotator": "claude-sonnet-5-5",
+ "pass": 2,
+ "file_roles": [
+  {
+   "path": "core/src/main/scala/kafka/cluster/Broker.scala",
+   "role": "refactor",
+   "evidence": "Only rewords two BrokerEndPointNotAvailableException messages to use listenerName.value; unrelated to the JAAS failure."
+  }
+ ],
+ "symptom_location": {
+  "file": "clients/src/main/java/org/apache/kafka/common/security/JaasContext.java",
+  "function": "defaultContext",
+  "determinable": true
+ },
+ "log_location": {
+  "file": "clients/src/main/java/org/apache/kafka/common/security/JaasContext.java",
+  "function": "defaultContext",
+  "determinable": true
+ },
+ "relation": "unclear",
+ "rationale": "Failure is a missing JAAS entry in SASL test setup; the commit message describes test harness cleanup (closeSasl, removing SaslTestHarness). The single non-test file only changes exception text.",
+ "confidence": "medium",
+ "notes": "Cause is in test files not shown in gold; the diffs of those were not provided."
+}

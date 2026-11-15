@@ -1,0 +1,28 @@
+{
+ "id": "mariadb:MDEV-14684",
+ "project": "mariadb",
+ "issue_key": "MDEV-14684",
+ "annotator": "claude-sonnet-5-5",
+ "pass": 2,
+ "file_roles": [
+  {
+   "path": "sql/sql_delete.cc",
+   "role": "causal",
+   "evidence": "In mysql_delete's truncate_history branch, adds 'if (table_list->is_view_or_derived()) { my_error(ER_VERS_TRUNCATE_TO_VIEW...); return true; }' before DBUG_ASSERT(table)."
+  }
+ ],
+ "symptom_location": {
+  "file": "sql/sql_delete.cc",
+  "function": "mysql_delete",
+  "determinable": true
+ },
+ "log_location": {
+  "file": "sql/sql_delete.cc",
+  "function": "mysql_delete",
+  "determinable": true
+ },
+ "relation": "same-location",
+ "rationale": "The failing DBUG_ASSERT(table) is in the truncate_history branch of mysql_delete, which assumes a base table. The fix rejects views there. mysql_delete owns that assumption, and no other source file changed.",
+ "confidence": "medium",
+ "notes": "Could be read as symptom-handling if the check belonged in sql_truncate.cc; no evidence of that in the diff."
+}

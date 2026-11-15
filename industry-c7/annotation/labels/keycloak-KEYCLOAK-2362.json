@@ -1,0 +1,28 @@
+{
+  "id": "keycloak:KEYCLOAK-2362",
+  "project": "keycloak",
+  "issue_key": "KEYCLOAK-2362",
+  "annotator": "claude-opus-5",
+  "pass": 1,
+  "file_roles": [
+    {
+      "path": "services/src/main/java/org/keycloak/email/DefaultEmailSenderProvider.java",
+      "role": "causal",
+      "evidence": "The factory was stored without being checked, 'props.put(\"mail.smtp.ssl.socketFactory\", configurator.getSSLSocketFactory())', and Hashtable.put rejects a null value. It becomes 'SSLSocketFactory factory = configurator.getSSLSocketFactory(); if (factory != null) { ... }'. With no truststore configured the configurator returns null legitimately, so the defect is this method assuming it never would."
+    }
+  ],
+  "symptom_location": {
+    "file": "services/src/main/java/org/keycloak/email/DefaultEmailSenderProvider.java",
+    "function": "setupTruststore",
+    "determinable": true
+  },
+  "log_location": {
+    "file": null,
+    "function": null,
+    "determinable": false
+  },
+  "relation": "same-location",
+  "rationale": "The useful fragment is four lines long: 'java.lang.NullPointerException at java.util.Hashtable.put(Hashtable.java:459) at org.keycloak.email.DefaultEmailSenderProvider.setupTruststore(DefaultEmailSenderProvider.java:116)'. The first project frame is the method the fix rewrites, and the JDK frame above it explains the mechanism, since Hashtable forbids null values. The reporter's own uncertainty is also borne out, 'It could also be that NPE occurs if truststore is not present', which is exactly the case the guard now covers.",
+  "confidence": "high",
+  "notes": "The report's dominant evidence is a 30-line SSLHandshakeException trace, and it comes from SSLPoke, a standalone diagnostic the reporter downloaded from a Confluence page, with no Keycloak frame in it at all. The four lines that actually locate the defect sit underneath it. This is the third instance where the most prominent pasted trace belongs to software outside the repository, after GROOVY-3685 and KAFKA-6052, and the first where a useful trace is present but buried under a larger irrelevant one."
+}

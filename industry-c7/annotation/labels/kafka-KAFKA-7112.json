@@ -1,0 +1,28 @@
+{
+  "id": "kafka:KAFKA-7112",
+  "project": "kafka",
+  "issue_key": "KAFKA-7112",
+  "annotator": "claude-opus-5",
+  "pass": 1,
+  "file_roles": [
+    {
+      "path": "streams/src/main/java/org/apache/kafka/streams/processor/internals/StreamThread.java",
+      "role": "causal",
+      "evidence": "The state was read once and acted on after the poll that could change it. runOnce is restructured so polling and the decision are separate, with the comment 'only try to initialize the assigned tasks if the state is still in PARTITION_ASSIGNED after the poll call' and a fresh 'if (state == State.PARTITIONS_ASSIGNED)' guarding updateNewAndRestoringTasks. Acting on a stale read of state is the defect, and both the read and the use are in this method."
+    }
+  ],
+  "symptom_location": {
+    "file": "clients/src/main/java/org/apache/kafka/clients/consumer/KafkaConsumer.java",
+    "function": "poll",
+    "determinable": true
+  },
+  "log_location": {
+    "file": "streams/src/main/java/org/apache/kafka/streams/processor/internals/StreamThread.java",
+    "function": null,
+    "determinable": true
+  },
+  "relation": "caller-callee",
+  "rationale": "The throw is 'IllegalStateException: Consumer is not subscribed to any topics or assigned any partitions' at 'KafkaConsumer.poll(KafkaConsumer.java:1159)', reached from StoreChangelogReader.restore and TaskManager.updateNewAndRestoringTasks, which 'StreamThread.runOnce(StreamThread.java:808)' called. So the stale decision is in the gold file and the failure appears three frames below it. The commit explains why the window opened, that after KIP-266 'it is possible that only onPartitionRevoked will be called if timeout is elapsed'.",
+  "confidence": "high",
+  "notes": "A case where the evidence does lead to the answer, and by two independent routes: the trace contains a StreamThread frame, and the log line is tagged with the emitting class, '(org.apache.kafka.streams.processor.internals.StreamThread)', which names the gold file exactly. REPORT-NAMES-FIX: the reporter pastes the faulty block verbatim and diagnoses it, 'There is a race condition though, that if another rebalance gets triggered, then onPartitionRevoked will be called in which we will restoreConsumer.unsubscribe()'."
+}

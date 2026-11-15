@@ -1,0 +1,43 @@
+{
+ "id": "mariadb:MDEV-20831",
+ "project": "mariadb",
+ "issue_key": "MDEV-20831",
+ "annotator": "claude-sonnet-5-5",
+ "pass": 2,
+ "file_roles": [
+  {
+   "path": "plugin/type_inet/sql_type_inet.cc",
+   "role": "causal",
+   "evidence": "New Type_handler_inet6::partition_field_append_value prints the value with to_string() in single quotes, replacing the generic _binary hex output that broke inet6 partition values."
+  },
+  {
+   "path": "plugin/type_inet/sql_type_inet.h",
+   "role": "refactor",
+   "evidence": "Only adds override declarations of partition_field_check and partition_field_append_value."
+  },
+  {
+   "path": "sql/sql_partition.cc",
+   "role": "causal",
+   "evidence": "add_column_list_values and the removed check_part_field hard-coded type switch and charset/hex printing; diff delegates to type_handler()->partition_field_check/append_value."
+  },
+  {
+   "path": "sql/sql_type.h",
+   "role": "refactor",
+   "evidence": "Adds enum partition_value_print_mode_t, new virtual method declarations and trivial per-class overrides, i.e. interface plumbing for the fix in sql_partition.cc."
+  }
+ ],
+ "symptom_location": {
+  "file": "sql/sql_partition.cc",
+  "function": "add_column_list_values",
+  "determinable": true
+ },
+ "log_location": {
+  "file": "sql/sql_partition.cc",
+  "function": "add_column_list_values",
+  "determinable": true
+ },
+ "relation": "same-location",
+ "rationale": "The generic partition code wrote INET6 values to the frm as _binary hex, which then failed type checks on insert. The fix replaces that code and gives the inet6 plugin its own printer.",
+ "confidence": "medium",
+ "notes": "sql_type_inet.cc could be seen as new support code rather than corrected logic; labelled causal because it now decides inet6 output."
+}

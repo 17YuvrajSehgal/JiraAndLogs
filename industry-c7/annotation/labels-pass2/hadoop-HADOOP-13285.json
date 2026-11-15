@@ -1,0 +1,27 @@
+{
+ "id": "hadoop:HADOOP-13285",
+ "project": "hadoop",
+ "issue_key": "HADOOP-13285",
+ "annotator": "claude-sonnet-5-5",
+ "pass": 2,
+ "file_roles": [
+  {
+   "path": "hadoop-common-project/hadoop-common/src/main/java/org/apache/hadoop/ipc/DecayRpcScheduler.java",
+   "role": "causal",
+   "evidence": "getCallVolumeSummary serialized the whole callCounts map (decayed and non-decayed); diff serializes new getDecayedCallCounts() that keeps only list index 0."
+  }
+ ],
+ "symptom_location": {
+  "file": "hadoop-common-project/hadoop-common/src/main/java/org/apache/hadoop/ipc/DecayRpcScheduler.java",
+  "function": "getCallVolumeSummary",
+  "determinable": true
+ },
+ "log_location": {
+  "file": null,
+  "function": null,
+  "determinable": false
+ },
+ "relation": "same-location",
+ "rationale": "The wrong JMX output is produced by getCallVolumeSummary, which the diff changes. The report states the root cause as serializing all of callCounts.",
+ "confidence": "high"
+}

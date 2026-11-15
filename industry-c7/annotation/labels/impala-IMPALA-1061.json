@@ -1,0 +1,63 @@
+{
+  "id": "impala:IMPALA-1061",
+  "project": "impala",
+  "issue_key": "IMPALA-1061",
+  "annotator": "claude-opus-5",
+  "pass": 1,
+  "file_roles": [
+    {
+      "path": "fe/src/main/java/com/cloudera/impala/analysis/Analyzer.java",
+      "role": "causal",
+      "evidence": "registerBaseTableRef registered a single alias, 'aliasMap_.put(lookupAlias, result)'. It becomes registerTableRef, which registers both implicit aliases when there is no explicit one, 'unqualifiedAlias = ref.getName().getTbl().toLowerCase()' and a second 'aliasMap_.put(unqualifiedAlias, result)', and adds an ambiguousAliases_ set that getDescriptor and registerColumnRef now consult. Only one alias ever being recorded is why an unqualified reference did not resolve."
+    },
+    {
+      "path": "fe/src/main/java/com/cloudera/impala/analysis/ViewRef.java",
+      "role": "causal",
+      "evidence": "The constructors stop discarding the view's real name, 'super(alias, queryStmt)' becomes 'super(table.getTableName(), alias, queryStmt)' and 'super(origTblRef.name_, origTblRef.alias_, queryStmt)', and a new createDummyTable override builds 'new InlineView(table_)' for a catalog view. A substituted view previously carried only its alias, which is why the second reported query, against alltypes_view, failed where the base-table query worked."
+    },
+    {
+      "path": "fe/src/main/java/com/cloudera/impala/analysis/SelectStmt.java",
+      "role": "symptom-handling",
+      "evidence": "The only change is the wording of the error the reporter saw: 'throw new AnalysisException(\"unknown table: \" + tblName.toString())' becomes 'unknown table alias '' + tblName.toString() + '''. expandStar is where the failure surfaced; the resolution that failed happens in the Analyzer."
+    },
+    {
+      "path": "fe/src/main/java/com/cloudera/impala/analysis/TableRef.java",
+      "role": "refactor",
+      "evidence": "name_, getName, setFullyQualifiedTableName, getAlias and getAliasAsName are hoisted here from BaseTableRef with identical bodies, the constructor takes a TableName, and a one-line 'hasExplicitAlias() { return alias_ != null; }' is added over state that already existed. It makes the fix expressible for every kind of ref; the decision logic is in the Analyzer."
+    },
+    {
+      "path": "fe/src/main/java/com/cloudera/impala/analysis/BaseTableRef.java",
+      "role": "refactor",
+      "evidence": "Loses exactly what TableRef gained, and receives createTupleDescriptor holding the lines deleted from Analyzer.registerBaseTableRef, including the unchanged 'Preconditions.checkState(!(tbl instanceof View), ...)'. The call site becomes 'desc_ = analyzer.registerTableRef(this)'. A move."
+    },
+    {
+      "path": "fe/src/main/java/com/cloudera/impala/analysis/InlineViewRef.java",
+      "role": "refactor",
+      "evidence": "The constructor takes a TableName to pass upward, createTupleDescriptor changes signature from DescriptorTable to Analyzer, and the fake-table construction is pulled out as 'protected InlineView createDummyTable() { return new InlineView(alias_); }', unchanged behaviour. The seam exists so ViewRef can override it."
+    },
+    {
+      "path": "fe/src/main/java/com/cloudera/impala/catalog/InlineView.java",
+      "role": "refactor",
+      "evidence": "Adds an overload, 'public InlineView(Table tbl) { super(null, null, tbl.getDb(), tbl.getName(), null); }', beside the existing alias-only constructor. It supplies what ViewRef's override needs; which constructor to use is decided in ViewRef."
+    },
+    {
+      "path": "fe/src/main/java/com/cloudera/impala/analysis/TupleDescriptor.java",
+      "role": "refactor",
+      "evidence": "'setAlias(String alias)' becomes 'setAlias(String alias, boolean isExplicit)' with a hasExplicitAlias_ field and accessor, and an unused Logger is deleted. It carries the flag the Analyzer branches on."
+    }
+  ],
+  "symptom_location": {
+    "file": "fe/src/main/java/com/cloudera/impala/analysis/SelectStmt.java",
+    "function": "expandStar",
+    "determinable": true
+  },
+  "log_location": {
+    "file": "fe/src/main/java/com/cloudera/impala/analysis/SelectStmt.java",
+    "function": "expandStar",
+    "determinable": true
+  },
+  "relation": "state-producer",
+  "rationale": "Both reported messages are literal strings in gold files: 'unknown table: alltypes' is thrown by expandStar in SelectStmt, and 'unknown table alias: 'alltypes_view'' is the text registerColumnRef used in Analyzer before this change. The alias map is filled during table registration and read much later during star expansion and column resolution, so an alias that was never recorded only fails at the point of use. Two files hold the wrong logic, one is the place it surfaced, and five carry the hoisting and plumbing the change needed.",
+  "confidence": "high",
+  "notes": "An instance where the reported error text points straight at the gold set, which is uncommon in what has been labelled so far. It is also the clearest case yet of a large gold set with a small defect: eight files, of which two contain the wrong logic. The SelectStmt change is wording only, so a system that ranked it first would be right on fix-gold and wrong on cause."
+}

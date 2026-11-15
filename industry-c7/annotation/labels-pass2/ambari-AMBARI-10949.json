@@ -1,0 +1,27 @@
+{
+ "id": "ambari:AMBARI-10949",
+ "project": "ambari",
+ "issue_key": "AMBARI-10949",
+ "annotator": "claude-sonnet-5-5",
+ "pass": 2,
+ "file_roles": [
+  {
+   "path": "ambari-server/src/main/resources/common-services/HIVE/0.12.0.2.0/package/scripts/params_linux.py",
+   "role": "causal",
+   "evidence": "Diff moves `if security_enabled: hive_principal = ...` from the end of the file to before line ~403 where format() reads {hive_principal}; the old order caused KeyError 'hive_principal'."
+  }
+ ],
+ "symptom_location": {
+  "file": "ambari-server/src/main/resources/common-services/HIVE/0.12.0.2.0/package/scripts/params_linux.py",
+  "function": "module level (jdbc.url format call)",
+  "determinable": true
+ },
+ "log_location": {
+  "file": "ambari-server/src/main/resources/common-services/HIVE/0.12.0.2.0/package/scripts/params_linux.py",
+  "function": "format() call at params_linux.py:403",
+  "determinable": true
+ },
+ "relation": "same-location",
+ "rationale": "The traceback shows KeyError: 'hive_principal' at params_linux.py line 403. The fix only reorders the definition of hive_principal in the same file so it is defined before use. The ordering error was in this file.",
+ "confidence": "high"
+}

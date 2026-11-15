@@ -1,0 +1,28 @@
+{
+  "id": "qt:QTBUG-81604",
+  "project": "qt",
+  "issue_key": "QTBUG-81604",
+  "annotator": "claude-opus-5",
+  "pass": 1,
+  "file_roles": [
+    {
+      "path": "src/gui/image/qpnghandler.cpp",
+      "role": "causal",
+      "evidence": "QPNGImageWriter::writeImage set up libpng with only a warning handler, 'png_set_error_fn(png_ptr, 0, 0, qt_png_warning);', and never enabled benign-error handling, so libpng's recoverable 'known incorrect sRGB profile' complaint aborted the write through the error path. The fix adds '#ifdef PNG_BENIGN_ERRORS_SUPPORTED / png_set_benign_errors(png_ptr, 1); / #endif' right after it. This file owns PNG writing and nothing else was changed."
+    }
+  ],
+  "symptom_location": {
+    "file": "src/gui/image/qpnghandler.cpp",
+    "function": "QPNGImageWriter::writeImage",
+    "determinable": true
+  },
+  "log_location": {
+    "file": "src/gui/image/qpnghandler.cpp",
+    "function": "QPNGImageWriter::writeImage",
+    "determinable": true
+  },
+  "relation": "same-location",
+  "rationale": "The report is that saving returns false and leaves 'a zero size file', with 'libpng error: known incorrect sRGB profile' in between, so the write is aborted by an error libpng itself calls recoverable. The whole diff is in the libpng setup inside QPNGImageWriter::writeImage, adding 'png_set_benign_errors(png_ptr, 1)' so that class of error no longer stops the write. The missing configuration and the failing write are the same function.",
+  "confidence": "high",
+  "notes": "The decisive log line 'libpng error: known incorrect sRGB profile' is emitted by bundled libpng, not by Qt: 'png_set_error_fn(png_ptr, nullptr, nullptr, qt_png_warning)' leaves the error callback null, so libpng's default handler prints it. Following the convention of recording the deepest project-owned frame, log_location is the enclosing writeImage. The other lines the reporter pasted ('image1 false result true') come from the reporter's own test program. The 0-to-nullptr part of the same hunk is cosmetic. The fix ships with no regression test: the packet shows one changed file and no test file."
+}

@@ -1,0 +1,27 @@
+{
+ "id": "mongodb:SERVER-12128",
+ "project": "mongodb",
+ "issue_key": "SERVER-12128",
+ "annotator": "claude-sonnet-5-5",
+ "pass": 2,
+ "file_roles": [
+  {
+   "path": "src/mongo/db/geo/geoconstants.h",
+   "role": "refactor",
+   "evidence": "Only the comment changed: '// Thanks, Wikipedia.' to an equatorial radius comment with a source URL; the constant 6378.1*1000 is unchanged."
+  }
+ ],
+ "symptom_location": {
+  "file": "src/mongo/db/geo/geoconstants.h",
+  "function": "kRadiusOfEarthInMeters",
+  "determinable": true
+ },
+ "log_location": {
+  "file": null,
+  "function": null,
+  "determinable": false
+ },
+ "relation": "unrelated",
+ "rationale": "The inconsistency is between tests/docs (mean radius) and code (equatorial). The code constant stays the same, only its comment changed. The real change is in test files outside the gold set.",
+ "confidence": "medium"
+}

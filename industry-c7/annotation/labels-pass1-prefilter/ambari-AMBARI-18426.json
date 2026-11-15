@@ -1,0 +1,33 @@
+{
+  "id": "ambari:AMBARI-18426",
+  "project": "ambari",
+  "issue_key": "AMBARI-18426",
+  "annotator": "claude-opus-5",
+  "pass": 1,
+  "file_roles": [
+    {
+      "path": "ambari-server/src/main/java/org/apache/ambari/server/configuration/Configuration.java",
+      "role": "refactor",
+      "evidence": "Adds the ACTIVE_INSTANCE ConfigurationProperty with default Boolean.TRUE and an isActiveInstance() accessor that wraps Boolean.parseBoolean(getProperty(ACTIVE_INSTANCE)). Declaration and accessor only; the decision is taken elsewhere."
+    },
+    {
+      "path": "ambari-server/src/main/java/org/apache/ambari/server/controller/AmbariServer.java",
+      "role": "preventive",
+      "evidence": "main() gains a guard before startup: 'if (!config.isActiveInstance()) { ... throw new AmbariException(errMsg); }'. The rubric counts a downstream validation as preventive, and the report asks for exactly this, 'the same check is required in the Java code in AmbariServer.java::main()'."
+    }
+  ],
+  "symptom_location": {
+    "file": null,
+    "function": null,
+    "determinable": false
+  },
+  "log_location": {
+    "file": null,
+    "function": null,
+    "determinable": false
+  },
+  "relation": "unclear",
+  "rationale": "The report describes a missing guard rather than an observed failure: the active-instance check exists in ambari-server.py but not in the JAR entry point, so starting the JAR directly bypasses it. Nothing failed, nothing was logged, and no file contains wrong logic, so there is no causal file. One gold file adds the guard and the other adds the configuration property it reads.",
+  "confidence": "high",
+  "notes": "A clean no-causal-file instance of the kind the reviewer predicts: the fix is purely a new validation, and the ground truth is still two fix-modified files."
+}

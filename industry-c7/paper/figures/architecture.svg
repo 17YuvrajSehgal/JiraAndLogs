@@ -1,0 +1,151 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1780 620"
+     font-family="Helvetica, Arial, sans-serif">
+  <defs>
+    <g id="i-doc"><path d="M4,0 h20 l8,8 v28 h-28 z" fill="#FFFFFF" stroke="#3E9B5F" stroke-width="2"/><path d="M24,0 v8 h8" fill="none" stroke="#3E9B5F" stroke-width="2"/><text x="17" y="26" font-size="13" font-weight="bold" fill="#3E9B5F" text-anchor="middle" font-family="monospace">&lt;/&gt;</text></g>
+    <g id="i-git"><circle cx="8" cy="7" r="5.5" fill="#C9B6EA" stroke="#6E4FA8" stroke-width="2"/><circle cx="8" cy="31" r="5.5" fill="#C9B6EA" stroke="#6E4FA8" stroke-width="2"/><circle cx="28" cy="19" r="5.5" fill="#C9B6EA" stroke="#6E4FA8" stroke-width="2"/><path d="M8,12.5 v13 M12,10 C22,12 24,12 27,14" fill="none" stroke="#6E4FA8" stroke-width="2"/></g>
+    <g id="i-db"><path d="M2,7 v22 a16,6 0 0 0 32 0 v-22" fill="#7FA8D9" stroke="#3D6CA8" stroke-width="2"/><ellipse cx="18" cy="7" rx="16" ry="6" fill="#A9C6E8" stroke="#3D6CA8" stroke-width="2"/><path d="M2,15 a16,6 0 0 0 32 0 M2,22 a16,6 0 0 0 32 0" fill="none" stroke="#3D6CA8" stroke-width="1.6"/></g>
+    <g id="i-bolt"><polygon points="18,0 4,20 13,20 8,36 26,14 15,14 22,0" fill="#F2B705" stroke="#B8860B" stroke-width="1.5" stroke-linejoin="round"/></g>
+    <g id="i-ctx"><rect x="8" y="1" width="26" height="20" rx="3" fill="#D7E6F6" stroke="#3D6CA8" stroke-width="1.8"/><rect x="4" y="8" width="26" height="20" rx="3" fill="#C2D9F0" stroke="#3D6CA8" stroke-width="1.8"/><rect x="0" y="15" width="26" height="20" rx="3" fill="#A9C6E8" stroke="#3D6CA8" stroke-width="1.8"/><line x1="4" y1="22" x2="22" y2="22" stroke="#3D6CA8" stroke-width="1.6"/><line x1="4" y1="28" x2="17" y2="28" stroke="#3D6CA8" stroke-width="1.6"/></g>
+    <g id="i-brain"><path d="M16,2 C8,2 4,8 5,13 C1,15 1,22 5,25 C4,31 10,35 16,33 L16,2 Z" fill="#F3B8CD" stroke="#B04A74" stroke-width="2" stroke-linejoin="round"/><path d="M20,2 C28,2 32,8 31,13 C35,15 35,22 31,25 C32,31 26,35 20,33 L20,2 Z" fill="#F3B8CD" stroke="#B04A74" stroke-width="2" stroke-linejoin="round"/><path d="M10,10 c3,2 3,5 0,7 M26,10 c-3,2 -3,5 0,7 M11,24 c2,2 3,2 5,1 M25,24 c-2,2 -3,2 -5,1" fill="none" stroke="#B04A74" stroke-width="1.6"/></g>
+    <g id="i-gear" stroke="#C96A3B" fill="#F4A261"><g stroke-width="5"><line x1="18" y1="0" x2="18" y2="36"/><line x1="0" y1="18" x2="36" y2="18"/><line x1="5" y1="5" x2="31" y2="31"/><line x1="31" y1="5" x2="5" y2="31"/></g><circle cx="18" cy="18" r="11" stroke-width="3"/><circle cx="18" cy="18" r="4.5" fill="#FDEFE6" stroke-width="2"/></g>
+    <g id="i-eye"><path d="M1,18 C8,6 28,6 35,18 C28,30 8,30 1,18 Z" fill="#FFFFFF" stroke="#3E9B5F" stroke-width="2"/><circle cx="18" cy="18" r="7" fill="#7CC79B" stroke="#3E9B5F" stroke-width="2"/><circle cx="18" cy="18" r="2.6" fill="#1F5132"/></g>
+    <g id="i-star"><polygon points="18,1 22.5,13 35,13.5 25,21.5 28.8,34 18,26.5 7.2,34 11,21.5 1,13.5 13.5,13" fill="#F7CE46" stroke="#C99A06" stroke-width="1.6" stroke-linejoin="round"/></g>
+    <marker id="m-pink" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#D4537E"/></marker>
+  </defs>
+
+  <!-- ===================== INPUTS group ===================== -->
+  <rect x="20" y="46" width="310" height="540" rx="14"
+        fill="#FDFDFB" stroke="#333" stroke-width="2.2" stroke-dasharray="9 6"/>
+  <rect x="120" y="30" width="110" height="32" rx="8" fill="#FFF" stroke="#333" stroke-width="2"/>
+  <text x="175" y="52" font-size="20" font-weight="bold" text-anchor="middle" fill="#222">Inputs</text>
+
+  <rect x="36" y="78" width="278" height="126" rx="10" fill="#EAF6EE" stroke="#3E9B5F" stroke-width="2"/>
+  <use href="#i-doc" x="52" y="90"/>
+  <text x="98" y="114" font-size="18" font-weight="bold" fill="#246B40">Issue report + logs</text>
+  <text x="52" y="152" font-size="15.5" fill="#555">summary and description with</text>
+  <text x="52" y="174" font-size="15.5" fill="#555">reporter-pasted logs and traces</text>
+
+  <rect x="36" y="218" width="278" height="130" rx="10" fill="#F2EDFA" stroke="#8E6CC8" stroke-width="2"/>
+  <use href="#i-git" x="52" y="230"/>
+  <text x="98" y="254" font-size="18" font-weight="bold" fill="#5A3E96">Code snapshot</text>
+  <text x="52" y="292" font-size="15.5" fill="#555">repository at the parent of the</text>
+  <text x="52" y="314" font-size="15.5" fill="#555">fix commit</text>
+  <text x="52" y="338" font-size="13.5" font-style="italic" fill="#5A3E96">the fix is never visible</text>
+
+  <rect x="36" y="362" width="278" height="200" rx="10" fill="#FDEEF3" stroke="#D4537E" stroke-width="2"/>
+  <use href="#i-db" x="52" y="374"/>
+  <text x="98" y="398" font-size="18" font-weight="bold" fill="#A32C58">Incident memory pool</text>
+  <text x="52" y="436" font-size="15.5" fill="#555">every fixed, fix-linked past</text>
+  <text x="52" y="458" font-size="15.5" fill="#555">issue of the project (logs</text>
+  <text x="52" y="480" font-size="15.5" fill="#555">not required)</text>
+  <rect x="52" y="496" width="246" height="26" rx="6" fill="#FFF" stroke="#D4537E" stroke-width="1.5"/>
+  <text x="175" y="514" font-size="13" font-family="monospace" fill="#A32C58" text-anchor="middle">4.0k / 6.0k / 19.8k / 2.3k</text>
+  <text x="52" y="546" font-size="13.5" font-style="italic" fill="#A32C58">Kafka / MariaDB / MongoDB / Qt</text>
+
+  <!-- ===================== SIGNALS group ===================== -->
+  <rect x="430" y="46" width="600" height="540" rx="14"
+        fill="#FDFDFB" stroke="#333" stroke-width="2.2" stroke-dasharray="9 6"/>
+  <rect x="520" y="30" width="420" height="32" rx="8" fill="#FFF" stroke="#333" stroke-width="2"/>
+  <text x="730" y="52" font-size="20" font-weight="bold" text-anchor="middle" fill="#222">Four ranked signals over snapshot files</text>
+
+  <!-- S1 top-left -->
+  <rect x="446" y="78" width="280" height="238" rx="10" fill="#FDEFE6" stroke="#E8794A" stroke-width="2"/>
+  <use href="#i-bolt" x="462" y="90"/>
+  <text x="508" y="114" font-size="18" font-weight="bold" fill="#A54B22">S1  Trace mentions</text>
+  <text x="462" y="152" font-size="15.5" fill="#555">explicit file names and stack-</text>
+  <text x="462" y="174" font-size="15.5" fill="#555">trace frames in the report;</text>
+  <text x="462" y="196" font-size="15.5" fill="#555">bare-stem fallback</text>
+  <text x="462" y="296" font-size="13.5" font-style="italic" fill="#A54B22">doubles as the grep baseline</text>
+
+  <!-- S2 top-right -->
+  <rect x="740" y="78" width="280" height="238" rx="10" fill="#EAF2FB" stroke="#4A7FC1" stroke-width="2"/>
+  <use href="#i-ctx" x="756" y="90"/>
+  <text x="802" y="114" font-size="18" font-weight="bold" fill="#2D5A94">S2  Path retrieval</text>
+  <text x="756" y="152" font-size="15.5" fill="#555">BM25 over path tokens, split</text>
+  <text x="756" y="174" font-size="15.5" fill="#555">on case and underscores</text>
+  <text x="756" y="296" font-size="13.5" font-style="italic" fill="#2D5A94">path names carry meaning</text>
+
+  <!-- S4 bottom-left (so the memory arrow lands cleanly) -->
+  <rect x="446" y="330" width="280" height="238" rx="10" fill="#FDEEF3" stroke="#D4537E" stroke-width="2"/>
+  <use href="#i-brain" x="462" y="342"/>
+  <text x="508" y="366" font-size="18" font-weight="bold" fill="#A32C58">S4  Memory vote</text>
+  <text x="462" y="404" font-size="15.5" fill="#555">20 most similar admissible past</text>
+  <text x="462" y="426" font-size="15.5" fill="#555">incidents; their fix files get</text>
+  <text x="462" y="448" font-size="15.5" fill="#555">1/rank votes</text>
+  <rect x="462" y="464" width="248" height="52" rx="6" fill="#FBECEC" stroke="#C25B5B" stroke-width="1.5"/>
+  <text x="472" y="484" font-size="13.5" font-weight="bold" fill="#8F3131">firewall: self, duplicates, same</text>
+  <text x="472" y="502" font-size="13.5" font-weight="bold" fill="#8F3131">fix commit, resolved later</text>
+  <text x="462" y="548" font-size="13.5" font-style="italic" fill="#A32C58">blocks 67&#8211;71% of candidate votes</text>
+
+  <!-- S3 bottom-right -->
+  <rect x="740" y="330" width="280" height="238" rx="10" fill="#EAF6EE" stroke="#3E9B5F" stroke-width="2"/>
+  <use href="#i-doc" x="756" y="342"/>
+  <text x="802" y="366" font-size="18" font-weight="bold" fill="#246B40">S3  Content retrieval</text>
+  <text x="756" y="404" font-size="15.5" fill="#555">BM25 over file contents of a</text>
+  <text x="756" y="426" font-size="15.5" fill="#555">candidate pool: S1 hits +</text>
+  <text x="756" y="448" font-size="15.5" fill="#555">top-200 of S2 + S4 votes</text>
+  <text x="756" y="548" font-size="13.5" font-style="italic" fill="#246B40">pool-local statistics: no leakage</text>
+
+  <!-- ===================== FUSION card ===================== -->
+  <rect x="1110" y="200" width="270" height="230" rx="10" fill="#F2EDFA" stroke="#8E6CC8" stroke-width="2"/>
+  <use href="#i-gear" x="1126" y="212"/>
+  <text x="1172" y="236" font-size="18" font-weight="bold" fill="#5A3E96">Weighted RRF</text>
+  <text x="1126" y="274" font-size="15.5" fill="#555">regime = does the report</text>
+  <text x="1126" y="296" font-size="15.5" fill="#555">name a file? (observable)</text>
+  <text x="1126" y="318" font-size="15.5" fill="#555">weights grid-tuned on the</text>
+  <text x="1126" y="340" font-size="15.5" fill="#555">dev split only (earliest 30%)</text>
+  <text x="1126" y="408" font-size="13.5" font-style="italic" fill="#5A3E96">the only tuned parameters</text>
+
+  <!-- ===================== OUTPUTS group ===================== -->
+  <rect x="1440" y="46" width="320" height="330" rx="14"
+        fill="#FDFDFB" stroke="#333" stroke-width="2.2" stroke-dasharray="9 6"/>
+  <rect x="1540" y="30" width="130" height="32" rx="8" fill="#FFF" stroke="#333" stroke-width="2"/>
+  <text x="1605" y="52" font-size="20" font-weight="bold" text-anchor="middle" fill="#222">Outputs</text>
+
+  <rect x="1456" y="78" width="288" height="126" rx="10" fill="#EAF6EE" stroke="#3E9B5F" stroke-width="2"/>
+  <use href="#i-doc" x="1472" y="90"/>
+  <text x="1518" y="114" font-size="18" font-weight="bold" fill="#246B40">Ranked files + module</text>
+  <text x="1472" y="152" font-size="15.5" fill="#555">module read off the file list</text>
+  <text x="1472" y="174" font-size="15.5" fill="#555">by first occurrence</text>
+
+  <rect x="1456" y="218" width="288" height="142" rx="10" fill="#F4F5F7" stroke="#4B5563" stroke-width="2"/>
+  <use href="#i-eye" x="1472" y="230"/>
+  <text x="1518" y="254" font-size="18" font-weight="bold" fill="#2F3A4A">Provenance</text>
+  <text x="1472" y="292" font-size="15.5" fill="#555">per file: signals, matched</text>
+  <text x="1472" y="314" font-size="15.5" fill="#555">terms, voter issue keys</text>
+  <text x="1472" y="344" font-size="13.5" font-style="italic" fill="#2F3A4A">citations, not narrative</text>
+
+  <!-- ===================== TAKEAWAY card ===================== -->
+  <rect x="1440" y="400" width="320" height="186" rx="10" fill="#FFF8E4" stroke="#D9A520" stroke-width="2"/>
+  <use href="#i-star" x="1456" y="412"/>
+  <text x="1502" y="436" font-size="18" font-weight="bold" fill="#8A6A10">Beats strongest baseline</text>
+  <text x="1456" y="474" font-size="15.5" fill="#555">Acc@5 +0.057 to +0.187 on all</text>
+  <text x="1456" y="496" font-size="15.5" fill="#555">4 projects (8/8 tests sig.)</text>
+  <text x="1456" y="518" font-size="15.5" fill="#555">module in top 5: at least 92%</text>
+  <text x="1456" y="540" font-size="15.5" fill="#555">memory on hard: up to +0.209</text>
+
+  <!-- ===================== FLOWS ===================== -->
+  <!-- 1: report + snapshot -> signals -->
+  <circle cx="366" cy="120" r="12" fill="#E8794A"/>
+  <text x="366" y="125.5" font-size="15" font-weight="bold" fill="#FFF" text-anchor="middle">1</text>
+  <polygon points="332,152 398,152 398,140 428,163 398,186 398,174 332,174"
+           fill="#FBE3C9" stroke="#E8794A" stroke-width="2" stroke-linejoin="round"/>
+
+  <!-- 2: memory pool -> S4 (firewalled) -->
+  <circle cx="366" cy="420" r="12" fill="#D4537E"/>
+  <text x="366" y="425.5" font-size="15" font-weight="bold" fill="#FFF" text-anchor="middle">2</text>
+  <line x1="332" y1="449" x2="440" y2="449" stroke="#D4537E" stroke-width="3"
+        stroke-dasharray="10 6" marker-end="url(#m-pink)"/>
+
+  <!-- 3: signals -> fusion -->
+  <circle cx="1064" cy="275" r="12" fill="#8E6CC8"/>
+  <text x="1064" y="280.5" font-size="15" font-weight="bold" fill="#FFF" text-anchor="middle">3</text>
+  <polygon points="1032,292 1076,292 1076,280 1106,303 1076,326 1076,314 1032,314"
+           fill="#E4DAF4" stroke="#8E6CC8" stroke-width="2" stroke-linejoin="round"/>
+
+  <!-- 4: fusion -> outputs -->
+  <circle cx="1406" cy="275" r="12" fill="#3E9B5F"/>
+  <text x="1406" y="280.5" font-size="15" font-weight="bold" fill="#FFF" text-anchor="middle">4</text>
+  <polygon points="1382,292 1408,292 1408,280 1438,303 1408,326 1408,314 1382,314"
+           fill="#CBE8D5" stroke="#3E9B5F" stroke-width="2" stroke-linejoin="round"/>
+</svg>

@@ -1,0 +1,33 @@
+{
+  "id": "kafka:KAFKA-4848",
+  "project": "kafka",
+  "issue_key": "KAFKA-4848",
+  "annotator": "claude-opus-5",
+  "pass": 1,
+  "file_roles": [
+    {
+      "path": "streams/src/main/java/org/apache/kafka/streams/processor/internals/StreamThread.java",
+      "role": "causal",
+      "evidence": "retryWithBackoff looped with no deadline, leaving only 'if (tasksToBeCreated.isEmpty()) break;' as an exit. The fix gives it one, 'if (tasksToBeCreated.isEmpty() || time.milliseconds() - start > rebalanceTimeoutMs) break;', threads start down from onPartitionsAssigned through addStreamTasks and addStandbyTasks, stores rebalanceTimeoutMs from the consumer's max.poll.interval.ms, and resets 'backoffTimeMs = 50L' after a task is created. An unbounded wait for a lock another thread now owns is the defect."
+    },
+    {
+      "path": "streams/src/main/java/org/apache/kafka/streams/StreamsConfig.java",
+      "role": "preventive",
+      "evidence": "One line, 'tempConsumerDefaultOverrides.put(ConsumerConfig.MAX_POLL_INTERVAL_MS_CONFIG, \"300000\")'. It supplies the timeout the new bound reads; the loop that hung is in the other file."
+    }
+  ],
+  "symptom_location": {
+    "file": "streams/src/main/java/org/apache/kafka/streams/processor/internals/StreamThread.java",
+    "function": "retryWithBackoff",
+    "determinable": true
+  },
+  "log_location": {
+    "file": null,
+    "function": null,
+    "determinable": false
+  },
+  "relation": "same-location",
+  "rationale": "There is no trace and no log in the report, only a description of the hang: a thread whose partitions were reassigned 'cannot get rocks db lock and simply keeps waiting for that lock forever'. The reporter places it precisely, 'in retryWithBackoff for AbstractTaskCreator we have a backoffTimeMs = 50L', and that method is an inner class of the gold file, so the thread is stuck in the same method the fix bounds. The second gold file only provides the timeout value.",
+  "confidence": "high",
+  "notes": "The warn inside the retry loop, 'Could not create task {}. Will retry.', would be the visible trace of this in a real log, but the reporter pastes none, so no log site is recorded. REPORT-NAMES-FIX: the most complete case so far. The reporter names the class, the method and the variable, explains the mechanism, and prescribes the fix that was adopted: 'We need to have a upper bound for this backoffTimeM. If the time is greater than MAX_POLL_INTERVAL_MS_CONFIG and it still hasn't got the lock ...'. 'refactor' is the alternative for StreamsConfig; preventive is chosen because the rubric puts a timeout and a configuration tightening under that role."
+}

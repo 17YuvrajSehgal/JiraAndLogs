@@ -1,0 +1,28 @@
+{
+ "id": "kafka:KAFKA-4558",
+ "project": "kafka",
+ "issue_key": "KAFKA-4558",
+ "annotator": "claude-sonnet-5-5",
+ "pass": 2,
+ "file_roles": [
+  {
+   "path": "core/src/main/scala/kafka/tools/JmxTool.scala",
+   "role": "preventive",
+   "evidence": "Diff wraps JMXConnectorFactory.connect in a loop with maxNumRetries=10 and 500 ms sleeps, exiting 1 if not connected. It is a retry added to tolerate an unready server."
+  }
+ ],
+ "symptom_location": {
+  "file": "tests/kafkatest (ProduceConsumeValidate throttling_test)",
+  "function": null,
+  "determinable": false
+ },
+ "log_location": {
+  "file": null,
+  "function": null,
+  "determinable": false
+ },
+ "relation": "concurrency",
+ "rationale": "The reported failure is a test-start race: the producer starts before the consumer is ready. The gold file only adds a connection retry to JmxTool, which is a tolerance mechanism and not the corrected logic.",
+ "confidence": "medium",
+ "notes": "The real readiness check is in test files that are not gold."
+}

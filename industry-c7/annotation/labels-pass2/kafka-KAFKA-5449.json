@@ -1,0 +1,47 @@
+{
+ "id": "kafka:KAFKA-5449",
+ "project": "kafka",
+ "issue_key": "KAFKA-5449",
+ "annotator": "claude-sonnet-5-5",
+ "pass": 2,
+ "file_roles": [
+  {
+   "path": "clients/src/main/java/org/apache/kafka/clients/producer/KafkaProducer.java",
+   "role": "refactor",
+   "evidence": "Only renames beginCommittingTransaction/beginAbortingTransaction to beginCommit/beginAbort at the call sites."
+  },
+  {
+   "path": "clients/src/main/java/org/apache/kafka/clients/producer/internals/ProducerBatch.java",
+   "role": "refactor",
+   "evidence": "Only removes a stray semicolon after the FinalState enum."
+  },
+  {
+   "path": "clients/src/main/java/org/apache/kafka/clients/producer/internals/RecordAccumulator.java",
+   "role": "causal",
+   "evidence": "hasUnflushedBatches() scanned batches() and incomplete.incomplete without synchronization; replaced by hasIncomplete() backed by the incomplete set, and iteration now uses copyAll(); the old check was wrong under concurrency."
+  },
+  {
+   "path": "clients/src/main/java/org/apache/kafka/clients/producer/internals/Sender.java",
+   "role": "causal",
+   "evidence": "maybeSendTransactionalRequest removed 'if (accumulator.hasUnflushedBatches()) return false;' and the !hasPartitionsToAdd condition; now passes accumulator.hasIncomplete() into nextRequestHandler."
+  },
+  {
+   "path": "clients/src/main/java/org/apache/kafka/clients/producer/internals/TransactionManager.java",
+   "role": "causal",
+   "evidence": "nextRequestHandler(hasIncompleteBatches) now peeks and returns null if 'nextRequestHandler.isEndTxn() && hasIncompleteBatches', so EndTxn is dequeued only after batches complete; previously it was polled before the check."
+  }
+ ],
+ "symptom_location": {
+  "file": "core/src/test/scala/integration/kafka/api/TransactionsTest.scala",
+  "function": "testReadCommittedConsumerShouldNotSeeUndecidedData",
+  "determinable": true
+ },
+ "log_location": {
+  "file": "core/src/test/scala/unit/kafka/utils/TestUtils.scala",
+  "function": "consumeRecords",
+  "determinable": true
+ },
+ "relation": "concurrency",
+ "rationale": "The flaky test saw 6 of 8 records, which fits an EndTxn marker being sent before all batches were done. The commit message names a race on dequeuing the EndTxn request. The fix holds the EndTxn in TransactionManager until the accumulator reports no incomplete batches, and replaces the racy check in Sender and RecordAccumulator. The report gives no diagnosis, so the link between the symptom and the race is taken from the commit message and diff.",
+ "confidence": "medium"
+}

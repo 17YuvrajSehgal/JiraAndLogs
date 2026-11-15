@@ -1,0 +1,28 @@
+{
+  "id": "groovy:GROOVY-3723",
+  "project": "groovy",
+  "issue_key": "GROOVY-3723",
+  "annotator": "claude-opus-5",
+  "pass": 1,
+  "file_roles": [
+    {
+      "path": "src/main/groovy/lang/MetaBeanProperty.java",
+      "role": "causal",
+      "evidence": "getProperty, setProperty and getModifiers read the fields directly; the fix makes each call the accessor first, 'MetaMethod getter = getGetter();' and 'MetaMethod setter = getSetter();'. Because the subclass holds its own getter and setter, reading the parent's fields saw null, which produced the reported 'Cannot set read-only property: id' thrown two lines below."
+    }
+  ],
+  "symptom_location": {
+    "file": "src/main/groovy/lang/MetaBeanProperty.java",
+    "function": "setProperty",
+    "determinable": true
+  },
+  "log_location": {
+    "file": "src/main/groovy/lang/MetaBeanProperty.java",
+    "function": "setProperty",
+    "determinable": true
+  },
+  "relation": "same-location",
+  "rationale": "Both messages quoted in the report, 'Cannot set read-only property: ' and 'Cannot read write-only property: ', appear verbatim in the changed file, so the throw site and the defect are the same lines. The reporter blamed a different class, asking 'Is there any reason why ThreadManagedMetaBeanProperty stores these values locally?', but the fix lands in the parent, MetaBeanProperty, which should have gone through its own accessors.",
+  "confidence": "high",
+  "notes": "Useful example of the report naming the wrong class. A localizer that follows the reporter's diagnosis to ThreadManagedMetaBeanProperty is led away from the gold file."
+}

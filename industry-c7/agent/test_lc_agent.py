@@ -1,0 +1,386 @@
+"""Self-check for the LangGraph rebuild. No model, no GPU.
+
+The whole claim of this rebuild is that the mandatory steps are
+STRUCTURE rather than instructions. A claim like that is worth nothing
+unless something fails when the structure is removed, so these checks
+drive the real graph with a stubbed model and assert on what reached it.
+
+Usage:
+    python industry-c7/agent/test_lc_agent.py
+"""
+
+from __future__ import annotations
+
+import json
+import sys
+from pathlib import Path
+
+HERE = Path(__file__).resolve().parent
+sys.path.insert(0, str(HERE))
+sys.path.insert(0, str(HERE.parents[0] / "scripts"))
+
+import lc_agent as LA  # noqa: E402
+import run_agent as RA  # noqa: E402
+import tools as T  # noqa: E402
+from lc_store import Incident, IncidentStore  # noqa: E402
+from localize import parse_iso_epoch  # noqa: E402
+
+ok = n = 0
+
+
+def chk(name, cond, detail=""):
+    global ok, n
+    n += 1
+    ok += bool(cond)
+    print(f"{'PASS' if cond else 'FAIL'}  {name}" + (f"  [{detail}]" if detail else ""))
+
+
+# ---- the firewall, on synthetic data with a known answer -----------------
+def mkinc(key, resolved, files, shas=(), toks=None):
+    from collections import Counter
+    return Incident(key=key, resolved=resolved, fix_shas=frozenset(shas),
+                    gold_files=tuple(files),
+                    toks=toks or Counter("null pointer partition".split()))
+
+
+NOW = 1_000_000.0
+store = IncidentStore("t", {
+    "OLD-1": mkinc("OLD-1", NOW - 86400 * 10, ["a.java"]),
+    "OLD-2": mkinc("OLD-2", NOW - 86400 * 400, ["b.java"]),
+    "FUTURE": mkinc("FUTURE", NOW + 86400, ["leak.java"]),
+    "SELF": mkinc("SELF", NOW - 10, ["self.java"]),
+    "DUP": mkinc("DUP", NOW - 20, ["dup.java"]),
+    "SHARED": mkinc("SHARED", NOW - 30, ["shared.java"], shas=["deadbeef"]),
+})
+ctx = {"cutoff": NOW, "this_key": "SELF", "this_fix_shas": frozenset(["deadbeef"]),
+       "dup_cluster": "C1", "dup_of": {"DUP": "C1"}}
+got = {r.incident for r in store.search("null pointer partition", limit=10, **ctx)}
+chk("firewall excludes incidents resolved AFTER the report", "FUTURE" not in got)
+chk("firewall excludes the issue itself", "SELF" not in got)
+chk("firewall excludes a duplicate of it", "DUP" not in got)
+chk("firewall excludes anything sharing a fix commit", "SHARED" not in got)
+chk("admissible history survives", got == {"OLD-1", "OLD-2"}, str(sorted(got)))
+
+res = store.search("null pointer partition", limit=10, **ctx)
+by = {r.incident: r for r in res}
+chk("recency weighting prefers the newer of two equal matches",
+    by["OLD-1"].weight > by["OLD-2"].weight,
+    f"{by['OLD-1'].weight:.4f} vs {by['OLD-2'].weight:.4f}")
+
+big = IncidentStore("t", {
+    "SMALL": mkinc("SMALL", NOW - 100, ["one.java"]),
+    "REFACTOR": mkinc("REFACTOR", NOW - 100, [f"f{i}.java" for i in range(40)]),
+})
+w = {r.incident: r.weight for r in big.search("null pointer partition", limit=5,
+                                              cutoff=NOW, this_key="X")}
+chk("a one-file fix outweighs a 40-file refactor",
+    w.get("SMALL", 0) > w.get("REFACTOR", 1) * 10,
+    f"{w.get('SMALL', 0):.4f} vs {w.get('REFACTOR', 0):.4f}")
+chk("the namespace is keyed on TIME, not identity",
+    store.namespace(NOW) != store.namespace(NOW + 1))
+
+# ---- the submission schema cannot be satisfied without evidence ----------
+from pydantic import ValidationError  # noqa: E402
+
+try:
+    LA.Localization(files=[], causal_chain=[])
+    chk("an empty submission is rejected", False)
+except ValidationError:
+    chk("an empty submission is rejected", True)
+try:
+    LA.Localization(module="core",
+                    files=[LA.RankedFile(path="a.java", symbol="m",
+                                     evidence="x")],
+                    causal_chain=[LA.ChainStep(step="a", cited_from="read_code",
+                                               file="a.java", log_event="")])
+    chk("a one-step chain is rejected (2-6 required)", False)
+except ValidationError:
+    chk("a one-step chain is rejected (2-6 required)", True)
+good = LA.Localization(
+    module="core",
+    files=[LA.RankedFile(path="a.java", symbol="handleRequest",
+                         evidence="line 42 sets it to null")],
+    causal_chain=[LA.ChainStep(step="a", cited_from="read_code",
+                               file="a.java", log_event="E1"),
+                  LA.ChainStep(step="b", cited_from="recall_incidents",
+                               file="", log_event="")])
+chk("a complete submission validates", len(good.files) == 1)
+chk("the submitted region survives on the model", good.files[0].symbol
+    == "handleRequest")
+
+# The challenge asks for an explanation "linking issue symptoms, selected
+# log events and candidate code regions", and causal_lift_v3.py reads
+# step["file"] for every number it reports. Without this field that whole
+# analysis silently scored zero on a 26,544-instance run.
+try:
+    LA.ChainStep(step="a", cited_from="read_code", log_event="")
+    chk("a chain step without a file is rejected", False)
+except ValidationError:
+    chk("a chain step without a file is rejected", True)
+chk("a step about the report, not code, may name no file",
+    good.causal_chain[1].file == "")
+# T29/T32: the module and the cited log event are required, not optional
+for kw, name in ((dict(step="a", cited_from="x", file=""), "log_event"),):
+    try:
+        LA.ChainStep(**kw)
+        chk(f"a chain step without {name} is rejected", False)
+    except ValidationError:
+        chk(f"a chain step without {name} is rejected", True)
+try:
+    LA.Localization(files=good.files, causal_chain=good.causal_chain)
+    chk("a submission without a module is rejected", False)
+except ValidationError:
+    chk("a submission without a module is rejected", True)
+try:
+    LA.RankedFile(path="a.java", evidence="x")
+    chk("a file without a region is rejected", False)
+except ValidationError:
+    chk("a file without a region is rejected", True)
+
+# No OPTIONAL field may re-enter the submission schema. With three of
+# them (confidence, file, rationale) the model never produced a tool
+# call on the captured failing request: it generated to the cap, at
+# 4,000 tokens and again at 16,000. Without them it answered in 899.
+# Descriptions and numeric bounds made no difference; only this did.
+_opt = {m.__name__: [n for n, f in m.model_fields.items() if not f.is_required()]
+        for m in (LA.Localization, LA.RankedFile, LA.ChainStep)}
+chk("the submission schema has no optional fields",
+    all(not v for v in _opt.values()), str(_opt))
+
+# ---- the graph itself, against a real snapshot and a stubbed model -------
+pop = RA.build_population(["kafka"], limit=1, full=True)
+if not pop:
+    print("\nSKIP graph checks: no kafka population here")
+else:
+    proj, b, row = pop[0]
+    mem, dup, created, _ = RA.load_support(proj, RA.PROJECTS[proj]["key_prefix"])
+    ws = T.Workspace(proj, b["snapshot_sha"], b["query_text"], mem, dup,
+                     parse_iso_epoch(b.get("created"))
+                     or created.get(b["issue_key"]) or b["fix_time"],
+                     b["issue_key"], set(b["fix_shas"]), {},
+                     list(row["rankings"]["cond_ours"][:20]))
+    istore = IncidentStore.from_pool(proj, mem)
+    rctx = {"cutoff": ws.cutoff, "this_key": ws.issue_key,
+            "this_fix_shas": frozenset(ws.fix_shas),
+            "dup_cluster": dup.get(ws.issue_key), "dup_of": dup}
+
+    gather = LA.make_preamble(ws, istore, rctx, ws.seed_candidates,
+                              repo_tree="src/  (12 files)")
+    import agent as A
+    real = A.reformulate
+    try:
+        A.reformulate = lambda *a, **k: {"behaviour": "partition assignment "
+                                         "returns null", "identifiers": []}
+        # the decorator returns a middleware OBJECT and the hook is a
+        # method on it. Calling it directly is the only way to assert on
+        # what the model actually receives, which is the whole claim here.
+        upd = gather.before_agent({"messages": []}, None)
+    finally:
+        A.reformulate = real
+
+    chk("the preamble is registered as a before_agent hook",
+        callable(getattr(gather, "before_agent", None)), str(type(gather)))
+    if upd is None:
+        chk("the preamble returned state updates", False, "got None")
+    else:
+        p = upd["prepared"]
+        brief = upd["messages"][0]["content"]
+        chk("preamble resolves report symbols against the snapshot",
+            isinstance(p["symbols"], list))
+        chk("preamble queries memory unconditionally",
+            isinstance(p["recalls"], list))
+        chk("preamble runs BOTH a behaviour and a title search",
+            "content_hits" in p and "title_hits" in p)
+        chk("preamble walks one hop back from the frames", "backward" in p)
+        chk("the briefing carries the report", "ISSUE REPORT" in brief)
+        chk("the briefing carries the repo structure when supplied",
+            "REPOSITORY STRUCTURE" in brief)
+        chk("the briefing names the seed candidates",
+            "retrieval layer ranked highest" in brief)
+        chk("tool calls made during the preamble are not charged to the agent",
+            len(ws.calls) == 0, f"{len(ws.calls)} calls recorded")
+        chk("preamble runs the log layer (events, printing sites, back hop)",
+            all(k in p for k in ("events", "printed_by", "log_back")))
+        chk("the briefing lists the modules to pick from",
+            "=== MODULES" in brief and len(p["modules"]) > 1)
+        chk("every module offered is one the scorer accepts",
+            all(LA.resolve_module(m, ws, {x for x, _ in p["modules"]}) == m
+                for m, _ in p["modules"][:20]))
+        chk("a file path is cut down to its module",
+            LA.resolve_module(ws.snap.files[0], ws,
+                              {x for x, _ in p["modules"]}) != "")
+        chk("an invented module is a miss, not repaired",
+            LA.resolve_module("no/such/module", ws,
+                              {x for x, _ in p["modules"]}) == "")
+
+    names = [t.name for t in LA.build_tools(ws)]
+    chk("the tool surface matches the hand-rolled agent",
+        set(names) == {"search_symbol", "search_text", "read_code",
+                       "read_skeleton", "list_dir", "callers_of",
+                       "data_flow_back", "recall_incidents", "dependencies",
+                       "match_log"}, str(sorted(names)))
+    off = {t.name for t in LA.build_tools(ws, log_layer=False)}
+    chk("the log-layer ablation removes match_log and nothing else",
+        set(names) - off == {"match_log"}, str(sorted(off)))
+    chk("dependencies resolves a real file",
+        "imports" in ws.dependencies(ws.snap.files[0]))
+    chk("a cited event id is grounded", LA.grounded("E2", ws, {"E1", "E2"}))
+    chk("a quoted report line is grounded",
+        LA.grounded(" ".join(ws.query_text.split()[:6]), ws, set()))
+    chk("an invented log line is not grounded",
+        LA.grounded("this line was never in the report at all", ws, set()) is False)
+
+    # ---- the three defects the first real pilot exposed -----------------
+    # 1. the tools called ws.<method> directly, so nothing was counted and
+    #    the repeat guard never fired. The run looped and cost 11 calls.
+    byname = {t.name: t for t in LA.build_tools(ws)}
+    before = len(ws.calls)
+    r1 = byname["search_text"].invoke({"query": "connection state remove"})
+    chk("a tool call is recorded against the workspace",
+        len(ws.calls) == before + 1, f"{before} -> {len(ws.calls)}")
+    r2 = byname["search_text"].invoke({"query": "connection state remove"})
+    chk("an identical repeat call is told so, instead of looping",
+        "note" in r2 and "already made" in r2["note"],
+        str(r2.get("note"))[:60])
+    chk("the repeated call returns the same result it cached",
+        r1.get("hits") == r2.get("hits"))
+
+    # 2. the budget only nudged, so the model never had to stop. At the
+    #    hard limit the tools must be gone, or there is nothing forcing
+    #    an answer and the graph dies at its recursion limit.
+    class Req:
+        def __init__(self, nai):
+            self.state = {"messages": [type("M", (), {"type": "ai"})()
+                                       for _ in range(nai)]}
+            self.system_prompt = "S"
+            self.messages = []
+            self.tools = list(byname.values())
+
+        def override(self, **kw):
+            for k, v in kw.items():
+                setattr(self, k, v)
+            return self
+
+    seen = {}
+
+    def grab(req):
+        seen["tools"] = list(getattr(req, "tools", []))
+        seen["prompt"] = req.system_prompt
+        seen["messages"] = list(getattr(req, "messages", []))
+        return "R"
+
+    LA.turn_budget.wrap_model_call(Req(LA.MAX_TURNS - 5), grab)
+    chk("below the budget the model keeps every tool",
+        len(seen["tools"]) == len(LA.AGENT_TOOLS), f"{len(seen['tools'])} tools")
+    LA.turn_budget.wrap_model_call(Req(LA.MAX_TURNS), grab)
+    chk("at the hard limit every tool is withdrawn",
+        seen["tools"] == [], f"{len(seen['tools'])} tools left")
+    # a system-prompt suffix is NOT enough: the conversation still ends on
+    # a tool result, the model has nothing to reply to, and it reasoned to
+    # finish_reason=length writing nothing. The instruction has to be a
+    # turn it can answer.
+    tail = seen["messages"][-1] if seen["messages"] else None
+    chk("the order to answer arrives as a closing USER turn",
+        tail is not None and getattr(tail, "type", "") == "human"
+        and "Answer NOW" in tail.content,
+        f"last message is {getattr(tail, chr(39)+chr(116)+chr(121)+chr(112)+chr(101)+chr(39), None)}")
+    # the structured-output tool must SURVIVE the hard stop. Withdrawing
+    # everything left the model with a history full of tool calls and
+    # nothing it could do, and it reasoned to finish_reason=length three
+    # runs in a row without writing an answer.
+    answer_tool = type("AT", (), {"name": "Localization"})()
+    req = Req(LA.MAX_TURNS)
+    req.tools = list(byname.values()) + [answer_tool]
+    LA.turn_budget.wrap_model_call(req, grab)
+    kept = [getattr(t, "name", None) for t in seen["tools"]]
+    chk("the answer tool survives the hard stop; the others do not",
+        kept == ["Localization"], str(kept))
+    chk("and it is not smuggled into the system prompt instead",
+        "Answer NOW" not in (seen["prompt"] or ""))
+
+    # 3. no trimming at all, so context grew 8,005 -> 31,816 chars over
+    #    eleven turns. Stubbing the old results (what agent.py does) was
+    #    measured to be WORSE than not trimming: on the captured final
+    #    request the model never answered, finish_reason=length at 4,000
+    #    tokens and still at 16,000 after 400s, while the same request
+    #    with the stub messages removed answered in 44s.
+    from langchain_core.messages import AIMessage, ToolMessage
+    hist = []
+    for i in range(LA.KEEP_FULL + 3):
+        hist.append(AIMessage(content="", tool_calls=[
+            {"name": "read_code", "args": {"path": f"F{i}.java"},
+             "id": f"c{i}", "type": "tool_call"}]))
+        hist.append(ToolMessage(content="X" * 5000, tool_call_id=f"c{i}",
+                                name="read_code"))
+    req = Req(2)
+    req.messages = hist
+    LA.trim_history.wrap_model_call(req, grab)
+    out = seen["messages"]
+    tool_msgs = [m for m in out if getattr(m, "type", "") == "tool"]
+    chk("only the newest results survive; the rest are gone, not stubbed",
+        len(tool_msgs) == LA.KEEP_FULL
+        and not any("omitted" in m.content for m in tool_msgs),
+        f"{len(tool_msgs)} tool messages kept")
+    kept = {m.tool_call_id for m in tool_msgs}
+    chk("the newest ones are the ones kept",
+        kept == {f"c{i}" for i in range(3, LA.KEEP_FULL + 3)}, str(sorted(kept)))
+
+    # a tool_call with no reply is an invalid conversation; the assistant
+    # turn has to go with its result
+    ai = [m for m in out if getattr(m, "type", "") == "ai"]
+    called = {tc["id"] for m in ai for tc in (m.tool_calls or [])}
+    chk("no assistant turn is left calling a tool that has no reply",
+        called == kept, f"calls {sorted(called)} vs replies {sorted(kept)}")
+
+    # dropped bytes still have to be COUNTED -- that is the whole point
+    import tempfile
+
+    import lc_trace
+    rec = lc_trace.RunRecorder(Path(tempfile.mkdtemp()), "t", {})
+    for i in range(LA.KEEP_FULL + 3):
+        rec.tool_outputs[f"c{i}"] = "X" * 5000
+
+    class R2:
+        messages = out
+
+    rec.model_middleware().wrap_model_call(
+        R2(), lambda _r: type("X", (), {"result": AIMessage(content="ok")})())
+    ev = [e for e in lc_trace.replay(rec.path) if e["kind"] == "model_call"][0]
+    chk("the dropped results are priced, not silently lost",
+        ev["context"]["n_dropped_results"] == 3
+        and ev["context"]["chars_cut"] == 15000,
+        f"{ev['context']['n_dropped_results']} dropped, "
+        f"{ev['context']['chars_cut']} chars cut")
+
+# ---- the commit check must send the model back, or its question is lost --
+from langchain_core.messages import AIMessage as _AI, HumanMessage as _HM  # noqa: E402
+_upd = LA.commit_check.after_model(
+    {"messages": [_HM("q"), _AI("a"), _HM("b"), _AI("prose answer")],
+     "commit_checked": False}, None)
+chk("the commit check jumps back to the model (else the run ends no_answer)",
+    bool(_upd) and _upd.get("jump_to") == "model", str(_upd)[:80])
+chk("the commit check fires only once",
+    LA.commit_check.after_model({"messages": [_AI("x")] * 5,
+                                 "commit_checked": True}, None) is None)
+
+
+# ---- resolve_region: `name@line`, against a file with two constructors ----
+class _WS:
+    F = [("Sched", 10, 20), ("Sched", 22, 30), ("doWork", 40, 90)]
+
+    def _funcs_of(self, path):
+        return self.F
+
+    def resolve_symbol(self, path, name):
+        return next((f for f in self.F if f[0] == name), None)
+
+
+chk("name@line picks the exact overload",
+    LA.resolve_region(_WS(), "a.java", "Sched@22") == [("Sched", 22, 30)])
+chk("a class name in front of another function's first line -> that function",
+    LA.resolve_region(_WS(), "a.java", "Sched@40") == [("doWork", 40, 90)])
+chk("a line that starts no function falls back to the name (all overloads)",
+    LA.resolve_region(_WS(), "a.java", "Sched@55") == _WS.F[:2])
+
+print(f"\n{ok}/{n} checks passed")
+raise SystemExit(0 if ok == n else 1)

@@ -1,0 +1,38 @@
+{
+ "id": "mongodb:SERVER-24739",
+ "project": "mongodb",
+ "issue_key": "SERVER-24739",
+ "annotator": "claude-sonnet-5-5",
+ "pass": 2,
+ "file_roles": [
+  {
+   "path": "src/mongo/db/mongod_options.cpp",
+   "role": "preventive",
+   "evidence": "Adds a range check after storage.syncPeriodSecs is read: 'syncdelay < 0 || syncdelay > kMaxSyncdelaySecs' returns Status BadValue at startup."
+  },
+  {
+   "path": "src/mongo/db/storage/storage_options.cpp",
+   "role": "preventive",
+   "evidence": "Defines kMaxSyncdelaySecs and a SyncdelaySetting::validate() that rejects values outside 0..max on setParameter."
+  },
+  {
+   "path": "src/mongo/db/storage/storage_options.h",
+   "role": "refactor",
+   "evidence": "Only declares 'static const double kMaxSyncdelaySecs;' used by the two validators."
+  }
+ ],
+ "symptom_location": {
+  "file": "src/mongo/db/data_file_sync.cpp",
+  "function": "DataFileSync::run",
+  "determinable": false
+ },
+ "log_location": {
+  "file": null,
+  "function": null,
+  "determinable": false
+ },
+ "relation": "state-producer",
+ "rationale": "A huge syncdelay value overflows a duration_cast inside DataFileSync::run and terminates the server. The fix never touches that code; it rejects out-of-range values at startup and on setParameter. I treated this as input validation upstream of the failing code (preventive), so no file is causal. If the reviewer counts missing validation as the defect, the two validators would become causal.",
+ "confidence": "medium",
+ "notes": "DataFileSync file path is not in the packet; the symptom file path is inferred from the thread name in the log."
+}

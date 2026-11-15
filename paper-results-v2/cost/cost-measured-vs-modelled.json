@@ -1,0 +1,135 @@
+{
+  "wol-v3": {
+    "n_windows": 13388,
+    "per_skill": {
+      "compose_l2": {
+        "invoked": 13376,
+        "skipped_by_gate": 12,
+        "measured_ms_mean": 0.025545828349282297,
+        "modelled_ms": 1.0,
+        "modelled_tokens": 0
+      },
+      "compose_novelty": {
+        "invoked": 13388,
+        "skipped_by_gate": 0,
+        "measured_ms_mean": 0.009339109650433223,
+        "modelled_ms": 1.0,
+        "modelled_tokens": 0
+      },
+      "compose_triage": {
+        "invoked": 13388,
+        "skipped_by_gate": 0,
+        "measured_ms_mean": 0.013533761577532118,
+        "modelled_ms": 1.0,
+        "modelled_tokens": 0
+      },
+      "reformulate_query": {
+        "invoked": 2810,
+        "skipped_by_gate": 10566,
+        "measured_ms_mean": 0.0342423487544484,
+        "modelled_ms": 300.0,
+        "modelled_tokens": 400
+      },
+      "request_similar_incident_window": {
+        "invoked": 2810,
+        "skipped_by_gate": 10578,
+        "measured_ms_mean": 204.2188946619217,
+        "modelled_ms": 3.0,
+        "modelled_tokens": 0
+      },
+      "rerank_with_evidence": {
+        "invoked": 2810,
+        "skipped_by_gate": 10578,
+        "measured_ms_mean": 0.16900355871886122,
+        "modelled_ms": 50.0,
+        "modelled_tokens": 0
+      },
+      "retrieve_dense": {
+        "invoked": 13376,
+        "skipped_by_gate": 0,
+        "measured_ms_mean": 0.03868712619617225,
+        "modelled_ms": 1.0,
+        "modelled_tokens": 0
+      },
+      "retrieve_hybrid_fusion": {
+        "invoked": 13376,
+        "skipped_by_gate": 0,
+        "measured_ms_mean": 0.04145192882775119,
+        "modelled_ms": 1.0,
+        "modelled_tokens": 0
+      }
+    },
+    "measured": {
+      "total_invocations": 75334,
+      "total_gate_skips": 31734,
+      "harness_wall_ms_total": 576146.0780000001,
+      "harness_wall_ms_per_window": 43.03451434120108,
+      "caveat": "predictions-backed replay; not deployment cost"
+    },
+    "modelled": {
+      "saving_wall_pct": 77.8915828684061,
+      "saving_tokens_pct": 78.99222488038278,
+      "dominant_skill": "reformulate_query",
+      "dominant_share_of_saving": 0.8497107316390587,
+      "verifier_sensitivity": {
+        "0.5x": 77.8915828684061,
+        "1.0x": 77.8915828684061,
+        "2.0x": 77.8915828684061
+      }
+    },
+    "cross_check_measured_units": {
+      "saving_wall_pct": 78.96143290481946,
+      "agrees_with_modelled_within_pts": 1.0698500364133565
+    },
+    "cost_table_accuracy": [
+      {
+        "skill": "reformulate_query",
+        "measured_ms": 0.0342423487544484,
+        "modelled_ms": 300.0,
+        "ratio": 8761.081260847424
+      },
+      {
+        "skill": "rerank_with_evidence",
+        "measured_ms": 0.16900355871886122,
+        "modelled_ms": 50.0,
+        "ratio": 295.85175826489785
+      },
+      {
+        "skill": "compose_novelty",
+        "measured_ms": 0.009339109650433223,
+        "modelled_ms": 1.0,
+        "ratio": 107.07658839337131
+      },
+      {
+        "skill": "compose_triage",
+        "measured_ms": 0.013533761577532118,
+        "modelled_ms": 1.0,
+        "ratio": 73.88928748827199
+      },
+      {
+        "skill": "request_similar_incident_window",
+        "measured_ms": 204.2188946619217,
+        "modelled_ms": 3.0,
+        "ratio": 68.07296488730724
+      },
+      {
+        "skill": "compose_l2",
+        "measured_ms": 0.025545828349282297,
+        "modelled_ms": 1.0,
+        "ratio": 39.14533466393133
+      },
+      {
+        "skill": "retrieve_dense",
+        "measured_ms": 0.03868712619617225,
+        "modelled_ms": 1.0,
+        "ratio": 25.848391915420724
+      },
+      {
+        "skill": "retrieve_hybrid_fusion",
+        "measured_ms": 0.04145192882775119,
+        "modelled_ms": 1.0,
+        "ratio": 24.124329754482282
+      }
+    ]
+  }
+}

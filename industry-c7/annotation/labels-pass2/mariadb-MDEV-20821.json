@@ -1,0 +1,27 @@
+{
+ "id": "mariadb:MDEV-20821",
+ "project": "mariadb",
+ "issue_key": "MDEV-20821",
+ "annotator": "claude-sonnet-5-5",
+ "pass": 2,
+ "file_roles": [
+  {
+   "path": "sql/slave.cc",
+   "role": "causal",
+   "evidence": "slave_prepare_for_shutdown() gains 'global_rpl_thread_pool.destroy();' before stop_slave_background_thread(); commit says idle workers were never notified to exit, hanging close_connections()."
+  }
+ ],
+ "symptom_location": {
+  "file": "sql/mysqld.cc",
+  "function": "close_connections",
+  "determinable": true
+ },
+ "log_location": {
+  "file": null,
+  "function": null,
+  "determinable": false
+ },
+ "relation": "concurrency",
+ "rationale": "Server shutdown hung because idle parallel slave worker threads were never told to exit. The diff adds the pool destruction to the shutdown preparation step, which is the missing step. The hang site close_connections is named only in the commit message, not in the diff or the report, and the report has no log line from it.",
+ "confidence": "medium"
+}

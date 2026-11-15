@@ -1,0 +1,43 @@
+{
+  "id": "ambari:AMBARI-11506",
+  "project": "ambari",
+  "issue_key": "AMBARI-11506",
+  "annotator": "claude-opus-5",
+  "pass": 1,
+  "file_roles": [
+    {
+      "path": "ambari-server/src/main/java/org/apache/ambari/server/orm/entities/HostStateEntity.java",
+      "role": "refactor",
+      "evidence": "The entire diff is two new accessors, 'public Long getHostId()' and 'public void setHostId(Long hostId)'. No logic is corrected here; the accessors exist so the real fix in HostImpl can call hostStateDAO.findByHostId(hostEntity.getHostId())."
+    },
+    {
+      "path": "ambari-server/src/main/java/org/apache/ambari/server/orm/entities/HostVersionEntity.java",
+      "role": "refactor",
+      "evidence": "Same shape as HostStateEntity: the diff adds only getHostId/setHostId after equals(). An API adaptation forced by the DAO change elsewhere, not a behaviour change."
+    },
+    {
+      "path": "ambari-server/src/main/java/org/apache/ambari/server/state/cluster/ClusterImpl.java",
+      "role": "causal",
+      "evidence": "The loop 'for (Host host : hosts.values())' issued one hostVersionDAO.findByClusterStackVersionAndHost(...) per host and is replaced by a single hostVersionDAO.findByClusterStackAndVersion(...) call, with hostsWithoutHostVersion computed by set difference. A per-host query on a large cluster is the wrong logic that made this path slow."
+    },
+    {
+      "path": "ambari-server/src/main/java/org/apache/ambari/server/state/host/HostImpl.java",
+      "role": "causal",
+      "evidence": "getHostEntity() changes from 'hostDAO.findByName(hostEntity.getHostName())' to 'hostDAO.findById(hostEntity.getHostId())', and getHostStateEntity() stops loading the whole host entity ('getHostEntity().getHostStateEntity()') in favour of 'hostStateDAO.findByHostId(...)'. These are repeated lookups on the heartbeat path being corrected."
+    }
+  ],
+  "symptom_location": {
+    "file": "ambari-server/src/main/java/org/apache/ambari/server/api/GsonJsonProvider.java",
+    "function": "writeTo",
+    "determinable": true
+  },
+  "log_location": {
+    "file": "ambari-agent/src/main/python/ambari_agent/Controller.py",
+    "function": null,
+    "determinable": true
+  },
+  "relation": "caller-callee",
+  "rationale": "The report is a timeout, not a logic error: the agent logs 'SSLError(The read operation timed out)' and the server logs an EofException while gson writes the heartbeat response, meaning the client had already given up. Neither gold file appears in the stack trace; the two causal files sit underneath the heartbeat handler and were changed to stop issuing one DAO query per host, which is what made the response late. The two entity files only gain getHostId/setHostId accessors that the new DAO calls need.",
+  "confidence": "medium",
+  "notes": "The commit message states only the symptom ('Heartbeats lost during large cluster deploy'), so the causal link from per-host queries to the read timeout is read off the diff rather than stated by the author."
+}

@@ -1,0 +1,32 @@
+{
+ "id": "mariadb:MDEV-14730",
+ "project": "mariadb",
+ "issue_key": "MDEV-14730",
+ "annotator": "claude-sonnet-5-5",
+ "pass": 2,
+ "file_roles": [
+  {
+   "path": "sql/partition_info.cc",
+   "role": "causal",
+   "evidence": "vers_scan_min_max called file->ha_external_lock(thd, F_RDLCK/F_UNLCK) directly on partition handlers; the diff replaces this with a Table_locker using lock_tables, so the handler lock type stays consistent (assert m_lock_type == 2 in ha_close)."
+  },
+  {
+   "path": "sql/table.h",
+   "role": "refactor",
+   "evidence": "Adds a TABLE_LIST(TABLE&, thr_lock_type) constructor used by the new Table_locker and vers_setup_stats; helper only."
+  }
+ ],
+ "symptom_location": {
+  "file": "sql/handler.cc",
+  "function": "handler::ha_close",
+  "determinable": true
+ },
+ "log_location": {
+  "file": "sql/handler.cc",
+  "function": "handler::ha_close",
+  "determinable": true
+ },
+ "relation": "state-producer",
+ "rationale": "The lock was taken on the partition handler outside the normal table lock, and after a lock-wait timeout the lock type was left inconsistent, so ha_close asserted later. The change is in the versioning partition code.",
+ "confidence": "medium"
+}

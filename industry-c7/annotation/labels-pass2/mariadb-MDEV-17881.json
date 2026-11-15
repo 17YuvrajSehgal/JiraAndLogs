@@ -1,0 +1,27 @@
+{
+ "id": "mariadb:MDEV-17881",
+ "project": "mariadb",
+ "issue_key": "MDEV-17881",
+ "annotator": "claude-sonnet-5-5",
+ "pass": 2,
+ "file_roles": [
+  {
+   "path": "storage/innobase/rem/rem0cmp.cc",
+   "role": "causal",
+   "evidence": "cmp_dtuple_rec_with_match_bytes drops the ut_ad that no record has REC_INFO_MIN_REC_FLAG and instead returns 1 when it is set (metadata record), with new asserts."
+  }
+ ],
+ "symptom_location": {
+  "file": "storage/innobase/rem/rem0cmp.cc",
+  "function": "cmp_dtuple_rec_with_match_bytes",
+  "determinable": true
+ },
+ "log_location": {
+  "file": "storage/innobase/rem/rem0cmp.cc",
+  "function": "cmp_dtuple_rec_with_match_bytes",
+  "determinable": true
+ },
+ "relation": "same-location",
+ "rationale": "The function assumed the flag never appears on a leaf record, which stopped being true with instant ADD COLUMN. The diff adds the missing handling in the same function.",
+ "confidence": "high"
+}

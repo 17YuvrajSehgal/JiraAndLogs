@@ -1,0 +1,28 @@
+{
+  "id": "camel:CAMEL-10980",
+  "project": "camel",
+  "issue_key": "CAMEL-10980",
+  "annotator": "claude-opus-5",
+  "pass": 1,
+  "file_roles": [
+    {
+      "path": "components/camel-undertow/src/main/java/org/apache/camel/component/undertow/handlers/CamelMethodHandler.java",
+      "role": "causal",
+      "evidence": "add() is where the reported exception was raised, and the fix deletes the whole check: 'HttpHandler existing = methodMap.get(method); if (methodMap.get(method) != null) { throw new IllegalArgumentException(String.format(\"Duplicate handler for a method '%s': '%s', '%s'\", ...)); }'. The format string matches the reported message exactly, and the commit message is 'removed camel-undertow duplicate handler check'."
+    }
+  ],
+  "symptom_location": {
+    "file": "components/camel-undertow/src/main/java/org/apache/camel/component/undertow/handlers/CamelMethodHandler.java",
+    "function": "add",
+    "determinable": true
+  },
+  "log_location": {
+    "file": "components/camel-undertow/src/main/java/org/apache/camel/component/undertow/handlers/CamelMethodHandler.java",
+    "function": "add",
+    "determinable": true
+  },
+  "relation": "same-location",
+  "rationale": "The reported text, \"Duplicate handler for a method 'OPTIONS'\", is produced by the String.format in this method, so the throw site is unambiguous. The guard itself was the defect: with enableCORS(true) a second OPTIONS handler is legitimate, so rejecting it was wrong logic, and the fix removes the rejection rather than working around it. Cause and symptom are the same lines.",
+  "confidence": "high",
+  "notes": "An instance where the fix is a deletion. The gold file is correct and easy to find because the exception message is in the report, but nothing was added, so any system reasoning about where new code should go is pointed the wrong way."
+}

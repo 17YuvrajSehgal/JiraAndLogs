@@ -1,0 +1,28 @@
+{
+  "id": "mongodb:SERVER-35244",
+  "project": "mongodb",
+  "issue_key": "SERVER-35244",
+  "annotator": "claude-opus-5",
+  "pass": 1,
+  "file_roles": [
+    {
+      "path": "src/mongo/db/session_catalog.cpp",
+      "role": "causal",
+      "evidence": "The reported server error is the text of a check this file owns: 'Direct writes against config.transactions cannot be performed using a transaction or on a session.' with 'code' : 40528. Dropping the config database is a legitimate operation that this check rejects, which is why the report says the drop 'fails while it passes in 3.7.9 and earlier'. It is the only non-test file the fix changed, so no other file contributed the bad state and the over-strict check itself is the defect."
+    }
+  ],
+  "symptom_location": {
+    "file": "src/mongo/db/session_catalog.cpp",
+    "function": null,
+    "determinable": true
+  },
+  "log_location": {
+    "file": null,
+    "function": null,
+    "determinable": false
+  },
+  "relation": "same-location",
+  "rationale": "The failure is a server-side uassert returned to the client, 'Command failed with error 40528: Direct writes against config.transactions cannot be performed using a transaction or on a session.', raised while dropping the config database. The single gold file is the session catalog, which is the owner of config.transactions and therefore of that check, so the site where the failure surfaced and the site holding the too-strict condition are the same. Under the RUBRIC.md hard case this is causal rather than symptom-handling, because no other file was changed and so no other file produced the state the check objected to.",
+  "confidence": "medium",
+  "notes": "NO-DIFF PACKET: every gold file in this packet shows '(no diff retrieved)' and the fix commit message is '(empty)', so the issue report is the only evidence the packet carries. Decision recorded here per CONVENTIONS.md ('If a case is not covered here, follow RUBRIC.md and say in notes what was decided and why'): a role is assigned only where the report itself names the faulty code, the wrong behaviour, or the adopted fix, and every other gold file is 'unclear', per schema.json ('A label without citable evidence is not auditable and must be unclear'). Instance confidence is capped at medium because no diff was shown. The pasted trace belongs to another project: every frame is com.mongodb.connection.* / com.mongodb.operation.* / com.mongodb.DB.dropDatabase, i.e. the Java driver running in the reporter's own client, not the mongodb server repository that the gold set is drawn from. The gold file does not appear in the trace at all, and no server frame does. log_location is not determinable: the quoted text is a driver exception carrying a server error reply, not a log line, which CONVENTIONS.md treats the same way as JMX values and harness assertions. The gold path is matched to the quoted error text and to config.transactions by ownership; the packet did not show the source tree, and the enclosing function is not visible anywhere, so it is recorded as null."
+}

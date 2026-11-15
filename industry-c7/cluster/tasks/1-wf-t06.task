@@ -1,0 +1,1 @@
+--arm wf --full --seed 42 --tag wf-t06 --workers 24 --project mongodb

@@ -1,0 +1,27 @@
+{
+ "id": "qt:QTBUG-82142",
+ "project": "qt",
+ "issue_key": "QTBUG-82142",
+ "annotator": "claude-sonnet-5-5",
+ "pass": 2,
+ "file_roles": [
+  {
+   "path": "src/testlib/qtestlog.cpp",
+   "role": "causal",
+   "evidence": "'#include \"moc_qtestlog_p.cpp\"' moved from before QT_END_NAMESPACE to after it, so the moc file's std headers (<memory>) are no longer included inside namespace RTA."
+  }
+ ],
+ "symptom_location": {
+  "file": "src/testlib/qtestlog.cpp",
+  "function": null,
+  "determinable": true
+ },
+ "log_location": {
+  "file": "src/testlib/qtestlog.cpp",
+  "function": null,
+  "determinable": true
+ },
+ "relation": "config-build",
+ "rationale": "With -qtnamespace the build broke because the moc include pulled standard library headers into the Qt namespace ('move' is not a member of 'RTA::std'). The diff moves the include outside the namespace, which is the wrong placement being corrected. The error is raised from qtestlog.cpp line 600 per the log.",
+ "confidence": "high"
+}

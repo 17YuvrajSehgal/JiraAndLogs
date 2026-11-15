@@ -1,0 +1,28 @@
+{
+ "id": "mongodb:SERVER-15512",
+ "project": "mongodb",
+ "issue_key": "SERVER-15512",
+ "annotator": "claude-sonnet-5-5",
+ "pass": 2,
+ "file_roles": [
+  {
+   "path": "src/mongo/db/repl/rs_sync.cpp",
+   "role": "unclear",
+   "evidence": "Adds 'lock lk(this);' in ReplSetImpl::clearVetoes(). The commit message talks about the 'legacy initial sync flag' but the diff touches _veto; the report has no stack or log line linking the two."
+  }
+ ],
+ "symptom_location": {
+  "file": "jstests/replsets/resync.js",
+  "function": "awaitReplication",
+  "determinable": true
+ },
+ "log_location": {
+  "file": "jstests/replsets/resync.js",
+  "function": "awaitReplication",
+  "determinable": true
+ },
+ "relation": "concurrency",
+ "rationale": "Report is a test timeout waiting for replication with no root cause stated. The one-line lock fix is a plausible data race fix but the diff does not show how it produces the logged hang.",
+ "confidence": "low",
+ "notes": "Would be settled by the SERVER-15512 discussion or the full commit including other changes showing which flag was racing."
+}

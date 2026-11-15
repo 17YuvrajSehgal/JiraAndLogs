@@ -1,0 +1,1 @@
+--arm wf --full --seed 7 --tag wf-t04-seed7 --workers 24 --project geode --project infinispan --project pdfbox --project sakai

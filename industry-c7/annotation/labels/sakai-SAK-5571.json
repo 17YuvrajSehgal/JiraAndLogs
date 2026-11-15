@@ -1,0 +1,33 @@
+{
+  "id": "sakai:SAK-5571",
+  "project": "sakai",
+  "issue_key": "SAK-5571",
+  "annotator": "claude-opus-5",
+  "pass": 1,
+  "file_roles": [
+    {
+      "path": "samigo/samigo-app/src/java/org/sakaiproject/tool/assessment/ui/bean/delivery/DeliveryBean.java",
+      "role": "preventive",
+      "evidence": "The change adds a configuration lookup and the import it needs, 'import org.sakaiproject.component.cover.ServerConfigurationService;' and 'public String getPortal(){ return ServerConfigurationService.getString(\"portalPath\"); }'. None of the eleven hard-coded occurrences the report lists is in this file; they are in LoginServlet.java and seven JSPs, for example 'path = \"/portal/login?url=\" + URLEncoder.encode(...)' and 'onclick=\"javascript:window.open('/portal/login','_top')\"'. This file supplies the configured value those sites switch to, which is the rubric's configuration tightening rather than a correction of wrong logic here."
+    },
+    {
+      "path": "samigo/samigo-app/src/java/org/sakaiproject/tool/assessment/ui/bean/shared/PersonBean.java",
+      "role": "refactor",
+      "evidence": "The whole diff is one blank line added before the closing brace, after 'service.deleteResources(resourceIdList); return \"editAssessment\"; }' and before '}'. No statement is added, removed or altered."
+    }
+  ],
+  "symptom_location": {
+    "file": null,
+    "function": null,
+    "determinable": false
+  },
+  "log_location": {
+    "file": null,
+    "function": null,
+    "determinable": false
+  },
+  "relation": "unclear",
+  "rationale": "There is no failure here: the report is a maintainability request, '\"/portal\" should not be hard-coded - see SAK-4576 for background', followed by a grep listing of eleven hard-coded sites. The fix changed nine files, of which the two gold ones are a new 'getPortal()' accessor reading 'portalPath' from ServerConfigurationService and a single blank line. Every site the report actually complains about is outside the gold set, so there is no symptom to relate to a cause.",
+  "confidence": "medium",
+  "notes": "The instance has no failure: nothing crashed, nothing was logged, and the report is a usability and configurability complaint. No gold file is causal, which rubric rule 3 allows. The sharp point for the benchmark is that the report quotes eleven exact lines of defective code with their file paths, and not one of those files is in the gold set: LoginServlet.java and the seven JSPs were changed but do not count as snapshot source files, so a localizer that answers with the files the reporter literally quoted scores zero. DeliveryBean.java is labelled preventive rather than causal because the hard-coded path never lived in it; a second rater could reasonably call it causal under the convention that a missing capability and its missing use are both causal, or refactor as an API addition forced by the real fix in the JSPs. Worth putting in the agreement check. The gold set also contains a file whose whole change is cosmetic, PersonBean.java, which gains only a blank line. The fix ships with no regression test: nine files changed and the packet lists no test among the two that are source."
+}

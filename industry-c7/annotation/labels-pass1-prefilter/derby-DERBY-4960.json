@@ -1,0 +1,38 @@
+{
+  "id": "derby:DERBY-4960",
+  "project": "derby",
+  "issue_key": "DERBY-4960",
+  "annotator": "claude-opus-5",
+  "pass": 1,
+  "file_roles": [
+    {
+      "path": "java/engine/org/apache/derby/impl/store/raw/data/BaseContainer.java",
+      "role": "refactor",
+      "evidence": "The whole diff is a comment typo, 'If a post comit action' becoming 'If a post commit action'. No code changes in this file."
+    },
+    {
+      "path": "java/engine/org/apache/derby/impl/store/raw/data/RAFContainer.java",
+      "role": "causal",
+      "evidence": "openContainer is split into openContainerMinion(newIdentity, doReopen) with a new reopenContainer entry point, and the header read becomes conditional: 'if (!reopen) { readHeader(getEmbryonicPage(...)); }' with the comment 'under reopen: can give race condition or if we synchronize access, deadlock, so skip'. The report traces the race to exactly this path, 'FileContainer#openContainer calls readHeader -> readHeaderFromArray -> allocCache.reset'."
+    },
+    {
+      "path": "java/engine/org/apache/derby/impl/store/raw/data/RAFContainer4.java",
+      "role": "causal",
+      "evidence": "The interrupt-recovery loop changes 'openContainer(currentIdentity)' to 'reopenContainer(currentIdentity)'. This is the call site that performed the unsafe reopen, and the commit message describes the fix in these terms: 'When reopening the container after an interrupt we now call reopenContainer instead of openContainer'."
+    }
+  ],
+  "symptom_location": {
+    "file": "java/engine/org/apache/derby/impl/store/raw/data/AllocationCache.java",
+    "function": "validate",
+    "determinable": true
+  },
+  "log_location": {
+    "file": "java/engine/org/apache/derby/impl/store/raw/data/AllocationCache.java",
+    "function": "validate",
+    "determinable": true
+  },
+  "relation": "concurrency",
+  "rationale": "The ArrayIndexOutOfBoundsException is thrown at 'AllocationCache.validate(AllocationCache.java:581)', a file no commit touches, while the two causal files are on the other thread's reopen path. The reporter states the ordering explicitly: 'This can only happen if another thread has called allocCache.reset while the thread above is in the loop in validate, so as to set numExtents to 0.' Cause and symptom are separate sites joined by an interleaving, which is the concurrency relation.",
+  "confidence": "high",
+  "notes": "The file named in the stack trace, AllocationCache.java, is not in the gold set, and neither is FileContainer.java, which the reporter names twice. The fix lands two layers away in RAFContainer and RAFContainer4."
+}

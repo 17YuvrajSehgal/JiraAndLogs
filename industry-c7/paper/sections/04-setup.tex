@@ -1,0 +1,106 @@
+\section{Evaluation Setup}
+\label{sec:setup}
+
+\subsection{Split and populations}
+\label{sec:setup:protocol}
+\label{sec:setup:populations}
+
+Each project's instances are ordered by the time of their fix commit.
+The earliest 30\% form the development split and the later 70\% the
+evaluation split. The retrieval layer's fusion weights, its only fitted
+parameters, are tuned on the development split. \sys{} has no fitted
+parameters; its prompts and step budgets were settled on two small
+pilots drawn from the evaluation split, which
+\cref{sec:discussion:threats} discloses together with the headline
+scored without those instances. We chose a time split rather than a
+random one
+because it mirrors deployment: a system is configured on the project's
+past and then meets its future. The split has a side effect any system
+with historical memory will meet: the development split holds the
+oldest issues, which have the least history behind them, so the tuned
+weights undervalue memory relative to its worth on later data. We keep
+the split anyway; the alternative is the deployment scenario backwards.
+
+Two populations carry the results, and no comparison mixes them. The
+\emph{evaluation split} is the later 70\% of every project,
+\nEval{} instances, \nEvalHard{} of them hard. \sys{}, the retrieval
+layer and the loop ablation are scored on all of it; the paired
+ablation of \cref{tab:ablation} uses the 26{,}537 instances both arms
+answered. The
+\emph{sample} is \nSample{} instances drawn from the evaluation split
+with a fixed seed before any agent had run, stratified to match the
+split's project mix and hard fraction (\nSampleHard{} hard against the
+split's 48\%). It carries the two reimplemented published agents and
+the model baselines, and every system on it, \sys{} included, is scored
+on exactly those instances. The 101 benchmark instances whose gold consists entirely of
+test files are excluded from both populations before any system is
+scored (\cref{tab:funnel}); they are rankable and easier than average,
+so the exclusion lowers every score rather than raising it.
+
+\subsection{Metrics}
+\label{sec:setup:metrics}
+
+At the file level we report Acc@K, the
+fraction of instances with at least one gold file in the top $K$, and
+MRR, the mean reciprocal rank of the first gold file, with
+$K \in \{1, 5\}$ and Acc@5 as the practical target, since five files is
+a realistic number for an engineer to open. At the module level a
+module is a file's leading path components at a fixed per-project
+depth, and Acc@1 asks whether the module the system names, or the
+module of its top file, contains a gold file. At the region level a
+candidate is a function, identified by file, name and start line, gold
+functions are those whose span overlaps a hunk of the fix diff, and
+Acc@K is computed on the instances for which at least one gold function
+is derivable.
+
+\subsection{Compared systems}
+\label{sec:setup:systems}
+
+All systems see the same input, the issue report with its logs and the
+code snapshot, and none sees a gold file, a memory vote or a difficulty
+label. \textbf{The retrieval layer} is \cref{sec:approach}. \textbf{The
+unconstrained loop} is the ablation of \cref{sec:agent:principles}: the
+same model, the same evidence pass, the same tools and the same final
+checks as \sys{}, with the model free to choose tools in any order for
+up to fourteen turns and to decide when to submit, which is the usual
+agent shape. It isolates what the fixed procedure contributes.
+\textbf{LocAgent-style} and \textbf{CoSIL-style} are reimplementations
+of the two published localization agents that take exactly our inputs,
+an issue and a repository, and return ranked
+locations~\cite{chen2025locagent,jiang2025cosil}. Neither released
+system runs on this benchmark as released: both are built for Python
+repositories and parse Python files only, while our projects are
+mainly Java, Scala, C and C++. The graph layer
+is the contribution in both papers, so replacing it is the port; we
+reimplement their search strategies on our tree-sitter layer and name
+the arms accordingly.
+Held constant: the served model, temperature zero, the seed, the
+snapshots, the reports with their logs, the context window and a turn
+budget at least as large as ours. Withheld from both, because neither
+design has it: incident memory, our evidence pass and our structured
+submission. Both parse a free-text answer, and an instance where that
+answer names no file counts as a miss. \textbf{The model alone} follows
+the shape of Agentless's localization stage~\cite{xia2025agentless},
+narrowing without tools: one
+call picks up to fifteen directories from the snapshot's directory
+list, a second ranks ten files from the source files in those
+directories. \textbf{The model as re-ranker} is given the retrieval
+layer's top twenty candidates with their function names and returns a
+ranked ten. All model-based systems use one general-purpose
+open-weights model, Qwen3.8-27B, self-hosted on H100 GPUs at
+temperature zero with a fixed seed and thinking disabled, so what
+separates them is the architecture.
+
+\subsection{Statistics}
+\label{sec:setup:stats}
+
+Every comparison is paired over instances and tested with a bootstrap
+of 2{,}000 resamples; we report the mean difference with its 95\%
+interval and call it significant when the interval excludes zero. We do
+not correct for multiple comparisons: the differences the paper builds
+on are far from zero, and the one that is not, the file-level
+difference between the two agents, is reported as small. The retrieval
+layer is deterministic end to end and reproduces its tables bit for
+bit; the agents run at temperature zero with a fixed seed, and the
+residual variation of the model is reported in
+\cref{sec:discussion:threats}.

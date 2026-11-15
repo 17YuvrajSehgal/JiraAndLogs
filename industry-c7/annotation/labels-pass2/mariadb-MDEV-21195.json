@@ -1,0 +1,37 @@
+{
+ "id": "mariadb:MDEV-21195",
+ "project": "mariadb",
+ "issue_key": "MDEV-21195",
+ "annotator": "claude-sonnet-5-5",
+ "pass": 2,
+ "file_roles": [
+  {
+   "path": "sql/my_decimal.cc",
+   "role": "refactor",
+   "evidence": "my_decimal2int gets a round_type parameter instead of hard-coded HALF_UP; needed so the partition code can pass FLOOR, default behaviour unchanged."
+  },
+  {
+   "path": "sql/my_decimal.h",
+   "role": "refactor",
+   "evidence": "Declaration adds `decimal_round_mode round_type= HALF_UP` default; API adaptation for the real fix."
+  },
+  {
+   "path": "sql/sql_partition.cc",
+   "role": "causal",
+   "evidence": "part_val_int used item_expr->val_int() (HALF_UP rounding of 9.9 to 10); diff handles DECIMAL_RESULT via my_decimal2int(..., FLOOR)."
+  }
+ ],
+ "symptom_location": {
+  "file": "sql/sql_partition.cc",
+  "function": "part_val_int",
+  "determinable": true
+ },
+ "log_location": {
+  "file": null,
+  "function": null,
+  "determinable": false
+ },
+ "relation": "same-location",
+ "rationale": "The report shows 9.9 placed in the p2 partition because the decimal is rounded up before partition lookup. part_val_int in sql_partition.cc is changed to floor decimals. The my_decimal files only add the parameter plumbing.",
+ "confidence": "high"
+}

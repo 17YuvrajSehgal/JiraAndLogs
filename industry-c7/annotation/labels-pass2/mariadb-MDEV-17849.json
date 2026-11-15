@@ -1,0 +1,57 @@
+{
+ "id": "mariadb:MDEV-17849",
+ "project": "mariadb",
+ "issue_key": "MDEV-17849",
+ "annotator": "claude-sonnet-5-5",
+ "pass": 2,
+ "file_roles": [
+  {
+   "path": "extra/mariabackup/fil_cur.cc",
+   "role": "refactor",
+   "evidence": "Condition changed to 'if (!node->is_open())' with the old condition moved into ut_ad; adapts mariabackup to undo files now arriving already open."
+  },
+  {
+   "path": "extra/mariabackup/xtrabackup.cc",
+   "role": "refactor",
+   "evidence": "fil_node_create(...) calls replaced by space->add(..., OS_FILE_CLOSED, ...) and dead log-file checks removed; API adaptation and cleanup, named 'remove some dead code' in the commit."
+  },
+  {
+   "path": "storage/innobase/fil/fil0fil.cc",
+   "role": "causal",
+   "evidence": "fil_node_open_file used to read page 0 then 'os_file_close(node->handle); node->handle = OS_FILE_CLOSED;' ; now keeps the handle open (read_page0 split out) and fil_space_t::add takes a handle."
+  },
+  {
+   "path": "storage/innobase/fsp/fsp0space.cc",
+   "role": "refactor",
+   "evidence": "fil_node_create replaced by space->add(it->m_filepath, OS_FILE_CLOSED, ...) plus a NULL check on fil_space_create; forced by the API change."
+  },
+  {
+   "path": "storage/innobase/fsp/fsp0sysspace.cc",
+   "role": "refactor",
+   "evidence": "Same fil_node_create to space->add(..., OS_FILE_CLOSED, ...) replacement and NULL check."
+  },
+  {
+   "path": "storage/innobase/include/fil0fil.h",
+   "role": "refactor",
+   "evidence": "Declares fil_space_t::add and fil_node_t::read_page0 and removes fil_node_create; header side of the fil0fil.cc change."
+  },
+  {
+   "path": "storage/innobase/srv/srv0start.cc",
+   "role": "causal",
+   "evidence": "srv_undo_tablespace_open did 'ret = os_file_close(fh)' right after os_file_get_size and then fil_node_create(...) with a closed node; now calls space->add(name, fh, ...) so the undo file stays open with a handle."
+  }
+ ],
+ "symptom_location": {
+  "file": "storage/innobase/log/log0recv.cc",
+  "function": "recv_addr_trim",
+  "determinable": true
+ },
+ "log_location": {
+  "file": "storage/innobase/log/log0recv.cc",
+  "function": "recv_addr_trim",
+  "determinable": true
+ },
+ "relation": "state-producer",
+ "rationale": "Crash recovery asserted file->is_open() in recv_addr_trim because the undo tablespace file node had no handle. The reporter names srv_undo_tablespace_open() as opening and immediately closing the file, and the diff removes that close and passes the handle into the new fil_space_t::add. Other files are signature adaptation to that API, so I marked them refactor. The same close-after-page0 pattern also existed in fil_node_open_file, which is why fil0fil.cc is causal too.",
+ "confidence": "medium"
+}

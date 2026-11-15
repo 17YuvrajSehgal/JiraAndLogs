@@ -1,0 +1,27 @@
+{
+ "id": "hive:HIVE-2752",
+ "project": "hive",
+ "issue_key": "HIVE-2752",
+ "annotator": "claude-sonnet-5-5",
+ "pass": 2,
+ "file_roles": [
+  {
+   "path": "metastore/src/java/org/apache/hadoop/hive/metastore/ObjectStore.java",
+   "role": "causal",
+   "evidence": "MIndex was built with index.getIndexName() (original case) while the lookup path compared lowercased names; diff adds .toLowerCase() in both the MIndex constructor call and query.execute(..., indexName.toLowerCase())."
+  }
+ ],
+ "symptom_location": {
+  "file": "metastore/src/java/org/apache/hadoop/hive/metastore/ObjectStore.java",
+  "function": "alterIndex",
+  "determinable": true
+ },
+ "log_location": {
+  "file": "metastore/src/java/org/apache/hadoop/hive/metastore/ObjectStore.java",
+  "function": "alterIndex",
+  "determinable": true
+ },
+ "relation": "same-location",
+ "rationale": "The index name was stored in mixed case but ALTER INDEX looked for a lowercased name, so the metastore said 'index testtablea_idx doesn't exist'. ObjectStore both stores and queries the name, so it owns the normalization invariant and the diff fixes both sides there. The exception is thrown at ObjectStore.alterIndex per the stack trace.",
+ "confidence": "high"
+}

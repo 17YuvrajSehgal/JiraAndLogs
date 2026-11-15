@@ -1,0 +1,28 @@
+{
+  "id": "qt:QTBUG-84562",
+  "project": "qt",
+  "issue_key": "QTBUG-84562",
+  "annotator": "claude-opus-5",
+  "pass": 1,
+  "file_roles": [
+    {
+      "path": "src/corelib/kernel/qeventdispatcher_win.cpp",
+      "role": "causal",
+      "evidence": "The reporter bisected the regression to a commit in this exact file, 'I've narrowed down the problem to this commit: QEventDispatcherWin32: fix posted events delivering' with the hash e0d80167c18b5a71acf4dac59f3e6f37292fa397, and states the boundary, 'Right before this commit everything works as expected, and after it's applied the problem occurs.' The only non-test source file the fix changed is that same dispatcher, and the reported loss is exactly what it owns, delivery of posted events to an embedded window."
+    }
+  ],
+  "symptom_location": {
+    "file": null,
+    "function": null,
+    "determinable": false
+  },
+  "log_location": {
+    "file": null,
+    "function": null,
+    "determinable": false
+  },
+  "relation": "unclear",
+  "rationale": "The failure is behavioural and observed from outside Qt, 'my Qt window displays once and then no longer refresh (unless during a resize), and no longer receive any input event (such as mouse or keyboard)', inside a VST3 plugin hosted by Cubase and embedded with QWinWidget from qt-solutions, which is not in the snapshot. There is no crash, no log and no frame, so no symptom site can be placed and its relation to the dispatcher cannot be stated. The only localization in the packet is the bisect, which lands on the gold file itself.",
+  "confidence": "medium",
+  "notes": "The packet renders this file's diff as '(no diff retrieved)', so no hunk could be cited for any gold file in this instance. The report names a culprit commit rather than a location, which is the bisect-style evidence CONVENTIONS records for MDEV-21063 and MDEV-21195; here it is unusually strong because the named commit touches the gold file. The failure is host-dependent and reproduces in only some integrations, 'The issue occurs in the Steinberg Cubase and Steinberg Nuendo integrations, but not in Presonus Studio One or Cockos Reaper', so the triggering message loop is third-party code. The reporter's own suggestion is a revert, 'Any way this commit could be reverted or fixed ?', and whether the fix reverted the posted-event change or corrected it is not shown; that is why confidence is medium. Nothing is emitted, so log_location.determinable is false, and symptom_location is left undeterminable rather than set to the dispatcher, which would assume the answer."
+}

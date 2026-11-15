@@ -1,0 +1,28 @@
+{
+  "id": "qt:QTBUG-83456",
+  "project": "qt",
+  "issue_key": "QTBUG-83456",
+  "annotator": "claude-opus-5",
+  "pass": 1,
+  "file_roles": [
+    {
+      "path": "src/corelib/io/qsettings.cpp",
+      "role": "causal",
+      "evidence": "The input is legal and the parser does not handle it: the reporter shows the file is well formed apart from a byte-order mark, 'qt.conf: UTF-8 Unicode (with BOM) text' over '[Paths]' and 'Prefix = /foo/bar', and that the value is then silently ignored, './qmake -query QT_INSTALL_PREFIX   # expected: /foo/bar' printing '/home/jil/Qt/5.14.2/gcc_64/bin'. The only non-test source file the fix changed is the INI reader, so nothing elsewhere was treated as broken and the unhandled mark is the defect here."
+    }
+  ],
+  "symptom_location": {
+    "file": null,
+    "function": null,
+    "determinable": false
+  },
+  "log_location": {
+    "file": null,
+    "function": null,
+    "determinable": false
+  },
+  "relation": "caller-callee",
+  "rationale": "The failure is visible only as a wrong answer from a different program, 'qmake -query QT_INSTALL_PREFIX' returning the built-in path instead of the Prefix set in qt.conf, and the report names no file, function or frame on that side. The single gold file is the settings reader that parses the file, so the caller asked for a key the parser never recorded because the first section header was preceded by a byte-order mark. The title states the whole mechanism, 'QMake: qt.conf ignored if it contains BOM'.",
+  "confidence": "medium",
+  "notes": "The packet renders this file's diff as '(no diff retrieved)', so no hunk could be cited for any gold file in this instance. The causal call rests on the rule CONVENTIONS records for a legal-but-unhandled input in the file that owns the feature, as for HIVE-2334 and MDEV-14684: no other file was changed, so the unguarded parse is the defect. The symptom site is not determinable; the packet shows a shell session and no qmake source, and naming a qmake file would be inventing a path rather than inferring one from a package name. There is no log: the evidence is command output, which CONVENTIONS puts with SHOW output and JMX values. The relation is recorded as caller-callee because the consumer asks the parser for the key and gets the fallback; a second rater could reasonably call it state-producer, since the mark corrupts the section header at parse time and the loss is only noticed later at lookup."
+}

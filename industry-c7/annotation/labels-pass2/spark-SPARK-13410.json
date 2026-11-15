@@ -1,0 +1,27 @@
+{
+ "id": "spark:SPARK-13410",
+ "project": "spark",
+ "issue_key": "SPARK-13410",
+ "annotator": "claude-sonnet-5-5",
+ "pass": 2,
+ "file_roles": [
+  {
+   "path": "sql/catalyst/src/main/scala/org/apache/spark/sql/types/UserDefinedType.scala",
+   "role": "causal",
+   "evidence": "Adds 'override def equals(other: Any)' to UserDefinedType (acceptsType) and to PythonUserDefinedType (pyUDT equality); before, each UDT instance was only reference-equal."
+  }
+ ],
+ "symptom_location": {
+  "file": "sql/catalyst/src/main/scala/org/apache/spark/sql/catalyst/plans/logical/basicOperators.scala",
+  "function": "Union.resolved",
+  "determinable": true
+ },
+ "log_location": {
+  "file": null,
+  "function": null,
+  "determinable": false
+ },
+ "relation": "caller-callee",
+ "rationale": "Union checks that output attribute data types are equal, but two separate UDT instances were never equal, so the Union stayed unresolved. The diff adds equals to the UDT classes. The reporter names the Union check in basicOperators.scala, which is the consumer of the missing equality.",
+ "confidence": "high"
+}

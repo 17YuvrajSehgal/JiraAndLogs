@@ -1,0 +1,28 @@
+{
+ "id": "qt:QTBUG-90698",
+ "project": "qt",
+ "issue_key": "QTBUG-90698",
+ "annotator": "claude-sonnet-5-5",
+ "pass": 2,
+ "file_roles": [
+  {
+   "path": "src/gui/text/qtextengine.cpp",
+   "role": "preventive",
+   "evidence": "applyVisibilityRules now tries glyphIndex(0x002d), then 0x2010, then 0x00ad instead of only '-'. A fallback chain for fonts lacking one glyph; the commit title says it handles macOS 11 test issues."
+  }
+ ],
+ "symptom_location": {
+  "file": "tests/auto/gui/text/qtextlayout/tst_qtextlayout.cpp",
+  "function": "softHyphens",
+  "determinable": true
+ },
+ "log_location": {
+  "file": "tests/auto/gui/text/qtextlayout/tst_qtextlayout.cpp",
+  "function": "softHyphens",
+  "determinable": true
+ },
+ "relation": "unclear",
+ "rationale": "A CI test failed (textLength 4 vs 5) and the commit says to calculate hyphen width better in the test. The engine change is a glyph fallback, which may be real logic or only a defensive change.",
+ "confidence": "low",
+ "notes": "The test diff (not gold) would show whether the engine behavior or the test expectation was wrong."
+}

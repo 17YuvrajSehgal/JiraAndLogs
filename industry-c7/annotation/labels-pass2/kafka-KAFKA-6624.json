@@ -1,0 +1,28 @@
+{
+ "id": "kafka:KAFKA-6624",
+ "project": "kafka",
+ "issue_key": "KAFKA-6624",
+ "annotator": "claude-sonnet-5-5",
+ "pass": 2,
+ "file_roles": [
+  {
+   "path": "core/src/main/scala/kafka/log/LogManager.scala",
+   "role": "causal",
+   "evidence": "logsToBeDeleted now holds (Log, scheduleTime) and deleteLogs sleeps until scheduleTime + fileDeleteDelayMs before removedLog.delete(), so a segment is no longer closed under a concurrent flush."
+  }
+ ],
+ "symptom_location": {
+  "file": "core/src/main/scala/kafka/log/Log.scala",
+  "function": "flush",
+  "determinable": true
+ },
+ "log_location": {
+  "file": "core/src/main/scala/kafka/log/LogSegment.scala",
+  "function": "flush",
+  "determinable": true
+ },
+ "relation": "concurrency",
+ "rationale": "The trace is a ClosedChannelException in LogSegment.flush while the topic was being deleted, reported as a disk failure. The diff delays physical deletion by file.delete.delay.ms, which orders delete after flush.",
+ "confidence": "medium",
+ "notes": "Log.scala and LogSegment.scala are cited from the stack trace; they are not in the packet diff."
+}

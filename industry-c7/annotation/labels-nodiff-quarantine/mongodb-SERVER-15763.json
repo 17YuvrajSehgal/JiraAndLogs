@@ -1,0 +1,33 @@
+{
+  "id": "mongodb:SERVER-15763",
+  "project": "mongodb",
+  "issue_key": "SERVER-15763",
+  "annotator": "claude-opus-5",
+  "pass": 1,
+  "file_roles": [
+    {
+      "path": "src/mongo/db/repl/repl_coordinator_impl.cpp",
+      "role": "causal",
+      "evidence": "The report states the invariant that was not holding and the exact reply it wanted: 'Check to make sure that isMaster returns something readable, {{ismaster:true, secondary:false }}, when transitioning to primary, during draining stage esp.' ReplicationCoordinatorImpl is the component that answers isMaster and owns the draining-to-primary transition named there, and it is the only production file in the gold set. The hunk is not visible: '(no diff retrieved)'."
+    },
+    {
+      "path": "src/mongo/db/repl/repl_coordinator_test_fixture.cpp",
+      "role": "test",
+      "evidence": "The path is src/mongo/db/repl/repl_coordinator_test_fixture.cpp, a unit-test fixture, and the packet counts it as production: 'The fix changed 3 file(s); 2 of them are non-test source files (listed below as gold).' A test fixture leaked through the gold filter, which under the rubric is a benchmark defect worth recording."
+    }
+  ],
+  "symptom_location": {
+    "file": "src/mongo/db/repl/repl_coordinator_impl.cpp",
+    "function": null,
+    "determinable": true
+  },
+  "log_location": {
+    "file": null,
+    "function": null,
+    "determinable": false
+  },
+  "relation": "same-location",
+  "rationale": "The report describes a wrong isMaster reply during the draining stage of becoming primary, and the replication coordinator implementation is both what composes that reply and the only production file the fix changed, so the surfacing site and the fixed site are the same. The second gold file is a test fixture that the gold filter did not remove. No diff is rendered for either file, so the causal role rests on the report text plus the one-production-file gold set.",
+  "confidence": "medium",
+  "notes": "NO-DIFF-IN-PACKET: every gold file in this packet renders its diff as '(no diff retrieved)', so there is no diff evidence for any role here. Roles rest on the issue report and the gold file list alone, which is weaker than every previously labelled instance. A test file leaked into the gold set: repl_coordinator_test_fixture.cpp is counted among the '2 ... non-test source files'. That is a benchmark defect, and it means the effective production gold set here is one file. The report contains no log line and no trace, so log_location.determinable is false. symptom_location is inferred from the component name in the path and from the fact that only one production file changed; the packet does not show the tree or the enclosing function, so `function` is null. The clearest disagreement risk in this instance: the report describes no observed failure, only a desired invariant ('Check to make sure that ...'), so a second rater could reasonably read repl_coordinator_impl.cpp as preventive hardening rather than causal. It is called causal because a production file was changed, which means the state isMaster reported during draining was in fact wrong."
+}

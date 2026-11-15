@@ -1,0 +1,28 @@
+{
+  "id": "hadoop:HDFS-10457",
+  "project": "hadoop",
+  "issue_key": "HDFS-10457",
+  "annotator": "claude-opus-5",
+  "pass": 1,
+  "file_roles": [
+    {
+      "path": "hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/server/datanode/BlockPoolSliceStorage.java",
+      "role": "causal",
+      "evidence": "The single change is at the call site, 'StorageState curState = sd.analyzeStorage(startOpt, this)' becomes 'sd.analyzeStorage(startOpt, this, true)'. The report says the protection already exists for volume directories after HDFS-10360 and that the block pool path 'still auto-formats the directory', so the defect is this path never asking for the check."
+    }
+  ],
+  "symptom_location": {
+    "file": null,
+    "function": "analyzeStorage",
+    "determinable": false
+  },
+  "log_location": {
+    "file": null,
+    "function": null,
+    "determinable": false
+  },
+  "relation": "caller-callee",
+  "rationale": "The report carries no stack trace, no error text and no log; the failure is silent, a block pool directory being reformatted when current/VERSION is absent. The formatting decision is taken inside the callee analyzeStorage, and the only change is the argument the gold file passes to it, so the causal site is the caller and the effect occurs in the callee. The callee's file is not shown in the packet, so it is left unnamed.",
+  "confidence": "medium",
+  "notes": "That the third argument means 'do not auto-format when VERSION is missing' is inferred from the issue title and from HDFS-10360 having added the same protection for volume directories; the overload's body is not in the packet. This instance has no log evidence whatsoever, so nothing in the report points a log-guided localizer at any file."
+}

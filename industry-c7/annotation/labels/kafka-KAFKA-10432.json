@@ -1,0 +1,28 @@
+{
+  "id": "kafka:KAFKA-10432",
+  "project": "kafka",
+  "issue_key": "KAFKA-10432",
+  "annotator": "claude-opus-5",
+  "pass": 1,
+  "file_roles": [
+    {
+      "path": "core/src/main/scala/kafka/log/LogSegment.scala",
+      "role": "causal",
+      "evidence": "One comparison changes, 'if (batch.partitionLeaderEpoch > 0 && cache.latestEpoch.forall(batch.partitionLeaderEpoch > _))' becomes '>= 0'. Epoch 0 is a valid epoch, so recovery silently dropped it from the cache. The commit states the same reading, that the check 'was likely intended to prevent negative epochs from being applied or there was an assumption that epochs started at 1'."
+    }
+  ],
+  "symptom_location": {
+    "file": null,
+    "function": null,
+    "determinable": false
+  },
+  "log_location": {
+    "file": null,
+    "function": null,
+    "determinable": false
+  },
+  "relation": "state-producer",
+  "rationale": "There is no exception and no application log. The only output is a system-test assertion, 'AssertionError: leader epochs for output-topic-1 didn't match', comparing three caches where one broker holds '{0: 9393L, ...}' and two hold '{0: 0L, ...}'. That assertion lives in the test harness, not in the source tree, so neither a symptom nor a log site can be placed. The wrong entry is written during recovery and only shows up later when caches are compared or an offset is stamped on a fetch.",
+  "confidence": "high",
+  "notes": "The reporter located the defect before filing, linking the exact line on GitHub and quoting the condition, and even names the commit that introduced it. Like KAFKA-10063, this instance is easy to localize for reasons unrelated to any log, and these should be counted so the headline accuracy is not read as evidence that logs point at code. REPORT-NAMES-FIX: the reporter links the exact GitHub line, quotes the condition and names the commit that introduced it."
+}

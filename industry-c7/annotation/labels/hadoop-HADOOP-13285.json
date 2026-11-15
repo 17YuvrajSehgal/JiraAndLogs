@@ -1,0 +1,28 @@
+{
+  "id": "hadoop:HADOOP-13285",
+  "project": "hadoop",
+  "issue_key": "HADOOP-13285",
+  "annotator": "claude-opus-5",
+  "pass": 1,
+  "file_roles": [
+    {
+      "path": "hadoop-common-project/hadoop-common/src/main/java/org/apache/hadoop/ipc/DecayRpcScheduler.java",
+      "role": "causal",
+      "evidence": "'return om.writeValueAsString(callCounts)' becomes 'return om.writeValueAsString(getDecayedCallCounts())', with a new private helper that keeps only 'entry.getValue().get(0).get()' per user. Serializing the whole map is what the reporter names as the root cause, and the method that did it is the one corrected."
+    }
+  ],
+  "symptom_location": {
+    "file": "hadoop-common-project/hadoop-common/src/main/java/org/apache/hadoop/ipc/DecayRpcScheduler.java",
+    "function": "getCallVolumeSummary",
+    "determinable": true
+  },
+  "log_location": {
+    "file": null,
+    "function": null,
+    "determinable": false
+  },
+  "relation": "same-location",
+  "rationale": "The reporter states the mechanism outright, 'The root cause is Jackson ObjectMapper simply serialize all the content of the callCounts map which contains both non-decayed and decayed counter after HADOOP-13197', and the diff changes exactly that call. The before and after JMX values given in the report, '{\"hbase\":1,\"mapred\":1}' against '{\"user_x\":[1,2]}', show the list of two counters leaking into the attribute, which the new helper flattens back to the decayed one. Defect and visible effect are the same method.",
+  "confidence": "high",
+  "notes": "The evidence in the report is a JMX attribute value, not a log line or a stack trace, so log_location is recorded as not determinable. The instance has no runtime log at all, which is worth counting separately from instances whose logs merely point elsewhere."
+}

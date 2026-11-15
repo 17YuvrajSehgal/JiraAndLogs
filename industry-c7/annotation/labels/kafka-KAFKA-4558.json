@@ -1,0 +1,28 @@
+{
+  "id": "kafka:KAFKA-4558",
+  "project": "kafka",
+  "issue_key": "KAFKA-4558",
+  "annotator": "claude-opus-5",
+  "pass": 1,
+  "file_roles": [
+    {
+      "path": "core/src/main/scala/kafka/tools/JmxTool.scala",
+      "role": "preventive",
+      "evidence": "A single connect, 'val jmxc = JMXConnectorFactory.connect(url, null)', becomes a retry loop of ten attempts with 'Thread.sleep(500)' between them and 'sys.exit(1)' if none succeed. The added comment says the tool 'only works reliably if the JmxServer is fully initialized prior to invoking the tool'. A retry around a connection that may not be ready yet, not a correction of the race the issue describes."
+    }
+  ],
+  "symptom_location": {
+    "file": null,
+    "function": null,
+    "determinable": false
+  },
+  "log_location": {
+    "file": null,
+    "function": null,
+    "determinable": false
+  },
+  "relation": "unclear",
+  "rationale": "The report contains no trace, no error text and no log, only a description of a race, that 'the throttling test will fail if the producer in the produce-consume-validate loop starts up before the consumer is fully initialized'. The commit places the fix in the test framework, 'the consumer will be considered initialized in the ProduceConsumeValidate tests once its partitions have been assigned', and four of the five changed files are filtered out as tests. Nothing in the evidence points to a production file, so no symptom site or relation can be stated.",
+  "confidence": "high",
+  "notes": "The sole gold file is a retry loop in a command-line tool the system test calls to read the metric, and its own comment attributes the underlying problem to a different ticket, KAFKA-4620. The fix for the reported race is in excluded test code, so this instance joins KAFKA-12851, GEODE-352 and GEODE-440 as one where the gold set cannot hold a correct answer."
+}

@@ -1,0 +1,42 @@
+{
+ "id": "mariadb:MDEV-22867",
+ "project": "mariadb",
+ "issue_key": "MDEV-22867",
+ "annotator": "claude-sonnet-5-5",
+ "pass": 2,
+ "file_roles": [
+  {
+   "path": "storage/innobase/btr/btr0btr.cc",
+   "role": "causal",
+   "evidence": "btr_discard_only_page_on_level: 'if (index->table->instant)' became '|| index->must_avoid_clear_instant_add()' and the metadata record is now preserved; before it was discarded while a DROP COLUMN was in progress."
+  },
+  {
+   "path": "storage/innobase/btr/btr0cur.cc",
+   "role": "causal",
+   "evidence": "btr_cur_optimistic_delete_func and btr_cur_pessimistic_delete add '&& !index->must_avoid_clear_instant_add()' to the 'whole index becomes logically empty' test, so the metadata record is no longer removed by a concurrent DELETE."
+  },
+  {
+   "path": "storage/innobase/btr/btr0pcur.cc",
+   "role": "refactor",
+   "evidence": "ut_ad(index->table->instant) disabled with '#if 0' and replaced by ut_ad(index->is_instant()); debug assertion relaxed to fit the fix, no runtime logic."
+  },
+  {
+   "path": "storage/innobase/include/dict0mem.h",
+   "role": "causal",
+   "evidence": "Adds dict_index_t::must_avoid_clear_instant_add(), returning true if any later index has to_be_dropped; this predicate is the new rule that prevents clear_instant_add() during NOCOPY DROP COLUMN."
+  }
+ ],
+ "symptom_location": {
+  "file": "storage/innobase/handler/handler0alter.cc",
+  "function": "dict_index_t::instant_add_field",
+  "determinable": true
+ },
+ "log_location": {
+  "file": "storage/innobase/handler/handler0alter.cc",
+  "function": "dict_index_t::instant_add_field",
+  "determinable": true
+ },
+ "relation": "concurrency",
+ "rationale": "The assertion fails because a concurrent DELETE emptied the table and cleared the instant-ADD metadata while ALTER ... DROP COLUMN ran. The fix stops the delete and page-discard paths in the btr code from removing the metadata record when an index is being dropped. The assertion site is in handler0alter.cc, outside the gold set, so symptom and cause sit in different layers. The helper in dict0mem.h is new code rather than corrected code, so its causal label is less certain.",
+ "confidence": "medium"
+}

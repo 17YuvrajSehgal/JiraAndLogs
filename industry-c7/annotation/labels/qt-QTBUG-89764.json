@@ -1,0 +1,33 @@
+{
+  "id": "qt:QTBUG-89764",
+  "project": "qt",
+  "issue_key": "QTBUG-89764",
+  "annotator": "claude-opus-5",
+  "pass": 1,
+  "file_roles": [
+    {
+      "path": "src/gui/rhi/qrhivulkan.cpp",
+      "role": "causal",
+      "evidence": "activateTextureRenderTarget did nothing but stamp a frame slot on the depth-stencil renderbuffer, 'if (rtD->m_desc.depthStencilBuffer()) QRHI_RES(QVkRenderBuffer, rtD->m_desc.depthStencilBuffer())->lastActiveFrameSlot = currentFrameSlot;'. The fix emits a real barrier there, 'depthStencilExplicitBarrier(cbD, rbD);', with the new function in the same file recording 'barrier.srcAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;' against the early and late fragment-test stages. The added comment states the gap, 'We specify no explicit VkSubpassDependency for an offscreen render target, meaning we need an explicit barrier for the depth-stencil buffer to avoid a write-after-write hazard (as the implicit one is not sufficient).'"
+    },
+    {
+      "path": "src/gui/rhi/qrhivulkan_p_p.h",
+      "role": "refactor",
+      "evidence": "One declaration line beside the existing barrier helpers, 'void depthStencilExplicitBarrier(QVkCommandBuffer *cbD, QVkRenderBuffer *rbD);'. No logic and no inline body."
+    }
+  ],
+  "symptom_location": {
+    "file": "src/gui/rhi/qrhivulkan.cpp",
+    "function": null,
+    "determinable": true
+  },
+  "log_location": {
+    "file": null,
+    "function": null,
+    "determinable": false
+  },
+  "relation": "same-location",
+  "rationale": "The validation layer flags the layout transition that Qt records when it begins the offscreen pass, 'vkCmdBeginRenderPass: Hazard WRITE_AFTER_WRITE in subpass 0 for attachment 1 image layout transition (old_layout: VK_IMAGE_LAYOUT_UNDEFINED, new_layout: VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL)', against a prior write from the previous pass, 'prior_usage: SYNC_LATE_FRAGMENT_TESTS_DEPTH_STENCIL_ATTACHMENT_WRITE, write_barriers: 0, command: vkCmdEndRenderPass'. 'write_barriers: 0' is the defect stated numerically, and the missing barrier is inserted in the same file and the same code path that records the flagged command. createOffscreenRenderPass only has its comment corrected, 'leave it to the resource tracking and activateTextureRenderTarget() to generate barriers', confirming that the renderpass description was deliberately left unsynchronised and the tracker simply never covered this resource.",
+  "confidence": "high",
+  "notes": "The pasted message is produced by the external Vulkan validation layer, not by Qt code, so log_location.determinable = false; the 'vkDebug:' prefix shows only that some Qt debug callback relayed it, and the packet does not show that callback. There is no stack trace and no Qt function name anywhere in the report, so the symptom file is placed from the command named in the message plus the diff, and the enclosing function (beginPass, per the commit message) is not visible in any hunk, so it is left null per the recorded convention. Two gold files, and one of them is a single declaration line."
+}

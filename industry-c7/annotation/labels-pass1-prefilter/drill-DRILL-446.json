@@ -1,0 +1,27 @@
+{
+  "id": "drill:DRILL-446",
+  "project": "drill",
+  "issue_key": "DRILL-446",
+  "annotator": "claude-opus-5",
+  "pass": 1,
+  "file_roles": [
+    {
+      "path": "exec/java-exec/src/main/java/org/apache/drill/exec/store/easy/json/JSONRecordReader.java",
+      "role": "causal",
+      "evidence": "The fix adds 'if(readType == ReadType.ARRAY) { groupCount--; }' after the nested read returns. groupCount selects which vector the value is written into, so leaving it incremented for arrays is what made addValueToVector reach for a NullableVarCharVector where a RepeatedVarCharVector was required."
+    }
+  ],
+  "symptom_location": {
+    "file": "exec/java-exec/src/main/java/org/apache/drill/exec/store/easy/json/JSONRecordReader.java",
+    "function": "addValueToVector",
+    "determinable": true
+  },
+  "log_location": {
+    "file": "exec/java-exec/src/main/java/org/apache/drill/exec/store/easy/json/JSONRecordReader.java",
+    "function": "addValueToVector",
+    "determinable": true
+  },
+  "relation": "same-location",
+  "rationale": "Every frame of the reported ClassCastException is in this one file, from 'JSONRecordReader$ReadType.addValueToVector(JSONRecordReader.java:459)' down to 'JSONRecordReader.next(JSONRecordReader.java:134)', and the fix lands in the same read loop. Cause and symptom are therefore the same location. The commit message, 'Fix Json Array parsing', does not spell out the mechanism, so the link from the group count to the vector type is read off the code.",
+  "confidence": "medium"
+}

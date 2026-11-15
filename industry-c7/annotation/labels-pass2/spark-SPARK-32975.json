@@ -1,0 +1,33 @@
+{
+ "id": "spark:SPARK-32975",
+ "project": "spark",
+ "issue_key": "SPARK-32975",
+ "annotator": "claude-sonnet-5-5",
+ "pass": 2,
+ "file_roles": [
+  {
+   "path": "resource-managers/kubernetes/core/src/main/scala/org/apache/spark/deploy/k8s/Config.scala",
+   "role": "refactor",
+   "evidence": "Adds the config KUBERNETES_ALLOCATION_DRIVER_READINESS_TIMEOUT (default 1s) used by the new wait; a knob needed by the real change."
+  },
+  {
+   "path": "resource-managers/kubernetes/core/src/main/scala/org/apache/spark/scheduler/cluster/k8s/ExecutorPodsAllocator.scala",
+   "role": "causal",
+   "evidence": "start() now waits with waitUntilReady(driverPodReadinessTimeout) on the driver pod before subscribing to snapshots; follow-up commit fixes a None.get in that new code."
+  }
+ ],
+ "symptom_location": {
+  "file": "core CoarseGrainedExecutorBackend.run",
+  "function": null,
+  "determinable": false
+ },
+ "log_location": {
+  "file": "org.apache.spark.executor.CoarseGrainedExecutorBackend",
+  "function": null,
+  "determinable": false
+ },
+ "relation": "concurrency",
+ "rationale": "Executors started before the driver service was resolvable by DNS (UnknownHostException). The allocator owned the start order, and the diff adds the missing wait there.",
+ "confidence": "medium",
+ "notes": "The follow-up None.get fix is a bug in the new code, not in the original failure."
+}

@@ -1,0 +1,53 @@
+{
+  "id": "ignite:IGNITE-5204",
+  "project": "ignite",
+  "issue_key": "IGNITE-5204",
+  "annotator": "claude-opus-5",
+  "pass": 1,
+  "file_roles": [
+    {
+      "path": "modules/indexing/src/main/java/org/apache/ignite/internal/processors/query/h2/database/InlineIndexHelper.java",
+      "role": "causal",
+      "evidence": "'size = (short)(s.length | 0x8000)' becomes 'size = (short)(s == null ? 0 : s.length | 0x8000)', directly after 's = trimUTF8(s, maxSize - 3)'. The very next lines already handled 's == null', so the code dereferenced a value it knew could be null. trimUTF8 returns null when a multibyte character cannot be cut to fit, which is the reporter's '草' in an indexed field, and the commit is titled 'Fixed NPE on certain data with index inlining'."
+    },
+    {
+      "path": "modules/indexing/src/main/java/org/apache/ignite/internal/processors/query/h2/IgniteH2Indexing.java",
+      "role": "unclear",
+      "evidence": "calculateQueryPartitions stops calling affinity directly on the raw parameter and delegates to a new bindPartitionInfoParameter, which converts first, 'Object param = H2Utils.convert(params[partInfo.paramIdx()], desc, partInfo.dataType()); return kernalContext().affinity().partition(partInfo.cacheName(), param)'. This is a genuine defect being corrected, but it is the second commit's defect, bound query parameters whose type differs from the key type, and the report's queries use string literals rather than bound parameters."
+    },
+    {
+      "path": "modules/indexing/src/main/java/org/apache/ignite/internal/processors/cache/query/CacheQueryPartitionInfo.java",
+      "role": "refactor",
+      "evidence": "Two fields are added, tableName and dataType, with accessors, the existing fields become final, and hashCode and equals are extended to cover them. It carries the type information the second commit's fix needs; no decision logic lives here."
+    },
+    {
+      "path": "modules/indexing/src/main/java/org/apache/ignite/internal/processors/query/h2/sql/GridSqlQuerySplitter.java",
+      "role": "refactor",
+      "evidence": "Only the two constructor calls change to match the widened signature, 'new CacheQueryPartitionInfo(-1, tbl.cacheName(), tbl.getName(), column.column().getType(), param.index())' and the constant form with nulls. A call-site adaptation forced by the change in CacheQueryPartitionInfo."
+    },
+    {
+      "path": "modules/indexing/src/main/java/org/apache/ignite/internal/processors/query/h2/DmlStatementsProcessor.java",
+      "role": "refactor",
+      "evidence": "The conversion block is deleted and replaced by 'return H2Utils.convert(val, desc, type);'. The removed lines reappear unchanged in H2Utils, so this is a move, not a behaviour change."
+    },
+    {
+      "path": "modules/indexing/src/main/java/org/apache/ignite/internal/processors/query/h2/H2Utils.java",
+      "role": "refactor",
+      "evidence": "Receives the moved method as 'public static Object convert(Object val, GridH2RowDescriptor desc, int type)', with the same body plus a leading 'if (val == null) return null;'. It exists so the partition path can reuse what DML already did."
+    }
+  ],
+  "symptom_location": {
+    "file": "modules/indexing/src/main/java/org/apache/ignite/internal/processors/query/h2/database/InlineIndexHelper.java",
+    "function": null,
+    "determinable": true
+  },
+  "log_location": {
+    "file": null,
+    "function": null,
+    "determinable": false
+  },
+  "relation": "same-location",
+  "rationale": "The report carries no trace and no log, only prose, 'there throws an exception by the H2 with a code 5000' and 'the whole ignite cache node will halt', plus the reporter's own guess that it relates to hash computing on the unicode character. The one change that matches the reported data is the null guard in InlineIndexHelper, where the faulty dereference and the failure are the same statement. The enclosing method is not named in the hunk, so only the file is recorded.",
+  "confidence": "medium",
+  "notes": "The gold set is the union of two commits closed under one key, and they fix different defects. 0d6fb1ad73e8 is the NPE on inlined index data, which matches the report. 99713feea764 fixes partition calculation for bound parameters whose type differs from the key type, and the five remaining gold files belong to it; only IgniteH2Indexing carries its behaviour change, the rest are plumbing and a code move. Whether that second defect produced either of the reporter's scenarios cannot be settled from the packet, since both of the reporter's queries use literals; the test added with that commit would settle it. So five of six gold files are not tied to the reported failure. REPORT-NAMES-FIX: the reporter guesses the area, 'I think the issue should relate to hash computing on the unicode character', which is the right area but names no file."
+}

@@ -1,0 +1,28 @@
+{
+  "id": "drill:DRILL-4884",
+  "project": "drill",
+  "issue_key": "DRILL-4884",
+  "annotator": "claude-opus-5",
+  "pass": 1,
+  "file_roles": [
+    {
+      "path": "exec/java-exec/src/main/java/org/apache/drill/exec/physical/impl/limit/LimitRecordBatch.java",
+      "role": "causal",
+      "evidence": "The loop counter was a char: 'for(char i = (char) offset; i < fetch; svIndex++, i++)' becomes 'for(int i = offset; i < fetch; svIndex++, i++) { outgoingSv.setIndex(svIndex, (char) i); }'. A char wraps from 65535 to 0, so with fetch == 65536 the condition never fails and svIndex runs past the buffer."
+    }
+  ],
+  "symptom_location": {
+    "file": "exec/java-exec/src/main/java/org/apache/drill/exec/physical/impl/limit/LimitRecordBatch.java",
+    "function": "limitWithNoSV",
+    "determinable": true
+  },
+  "log_location": {
+    "file": "exec/java-exec/src/main/java/org/apache/drill/exec/physical/impl/limit/LimitRecordBatch.java",
+    "function": "limitWithNoSV",
+    "determinable": true
+  },
+  "relation": "same-location",
+  "rationale": "The trace reaches the buffer check through 'LimitRecordBatch.limitWithNoSV(LimitRecordBatch.java:167)', which is the setIndex call the fix rewrites, so the overflow and the wrapped counter are the same statement. The reporter had already diagnosed it, noting in an inline comment that 'param i can be increased from 65535 to 65536, then be limited to 0 by the char type limitation, the loop abnormally continues'. The exception text, 'index: 131072, length: 2 (expected: range(0, 131072))', is two bytes per index past a 65536-entry vector, which matches.",
+  "confidence": "high",
+  "notes": "The reporter makes a second suggestion that the fix does not act on, that IteratorValidatorBatchIterator should reject 65536 rather than allow it. That file is not in the gold set, so the part of the report pointing at a second file leads nowhere. REPORT-NAMES-FIX: the reporter's inline comment states the wrapping mechanism and the loop that must be corrected."
+}

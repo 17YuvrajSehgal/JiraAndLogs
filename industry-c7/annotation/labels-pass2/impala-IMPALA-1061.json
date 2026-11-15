@@ -1,0 +1,63 @@
+{
+ "id": "impala:IMPALA-1061",
+ "project": "impala",
+ "issue_key": "IMPALA-1061",
+ "annotator": "claude-sonnet-5-5",
+ "pass": 2,
+ "file_roles": [
+  {
+   "path": "fe/src/main/java/com/cloudera/impala/analysis/Analyzer.java",
+   "role": "causal",
+   "evidence": "registerBaseTableRef/registerInlineViewRef replaced by registerTableRef registering the unqualified implicit alias plus ambiguousAliases_; registerColumnRef/getDescriptor rewritten to resolve via these aliases."
+  },
+  {
+   "path": "fe/src/main/java/com/cloudera/impala/analysis/BaseTableRef.java",
+   "role": "refactor",
+   "evidence": "name_/getAlias()/getAliasAsName() moved up to TableRef and createTupleDescriptor added; restructuring to feed the shared registerTableRef."
+  },
+  {
+   "path": "fe/src/main/java/com/cloudera/impala/analysis/InlineViewRef.java",
+   "role": "refactor",
+   "evidence": "Constructor now takes TableName, createTupleDescriptor takes Analyzer, adds createDummyTable(); adaptation to the new registration path."
+  },
+  {
+   "path": "fe/src/main/java/com/cloudera/impala/analysis/SelectStmt.java",
+   "role": "symptom-handling",
+   "evidence": "expandStar error message changed from 'unknown table: X' to 'unknown table alias 'X''; diagnostic change at the site that reported the failure."
+  },
+  {
+   "path": "fe/src/main/java/com/cloudera/impala/analysis/TableRef.java",
+   "role": "refactor",
+   "evidence": "Hosts name_, hasExplicitAlias(), getAlias(), getAliasAsName() moved from subclasses; supporting state for the Analyzer change."
+  },
+  {
+   "path": "fe/src/main/java/com/cloudera/impala/analysis/TupleDescriptor.java",
+   "role": "refactor",
+   "evidence": "Adds hasExplicitAlias_ and setAlias(alias, isExplicit); supporting state used by Analyzer."
+  },
+  {
+   "path": "fe/src/main/java/com/cloudera/impala/analysis/ViewRef.java",
+   "role": "causal",
+   "evidence": "ViewRef constructors passed origTblRef.getAlias() (full name) as an explicit alias and no TableName; diff passes name_ and alias_ separately and overrides createDummyTable, so views get implicit aliases."
+  },
+  {
+   "path": "fe/src/main/java/com/cloudera/impala/catalog/InlineView.java",
+   "role": "refactor",
+   "evidence": "Adds InlineView(Table) constructor used by ViewRef.createDummyTable; plumbing."
+  }
+ ],
+ "symptom_location": {
+  "file": "fe/src/main/java/com/cloudera/impala/analysis/Analyzer.java",
+  "function": "registerColumnRef",
+  "determinable": true
+ },
+ "log_location": {
+  "file": "fe/src/main/java/com/cloudera/impala/analysis/Analyzer.java",
+  "function": "registerColumnRef",
+  "determinable": true
+ },
+ "relation": "same-location",
+ "rationale": "The reported errors 'unknown table: alltypes' and 'unknown table alias' come from alias lookup when only the unqualified name is used with a star or a view. Analyzer is rewritten to register and resolve implicit aliases, and ViewRef stops treating the view name as an explicit alias. The other files carry the supporting restructuring.",
+ "confidence": "medium",
+ "notes": "ViewRef labelled causal because its old constructors lost the implicit-alias information for views (the second half of the report); other supporting files are refactor."
+}

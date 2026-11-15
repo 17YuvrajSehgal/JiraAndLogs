@@ -1,0 +1,33 @@
+{
+  "id": "mariadb:MDEV-15408",
+  "project": "mariadb",
+  "issue_key": "MDEV-15408",
+  "annotator": "claude-opus-5",
+  "pass": 1,
+  "file_roles": [
+    {
+      "path": "sql/handler.cc",
+      "role": "causal",
+      "evidence": "check_sys_fields is rewritten to work out which type the user was reaching for before complaining. New helpers are added, 'is_versioning_timestamp', 'is_some_bigint', 'is_versioning_bigint', and two message paths, 'require_timestamp' asking for 'TIMESTAMP(6)' and 'require_bigint' asking for 'BIGINT(20) UNSIGNED'. The message the reporter saw is produced here."
+    },
+    {
+      "path": "sql/handler.h",
+      "role": "refactor",
+      "evidence": "Signature change only, check_sys_fields gaining the 'bool can_native' parameter the new logic needs."
+    }
+  ],
+  "symptom_location": {
+    "file": "sql/handler.cc",
+    "function": "check_sys_fields",
+    "determinable": true
+  },
+  "log_location": {
+    "file": "sql/handler.cc",
+    "function": "check_sys_fields",
+    "determinable": true
+  },
+  "relation": "same-location",
+  "rationale": "Nothing failed. The server correctly rejected a system-versioned table whose row_start was a signed BIGINT, and the complaint is that the message sent the reporter the wrong way: 'It took me a while to figure why it wasn't accepting my explicitly defined BIGINT and insisting on TIMESTAMP instead; it turns out that I've actually missed UNSIGNED.' The message and the improvement are the same function.",
+  "confidence": "high",
+  "notes": "A second instance in this sample with no failure in it, after MDEV-13712, and of a slightly different kind: MDEV-13712 was a typo, this is correct behaviour with an unhelpful diagnostic. The fix is entirely about guessing user intent, as the commit says, 'Improve diagnostics. Try to guess what type user tried to type.' The quoted error text is a literal in the gold file, so a string match finds it at once. Instances of this shape are easy for reasons unrelated to log-guided localization and should be counted when interpreting the headline accuracy."
+}

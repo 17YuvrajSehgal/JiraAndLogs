@@ -1,0 +1,27 @@
+{
+ "id": "beam:BEAM-4066",
+ "project": "beam",
+ "issue_key": "BEAM-4066",
+ "annotator": "claude-sonnet-5-5",
+ "pass": 2,
+ "file_roles": [
+  {
+   "path": "sdks/java/nexmark/src/main/java/org/apache/beam/sdk/nexmark/NexmarkLauncher.java",
+   "role": "causal",
+   "evidence": "Anonymous DoFn classes inside NexmarkLauncher replaced by static nested PubsubMessageEventDoFn and EventPubsubMessageDoFn; anonymous classes capture the outer NexmarkLauncher, which is not Serializable."
+  }
+ ],
+ "symptom_location": {
+  "file": "sdks/java/nexmark/src/main/java/org/apache/beam/sdk/nexmark/NexmarkLauncher.java",
+  "function": "queryPubsub/sinkEventsToPubsub",
+  "determinable": true
+ },
+ "log_location": {
+  "file": null,
+  "function": null,
+  "determinable": false
+ },
+ "relation": "same-location",
+ "rationale": "The report is NotSerializableException for NexmarkLauncher. The diff replaces anonymous inner DoFns (which capture the outer instance) with static nested classes, removing the capture. The wrong construct was in this file.",
+ "confidence": "high"
+}

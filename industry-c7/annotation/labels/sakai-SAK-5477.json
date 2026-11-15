@@ -1,0 +1,33 @@
+{
+  "id": "sakai:SAK-5477",
+  "project": "sakai",
+  "issue_key": "SAK-5477",
+  "annotator": "claude-opus-5",
+  "pass": 1,
+  "file_roles": [
+    {
+      "path": "samigo/samigo-app/src/java/org/sakaiproject/tool/assessment/ui/bean/delivery/DeliveryBeanie.java",
+      "role": "causal",
+      "evidence": "The missing property named in the report is added here: 'public String getFeedbackDateString() { String dateString = \"\"; if (feedbackDate== null) { return dateString; } try { TimeUtil tu = new TimeUtil(); dateString = tu.getDisplayDateTime(displayFormat, feedbackDate); }'. The report says the bean has no such property, 'i looked in DeliveryBeanie.java and there is no property called feedbackDateString', and the thrown exception agrees, 'Error getting property 'feedbackDateString' from bean of type org.sakaiproject.tool.assessment.ui.bean.delivery.DeliveryBeanie'. The bean owns its own property set, and nothing else was changed to make the page stop asking for it."
+    },
+    {
+      "path": "samigo/samigo-app/src/java/org/sakaiproject/tool/assessment/ui/bean/delivery/ItemContentsBean.java",
+      "role": "refactor",
+      "evidence": "The entire change to this file is one logging call in a catch block, 'log.log(\"**duration recorded is not an integer value=\"+e.getMessage())' becoming 'log.info(\"**duration recorded is not an integer value=\"+e.getMessage())'. It is in setDurationIsOver handling, has nothing to do with feedbackDateString, and changes no behaviour the report describes."
+    }
+  ],
+  "symptom_location": {
+    "file": "samigo/samigo-app/src/java/org/sakaiproject/tool/assessment/ui/bean/delivery/DeliveryBeanie.java",
+    "function": null,
+    "determinable": true
+  },
+  "log_location": {
+    "file": null,
+    "function": null,
+    "determinable": false
+  },
+  "relation": "same-location",
+  "rationale": "The failure is a JSF property resolution that found nothing, 'javax.faces.el.PropertyNotFoundException: Error getting property 'feedbackDateString' from bean of type ... DeliveryBeanie', and the fix adds exactly that getter to exactly that bean. Symptom and cause are therefore the same file: the page asked the bean for a property the bean did not expose. The second gold file only changes 'log.log' to 'log.info' in an unrelated catch block.",
+  "confidence": "high",
+  "notes": "REPORT-NAMES-FIX: the reporter names the file, the missing property and the cause, 'i looked in DeliveryBeanie.java and there is no property called feedbackDateString. maybe that's why?'. A localizer that matches the quoted property name against the source reaches the answer without any reasoning about the failure. The gold set contains a file whose whole change is cosmetic: ItemContentsBean.java changes only a logging method name. Every frame in the pasted trace belongs to Tomcat or JSF, 'org.apache.jasper.servlet.JspServletWrapper.service(JspServletWrapper.java:375)' and 'org.apache.jasper.runtime.PageContextImpl.handlePageException(PageContextImpl.java:791)', and the JSP holding the expression is not named, so the only project-owned name in the evidence is the bean type itself; that is what symptom_location records. There is no project log line at all, and the reporter says so, 'I tried looking at the log for qa1-us but it's impossible to read it'. The fix ships with no regression test: the packet records two changed files and both are non-test source."
+}

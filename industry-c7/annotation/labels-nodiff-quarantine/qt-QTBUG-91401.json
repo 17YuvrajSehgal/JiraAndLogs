@@ -1,0 +1,33 @@
+{
+  "id": "qt:QTBUG-91401",
+  "project": "qt",
+  "issue_key": "QTBUG-91401",
+  "annotator": "claude-opus-5",
+  "pass": 1,
+  "file_roles": [
+    {
+      "path": "src/gui/painting/qicc.cpp",
+      "role": "causal",
+      "evidence": "The rejected input is named in the report's own log line, 'qt.gui.icc: Unsupported ICC profile class 70727472'. 0x70727472 is the four-character code 'prtr', a profile device class defined by the ICC specification, so a conformant profile is being refused. The 'qt.gui.icc' logging category places that refusal in this file, which is the only ICC-parsing file in the gold set, and the report's title states the outcome, 'Error loading PNG: Unsupported ICC profile class 70727472'."
+    },
+    {
+      "path": "src/gui/image/qpnghandler.cpp",
+      "role": "unclear",
+      "evidence": "This file is the detection site, named in its own message, 'qt.gui.imageio: QPngHandler: Failed to parse ICC profile', repeated sixteen times in the pasted log. What its change did cannot be read from the packet: tightening or de-duplicating that warning would be symptom-handling, an adaptation to a changed qicc signature would be refactor, and a second accept-list of its own would be causal. The packet shows '(no diff retrieved)' for it, so none of the three can be ruled out."
+    }
+  ],
+  "symptom_location": {
+    "file": "src/gui/image/qpnghandler.cpp",
+    "function": null,
+    "determinable": true
+  },
+  "log_location": {
+    "file": "src/gui/painting/qicc.cpp",
+    "function": null,
+    "determinable": true
+  },
+  "relation": "caller-callee",
+  "rationale": "The two pasted lines pair an inner refusal with an outer failure: 'qt.gui.icc: Unsupported ICC profile class 70727472' is emitted while parsing the profile, and 'qt.gui.imageio: QPngHandler: Failed to parse ICC profile' is the PNG handler reporting that the call it made failed. 0x70727472 is 'prtr', a legal ICC device class, so the wrong logic is the accept-list in the ICC parser and the PNG handler is the caller that surfaced it. No diff was rendered for either file, so the PNG handler's own role cannot be settled.",
+  "confidence": "medium",
+  "notes": "The packet renders this file's diff as '(no diff retrieved)', so no hunk could be cited for any gold file in this instance. The causal call rests on the report alone: the logging category 'qt.gui.icc' places the message in qicc.cpp, and 0x70727472 decodes to 'prtr', a class the ICC specification defines, so refusing it is wrong logic in the file that owns ICC parsing. A logger tag places the emitting file here in the same way CONVENTIONS records for KAFKA-6051. The second gold file is left unclear rather than guessed; its diff hunk would settle it. No function name is given for either location because the packet shows no code. The gold file does not appear in the report at a function level at all, only as a category prefix and a class-name prefix in two warning lines."
+}

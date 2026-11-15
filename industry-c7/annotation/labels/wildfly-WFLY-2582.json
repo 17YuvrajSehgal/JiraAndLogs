@@ -1,0 +1,28 @@
+{
+  "id": "wildfly:WFLY-2582",
+  "project": "wildfly",
+  "issue_key": "WFLY-2582",
+  "annotator": "claude-opus-5",
+  "pass": 1,
+  "file_roles": [
+    {
+      "path": "webservices/server-integration/src/main/java/org/jboss/as/webservices/deployers/deployment/AbstractDeploymentModelBuilder.java",
+      "role": "causal",
+      "evidence": "The constructor resolved the SPI provider through whatever class loader happened to be in context, 'final SPIProvider spiProvider = SPIProviderResolver.getInstance().getProvider(); this.deploymentModelFactory = spiProvider.getSPI(DeploymentModelFactory.class);', and the fix names the loader explicitly, 'final ClassLoader cl = AbstractDeploymentModelBuilder.class.getClassLoader(); final SPIProvider spiProvider = SPIProviderResolver.getInstance(cl).getProvider(); this.deploymentModelFactory = spiProvider.getSPI(DeploymentModelFactory.class, cl);'. The trace shows the ambient loader being the wrong one, 'ClassNotFoundException: org.jboss.ws.common.spi.DefaultSPIProviderResolver from [Module \"org.jboss.as.controller:main\" ...]', and this class is the one that failed to say which module its own SPI lives in."
+    }
+  ],
+  "symptom_location": {
+    "file": "webservices/server-integration/src/main/java/org/jboss/as/webservices/deployers/deployment/AbstractDeploymentModelBuilder.java",
+    "function": "AbstractDeploymentModelBuilder.<init>",
+    "determinable": true
+  },
+  "log_location": {
+    "file": null,
+    "function": null,
+    "determinable": false
+  },
+  "relation": "same-location",
+  "rationale": "The deepest WildFly-owned frame in the trace is the line the diff changes, 'at org.jboss.as.webservices.deployers.deployment.AbstractDeploymentModelBuilder.<init>(AbstractDeploymentModelBuilder.java:78)', which sits inside the hunk running from line 73. Everything below it is other projects: org.jboss.wsf.spi and org.jboss.ws.api resolving the service, then jboss-modules failing the load. The root cause the trace states is that the lookup ran under the controller module, 'from [Module \"org.jboss.as.controller:main\" from local module loader @3a6e15 ...]', because XTS boot called in on a controller thread, 'at org.jboss.as.xts.XTSSubsystemAdd.performBoottime(XTSSubsystemAdd.java:197)'; pinning the loader to the webservices class removes that dependence.",
+  "confidence": "high",
+  "notes": "REPORT-NAMES-FIX: the trace's deepest project-owned frame is the exact line the commit edits, so the report hands over the file and the line. It also loosely prescribes the approach taken, 'This might possibly be solved either by introducing a new service and setting dependencies or by removing the need for such a setup in the code exercised by XTS', and the commit took the second option, 'Always use webservices module classloader for building up DeploymentModelBuilder'. The reporter's own diagnosis would mislead though, since it calls this 'yet another race condition (this time between the 2 subsystems boot)' and points at a prior change, 'The changes for https://issues.jboss.org/browse/WFLY-2565 revealed a problem', while the fix is not a service dependency and touches neither XTS nor subsystem ordering. A localizer following the narrative looks at XTSSubsystemAdd; one following the trace is right. The failing log line is tagged with a logging category rather than a class, '[org.jboss.as.controller.management-operation]', and the packet does not show which controller class emits JBAS014612, so log_location.determinable = false. One file changed, no regression test, and the ClassNotFoundException itself is thrown entirely inside third-party modules."
+}

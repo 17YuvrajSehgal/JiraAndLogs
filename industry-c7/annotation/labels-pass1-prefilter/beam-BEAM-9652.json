@@ -1,0 +1,33 @@
+{
+  "id": "beam:BEAM-9652",
+  "project": "beam",
+  "issue_key": "BEAM-9652",
+  "annotator": "claude-opus-5",
+  "pass": 1,
+  "file_roles": [
+    {
+      "path": "sdks/java/io/google-cloud-platform/src/main/java/org/apache/beam/sdk/io/gcp/bigquery/BatchLoads.java",
+      "role": "causal",
+      "evidence": "writeTempTables returned its PCollection with no coder attached; the fix appends '.setCoder(KvCoder.of(tableDestinationCoder, StringUtf8Coder.of()))' to its return value, and the two call sites stop hand-building a coder, one becoming '.setCoder(KvCoder.of(VoidCoder.of(), tempTables.getCoder()))'. Leaving the output coder to inference is what produced AvroCoder of java.lang.Object."
+    },
+    {
+      "path": "sdks/java/io/google-cloud-platform/src/main/java/org/apache/beam/sdk/io/gcp/bigquery/ReifyAsIterable.java",
+      "role": "causal",
+      "evidence": "The transform also failed to set its own output coder; the fix adds '.setCoder(IterableCoder.of(input.getCoder()))' and the import for IterableCoder. Previously the caller in BatchLoads patched this up from outside, which is why the caller's '.setCoder(IterableCoder.of(...))' line is deleted in the same commit."
+    }
+  ],
+  "symptom_location": {
+    "file": "sdks/java/core/src/main/java/org/apache/beam/sdk/coders/KvCoder.java",
+    "function": "registerByteSizeObserver",
+    "determinable": true
+  },
+  "log_location": {
+    "file": "sdks/java/core/src/main/java/org/apache/beam/sdk/coders/KvCoder.java",
+    "function": "registerByteSizeObserver",
+    "determinable": true
+  },
+  "relation": "state-producer",
+  "rationale": "The ClassCastException is thrown at 'KvCoder.registerByteSizeObserver(KvCoder.java:36)', a core SDK file that neither fix commit touches. The wrong coder was attached much earlier, where the reporter shows an inferred 'AvroCoder' over 'java.lang.Object', and only fails when the runner later walks the elements. Both gold files are places where a coder should have been set and was not, so the bad state is produced in them and consumed at the symptom site.",
+  "confidence": "high",
+  "notes": "Good illustration for the paper: the only file named in the exception is not in the gold set, and both gold files are several transforms upstream of it."
+}

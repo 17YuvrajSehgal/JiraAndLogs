@@ -1,0 +1,27 @@
+{
+ "id": "qt:QTBUG-81604",
+ "project": "qt",
+ "issue_key": "QTBUG-81604",
+ "annotator": "claude-sonnet-5-5",
+ "pass": 2,
+ "file_roles": [
+  {
+   "path": "src/gui/image/qpnghandler.cpp",
+   "role": "causal",
+   "evidence": "QPNGImageWriter::writeImage now calls png_set_benign_errors(png_ptr, 1) (under PNG_BENIGN_ERRORS_SUPPORTED); before, a recoverable libpng 'known incorrect sRGB profile' error aborted the write and returned false."
+  }
+ ],
+ "symptom_location": {
+  "file": "src/gui/image/qpnghandler.cpp",
+  "function": "QPNGImageWriter::writeImage",
+  "determinable": true
+ },
+ "log_location": {
+  "file": "src/gui/image/qpnghandler.cpp",
+  "function": "qt_png_warning",
+  "determinable": true
+ },
+ "relation": "same-location",
+ "rationale": "The writer treated a benign libpng error as fatal. The fix changes the error mode in the writer, where the failure is returned. The error text itself comes from libpng, outside the repo.",
+ "confidence": "medium"
+}

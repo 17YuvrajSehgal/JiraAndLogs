@@ -1,0 +1,28 @@
+{
+  "id": "kafka:KAFKA-10063",
+  "project": "kafka",
+  "issue_key": "KAFKA-10063",
+  "annotator": "claude-opus-5",
+  "pass": 1,
+  "file_roles": [
+    {
+      "path": "core/src/main/scala/kafka/log/LogCleaner.scala",
+      "role": "causal",
+      "evidence": "Three gauges called max on a collection that can be empty, for example 'newGauge(\"max-clean-time-secs\", () => cleaners.iterator.map(_.lastStats.elapsedSecs).max.toInt)'. A helper replaces them, 'private def maxOverCleanerThreads(f: CleanerThread => Double): Int = cleaners.foldLeft(0.0d)((max, thread) => math.max(max, f(thread))).toInt', which has a defined value for an empty collection. This file owns both the gauges and the cleaners buffer that shutdown empties."
+    }
+  ],
+  "symptom_location": {
+    "file": "core/src/main/scala/kafka/log/LogCleaner.scala",
+    "function": null,
+    "determinable": true
+  },
+  "log_location": {
+    "file": "core/src/main/scala/kafka/log/LogCleaner.scala",
+    "function": null,
+    "determinable": true
+  },
+  "relation": "same-location",
+  "rationale": "The trace ends in 'kafka.log.LogCleaner.kafka$log$LogCleaner$$$anonfun$new$9(LogCleaner.scala:132)' with the message 'java.lang.UnsupportedOperationException: empty.max', and line 132 is the max-clean-time-secs gauge the diff rewrites. An empty cleaners buffer after shutdown is a legitimate state, so the defect is the gauge assuming it is never empty rather than anything shutdown does wrong. The failing frame is a synthetic lambda, so no method name is recorded.",
+  "confidence": "high",
+  "notes": "The reporter had already located the fix: the issue text quotes the exact gauge line before any fix existed. Instances where the report names the faulty code are worth counting separately, since they make localization easy for reasons that have nothing to do with the log. REPORT-NAMES-FIX: the issue text quotes the faulty gauge line verbatim before any fix existed."
+}

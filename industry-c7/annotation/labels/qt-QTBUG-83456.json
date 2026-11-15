@@ -1,0 +1,28 @@
+{
+  "id": "qt:QTBUG-83456",
+  "project": "qt",
+  "issue_key": "QTBUG-83456",
+  "annotator": "claude-opus-5",
+  "pass": 1,
+  "file_roles": [
+    {
+      "path": "src/corelib/io/qsettings.cpp",
+      "role": "causal",
+      "evidence": "In QConfFileSettingsPrivate::readIniFile the whole BOM detection block sat inside '#if QT_CONFIG(textcodec)', so a build without textcodec never ran 'dataPos = 3;' and fed the three BOM bytes to readIniLine as part of the first line. The fix moves the '#if' inward so the skip always happens, 'if (data.size() >= 3 && dd[0] == 0xef && dd[1] == 0xbb && dd[2] == 0xbf) { #if QT_CONFIG(textcodec) iniCodec = ... #else ok = false; #endif dataPos = 3; }'. The ini parser owns BOM handling and no other file changed."
+    }
+  ],
+  "symptom_location": {
+    "file": "src/corelib/io/qsettings.cpp",
+    "function": "QConfFileSettingsPrivate::readIniFile",
+    "determinable": true
+  },
+  "log_location": {
+    "file": null,
+    "function": null,
+    "determinable": false
+  },
+  "relation": "same-location",
+  "rationale": "The report shows 'qt.conf: UTF-8 Unicode (with BOM) text' and './qmake -query QT_INSTALL_PREFIX' returning the built-in prefix instead of the configured '/foo/bar', so the file parsed to nothing. The diff shows why: the BOM skip was compiled out entirely when textcodec is unavailable, which is exactly how qmake is built, as the commit says, 'qmake (that is built without textcodec support)'. The wrong preprocessor placement and the failed parse are in the same function.",
+  "confidence": "high",
+  "notes": "No log line exists; the report's evidence is qmake's command output, which under the conventions is not a log, so log_location.determinable = false. The user-visible surface is qmake's -query handling, whose file the packet does not show; symptom_location is set to the parse site that is visible. The fix ships with no regression test: one changed file, no test file."
+}

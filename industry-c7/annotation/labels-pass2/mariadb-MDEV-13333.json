@@ -1,0 +1,32 @@
+{
+ "id": "mariadb:MDEV-13333",
+ "project": "mariadb",
+ "issue_key": "MDEV-13333",
+ "annotator": "claude-sonnet-5-5",
+ "pass": 2,
+ "file_roles": [
+  {
+   "path": "storage/innobase/lock/lock0lock.cc",
+   "role": "causal",
+   "evidence": "'if (trx->lock.was_chosen_as_deadlock_victim)' became '... && wsrep_on_trx(trx)' in lock_table_enqueue_waiting, and 'if (c_lock)' became 'if (c_lock && wsrep_on_trx(trx))' in lock_table_create; Galera-only code was running without Galera."
+  },
+  {
+   "path": "storage/xtradb/lock/lock0lock.cc",
+   "role": "causal",
+   "evidence": "Same two wsrep_on_trx(trx) guards added in the XtraDB copy of lock_table_create and lock_table_enqueue_waiting."
+  }
+ ],
+ "symptom_location": {
+  "file": "storage/innobase/lock/lock0lock.cc",
+  "function": "lock_table_enqueue_waiting",
+  "determinable": true
+ },
+ "log_location": {
+  "file": null,
+  "function": null,
+  "determinable": false
+ },
+ "relation": "same-location",
+ "rationale": "A non-Galera server returned a false deadlock because Galera-specific victim handling ran unconditionally. The diff adds wsrep_on_trx() to the conditions that decide DB_DEADLOCK and lock list placement, and the commit message says the same. Both gold files are copies of the same InnoDB and XtraDB code with the identical fix. The error text comes from the Bacula client, not the repo.",
+ "confidence": "high"
+}

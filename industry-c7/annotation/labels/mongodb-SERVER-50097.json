@@ -1,0 +1,28 @@
+{
+  "id": "mongodb:SERVER-50097",
+  "project": "mongodb",
+  "issue_key": "SERVER-50097",
+  "annotator": "claude-opus-5",
+  "pass": 1,
+  "file_roles": [
+    {
+      "path": "src/mongo/s/commands/strategy.cpp",
+      "role": "causal",
+      "evidence": "The exhaust flag was decided from the raw request name in Strategy::clientCommand, 'if (!opCtx->isExhaust() || request.getCommandName() != \"isMaster\"_sd) { InExhaustIsMaster::get(session.get())->setInExhaustIsMaster(false); }', so the alias 'ismaster' failed the comparison. The fix moves that block into runCommand, after 'auto const command = CommandHelpers::findCommand(commandName);', and compares the registry's canonical name instead, 'if (!opCtx->isExhaust() || command->getName() != \"isMaster\"_sd)'."
+    }
+  ],
+  "symptom_location": {
+    "file": "src/mongo/transport/ismaster_metrics.cpp",
+    "function": null,
+    "determinable": true
+  },
+  "log_location": {
+    "file": null,
+    "function": null,
+    "determinable": false
+  },
+  "relation": "state-producer",
+  "rationale": "The report states the mechanism and the fix: 'On mongos, however, we only look at the command name passed into the request. This means that we will incorrectly mark inExhaustIsMaster as false if we send \"ismaster\" instead of \"isMaster\" to mongos.' The diff corrects exactly that comparison in strategy.cpp by looking the command up in the registry first and testing 'command->getName()'. The wrong flag is written here and shows up later as the inaccurate counter kept in ismaster_metrics.cpp, which the report links at L87-L94.",
+  "confidence": "high",
+  "notes": "The symptom site, src/mongo/transport/ismaster_metrics.cpp, is outside the gold set; its path and line range come from the report's links, not from a trace, and the enclosing function is not visible in the packet, so function is null. The observable failure is a wrong metric value, not a log line, so log_location.determinable = false. REPORT-NAMES-FIX: the last sentence prescribes the adopted fix, 'Mongos should look up the request's command name in the command registry so that any aliases to the isMaster command are correctly covered.' A second rater could call the relation 'same-location', since the bad write and the corrected code are the same statement; it is 'state-producer' here because the inaccuracy is only observed where the metric is read."
+}

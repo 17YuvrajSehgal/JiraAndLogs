@@ -1,0 +1,33 @@
+{
+  "id": "kafka:KAFKA-6052",
+  "project": "kafka",
+  "issue_key": "KAFKA-6052",
+  "annotator": "claude-opus-5",
+  "pass": 1,
+  "file_roles": [
+    {
+      "path": "core/src/main/scala/kafka/common/InterBrokerSendThread.scala",
+      "role": "causal",
+      "evidence": "When the client was not ready the old doWork discarded the request and faked a failure, building a ClientResponse with 'true /* disconnected */, null /* responseBody */' and calling 'completionHandler.onComplete(disconnectResponse)' instead of keeping it. The rewrite holds requests in a new UnsentRequests queue and adds 'sendRequests', 'checkDisconnects', 'failExpiredRequests' and 'unsentRequests.clean()'. Dropping a request because a connection was not ready yet is the defect."
+    },
+    {
+      "path": "core/src/main/scala/kafka/coordinator/transaction/TransactionMarkerChannelManager.scala",
+      "role": "refactor",
+      "evidence": "One line, 'override val unsentExpiryMs: Int = config.requestTimeoutMs', implementing the abstract member the other file introduces. Nothing about marker handling changes."
+    }
+  ],
+  "symptom_location": {
+    "file": null,
+    "function": null,
+    "determinable": false
+  },
+  "log_location": {
+    "file": null,
+    "function": null,
+    "determinable": false
+  },
+  "relation": "state-producer",
+  "rationale": "The report carries no stack trace and no Kafka log. What it shows is the reporter's own application code and the observation that 'The same code is running fine in Linux' while on Windows a read_committed consumer stops returning records. The commit supplies the missing link, that the defect 'prevents the coordinator from sending WriteTxnMarkers requests to complete a transaction', so a marker that is never written on the broker is what the consumer later blocks on, in a different process.",
+  "confidence": "medium",
+  "notes": "The only log-like lines in the report come from the reporter's own application, 'Initializing transaction...', 'Begin transaction done.', emitted by their Logger class and not present anywhere in the Kafka tree. That is the second instance after GROOVY-3685 where the pasted log belongs to software outside the repository. The chain from the dropped request to the symptom rests on the commit message rather than on anything in the report, which is why confidence is medium rather than high."
+}

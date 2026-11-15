@@ -1,0 +1,58 @@
+{
+ "id": "phoenix:PHOENIX-3308",
+ "project": "phoenix",
+ "issue_key": "PHOENIX-3308",
+ "annotator": "claude-sonnet-5-5",
+ "pass": 2,
+ "file_roles": [
+  {
+   "path": "phoenix-core/src/it/java/org/apache/phoenix/end2end/index/ImmutableIndexIT.java",
+   "role": "test",
+   "evidence": "Integration test under src/it/ whose only change is the base class (ParallelStatsDisabledIT or BaseHBaseManagedTimeIT / BaseOwnClusterIT) so it manages its own mini cluster."
+  },
+  {
+   "path": "phoenix-flume/src/it/java/org/apache/phoenix/flume/PhoenixSinkIT.java",
+   "role": "test",
+   "evidence": "Integration test under src/it/ whose only change is the base class (ParallelStatsDisabledIT or BaseHBaseManagedTimeIT / BaseOwnClusterIT) so it manages its own mini cluster."
+  },
+  {
+   "path": "phoenix-flume/src/it/java/org/apache/phoenix/flume/RegexEventSerializerIT.java",
+   "role": "test",
+   "evidence": "Integration test under src/it/ whose only change is the base class (ParallelStatsDisabledIT or BaseHBaseManagedTimeIT / BaseOwnClusterIT) so it manages its own mini cluster."
+  },
+  {
+   "path": "phoenix-pherf/src/it/java/org/apache/phoenix/pherf/ResultBaseTestIT.java",
+   "role": "test",
+   "evidence": "Integration test under src/it/ whose only change is the base class (ParallelStatsDisabledIT or BaseHBaseManagedTimeIT / BaseOwnClusterIT) so it manages its own mini cluster."
+  },
+  {
+   "path": "phoenix-pherf/src/it/java/org/apache/phoenix/pherf/SchemaReaderIT.java",
+   "role": "test",
+   "evidence": "Integration test under src/it/ whose only change is the base class (ParallelStatsDisabledIT or BaseHBaseManagedTimeIT / BaseOwnClusterIT) so it manages its own mini cluster."
+  },
+  {
+   "path": "phoenix-pig/src/it/java/org/apache/phoenix/pig/BasePigIT.java",
+   "role": "test",
+   "evidence": "Integration test under src/it/ whose only change is the base class (ParallelStatsDisabledIT or BaseHBaseManagedTimeIT / BaseOwnClusterIT) so it manages its own mini cluster."
+  },
+  {
+   "path": "phoenix-queryserver/src/it/java/org/apache/phoenix/end2end/QueryServerBasicsIT.java",
+   "role": "test",
+   "evidence": "Integration test under src/it/ whose only change is the base class (ParallelStatsDisabledIT or BaseHBaseManagedTimeIT / BaseOwnClusterIT) so it manages its own mini cluster."
+  }
+ ],
+ "symptom_location": {
+  "file": null,
+  "function": null,
+  "determinable": false
+ },
+ "log_location": {
+  "file": null,
+  "function": null,
+  "determinable": false
+ },
+ "relation": "unrelated",
+ "rationale": "The issue is about tests not shutting down the mini cluster, and all seven gold files are integration tests that leaked through the filter. No product code is in the gold set, so there is no causal file.",
+ "confidence": "high",
+ "notes": "Benchmark defect: src/it files counted as non-test source."
+}

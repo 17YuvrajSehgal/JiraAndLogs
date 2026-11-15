@@ -1,0 +1,27 @@
+{
+ "id": "qt:QTBUG-80945",
+ "project": "qt",
+ "issue_key": "QTBUG-80945",
+ "annotator": "claude-sonnet-5-5",
+ "pass": 2,
+ "file_roles": [
+  {
+   "path": "src/printsupport/dialogs/qprintdialog_unix.cpp",
+   "role": "causal",
+   "evidence": "init() now sets options.pagesRadioButton/pagesLineEdit to nullptr after delete, and selectPrinter's pagesRadioButton->setEnabled moves inside '#if QT_CONFIG(cups)'; the old code used the deleted radio button."
+  }
+ ],
+ "symptom_location": {
+  "file": "src/printsupport/dialogs/qprintdialog_unix.cpp",
+  "function": "QPrintDialogPrivate::selectPrinter",
+  "determinable": true
+ },
+ "log_location": {
+  "file": "src/widgets/kernel/qwidget.cpp",
+  "function": "QWidget::setEnabled",
+  "determinable": true
+ },
+ "relation": "state-producer",
+ "rationale": "ASan shows the radio button freed in QPrintDialogPrivate::init and read in selectPrinter. Both are in the changed file, which creates the dangling pointer and then uses it.",
+ "confidence": "high"
+}

@@ -1,0 +1,32 @@
+{
+ "id": "mariadb:MDEV-15408",
+ "project": "mariadb",
+ "issue_key": "MDEV-15408",
+ "annotator": "claude-sonnet-5-5",
+ "pass": 2,
+ "file_roles": [
+  {
+   "path": "sql/handler.cc",
+   "role": "causal",
+   "evidence": "Vers_parse_info::check_sys_fields rewritten: old code set check_unit=VERS_TIMESTAMP and goto error for any non-matching type, so a BIGINT without UNSIGNED got the 'TIMESTAMP(6)' message; new code picks require_bigint vs require_timestamp via can_native and is_some_bigint."
+  },
+  {
+   "path": "sql/handler.h",
+   "role": "refactor",
+   "evidence": "Removes the check_unit member and adds a can_native parameter to check_sys_fields declaration; follows the handler.cc rewrite."
+  }
+ ],
+ "symptom_location": {
+  "file": "sql/handler.cc",
+  "function": "Vers_parse_info::check_sys_fields",
+  "determinable": true
+ },
+ "log_location": {
+  "file": "sql/handler.cc",
+  "function": "Vers_parse_info::check_sys_fields",
+  "determinable": true
+ },
+ "relation": "same-location",
+ "rationale": "The report is about a misleading message: a BIGINT row_start missing UNSIGNED was reported as needing TIMESTAMP(6). The message choice lived in check_sys_fields, which forced check_unit to TIMESTAMP on any mismatch, and the diff replaces that selection logic. The commit message calls it improved diagnostics, so one could call it symptom-handling, but the wrong output came from this same function's logic.",
+ "confidence": "medium"
+}

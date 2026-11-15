@@ -1,0 +1,28 @@
+{
+  "id": "mongodb:SERVER-21636",
+  "project": "mongodb",
+  "issue_key": "SERVER-21636",
+  "annotator": "claude-opus-5",
+  "pass": 1,
+  "file_roles": [
+    {
+      "path": "src/mongo/db/dbcommands.cpp",
+      "role": "causal",
+      "evidence": "The outer condition already knows about the isolation-testing mode, '(replCoord->getReplicationMode() == repl::ReplicationCoordinator::Mode::modeReplSet || testingSnapshotBehaviorInIsolation) && readConcernArgs.getLevel() == repl::ReadConcernLevel::kMajorityReadConcern', but the protocol-version rejection inside it did not: 'if (!replCoord->isV1ElectionProtocol())' becomes 'if (!testingSnapshotBehaviorInIsolation && !replCoord->isV1ElectionProtocol())'. The missing exemption is the wrong logic, and this file owns the check."
+    }
+  ],
+  "symptom_location": {
+    "file": "src/mongo/db/dbcommands.cpp",
+    "function": "Command::run",
+    "determinable": true
+  },
+  "log_location": {
+    "file": null,
+    "function": null,
+    "determinable": false
+  },
+  "relation": "same-location",
+  "rationale": "With no replica set configured, isV1ElectionProtocol() is false, so a majority read in isolation-testing mode was rejected with 'Replica sets running protocol version 0 do not support readConcern: majority' instead of blocking on a snapshot; that is why the test could not find the operation it meant to kill, 'Error: assert.soon failed, msg:could not kill an op that was waiting for a snapshot'. The rejection and the fix are the same statement in the same function, 'bool Command::run(OperationContext* txn,'. The reporter's framing fits, 'Happened after Matt's commit', since the protocol-version check is what the new condition exempts.",
+  "confidence": "high",
+  "notes": "The report names a culprit commit rather than a location, linking an Evergreen version and saying 'Happened after [Matt's commit]', and it guesses a mechanism that the diff does not support, 'they sleep on condition variables and we might have killed the snapshot thread'. Every frame in the quoted failure belongs to the shell harness, 'doassert@src/mongo/shell/assert.js:15:14', 'assert.soon@src/mongo/shell/assert.js:200:13' and '@jstests/noPassthrough/read_majority.js:50:1', and conventions say a test-harness assertion is not a log, so log_location.determinable = false. symptom_location is the gold file itself, which a second rater could reasonably dispute: the only placed frames are in the harness, and calling Command::run the surfacing site is read off the diff rather than off the trace. The failing path exists only under a test-only flag, testingSnapshotBehaviorInIsolation, so the defect is in production source but can only be reached by a test. No regression test ships with the fix, which is expected here because the fix exists to make an already-written test pass."
+}

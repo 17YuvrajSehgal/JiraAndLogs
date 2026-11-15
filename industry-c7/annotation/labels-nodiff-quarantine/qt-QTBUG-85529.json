@@ -1,0 +1,28 @@
+{
+  "id": "qt:QTBUG-85529",
+  "project": "qt",
+  "issue_key": "QTBUG-85529",
+  "annotator": "claude-opus-5",
+  "pass": 1,
+  "file_roles": [
+    {
+      "path": "src/plugins/platforminputcontexts/compose/qcomposeplatforminputcontext.cpp",
+      "role": "causal",
+      "evidence": "The reported input is legal and only one of its orders is accepted, 'say I want to type a with acute and smooth breathing. In Qt, I can only do this by typing the acute, then the smooth breathing, then the alpha. In GTK and other toolkits, I can type either that or the smooth breathing, then the acute accent. then the alpha.' The only non-test source file the fix changed is the compose input context, which is what matches a typed sequence against the compose table, so the sequence matching it performs is the wrong logic and nothing else was treated as broken."
+    }
+  ],
+  "symptom_location": {
+    "file": null,
+    "function": null,
+    "determinable": false
+  },
+  "log_location": {
+    "file": null,
+    "function": null,
+    "determinable": false
+  },
+  "relation": "unclear",
+  "rationale": "The report is purely behavioural, 'Polytonic Greek characters cannot be composed both ways' and 'This applies to all Greek characters having multiple diacritics', with no trace, no log line, no crash and no file named. The single gold file is the compose input context that owns sequence lookup, so the defect is placed by what was changed rather than by any evidence of where the failure surfaced, and no symptom site can be recorded.",
+  "confidence": "medium",
+  "notes": "The packet renders this file's diff as '(no diff retrieved)', so no hunk could be cited for any gold file in this instance. The causal call uses the rule CONVENTIONS records for a legal-but-unhandled input in the file that owns the feature; the alternative order is a valid compose sequence and the input context is the only thing changed. It does not rest on observed logic, and a second rater who declines to label any no-diff instance would put this at unclear. There is no failure in the crash or exception sense: nothing is emitted, nothing aborts, and the report is a comparison with other toolkits, so both symptom_location and log_location are not determinable. The gold file is never named in the report, which mentions only Qt, GTK and the characters typed. Whether the fix changed the matching in this file or the table it reads is not shown; both would still be this file, since no other file was changed."
+}

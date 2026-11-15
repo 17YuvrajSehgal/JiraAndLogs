@@ -1,0 +1,48 @@
+{
+  "id": "qt:QTBUG-80844",
+  "project": "qt",
+  "issue_key": "QTBUG-80844",
+  "annotator": "claude-opus-5",
+  "pass": 1,
+  "file_roles": [
+    {
+      "path": "src/plugins/platforms/cocoa/qcocoabackingstore.mm",
+      "role": "causal",
+      "evidence": "The reaction to a backing-properties change was to discard the painted content, 'void QCALayerBackingStore::backingPropertiesChanged() { m_buffers.clear(); m_buffers.resize(1); }', and the older path did the same, 'void QNSWindowBackingStore::backingPropertiesChanged() { m_image = QImage(); }'. The fix keeps the buffers and only re-tags them, 'qCDebug(lcQpaBackingStore) << \"Updating color space of existing buffers\"; for (auto &buffer : m_buffers) buffer->setColorSpace(colorSpace());', deletes the QNSWindowBackingStore override entirely, and moves the notification observer out of the shared QCocoaBackingStore constructor into QCALayerBackingStore's."
+    },
+    {
+      "path": "src/plugins/platforms/cocoa/qcocoabackingstore.h",
+      "role": "refactor",
+      "evidence": "Members and declarations move between classes with no logic in the header: 'QMacNotificationObserver m_backingPropertiesObserver;' and 'virtual void backingPropertiesChanged() = 0;' are removed from QCocoaBackingStore, 'void backingPropertiesChanged() override;' is removed from QNSWindowBackingStore, and QCALayerBackingStore gains the non-virtual 'void backingPropertiesChanged();' plus the observer member."
+    },
+    {
+      "path": "src/plugins/platforms/cocoa/qiosurfacegraphicsbuffer.mm",
+      "role": "refactor",
+      "evidence": "The same IOSurface call is lifted out of the constructor into a method so it can be called again later: 'if (colorSpace) { IOSurfaceSetValue(m_surface, CFSTR(\"IOSurfaceColorSpace\"), QCFType<CFPropertyListRef>(CGColorSpaceCopyPropertyList(colorSpace))); }' is deleted from QIOSurfaceGraphicsBuffer's constructor and reappears verbatim inside 'void QIOSurfaceGraphicsBuffer::setColorSpace(QCFType<CGColorSpaceRef> colorSpace)' with 'Q_ASSERT(colorSpace);' in place of the if. Nothing it did was wrong."
+    },
+    {
+      "path": "src/plugins/platforms/cocoa/qiosurfacegraphicsbuffer.h",
+      "role": "refactor",
+      "evidence": "Declaration churn matching that move: 'QIOSurfaceGraphicsBuffer(const QSize &size, const QPixelFormat &format, QCFType<CGColorSpaceRef> colorSpace);' loses its last parameter and 'void setColorSpace(QCFType<CGColorSpaceRef> colorSpace);' is declared."
+    },
+    {
+      "path": "src/plugins/platforms/cocoa/qcocoaintegration.mm",
+      "role": "refactor",
+      "evidence": "The entire change to this file is two commented-out lines added to QCocoaIntegration::styleHint, '// case CursorFlashTime:' and '//     return 50000;'. No code is executed differently and nothing here concerns backingstore buffers."
+    }
+  ],
+  "symptom_location": {
+    "file": null,
+    "function": null,
+    "determinable": false
+  },
+  "log_location": {
+    "file": null,
+    "function": null,
+    "determinable": false
+  },
+  "relation": "state-producer",
+  "rationale": "The report is a user-visible redraw artifact with no log or trace, 'connect or disconnect monitor and then move mouse over app -> some problems with main window updating', and the commit message explains why discarding the buffers breaks those clients: 'Clients such as QtWidgets that do their own dirty tracking will assume they can just flush in response to the expose event, without repainting anything. Since we have no way at the moment to inform these clients that the backingstore content might be invalid we can't just throw it away.' The emptied buffer is produced in backingPropertiesChanged and only shows up later when the client flushes, which is why the symptom site is outside the packet.",
+  "confidence": "medium",
+  "notes": "The gold set contains a file whose whole change is cosmetic and unrelated: qcocoaintegration.mm adds only two commented-out lines about CursorFlashTime, which look like debugging leftovers committed by accident, yet it counts as a gold file for this instance. No log and no trace, so both locations are undeterminable and the mechanism is taken from the commit message, which sets confidence to medium; a second rater could set relation to 'unclear' for want of a symptom site. A second rater could also call qiosurfacegraphicsbuffer.mm causal under the 'missing capability plus its missing use' rule, since re-tagging an existing buffer is what makes the real fix possible; it is refactor here because the moved code is identical and nothing it did was corrected."
+}

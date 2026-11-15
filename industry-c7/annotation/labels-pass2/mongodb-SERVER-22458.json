@@ -1,0 +1,28 @@
+{
+ "id": "mongodb:SERVER-22458",
+ "project": "mongodb",
+ "issue_key": "SERVER-22458",
+ "annotator": "claude-sonnet-5-5",
+ "pass": 2,
+ "file_roles": [
+  {
+   "path": "src/mongo/db/storage/key_string.h",
+   "role": "causal",
+   "evidence": "getSizeByte changes the mask from '_buf[0] & 0x3f' to '& 0x7f', matching setSizeByte which stores 0x80 | size."
+  }
+ ],
+ "symptom_location": {
+  "file": "src/mongo/db/storage/key_string.h",
+  "function": "TypeBits::getSizeByte",
+  "determinable": true
+ },
+ "log_location": {
+  "file": null,
+  "function": null,
+  "determinable": false
+ },
+ "relation": "same-location",
+ "rationale": "The report says TypeBits limits the length to 63 bytes. The read mask of 6 bits is the cause, and the diff widens it to 7 bits.",
+ "confidence": "high",
+ "notes": "Theoretical issue, no log or crash."
+}

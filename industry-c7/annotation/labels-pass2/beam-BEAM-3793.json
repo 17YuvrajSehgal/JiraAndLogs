@@ -1,0 +1,28 @@
+{
+ "id": "beam:BEAM-3793",
+ "project": "beam",
+ "issue_key": "BEAM-3793",
+ "annotator": "claude-sonnet-5-5",
+ "pass": 2,
+ "file_roles": [
+  {
+   "path": "sdks/go/cmd/beamctl/cmd/root.go",
+   "role": "refactor",
+   "evidence": "Only hunk: RootCmd.AddCommand(artifactCmd) becomes AddCommand(artifactCmd, provisionCmd). It registers a new beamctl subcommand (the 'add beamctl support' half of the commit) and does not touch validation of ProvisionInfo."
+  }
+ ],
+ "symptom_location": {
+  "file": "sdks/go/pkg/beam/provision/provison.go",
+  "function": "ProtoToJSON",
+  "determinable": true
+ },
+ "log_location": {
+  "file": "sdks/java/boot/boot.go",
+  "function": "main",
+  "determinable": true
+ },
+ "relation": "unclear",
+ "rationale": "The report is a panic in the Go boot code when ProvisionInfo is nil. The only gold file just wires a new CLI subcommand, so the real validation fix is in files not shown as gold. The gold file is incidental to the reported failure.",
+ "confidence": "low",
+ "notes": "Packet says 4 files changed but only root.go is gold; the provision validation code is not visible. Seeing the other diffs would settle the relation."
+}

@@ -1,0 +1,153 @@
+{
+  "id": "mariadb:MDEV-12600",
+  "project": "mariadb",
+  "issue_key": "MDEV-12600",
+  "annotator": "claude-opus-5",
+  "pass": 1,
+  "file_roles": [
+    {
+      "path": "storage/innobase/buf/buf0dblwr.cc",
+      "role": "causal",
+      "evidence": "buf_dblwr_create gains the capacity test the whole issue turns on, described by the cleanup commit as 'Check that the first data file is big enough for creating the doublewrite buffers', and tries to return an error on non-fatal failure. The first commit states the condition outright: 'Problem was that all doublewrite buffer pages must fit to first system datafile.' This is the InnoDB copy; the two trees carry identical diffs for this file."
+    },
+    {
+      "path": "storage/xtradb/buf/buf0dblwr.cc",
+      "role": "causal",
+      "evidence": "buf_dblwr_create gains the capacity test the whole issue turns on, described by the cleanup commit as 'Check that the first data file is big enough for creating the doublewrite buffers', and tries to return an error on non-fatal failure. The first commit states the condition outright: 'Problem was that all doublewrite buffer pages must fit to first system datafile.' This is the XtraDB copy; the two trees carry identical diffs for this file."
+    },
+    {
+      "path": "storage/innobase/btr/btr0btr.cc",
+      "role": "symptom-handling",
+      "evidence": "btr_create stops using an allocation it never checked: 'If ibuf header page allocation fails report error and return FIL_NULL. Similarly if root page allocation fails return a error.' A failure detected here, with the undersized file originating elsewhere. This is the InnoDB copy; the two trees carry identical diffs for this file."
+    },
+    {
+      "path": "storage/xtradb/btr/btr0btr.cc",
+      "role": "symptom-handling",
+      "evidence": "btr_create stops using an allocation it never checked: 'If ibuf header page allocation fails report error and return FIL_NULL. Similarly if root page allocation fails return a error.' A failure detected here, with the undersized file originating elsewhere. This is the XtraDB copy; the two trees carry identical diffs for this file."
+    },
+    {
+      "path": "storage/innobase/fsp/fsp0fsp.cc",
+      "role": "symptom-handling",
+      "evidence": "fseg_create_general starts reporting when segment or page allocation fails, and fsp_header_init's error handling is reworked across the two commits, ending at 'Never return an error. Move the change buffer creation to the only caller that needs to do it.' Detection and reporting, not the capacity rule. This is the InnoDB copy; the two trees carry identical diffs for this file."
+    },
+    {
+      "path": "storage/xtradb/fsp/fsp0fsp.cc",
+      "role": "symptom-handling",
+      "evidence": "fseg_create_general starts reporting when segment or page allocation fails, and fsp_header_init's error handling is reworked across the two commits, ending at 'Never return an error. Move the change buffer creation to the only caller that needs to do it.' Detection and reporting, not the capacity rule. This is the XtraDB copy; the two trees carry identical diffs for this file."
+    },
+    {
+      "path": "storage/innobase/trx/trx0rseg.cc",
+      "role": "symptom-handling",
+      "evidence": "trx_rseg_create returns instead of continuing when segment header creation fails, and is refactored in the cleanup commit with 'no functional change'. This is the InnoDB copy; the two trees carry identical diffs for this file."
+    },
+    {
+      "path": "storage/xtradb/trx/trx0rseg.cc",
+      "role": "symptom-handling",
+      "evidence": "trx_rseg_create returns instead of continuing when segment header creation fails, and is refactored in the cleanup commit with 'no functional change'. This is the XtraDB copy; the two trees carry identical diffs for this file."
+    },
+    {
+      "path": "storage/innobase/dict/dict0crea.cc",
+      "role": "symptom-handling",
+      "evidence": "dict_build_table_def_step returns an error code when fsp_header_init fails, where it previously carried on. This is the InnoDB copy; the two trees carry identical diffs for this file."
+    },
+    {
+      "path": "storage/xtradb/dict/dict0crea.cc",
+      "role": "symptom-handling",
+      "evidence": "dict_build_table_def_step returns an error code when fsp_header_init fails, where it previously carried on. This is the XtraDB copy; the two trees carry identical diffs for this file."
+    },
+    {
+      "path": "storage/innobase/row/row0mysql.cc",
+      "role": "symptom-handling",
+      "evidence": "row_truncate_table_for_mysql reports an error if fsp header init fails rather than proceeding. This is the InnoDB copy; the two trees carry identical diffs for this file."
+    },
+    {
+      "path": "storage/xtradb/row/row0mysql.cc",
+      "role": "symptom-handling",
+      "evidence": "row_truncate_table_for_mysql reports an error if fsp header init fails rather than proceeding. This is the XtraDB copy; the two trees carry identical diffs for this file."
+    },
+    {
+      "path": "storage/innobase/srv/srv0start.cc",
+      "role": "symptom-handling",
+      "evidence": "Adds srv_init_abort, described as a 'New function to report database initialization errors', and makes srv_undo_tablespaces_init and innobase_start_or_create_for_mysql 'report error and abort' instead of continuing. This is what turns the crash into a clean refusal, at the point the failure is noticed. This is the InnoDB copy; the two trees carry identical diffs for this file."
+    },
+    {
+      "path": "storage/xtradb/srv/srv0start.cc",
+      "role": "symptom-handling",
+      "evidence": "Adds srv_init_abort, described as a 'New function to report database initialization errors', and makes srv_undo_tablespaces_init and innobase_start_or_create_for_mysql 'report error and abort' instead of continuing. This is what turns the crash into a clean refusal, at the point the failure is noticed. This is the XtraDB copy; the two trees carry identical diffs for this file."
+    },
+    {
+      "path": "storage/innobase/fil/fil0fil.cc",
+      "role": "refactor",
+      "evidence": "fil_report_invalid_page_access is reworded only: a multi-line fprintf becomes ib_logf calls with the same content, and the trailing ut_error becomes IB_LOG_LEVEL_FATAL. The cleanup commit lists it as 'Simplify the message.' This is the InnoDB copy; the two trees carry identical diffs for this file."
+    },
+    {
+      "path": "storage/xtradb/fil/fil0fil.cc",
+      "role": "refactor",
+      "evidence": "fil_report_invalid_page_access is reworded only: a multi-line fprintf becomes ib_logf calls with the same content, and the trailing ut_error becomes IB_LOG_LEVEL_FATAL. The cleanup commit lists it as 'Simplify the message.' This is the XtraDB copy; the two trees carry identical diffs for this file."
+    },
+    {
+      "path": "storage/innobase/log/log0recv.cc",
+      "role": "refactor",
+      "evidence": "Messages are deleted, including 'Restoring possible half-written data pages from the doublewrite buffer...' and the ib_logfiles log sequence number warning, described as removing 'a redundant message ... when crash recovery has already been initiated.' This is the InnoDB copy; the two trees carry identical diffs for this file."
+    },
+    {
+      "path": "storage/xtradb/log/log0recv.cc",
+      "role": "refactor",
+      "evidence": "Messages are deleted, including 'Restoring possible half-written data pages from the doublewrite buffer...' and the ib_logfiles log sequence number warning, described as removing 'a redundant message ... when crash recovery has already been initiated.' This is the XtraDB copy; the two trees carry identical diffs for this file."
+    },
+    {
+      "path": "storage/innobase/handler/ha_innodb.cc",
+      "role": "refactor",
+      "evidence": "innobase_init received a first-datafile size check in the first commit which the cleanup commit withdraws, 'innobase_init(): Revert the changes.', so the two commits largely cancel here. This is the InnoDB copy; the two trees carry identical diffs for this file."
+    },
+    {
+      "path": "storage/xtradb/handler/ha_innodb.cc",
+      "role": "refactor",
+      "evidence": "innobase_init received a first-datafile size check in the first commit which the cleanup commit withdraws, 'innobase_init(): Revert the changes.', so the two commits largely cancel here. This is the XtraDB copy; the two trees carry identical diffs for this file."
+    },
+    {
+      "path": "storage/innobase/include/fsp0fsp.h",
+      "role": "refactor",
+      "evidence": "Declaration changes following the fsp_header_init and fseg_create_general signature churn in fsp0fsp.cc. This is the InnoDB copy; the two trees carry identical diffs for this file."
+    },
+    {
+      "path": "storage/xtradb/include/fsp0fsp.h",
+      "role": "refactor",
+      "evidence": "Declaration changes following the fsp_header_init and fseg_create_general signature churn in fsp0fsp.cc. This is the XtraDB copy; the two trees carry identical diffs for this file."
+    },
+    {
+      "path": "storage/innobase/include/trx0rseg.h",
+      "role": "refactor",
+      "evidence": "Declaration changes following the trx_rseg_create rework in trx0rseg.cc. This is the InnoDB copy; the two trees carry identical diffs for this file."
+    },
+    {
+      "path": "storage/xtradb/include/trx0rseg.h",
+      "role": "refactor",
+      "evidence": "Declaration changes following the trx_rseg_create rework in trx0rseg.cc. This is the XtraDB copy; the two trees carry identical diffs for this file."
+    },
+    {
+      "path": "storage/innobase/include/buf0dblwr.h",
+      "role": "refactor",
+      "evidence": "Declaration change so buf_dblwr_create can report failure to its caller. This is the InnoDB copy; the two trees carry identical diffs for this file."
+    },
+    {
+      "path": "storage/xtradb/include/buf0dblwr.h",
+      "role": "refactor",
+      "evidence": "Declaration change so buf_dblwr_create can report failure to its caller. This is the XtraDB copy; the two trees carry identical diffs for this file."
+    }
+  ],
+  "symptom_location": {
+    "file": null,
+    "function": null,
+    "determinable": false
+  },
+  "log_location": {
+    "file": null,
+    "function": null,
+    "determinable": false
+  },
+  "relation": "config-build",
+  "rationale": "No site can be placed from the evidence. The reporter says so, 'I am not getting stack resolved - let me know if this is required to troubleshoot', and the pasted trace is bare addresses, 'mysqld[0xa9b877]', with only the crash handler and plugin_init resolved. What the report does establish is a configuration boundary, since the same build crashes only at page size 32K with a 3M first data file and passes at 16K, 64K, or with a 1M, 11M or 31M first file. That matches the stated rule, that every doublewrite buffer page must fit in the first system data file, so the cause is a capacity limit derived from configuration rather than a fault at any one site.",
+  "confidence": "medium",
+  "notes": "Twenty-six gold files for one missing capacity check. They are thirteen files mirrored exactly into the InnoDB and XtraDB trees, so the per-file count is doubled by MariaDB shipping two copies of the same storage engine, and the thirteen are themselves one check plus error propagation through every caller that had been ignoring an allocation failure. This is the largest gold set in the sample and the clearest case of file count tracking project structure rather than the size of the defect. The roles rest on the two commit messages, which are unusually explicit about what each function was changed for, rather than on reading eleven hundred diff lines; a rater who worked only from the diff could reasonably label several of the propagation files causal, since each did contain the wrong logic of ignoring a failure return. Worth putting in the agreement check. Note also that this packet lost one file's diff to a renderer cap of 25 files until that cap was raised to 50, and this label was written after the re-render."
+}

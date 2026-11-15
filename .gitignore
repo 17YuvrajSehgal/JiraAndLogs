@@ -69,3 +69,19 @@ paper-results.zip
 paper-results
 
 referenced-research-papers
+# v2 result set: commit summaries/JSON metrics, not bulk per-window output
+paper-results-v2/**/*-predictions.jsonl
+paper-results-v2/**/traces/
+paper-results-v2/**/*-predictions.jsonl
+
+# C7 benchmark data (published via Zenodo, not git)
+industry-c7/data/
+
+# raw dataset downloads (restored into MongoDB; too large for git)
+ThePublicJiraDataset/
+WoL/
+industry-c7/papers/pdfs/
+/build.log
+
+# multi-cluster monitor output
+c7-fleet-monitor.log

@@ -1,0 +1,53 @@
+{
+ "id": "ignite:IGNITE-5204",
+ "project": "ignite",
+ "issue_key": "IGNITE-5204",
+ "annotator": "claude-sonnet-5-5",
+ "pass": 2,
+ "file_roles": [
+  {
+   "path": "modules/indexing/src/main/java/org/apache/ignite/internal/processors/cache/query/CacheQueryPartitionInfo.java",
+   "role": "refactor",
+   "evidence": "Adds tableName and dataType fields and constructor parameters; data carrier change forced by the conversion fix in IgniteH2Indexing."
+  },
+  {
+   "path": "modules/indexing/src/main/java/org/apache/ignite/internal/processors/query/h2/DmlStatementsProcessor.java",
+   "role": "refactor",
+   "evidence": "Inline type conversion replaced by call to new H2Utils.convert; code moved."
+  },
+  {
+   "path": "modules/indexing/src/main/java/org/apache/ignite/internal/processors/query/h2/H2Utils.java",
+   "role": "refactor",
+   "evidence": "New static convert() contains the conversion code moved from DmlStatementsProcessor."
+  },
+  {
+   "path": "modules/indexing/src/main/java/org/apache/ignite/internal/processors/query/h2/IgniteH2Indexing.java",
+   "role": "causal",
+   "evidence": "calculateQueryPartitions used the raw params[paramIdx] for affinity().partition; new bindPartitionInfoParameter converts the parameter with H2Utils.convert to the column type first."
+  },
+  {
+   "path": "modules/indexing/src/main/java/org/apache/ignite/internal/processors/query/h2/database/InlineIndexHelper.java",
+   "role": "causal",
+   "evidence": "size = (short)s.length | 0x8000 changed to handle s == null from trimUTF8, fixing an NPE for multibyte strings in index inlining."
+  },
+  {
+   "path": "modules/indexing/src/main/java/org/apache/ignite/internal/processors/query/h2/sql/GridSqlQuerySplitter.java",
+   "role": "refactor",
+   "evidence": "Passes tbl.getName() and column type into CacheQueryPartitionInfo; plumbing for the conversion fix."
+  }
+ ],
+ "symptom_location": {
+  "file": "modules/indexing/src/main/java/org/apache/ignite/internal/processors/query/h2/database/InlineIndexHelper.java",
+  "function": "InlineIndexHelper.put",
+  "determinable": true
+ },
+ "log_location": {
+  "file": null,
+  "function": null,
+  "determinable": false
+ },
+ "relation": "unclear",
+ "rationale": "Two commits sit under one issue. One fixes an NPE for a unicode value in an inlined index, the other fixes partition calculation when the parameter type differs. The report only describes unicode in an index, so only the first clearly matches. I marked both as causal for the defect each corrects.",
+ "confidence": "low",
+ "notes": "Report text matches the inline NPE commit; link to the partition commit is not shown by the report. A reproducer or the JIRA discussion would settle it."
+}

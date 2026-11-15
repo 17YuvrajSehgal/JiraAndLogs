@@ -1,0 +1,63 @@
+{
+  "id": "kafka:KAFKA-6981",
+  "project": "kafka",
+  "issue_key": "KAFKA-6981",
+  "annotator": "claude-opus-5",
+  "pass": 1,
+  "file_roles": [
+    {
+      "path": "connect/runtime/src/main/java/org/apache/kafka/connect/runtime/Worker.java",
+      "role": "causal",
+      "evidence": "The faulty read is here. 'String topic = connConfig.getString(DeadLetterQueueReporter.PREFIX + \".\" + DeadLetterQueueReporter.DLQ_TOPIC_NAME)' asked a ConnectorConfig for a key it never defined. It becomes 'SinkConnectorConfig sinkConfig = new SinkConnectorConfig(plugins, connConfig.originalsStrings())' and 'String topic = connConfig.dlqTopicName()', with sinkTaskReporters retyped to take a SinkConnectorConfig. The top project frame of the trace is this method."
+    },
+    {
+      "path": "connect/runtime/src/main/java/org/apache/kafka/connect/runtime/SinkConnectorConfig.java",
+      "role": "causal",
+      "evidence": "The property the report names had no definition in the connector config at all. It is added here, 'public static final String DLQ_TOPIC_NAME_CONFIG = DLQ_PREFIX + \"topic.name\"' with a '.define(DLQ_TOPIC_NAME_CONFIG, ...)' and an accessor 'dlqTopicName()'. Without this, the read in Worker has nothing to find."
+    },
+    {
+      "path": "connect/runtime/src/main/java/org/apache/kafka/connect/runtime/ConnectorConfig.java",
+      "role": "preventive",
+      "evidence": "Adds an Error Handling group covering the other error properties, errors.retry.timeout, errors.retry.delay.max.ms, errors.allowed.max, errors.log.enable and errors.log.include.messages, with typed accessors. These reached the operator through 'connConfig.originalsWithPrefix(\"errors.\")', which does not throw, so they were not failing; defining them closes the same gap before it can bite."
+    },
+    {
+      "path": "connect/runtime/src/main/java/org/apache/kafka/connect/runtime/errors/DeadLetterQueueReporter.java",
+      "role": "refactor",
+      "evidence": "Its private configuration is deleted, the static PREFIX, DLQ_TOPIC_NAME, CONFIG_DEF and the whole DeadLetterQueueReporterConfig inner class, and it now holds a SinkConnectorConfig instead, reading 'connConfig.dlqTopicName()'. The definitions move to SinkConnectorConfig; behaviour is unchanged."
+    },
+    {
+      "path": "connect/runtime/src/main/java/org/apache/kafka/connect/runtime/errors/LogReporter.java",
+      "role": "refactor",
+      "evidence": "The same move: PREFIX, LOG_ENABLE, LOG_INCLUDE_MESSAGES, CONFIG_DEF and LogReporterConfig are removed, the constructor takes a ConnectorConfig, and the checks become 'connConfig.enableErrorLog()' and 'connConfig.includeRecordDetailsInErrorLog()'."
+    },
+    {
+      "path": "connect/runtime/src/main/java/org/apache/kafka/connect/runtime/errors/RetryWithToleranceOperator.java",
+      "role": "refactor",
+      "evidence": "Stops being configured through a map and takes its values directly, 'RetryWithToleranceOperator(long errorRetryTimeout, long errorMaxDelayInMillis, ToleranceType toleranceType, Time time)', with its own RETRY_TIMEOUT, RETRY_DELAY_MAX_MS and TOLERANCE_LIMIT constants deleted. An adaptation to where the definitions now live."
+    },
+    {
+      "path": "connect/runtime/src/main/java/org/apache/kafka/connect/runtime/errors/ErrorReporter.java",
+      "role": "refactor",
+      "evidence": "One line of substance, 'public interface ErrorReporter extends Configurable' becoming 'public interface ErrorReporter', since reporters are no longer configured from a map."
+    },
+    {
+      "path": "connect/runtime/src/main/java/org/apache/kafka/connect/runtime/errors/ToleranceType.java",
+      "role": "refactor",
+      "evidence": "'fromString' is replaced by 'public String value() { return name().toLowerCase(Locale.ROOT); }', so the enum can supply its own config string to the new define call. A helper swap."
+    }
+  ],
+  "symptom_location": {
+    "file": "connect/runtime/src/main/java/org/apache/kafka/connect/runtime/Worker.java",
+    "function": "sinkTaskReporters",
+    "determinable": true
+  },
+  "log_location": {
+    "file": null,
+    "function": null,
+    "determinable": false
+  },
+  "relation": "same-location",
+  "rationale": "The exception is 'ConfigException: Unknown configuration errors.deadletterqueue.topic.name', thrown through AbstractConfig.get and surfacing at 'Worker.sinkTaskReporters(Worker.java:531)', which is the line the fix rewrites. The reporter had already diagnosed it exactly: 'The ConnectorConfig does not define this property, and any calls to getString will throw a ConfigException (since only known properties are retained by AbstractConfig)'. Two files hold the two halves, the read and the missing definition, and the other six move configuration out of the reporters.",
+  "confidence": "medium",
+  "notes": "Seventeen files changed, eight survive the test filter, and two of those are needed to stop the reported exception. The split between causal and refactor here rests on noticing that the other error properties were read through originalsWithPrefix, which tolerates unknown keys, while only the DLQ topic went through getString, which does not; a rater who missed that distinction would reasonably mark ConnectorConfig causal as well. Worth putting in the agreement check. REPORT-NAMES-FIX: the report states the mechanism and the class in its first two sentences."
+}

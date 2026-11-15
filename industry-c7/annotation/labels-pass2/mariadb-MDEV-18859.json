@@ -1,0 +1,27 @@
+{
+ "id": "mariadb:MDEV-18859",
+ "project": "mariadb",
+ "issue_key": "MDEV-18859",
+ "annotator": "claude-sonnet-5-5",
+ "pass": 2,
+ "file_roles": [
+  {
+   "path": "sql/sql_delete.cc",
+   "role": "causal",
+   "evidence": "For FOR PORTION deletes, table->use_all_columns() skipped the marking that initialises rpl_write_set; the fix adds table->rpl_write_set= table->write_set, so pack_row no longer gets cols=0x0."
+  }
+ ],
+ "symptom_location": {
+  "file": "sql/rpl_record.cc",
+  "function": "pack_row",
+  "determinable": true
+ },
+ "log_location": {
+  "file": "mysys/my_bitmap.c",
+  "function": "bitmap_bits_set",
+  "determinable": true
+ },
+ "relation": "state-producer",
+ "rationale": "rpl_write_set was never set on the period-delete path, and the NULL bitmap crashed in pack_row during binlogging. The commit message says exactly this.",
+ "confidence": "high"
+}

@@ -1,0 +1,28 @@
+{
+  "id": "mariadb:MDEV-18587",
+  "project": "mariadb",
+  "issue_key": "MDEV-18587",
+  "annotator": "claude-opus-5",
+  "pass": 1,
+  "file_roles": [
+    {
+      "path": "sql/sql_class.cc",
+      "role": "causal",
+      "evidence": "THD::decide_logging_format applied the streaming-replication format rule to every statement, 'if (WSREP_CLIENT_NNULL(this) && variables.wsrep_trx_fragment_size > 0)'. It gains the missing qualifier, 'wsrep_thd_is_local(this)'. The commit gives the rule that was missing, that the check 'did the check also for DDLs running in TOI mode', which is why DROP DATABASE was rejected."
+    }
+  ],
+  "symptom_location": {
+    "file": "sql/sql_class.cc",
+    "function": "THD::decide_logging_format",
+    "determinable": true
+  },
+  "log_location": {
+    "file": "sql/sql_class.cc",
+    "function": "THD::decide_logging_format",
+    "determinable": true
+  },
+  "relation": "same-location",
+  "rationale": "The error the reporter sees, 'ERROR 1235 (42000): Streaming replication not supported with binlog_format=STATEMENT', is raised by the my_message call directly inside the branch the fix narrows, so the message, the wrong condition and the repair are the same block. The reporter's two SHOW DATABASES listings establish the rest, that sbtest survives on the node that refused the statement and is gone everywhere else.",
+  "confidence": "high",
+  "notes": "The locatable evidence is again the harmless half of the problem. The rejection message points straight at the gold file, but the damage the reporter actually cares about, 'Which leads to data inconsistency', is a five-node divergence that exists in no single server's logs and is only visible by comparing nodes. This is the second instance of that shape in MariaDB after MDEV-11817, both Galera, both where the serious consequence is distributed and the only locatable artefact is a local refusal."
+}

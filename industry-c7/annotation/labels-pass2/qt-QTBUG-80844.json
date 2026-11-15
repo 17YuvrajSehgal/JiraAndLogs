@@ -1,0 +1,48 @@
+{
+ "id": "qt:QTBUG-80844",
+ "project": "qt",
+ "issue_key": "QTBUG-80844",
+ "annotator": "claude-sonnet-5-5",
+ "pass": 2,
+ "file_roles": [
+  {
+   "path": "src/plugins/platforms/cocoa/qcocoabackingstore.h",
+   "role": "refactor",
+   "evidence": "Moves backingPropertiesChanged and m_backingPropertiesObserver from the base class to QCALayerBackingStore; follows from the .mm change."
+  },
+  {
+   "path": "src/plugins/platforms/cocoa/qcocoabackingstore.mm",
+   "role": "causal",
+   "evidence": "Old backingPropertiesChanged discarded content (`m_image = QImage()` / `m_buffers.clear()`); diff removes it for QNSWindowBackingStore and makes QCALayerBackingStore only update the color space of existing buffers."
+  },
+  {
+   "path": "src/plugins/platforms/cocoa/qcocoaintegration.mm",
+   "role": "refactor",
+   "evidence": "Only adds a commented-out CursorFlashTime case; unrelated to the fix."
+  },
+  {
+   "path": "src/plugins/platforms/cocoa/qiosurfacegraphicsbuffer.h",
+   "role": "refactor",
+   "evidence": "Constructor drops colorSpace argument and adds setColorSpace(); API adaptation needed so buffers can be re-tagged."
+  },
+  {
+   "path": "src/plugins/platforms/cocoa/qiosurfacegraphicsbuffer.mm",
+   "role": "refactor",
+   "evidence": "Moves IOSurfaceSetValue color-space code into new setColorSpace(); supports the real fix in qcocoabackingstore.mm."
+  }
+ ],
+ "symptom_location": {
+  "file": "QtWidgets backing store flush (not in gold set)",
+  "function": null,
+  "determinable": false
+ },
+ "log_location": {
+  "file": null,
+  "function": null,
+  "determinable": false
+ },
+ "relation": "state-producer",
+ "rationale": "Commit text says QtWidgets assumes a flush needs no repaint, but the cocoa backing store threw away its content when the display properties changed (mirror/unmirror). The discard logic in qcocoabackingstore.mm is removed, so that file holds the wrong logic. The other files plumb the color-space tagging.",
+ "confidence": "medium",
+ "notes": "Where the stale content is shown (QtWidgets) is stated only in the commit message."
+}

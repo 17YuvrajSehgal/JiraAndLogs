@@ -1,0 +1,28 @@
+{
+  "id": "beam:BEAM-3793",
+  "project": "beam",
+  "issue_key": "BEAM-3793",
+  "annotator": "claude-opus-5",
+  "pass": 1,
+  "file_roles": [
+    {
+      "path": "sdks/go/cmd/beamctl/cmd/root.go",
+      "role": "refactor",
+      "evidence": "The entire diff is one line, 'RootCmd.AddCommand(artifactCmd)' becoming 'RootCmd.AddCommand(artifactCmd, provisionCmd)'. That registers a new CLI subcommand and does nothing about the reported panic on a null ProvisionInfo."
+    }
+  ],
+  "symptom_location": {
+    "file": "sdks/go/pkg/beam/provision/provison.go",
+    "function": "ProtoToJSON",
+    "determinable": true
+  },
+  "log_location": {
+    "file": "sdks/go/pkg/beam/provision/provison.go",
+    "function": "ProtoToJSON",
+    "determinable": true
+  },
+  "relation": "unrelated",
+  "rationale": "The panic, 'reflect: call of reflect.Value.Field on zero Value', is raised inside jsonpb when ProtoToJSON marshals a nil message, and the deepest Beam frames are provison.go:79 and boot.go:80. The one gold file is a command registration in beamctl and has no connection to either. The commit message has two halves, 'Validate provision response and add beamctl support', and only the second half survived into the gold set.",
+  "confidence": "medium",
+  "notes": "An instance with no causal file where the real fix is almost certainly in an ADDED file. The commit touched 4 files and only this one is non-test and modified; the new provisionCmd it registers must live in a file that did not previously exist, and gold is modified files only. This is the 5.3% added-file limitation showing up concretely."
+}

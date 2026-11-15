@@ -1,28 +1,40 @@
-% === Experimental Setup ===
-\section{Experimental Setup}
+% === Study Design ===
+\section{Study Design}
 \label{sec:setup}
 
 \subsection{Research Questions}
 \label{sec:setup-rqs}
 
-Our evaluation is organized around four questions:
+This is a measurement study. We ask what incident-triage systems should be
+evaluated \emph{on}, and how sensitive the resulting conclusions are to choices
+that are usually left implicit. Four questions organize it:
 
 \begin{itemize}
-  \item[\textbf{RQ1}] \textbf{(Retrieval).} How accurately can a live incident be
-  matched to the most similar resolved incident in memory, and does fusing dense,
-  lexical, and graph retrieval outperform each in isolation, as well as strong
-  prior-art and LLM-based retrievers?
-  \item[\textbf{RQ2}] \textbf{(End-to-end triage).} Does the capability-gated
-  system retrieve effectively end to end, and does the \emph{same} system hold up
-  as the available evidence degrades from full telemetry to text alone?
-  \item[\textbf{RQ3}] \textbf{(Cost of adaptive execution).} What does the system's
-  capability gating buy? How much triage cost does it save relative
-  to running every step on every window, at equal accuracy, and which components
-  carry the result?
-  \item[\textbf{RQ4}] \textbf{(Synthetic vs.\ real).} How do triage and retrieval
-  behave on synthetic versus real incidents, and what does the contrast reveal
-  about where the difficulty lies?
+  \item[\textbf{RQ1}] \textbf{(Does the dominant target transfer?)}
+  Ticket-worthiness classification --- deciding whether a window warrants an
+  issue at all --- is what most automated-triage work optimizes and reports.
+  Does performance on that target carry from injected faults to real,
+  engineer-written incidents?
+
+  \item[\textbf{RQ2}] \textbf{(Does retrieval transfer, and are rankings
+  stable?)} Does matching a live incident against a memory of resolved ones
+  behave consistently across corpora, and do the \emph{relative} conclusions
+  about retrieval methods hold as corpus scale and realism change?
+
+  \item[\textbf{RQ3}] \textbf{(How much do protocol choices move the answer?)}
+  Reported results depend on the training seed, the relevance relation, the
+  feature construction, and the cost model. How large are those effects
+  compared with the differences between methods they are used to establish?
+
+  \item[\textbf{RQ4}] \textbf{(What does adaptive execution actually buy?)}
+  Capability gating is intended to cut cost without cost to quality. Which
+  components carry that result, and is the gating calibrated?
 \end{itemize}
+
+RQ1 and RQ2 concern \emph{what} to measure; RQ3 and RQ4 concern \emph{how}. We
+use \sys{}, the retrieval-and-gating system described in \S\ref{sec:approach},
+as the instrument throughout: it is a strong and realistic baseline rather than
+the object of study, and several of our findings are unflattering to it.
 
 \subsection{Systems and Baselines}
 \label{sec:setup-baselines}
@@ -76,18 +88,53 @@ windows are scored for both systems, preserving per-window correlation; a
 difference is significant when its interval excludes zero. Because we run many comparisons, we control the false-discovery rate across the
 test family with the Benjamini--Hochberg procedure and report corrected $q$-values.
 
-\noindent\emph{Gold validation.} Because the real dataset's matches are inferred rather than human-labelled, we
-validate them with an LLM-as-judge: a language model rates the relevance of each
-gold match and of a random control, and we report the gap as evidence that the
-labels carry signal.
+\noindent\emph{Where every label comes from.} No label in this paper is produced
+by a human annotator, and we state that plainly rather than leaving it to be
+inferred. The synthetic triage labels are assigned by construction from the fault
+injector: a window inside an injected fault is ticket-worthy, a pre-fault window
+is noise, a recovery window is borderline. The real triage labels are derived
+mechanically from Jira fields, as described in \S\ref{sec:datasets-wol}. The real
+relevance labels are the rule-inferred relations of \S\ref{sec:datasets-wol}. A
+language model is used in exactly two places, neither of which produces a
+benchmark label: it rewrites synthetic tickets into engineer prose, and it
+extracts graph entities offline.
 
-\noindent\emph{Implementation.} The dense retriever is a compact MiniLM
-bi-encoder fine-tuned for five epochs with hard negatives mined by lexical search;
-the hybrid fuses each retriever's top candidates by reciprocal rank fusion. Graph
-entities are extracted from tickets by a small language model and matched by
-entity overlap. The retrieval-augmented and judge models run offline with
-deterministic (greedy) decoding. Every experiment uses a fixed random seed, and
-full configurations and seeds are released with the artifact.
+\noindent\emph{Gold validation.} Because the real dataset's matches are inferred
+rather than human-labelled, we probe them with an LLM-as-judge. We sample $300$
+held-out queries that have a gold match; for each we form two pairs, the query
+against a randomly chosen gold match and the query against a memory item sampled
+uniformly from outside its gold set, and ask Qwen2.5-7B-Instruct for a single
+integer: \emph{``Rate how relevant a past ticket is to a current incident
+window\ldots\ 5 = clearly the same or related issue, 1 = unrelated.''} We parse
+the first digit of the reply, giving $600$ judgements under greedy decoding at a
+fixed seed. We report the gold-versus-control gap, and, because it qualifies the
+result, also the fraction of gold matches the judge rates highly
+(\S\ref{sec:results-rq4}). The control is sampled uniformly and is therefore an
+easy negative; we treat this check as exploratory evidence that the labels carry
+signal, not as a substitute for human judgement.
+
+\noindent\emph{What is trained, and when.} All learning happens \emph{offline and
+once per dataset}, strictly before evaluation; nothing is trained, adapted, or
+carried forward at incident time. Concretely: the dense retriever is a compact
+MiniLM bi-encoder fine-tuned for five epochs on the \emph{training} split's
+window--ticket pairs, with hard negatives mined by lexical search; it is then
+frozen, and every test query is served by that same frozen model. Graph entities
+are extracted from tickets by a small language model in a single offline indexing
+pass. At incident time the system only performs inference: embedding lookup,
+reciprocal rank fusion over the retrievers' candidates, and the gated
+language-model calls. No state, no gradients, and no learned parameters pass from
+one incident to the next.
+
+\noindent\emph{What is and is not deterministic.} Exactly one component is
+stochastic: fine-tuning the bi-encoder, which uses stochastic gradient descent on
+a GPU and is not bit-reproducible even at a fixed seed. Everything downstream is
+deterministic conditional on that trained model: nearest-neighbour scoring,
+reciprocal rank fusion, and a rule-based controller with no model-driven loop.
+The retrieval-augmented and judge models use greedy decoding at temperature zero,
+and the bootstrap is seeded. We therefore treat retriever training as the source
+of run-to-run variation and quantify it directly by retraining under multiple
+seeds (\S\ref{sec:results-rq1}), rather than relying on a fixed seed to stand in
+for repetition. Full configurations and seeds are released with the artifact.
 
 \noindent\emph{Compute environment.} All experiments ran on the Trillium cluster, administered by the Digital
 Research Alliance of Canada.\footnote{\url{https://alliancecan.ca}} Each training

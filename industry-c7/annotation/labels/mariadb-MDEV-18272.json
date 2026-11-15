@@ -1,0 +1,33 @@
+{
+  "id": "mariadb:MDEV-18272",
+  "project": "mariadb",
+  "issue_key": "MDEV-18272",
+  "annotator": "claude-opus-5",
+  "pass": 1,
+  "file_roles": [
+    {
+      "path": "storage/innobase/row/row0mysql.c",
+      "role": "causal",
+      "evidence": "The error paths stopped abandoning partial work. In row_mysql_handle_errors the DB_FOREIGN_EXCEED_MAX_DEPTH arm's 'trx_general_rollback_for_mysql(trx, NULL); break;' becomes 'goto rollback;', and two further arms that simply did 'break;' become 'goto rollback_to_savept;', with new 'rollback_to_savept:' and 'rollback:' labels. Returning an error while leaving the cascade half applied is the defect named by the issue title, that InnoDB 'fails to rollback after exceeding FOREIGN KEY recursion depth'."
+    },
+    {
+      "path": "storage/xtradb/row/row0mysql.c",
+      "role": "causal",
+      "evidence": "The identical restructuring in the XtraDB copy of the same error handler, same labels, same arms."
+    }
+  ],
+  "symptom_location": {
+    "file": null,
+    "function": null,
+    "determinable": false
+  },
+  "log_location": {
+    "file": null,
+    "function": null,
+    "determinable": false
+  },
+  "relation": "state-producer",
+  "rationale": "One line of the log is the cause and the rest are its consequences. The first entry, 'Cannot delete/update rows with cascading foreign key constraints that exceed max depth of 15', is the refusal whose rollback was missing; everything after it is purge threads finding the wreckage, 'tried to purge non-delete-marked record in index `a` of table `test`.`t1`', repeated with different tuples from five different thread ids. The records were left behind by the abandoned cascade and are only noticed later by a background thread, and neither emitting file is shown in the packet.",
+  "confidence": "medium",
+  "notes": "A new shape of unhelpful evidence. In KEYCLOAK-2362 a useful trace was buried under a larger irrelevant one; here the useful line is buried under sheer repetition of its own downstream effects, fifteen near-identical ERROR lines differing only in hexadecimal tuple values. Anything weighting evidence by frequency would rank the purge complaints first and go to the purge code, which is not in the gold set. The two gold files are again the InnoDB and XtraDB copies of one file. The reporter is also unusually careful about not asserting a cause, 'Possibly it is related to the numerous existing bugs known as MDEV-9663 family ... If you find a true relation, feel free to close this one as a duplicate', so no file is named anywhere in the report."
+}

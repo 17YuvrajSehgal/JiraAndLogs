@@ -1,0 +1,28 @@
+{
+ "id": "beam:BEAM-6262",
+ "project": "beam",
+ "issue_key": "BEAM-6262",
+ "annotator": "claude-sonnet-5-5",
+ "pass": 2,
+ "file_roles": [
+  {
+   "path": "sdks/java/io/kinesis/src/main/java/org/apache/beam/sdk/io/kinesis/ShardReadersPool.java",
+   "role": "causal",
+   "evidence": "stop() called executorService.shutdownNow() (interrupting readLoop mid getRecords); diff replaces it with shutdown()+awaitTermination() and only then shutdownNow()."
+  }
+ ],
+ "symptom_location": {
+  "file": "sdks/java/io/kinesis/src/main/java/org/apache/beam/sdk/io/kinesis/ShardReadersPool.java",
+  "function": "readLoop",
+  "determinable": true
+ },
+ "log_location": {
+  "file": "sdks/java/io/kinesis/src/main/java/org/apache/beam/sdk/io/kinesis/ShardReadersPool.java",
+  "function": "readLoop",
+  "determinable": true
+ },
+ "relation": "concurrency",
+ "rationale": "The SEVERE 'Unexpected exception' is the readLoop thread catching an AbortedException caused by interruption during stop(). The fix changes stop() from immediate shutdownNow to a graceful shutdown. Ordering between stop and in-flight reads is the issue, and the shutdown logic is in the changed file.",
+ "confidence": "medium",
+ "notes": "Exception is logged in readLoop, caused by interrupt from stop(); both in the same file."
+}

@@ -1,0 +1,28 @@
+{
+  "id": "mongodb:SERVER-17507",
+  "project": "mongodb",
+  "issue_key": "SERVER-17507",
+  "annotator": "claude-opus-5",
+  "pass": 1,
+  "file_roles": [
+    {
+      "path": "src/mongo/db/auth/native_sasl_authentication_session.cpp",
+      "role": "causal",
+      "evidence": "The session left its own completion flag unset on the error path: 'StatusWith<bool> status = _saslConversation->step(inputData, outputData); if (status.isOK()) { _done = status.getValue(); }' gains 'else { _done = true; }'. The conversation object owns _done, and on a failed step it stayed false, so the conversation was never finished and the failure was never reported as one."
+    }
+  ],
+  "symptom_location": {
+    "file": null,
+    "function": null,
+    "determinable": false
+  },
+  "log_location": {
+    "file": null,
+    "function": null,
+    "determinable": false
+  },
+  "relation": "state-producer",
+  "rationale": "The report is that failures stop being recorded, 'The AuditLog is not logging authentication failures in 3.0 enterprise and only logging the successes', and the fix is one branch in the SASL session, 'else { _done = true; }' after a non-OK step. The bad state, a conversation that never reports itself finished, is produced in this file and consumed by whatever audits the completed authentication, so the gold file is where the wrong logic lived even though the missing record appears elsewhere.",
+  "confidence": "medium",
+  "notes": "The consumer of _done is not in the packet: no audit file is changed and no caller of isDone is shown, so the step from 'not done' to 'no audit record' is taken from the commit message, 'Set SASL conversation isDone correctly on authentication failure', rather than shown. That is why confidence is medium and why relation rests on an inference. log_location.determinable = false for an unusual reason worth counting: the reported evidence is the absence of a log line, not a line that was emitted, and the report pastes no log, trace or reproducer. The audit code the report is about is the enterprise audit log and no enterprise file appears in the fix, so the site where the record should have been written may not be in the snapshot at all. The fix ships with no regression test: the packet records one changed file and it is the gold file."
+}

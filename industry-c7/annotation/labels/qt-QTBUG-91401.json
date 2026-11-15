@@ -1,0 +1,33 @@
+{
+  "id": "qt:QTBUG-91401",
+  "project": "qt",
+  "issue_key": "QTBUG-91401",
+  "annotator": "claude-opus-5",
+  "pass": 1,
+  "file_roles": [
+    {
+      "path": "src/gui/painting/qicc.cpp",
+      "role": "causal",
+      "evidence": "The validator rejected every Output-class profile, 'if (header.profileClass != uint(ProfileClass::Input) && header.profileClass != uint(ProfileClass::Display))', and now accepts the gray ones, '&& (header.profileClass != uint(ProfileClass::Output) || header.inputColorSpace != uint(ColorSpaceType::Gray))'. The reported class, 0x70727472, is 'prtr', an Output profile, so this is the check that produced the report. The same file also owns the message the reporter quotes and corrects its severity and the default level, 'qCWarning(lcIcc, \"Unsupported ICC profile class %x\"' becoming 'qCInfo(lcIcc, \"Unsupported ICC profile class 0x%x\"', and 'Q_LOGGING_CATEGORY(lcIcc, \"qt.gui.icc\")' becoming 'Q_LOGGING_CATEGORY(lcIcc, \"qt.gui.icc\", QtWarningMsg)'."
+    },
+    {
+      "path": "src/gui/image/qpnghandler.cpp",
+      "role": "symptom-handling",
+      "evidence": "Nothing functional is corrected here; both hunks only change how loudly the detection site speaks, 'qCWarning(lcImageIo, \"libpng warning: %s\", message)' becoming 'qCInfo(...)', and 'qCWarning(lcImageIo) << \"QPngHandler: Failed to parse ICC profile\"' becoming 'qCDebug(lcImageIo) << ...'. The surrounding logic is untouched, 'colorSpace = QColorSpace::fromIccProfile(...); if (!colorSpace.isValid())', so the rejected profile still arrives from qicc.cpp and the image still loads without a colour space."
+    }
+  ],
+  "symptom_location": {
+    "file": "src/gui/image/qpnghandler.cpp",
+    "function": "QPngHandlerPrivate::readPngHeader",
+    "determinable": true
+  },
+  "log_location": {
+    "file": "src/gui/painting/qicc.cpp",
+    "function": "isValidIccProfile",
+    "determinable": true
+  },
+  "relation": "caller-callee",
+  "rationale": "The two quoted lines pair a callee and its caller: 'qt.gui.icc: Unsupported ICC profile class 70727472' comes from isValidIccProfile in qicc.cpp, and 'qt.gui.imageio: QPngHandler: Failed to parse ICC profile' is readPngHeader reacting to the false it got back through QColorSpace::fromIccProfile. The decision that was wrong is the callee's, since 0x70727472 is 'prtr' and the fix stops rejecting gray Output profiles outright. The caller's change is severity only, which is why it is symptom-handling under the rubric's hard case: the bad state came from the other file and that file was also changed.",
+  "confidence": "medium",
+  "notes": "The instance has no failure in the usual sense; the complaint is log noise, 'Observe warnings', and the report is 32 repetitions of two lines. REPORT-NAMES-FIX: the report quotes verbatim both of the exact log statements the diff edits, so the faulty lines are handed to the reader. Second rater would reasonably disagree on qpnghandler.cpp: if the reported failure is taken to be the noise itself, then this file emits half of it and its severity was the wrong logic, which makes it causal rather than symptom-handling; it is labelled symptom-handling because its own behaviour was not corrected and the rejection it reports originates in qicc.cpp. Part of qicc.cpp's change is cosmetic (the '%x' to '0x%x' rewording), and one warning is deliberately kept and made more informative, 'qCWarning(lcIcc, \"fromIccProfile: Invalid ICC profile - invalid white-point(%f, %f)\", x, y)', which separates Qt's own deficiencies from genuinely broken profiles. Two log categories appear in the report; log_location records the one the issue title quotes."
+}

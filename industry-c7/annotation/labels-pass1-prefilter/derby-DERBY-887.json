@@ -1,0 +1,58 @@
+{
+  "id": "derby:DERBY-887",
+  "project": "derby",
+  "issue_key": "DERBY-887",
+  "annotator": "claude-opus-5",
+  "pass": 1,
+  "file_roles": [
+    {
+      "path": "java/build/org/apache/derbyBuild/ODBCMetadataGenerator.java",
+      "role": "refactor",
+      "evidence": "Adds a BOOLEAN_COLUMNS list, an isBoolean(colName) helper and CASE WHEN ... THEN 1 ELSE 0 END generation, with the comment 'Special logic to turn booleans into integers. This is necessary because you cannot cast a boolean to an integer, according to the sql standard.' It exists only to keep generated ODBC metadata working once the cast is withdrawn."
+    },
+    {
+      "path": "java/engine/org/apache/derby/iapi/types/DataTypeDescriptor.java",
+      "role": "causal",
+      "evidence": "comparable() allowed the comparison the report shows: the numeric branch returned 'compareWithTypeID.isNumericTypeId() || compareWithTypeID.isBooleanTypeId()' and the boolean branch likewise included isNumericTypeId(). Both boolean clauses are deleted, so 'where id = true' no longer type-checks."
+    },
+    {
+      "path": "java/engine/org/apache/derby/impl/sql/compile/BaseTypeCompiler.java",
+      "role": "causal",
+      "evidence": "convertible() drops '(otherType.isBooleanTypeId()) ||' from the numeric conversion list, and storable() changes from 'if ((otherType.isNumericTypeId()) || (otherType.isBooleanTypeId()))' to 'if (otherType.isNumericTypeId())'. This is the implicit boolean-to-number conversion the commit message says is being removed."
+    },
+    {
+      "path": "java/engine/org/apache/derby/impl/sql/compile/BitTypeCompiler.java",
+      "role": "preventive",
+      "evidence": "Removes 'otherType.isBooleanTypeId() ||' from the BIT/BLOB convertible list. The reported query compares a BIGINT with a boolean, not a BIT, so repairing this would not have prevented the reported failure; it removes the same non-standard conversion on another type."
+    },
+    {
+      "path": "java/engine/org/apache/derby/impl/sql/compile/BooleanTypeCompiler.java",
+      "role": "causal",
+      "evidence": "convertible() previously returned true for everything except DATE/TIME/TIMESTAMP and now returns '(otherType.isStringTypeId() || otherType.isBooleanTypeId())'. That blanket 'return true' is what permitted boolean to be converted to a numeric column in the reported predicate."
+    },
+    {
+      "path": "java/engine/org/apache/derby/impl/sql/compile/CLOBTypeCompiler.java",
+      "role": "refactor",
+      "evidence": "Both convertible() and storable() gain '|| otherType.isBooleanTypeId()'. This is permissive, not restrictive: boolean-to-string remains legal under the standard, so the target type compiler must now opt in once BooleanTypeCompiler stopped answering true for everything."
+    },
+    {
+      "path": "java/engine/org/apache/derby/impl/sql/compile/CharTypeCompiler.java",
+      "role": "refactor",
+      "evidence": "The LONGVARCHAR branch changes from 'return (otherType.isStringTypeId())' to '(otherType.isStringTypeId() || otherType.isBooleanTypeId())', with the comment updated to 'or CLOB or boolean'. The same forced opt-in as CLOBTypeCompiler."
+    }
+  ],
+  "symptom_location": {
+    "file": null,
+    "function": null,
+    "determinable": false
+  },
+  "log_location": {
+    "file": null,
+    "function": null,
+    "determinable": false
+  },
+  "relation": "unclear",
+  "rationale": "The reported failure is a wrong result set, 'select id,date from inbox where id = true' returning one row where eleven were expected, with no exception and no log line, so neither a symptom file nor a log file can be placed. Three gold files hold the type rules that let the comparison compile at all and are causal; three more are the forced accommodations that keep standard-legal boolean-to-string conversions working, and one removes the same non-standard conversion on BIT, which was never on the reported path.",
+  "confidence": "medium",
+  "notes": "java/build/org/apache/derbyBuild/ODBCMetadataGenerator.java is build-time tooling rather than product code, and TEST_PATH does not filter it, so it is in the gold set as a localisation target. Same class of benchmark defect as the Ambari perf script."
+}

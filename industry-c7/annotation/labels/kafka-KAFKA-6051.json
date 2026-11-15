@@ -1,0 +1,28 @@
+{
+  "id": "kafka:KAFKA-6051",
+  "project": "kafka",
+  "issue_key": "KAFKA-6051",
+  "annotator": "claude-opus-5",
+  "pass": 1,
+  "file_roles": [
+    {
+      "path": "core/src/main/scala/kafka/server/ReplicaFetcherThread.scala",
+      "role": "causal",
+      "evidence": "The endpoint was closed only after the thread had fully stopped, 'override def shutdown(): Unit = { super.shutdown(); leaderEndpoint.close() }'. It becomes 'override def initiateShutdown(): Boolean = { val justShutdown = super.initiateShutdown(); if (justShutdown) { leaderEndpoint.close() }; justShutdown }'. Closing after rather than during shutdown is what left the blocking fetch running while locks were held."
+    }
+  ],
+  "symptom_location": {
+    "file": "core/src/main/scala/kafka/server/ReplicaFetcherThread.scala",
+    "function": "shutdown",
+    "determinable": true
+  },
+  "log_location": {
+    "file": null,
+    "function": null,
+    "determinable": false
+  },
+  "relation": "same-location",
+  "rationale": "The reporter measures the stall from the timestamps of the three lifecycle lines, 18:11:42,879 'Shutting down' to 18:11:43,314 'Stopped', and explains that during it 'the replicaStateChangeLock, and mapLock in AbstractFetcherManager is still locked causing latency spikes on multiple brokers'. The wait happens inside this class's shutdown override, which is the method the fix replaces, so the stall and its cause are the same method.",
+  "confidence": "high",
+  "notes": "The three INFO lines are the generic shutdown lifecycle messages of Kafka's shutdownable-thread helper, not literals in the gold file, so no emitting site is recorded. What is useful here is that the bracketed logger tag, '(kafka.server.ReplicaFetcherThread)', names the gold file exactly, so matching on the logger name rather than the message text lands on the right file. REPORT-NAMES-FIX: the reporter prescribes the adopted fix verbatim, 'We should close the leaderEndpoint early during initiateShutdown() instead of after super.shutdown()'."
+}

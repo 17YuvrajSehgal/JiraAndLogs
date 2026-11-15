@@ -1,0 +1,28 @@
+{
+ "id": "solr:SOLR-14247",
+ "project": "solr",
+ "issue_key": "SOLR-14247",
+ "annotator": "claude-sonnet-5-5",
+ "pass": 2,
+ "file_roles": [
+  {
+   "path": "solr/test-framework/src/java/org/apache/solr/SolrTestCase.java",
+   "role": "test",
+   "evidence": "Test-framework base class; the diff only removes an unused Logger field and imports. The real fix (removing sleeps) is in a test file."
+  }
+ ],
+ "symptom_location": {
+  "file": null,
+  "function": null,
+  "determinable": false
+ },
+ "log_location": {
+  "file": null,
+  "function": null,
+  "determinable": false
+ },
+ "relation": "unrelated",
+ "rationale": "The issue is a slow test with many sleeps. The only gold file is a test-framework class where an unused logger is deleted, so it did not fix anything. No product code changed.",
+ "confidence": "high",
+ "notes": "Benchmark defect: test-framework file counted as source."
+}

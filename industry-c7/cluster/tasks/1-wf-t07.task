@@ -1,0 +1,1 @@
+--arm wf --full --seed 42 --tag wf-t07 --workers 24 --project ambari --project beam

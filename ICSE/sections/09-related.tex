@@ -5,9 +5,55 @@
 \noindent\textbf{Incident management and AIOps.} Cloud and microservice operations
 generate incident volumes that overwhelm manual on-call triage, motivating a large
 AIOps literature~\cite{notaro2021aiops,he2021survey}. Ghosh et al.~\cite{ghosh2022incidents}
-document the long detection-to-mitigation pipeline that motivates automation, and
-Chen et al.~\cite{chen2019triage} frame \emph{continuous incident triage} as
-routing incidents to the correct team. \sys{} reframes this bottleneck as retrieval against a memory of resolved incidents rather than classification.
+document the long detection-to-mitigation pipeline that motivates automation.
+
+A line of \emph{incident-level} systems is closest to our setting, and
+Table~\ref{tab:systems} positions \sys{} against it. DeepCT~\cite{chen2019triage}
+treats triage as \emph{continuous} routing: a GRU with an attention-based mask
+incrementally consumes the discussion thread attached to an incident and predicts
+the responsible team, reaching $0.64$--$0.73$ accuracy as the thread grows from
+one to five items across $14$ Microsoft services. Triangle~\cite{yu2025triangle}
+pursues the same output with a multi-agent negotiation over team documents,
+reporting up to $97\%$ assignment accuracy and a $91\%$ reduction in time-to-engage
+on $15$ months of production incidents. RCACopilot~\cite{chen2024rcacopilot}
+instead predicts a root-cause \emph{category} with an explanatory narrative,
+matching incidents to handlers by alert type.
+
+Two differences organize the comparison, and we state them as differences rather
+than as claims of superiority, since these systems target proprietary incident
+stores on which we cannot run. First, \emph{the output differs}: DeepCT and
+Triangle answer \emph{who should own this}, RCACopilot answers \emph{what kind of
+failure is this}, and \sys{} answers \emph{which resolved incident does this
+resemble}, returning a ranked list for an engineer to reuse. Second,
+\emph{retrieval plays a different role}. Triangle does retrieve historical
+incidents, by TF--IDF cosine similarity, but as an intermediate step that
+nominates candidate teams; for \sys{} the retrieved incidents are the deliverable,
+which is why retrieval quality, and not assignment accuracy, is what we measure.
+We also note what none of them report: a per-incident cost budget or an
+evaluation on public data. Those are the two axes \sys{} adds.
+
+\begin{table}[t]
+\centering
+\caption{Incident-level systems positioned by task, not by score; their
+evaluations use disjoint proprietary corpora and are not directly comparable.}
+\label{tab:systems}
+\footnotesize
+\setlength{\tabcolsep}{3pt}
+\begin{tabular}{@{}p{1.45cm}p{1.9cm}p{1.6cm}p{2.4cm}@{}}
+\toprule
+System & Input & Output & Evaluation \\
+\midrule
+DeepCT~\cite{chen2019triage} & incident $+$ discussion thread & responsible team & 14 Microsoft services, proprietary \\
+Triangle~\cite{yu2025triangle} & incident, past incidents, team docs & candidate teams & 15 months, one cloud provider, proprietary \\
+RCACopilot~\cite{chen2024rcacopilot} & alert-scoped diagnostic data & root-cause category $+$ narrative & 1 year, Microsoft, proprietary \\
+\textbf{\sys{}} & telemetry window \emph{or} text-only report & ranked prior incidents $+$ page decision & 2 public telemetry sets $+$ 38.6k public Jira incidents \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\sys{} thus reframes the on-call bottleneck as retrieval against a memory of
+resolved incidents rather than as routing or classification, and evaluates it
+under an explicit cost budget on data others can obtain.
 
 \noindent\textbf{LLMs for incident diagnosis.} Recent work applies LLMs to root-causing and mitigation: Ahmed et al.~\cite{ahmed2023rootcause}
 study LLM-recommended root causes at scale, RCACopilot~\cite{chen2024rcacopilot}

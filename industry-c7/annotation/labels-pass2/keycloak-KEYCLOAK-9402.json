@@ -1,0 +1,27 @@
+{
+ "id": "keycloak:KEYCLOAK-9402",
+ "project": "keycloak",
+ "issue_key": "KEYCLOAK-9402",
+ "annotator": "claude-sonnet-5-5",
+ "pass": 2,
+ "file_roles": [
+  {
+   "path": "adapters/oidc/adapter-core/src/main/java/org/keycloak/adapters/authorization/AbstractPolicyEnforcer.java",
+   "role": "causal",
+   "evidence": "In authorize(), the DISABLED branch now sends 401 'Invalid bearer' when securityContext == null; before it returned an empty granted context (log: 'Bearer FAILED' then 'GRANTED') for an expired token."
+  }
+ ],
+ "symptom_location": {
+  "file": "adapters/oidc/adapter-core/src/main/java/org/keycloak/adapters/authorization/AbstractPolicyEnforcer.java",
+  "function": "authorize",
+  "determinable": true
+ },
+ "log_location": {
+  "file": "adapters/oidc/adapter-core/src/main/java/org/keycloak/adapters/BearerTokenRequestAuthenticator.java",
+  "function": "authenticateToken",
+  "determinable": true
+ },
+ "relation": "state-producer",
+ "rationale": "Bearer verification failed and left no security context, but the DISABLED-mode path ignored that and returned 200. The fix is the missing check in authorize().",
+ "confidence": "medium"
+}

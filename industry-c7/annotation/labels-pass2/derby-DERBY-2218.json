@@ -1,0 +1,27 @@
+{
+ "id": "derby:DERBY-2218",
+ "project": "derby",
+ "issue_key": "DERBY-2218",
+ "annotator": "claude-sonnet-5-5",
+ "pass": 2,
+ "file_roles": [
+  {
+   "path": "java/engine/org/apache/derby/impl/sql/compile/SubqueryNode.java",
+   "role": "causal",
+   "evidence": "Diff adds `resultSet.bindUntypedNullsToResultColumns(null)` in SubqueryNode.bindExpression so untyped NULL is rejected at bind time instead of NPE in setDataTypeServices."
+  }
+ ],
+ "symptom_location": {
+  "file": "java/engine/org/apache/derby/impl/sql/compile/SubqueryNode.java",
+  "function": "setDataTypeServices",
+  "determinable": true
+ },
+ "log_location": {
+  "file": "java/engine/org/apache/derby/impl/sql/compile/SubqueryNode.java",
+  "function": "setDataTypeServices",
+  "determinable": true
+ },
+ "relation": "same-location",
+ "rationale": "The NPE is at SubqueryNode.setDataTypeServices called from bindExpression. The fix adds the missing untyped-null check inside SubqueryNode.bindExpression. SubqueryNode owns binding of its own result columns, so the missing check is the defect.",
+ "confidence": "high"
+}

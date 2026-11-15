@@ -1,0 +1,38 @@
+{
+ "id": "mongodb:SERVER-30467",
+ "project": "mongodb",
+ "issue_key": "SERVER-30467",
+ "annotator": "claude-sonnet-5-5",
+ "pass": 2,
+ "file_roles": [
+  {
+   "path": "src/mongo/db/matcher/schema/expression_internal_schema_str_length.h",
+   "role": "causal",
+   "evidence": "matches() now uses str::lengthInUTF8CodePoints(elem.valueStringData()) instead of elem.valuestrsize() - 1, which counted bytes."
+  },
+  {
+   "path": "src/mongo/db/pipeline/expression.cpp",
+   "role": "refactor",
+   "evidence": "Moves isContinuationByte to str::isUTF8ContinuationByte and reuses lengthInUTF8CodePoints in $strLenCP; $strLenCP behaviour is unchanged."
+  },
+  {
+   "path": "src/mongo/util/mongoutils/str.h",
+   "role": "refactor",
+   "evidence": "Adds the shared helpers isUTF8ContinuationByte and lengthInUTF8CodePoints, extracted from expression.cpp."
+  }
+ ],
+ "symptom_location": {
+  "file": "src/mongo/db/matcher/schema/expression_internal_schema_str_length.h",
+  "function": "matches",
+  "determinable": true
+ },
+ "log_location": {
+  "file": null,
+  "function": null,
+  "determinable": false
+ },
+ "relation": "same-location",
+ "rationale": "The request is that the length operators count code points, and the old code counted bytes. Only the match expression header changes that. The other files move the counting helper.",
+ "confidence": "high",
+ "notes": "Feature-style report, no failing log."
+}

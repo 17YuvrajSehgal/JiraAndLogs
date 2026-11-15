@@ -1,0 +1,73 @@
+{
+  "id": "mariadb:MDEV-11553",
+  "project": "mariadb",
+  "issue_key": "MDEV-11553",
+  "annotator": "claude-opus-5",
+  "pass": 1,
+  "file_roles": [
+    {
+      "path": "sql/item_timefunc.h",
+      "role": "causal",
+      "evidence": "Item_func_date_format stops carrying 'const bool is_time_format' set from a constructor argument and gains a two-argument and a three-argument constructor, both initialising 'locale(0), is_time_format(false)'. The guard that decided acceptability changes with it, 'if (is_time_format)' becoming 'if (arg_count > 2)', and Item_func_time_format is split out as its own subclass. The condition the server used to reject the expression is here."
+    },
+    {
+      "path": "sql/item_timefunc.cc",
+      "role": "causal",
+      "evidence": "The locale stops being read implicitly at evaluation time. 'locale= thd->variables.lc_time_names' becomes conditional, 'if (arg_count < 3) locale= thd->variables.lc_time_names; else if (args[2]->basic_const_item()) locale= args[2]->locale_from_val_str();', and make_date_time takes 'const MY_LOCALE *locale'. eq() is extended with 'if (arg_count > 2 && !args[2]->eq(item_func->args[2], 1)) return 0'."
+    },
+    {
+      "path": "sql/item.cc",
+      "role": "refactor",
+      "evidence": "Receives 'const MY_LOCALE *Item::locale_from_val_str()' whose body, including the ER_UNKNOWN_LOCALE warning and the 'lc= &my_locale_en_US' fallback, is the former Item_func_format::get_locale moved up to Item unchanged."
+    },
+    {
+      "path": "sql/item.h",
+      "role": "refactor",
+      "evidence": "Declares the moved helper, 'class MY_LOCALE;' and 'const MY_LOCALE *locale_from_val_str();'. Declaration only."
+    },
+    {
+      "path": "sql/item_strfunc.cc",
+      "role": "refactor",
+      "evidence": "The donor side of the same move: Item_func_format::get_locale is deleted and its two call sites become 'args[2]->locale_from_val_str()'. Behaviour is unchanged."
+    },
+    {
+      "path": "sql/item_strfunc.h",
+      "role": "refactor",
+      "evidence": "Drops the now-unneeded 'class MY_LOCALE;' forward declaration and the 'MY_LOCALE *get_locale(Item *item);' member, and makes the field const, 'const MY_LOCALE *locale'."
+    },
+    {
+      "path": "sql/item_create.cc",
+      "role": "refactor",
+      "evidence": "The generic builder is removed, class Create_func_date_format together with its singleton and its registration '{ C_STRING_WITH_LEN(\"DATE_FORMAT\") }, BUILDER(Create_func_date_format)', because the function is now parsed directly. The TIME_FORMAT builder is retargeted to 'new Item_func_time_format(thd, arg1, arg2)'."
+    },
+    {
+      "path": "sql/lex.h",
+      "role": "refactor",
+      "evidence": "One keyword table entry, '{ \"DATE_FORMAT\", SYM(DATE_FORMAT_SYM)}', so the parser can recognise the name it now handles itself."
+    },
+    {
+      "path": "sql/sql_yacc.yy",
+      "role": "refactor",
+      "evidence": "Adds '%token DATE_FORMAT_SYM' and two productions building Item_func_date_format with two and with three expressions, plus a typo fix, 'Non Reserved keywird' to 'keyword'. Grammar for the new explicit-locale form, which the reported statement does not use."
+    },
+    {
+      "path": "sql/sql_yacc_ora.yy",
+      "role": "refactor",
+      "evidence": "The identical token, productions and typo fix in the Oracle-mode grammar, which is maintained as a parallel copy of sql_yacc.yy."
+    }
+  ],
+  "symptom_location": {
+    "file": null,
+    "function": null,
+    "determinable": false
+  },
+  "log_location": {
+    "file": null,
+    "function": null,
+    "determinable": false
+  },
+  "relation": "unclear",
+  "rationale": "The only evidence is a client error, 'ERROR 1901 (HY000) at line 7140: Function or expression 'date_format()' cannot be used in the GENERATED ALWAYS AS clause of `start_day`', with no trace, no log and no frame. The check that raises it is the virtual-column processor on the function item, which is one of the gold files, but nothing in the report points there and the file that formats the message is not identified. Two files carry the change of behaviour and eight carry a moved helper, a retired builder and grammar for a new syntax.",
+  "confidence": "medium",
+  "notes": "Ten gold files for one logical change, which makes this the clearest case of the per-file metric being driven by project structure rather than by the difficulty of finding the defect. Four of the ten are header and implementation halves of two classes, two are the parallel standard and Oracle-mode grammars that must be edited identically, and one is a keyword table. What the packet cannot settle is why the reporter's two-argument call was rejected in 10.2 but accepted in 10.1, since the body of the virtual-column check is not shown; the hunk 'if (is_time_format)' becoming 'if (arg_count > 2)' is consistent with the locale being bound at parse time so the expression becomes deterministic, but that reading is inferred from the surrounding changes rather than shown. Seeing check_vcol_func_processor in full would settle it. The reporter also notes the behaviour difference across versions, 'So it may be a problem with 10.2.2 only', which is accurate and still names no file."
+}

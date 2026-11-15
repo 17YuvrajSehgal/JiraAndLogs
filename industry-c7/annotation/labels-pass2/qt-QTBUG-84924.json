@@ -1,0 +1,27 @@
+{
+ "id": "qt:QTBUG-84924",
+ "project": "qt",
+ "issue_key": "QTBUG-84924",
+ "annotator": "claude-sonnet-5-5",
+ "pass": 2,
+ "file_roles": [
+  {
+   "path": "src/corelib/kernel/qmetatype.h",
+   "role": "causal",
+   "evidence": "Removes the '#ifdef _LIBCPP_VERSION appendStr(\"std::\" ... _LIBCPP_ABI_NAMESPACE \"::pair\")' branch and adds an is_std_pair path in typenameHelper so names are always 'std::pair<T1,T2>'; the old libc++ name 'std::__1::pair' leaked into moc output."
+  }
+ ],
+ "symptom_location": {
+  "file": "src/network/access/qnetworkreplyhttpimpl_p.h",
+  "function": "moc_qnetworkreplyhttpimpl_p.cpp",
+  "determinable": true
+ },
+ "log_location": {
+  "file": "src/network/access/qnetworkreplyhttpimpl_p.h",
+  "function": "moc_qnetworkreplyhttpimpl_p.cpp",
+  "determinable": true
+ },
+ "relation": "state-producer",
+ "rationale": "The Android on macOS build failed in generated moc code that spelled the type as std::__1::pair, which is not valid there. The commit message says the type name normalization in QMetaType produced libc++-specific names, and the diff changes that normalization. The failing compile unit is a moc-generated file outside the gold set. The symptom file is the generated moc output, named in the build log.",
+ "confidence": "medium"
+}

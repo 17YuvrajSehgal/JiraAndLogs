@@ -1,0 +1,28 @@
+{
+  "id": "mongodb:SERVER-22458",
+  "project": "mongodb",
+  "issue_key": "SERVER-22458",
+  "annotator": "claude-opus-5",
+  "pass": 1,
+  "file_roles": [
+    {
+      "path": "src/mongo/db/storage/key_string.h",
+      "role": "causal",
+      "evidence": "The reader and the writer disagreed on how many bits the size field has. The writer keeps seven, 'void setSizeByte(uint8_t size) { dassert(size < kMaxBytesNeeded); _buf[0] = 0x80 | size; }', while the reader masked six, and that is what changes: 'return _buf[0] & 0x3f;' becomes 'return _buf[0] & 0x7f;'. The wrong mask is the defect and it is corrected here."
+    }
+  ],
+  "symptom_location": {
+    "file": "src/mongo/db/storage/key_string.h",
+    "function": "getSizeByte",
+    "determinable": true
+  },
+  "log_location": {
+    "file": null,
+    "function": null,
+    "determinable": false
+  },
+  "relation": "same-location",
+  "rationale": "The report states the defect as a capacity, 'KeyString::TypeBits incorrectly limits length to 63 bytes', and 63 is exactly what a six-bit mask yields, so the reported limit and the masked read are the same line. The fix widens only that read, '_buf[0] & 0x3f' to '_buf[0] & 0x7f', leaving the write side and its 'dassert(size < kMaxBytesNeeded)' alone, which confirms the reader was the one that was wrong. There is no separate symptom site because nothing ever failed.",
+  "confidence": "high",
+  "notes": "REPORT-NAMES-FIX: the report names the faulty code and the exact wrong behaviour in its title, 'KeyString::TypeBits incorrectly limits length to 63 bytes', which points straight at the six-bit mask. The instance has no failure: the reporter says so, 'This is only a theoretical issue, as the BSON size of a key is limited to 1024 bytes, so 63 bytes of data would require in 64*4 = 252 numeric fields, which is impossible.' Nothing was observed, nothing was logged, no trace exists, so log_location.determinable = false and the symptom site is the defect itself, as in the string-only instances already labelled. symptom_location.function is 'getSizeByte' from the diff; the enclosing class is named only by the report title, so it is not recorded in the function field. The fix ships with no regression test: the packet records one changed file and it is the gold file."
+}

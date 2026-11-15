@@ -1,0 +1,28 @@
+{
+  "id": "qt:QTBUG-84629",
+  "project": "qt",
+  "issue_key": "QTBUG-84629",
+  "annotator": "claude-opus-5",
+  "pass": 1,
+  "file_roles": [
+    {
+      "path": "src/platformsupport/fontdatabases/windows/qwindowsfontenginedirectwrite.cpp",
+      "role": "causal",
+      "evidence": "The report states the wrong behaviour and places it in the font engine, 'This seems to be because we in certain cases before would return a blank image consisting only of margins, but since we now respect the glyph margins in the font engine, we return an invalid image instead.' The only non-test source file the fix changed is that engine, and the warnings the reporter pastes are QPainter refusing the image it was handed, 'QPainter::begin: Paint device returned engine == 0, type: 3', so the invalid image is produced here and rejected elsewhere."
+    }
+  ],
+  "symptom_location": {
+    "file": "src/gui/painting/qpainter.cpp",
+    "function": "QPainter::begin",
+    "determinable": true
+  },
+  "log_location": {
+    "file": "src/gui/painting/qpainter.cpp",
+    "function": "QPainter::begin",
+    "determinable": true
+  },
+  "relation": "state-producer",
+  "rationale": "Three warnings are emitted in sequence, 'QPainter::begin: Paint device returned engine == 0, type: 3', 'QPainter::setCompositionMode: Painter not active' and 'QPainter::end: Painter not active, aborted', all of them QPainter reporting that it was given a device it cannot paint on. The bad value is created earlier, in the DirectWrite font engine that now returns an invalid image where it used to return a blank one, and is consumed at the QPainter::begin call, which is the state-producer shape. The regression commit is named in the report, 'After bb67c3b68b00fb2075a971f4f0d58e1867ef7128'.",
+  "confidence": "medium",
+  "notes": "The packet renders this file's diff as '(no diff retrieved)', so no hunk could be cited for any gold file in this instance. Each warning text is prefixed with the emitting class and function, 'QPainter::begin:', which places the site the way CONVENTIONS records for a bracketed logger tag in KAFKA-6051; the path src/gui/painting/qpainter.cpp is inferred from the class name because the packet does not show the tree. The symptom and log sites are outside the gold set, and the gold file is named nowhere in the pasted output. The report names a culprit commit rather than a location. The role is medium rather than high because the packet does not show whether the fix restores the blank image, clamps the margins, or makes callers skip an empty glyph; the first two are causal in this file and the third would be, too, since no other file was changed."
+}

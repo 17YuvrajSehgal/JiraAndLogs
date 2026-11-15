@@ -1,0 +1,28 @@
+{
+  "id": "camel:CAMEL-794",
+  "project": "camel",
+  "issue_key": "CAMEL-794",
+  "annotator": "claude-opus-5",
+  "pass": 1,
+  "file_roles": [
+    {
+      "path": "camel-core/src/main/java/org/apache/camel/model/ThreadType.java",
+      "role": "causal",
+      "evidence": "The fix adds an override that was missing: 'protected void configureChild(ProcessorType output) { super.configureChild(output); if (isInheritErrorHandler()) { output.setErrorHandlerBuilder(getErrorHandlerBuilder()); } }'. Without it the children of thread() never received the configured error handler and fell back to the default policy, which is the reported six redeliveries."
+    }
+  ],
+  "symptom_location": {
+    "file": "camel-core/src/main/java/org/apache/camel/processor/DeadLetterChannel.java",
+    "function": null,
+    "determinable": true
+  },
+  "log_location": {
+    "file": null,
+    "function": null,
+    "determinable": false
+  },
+  "relation": "state-producer",
+  "rationale": "The report says the exchange is redelivered 'to the default DeadLetterChannel' six times instead of once to the configured handler, so the failure surfaces in the error handler, not in ThreadType. The wrong error handler is attached to the child processors when the route is built in ThreadType.configureChild, and only shows up later at runtime, which is a produced-state relation. The report's output is System.out and a log endpoint, so no product log line can be located.",
+  "confidence": "medium",
+  "notes": "Symptom path is inferred from the class the reporter names ('the default DeadLetterChannel'), not from a stack trace. Four fix commits, two of which are test-only, and the first says the problem 'apparently already is fixed in Camel 1.5', so the gold set spans an uncertain fix history. The same file also makes errorHandler() throw IllegalArgumentException, which is preventive, but the configureChild override is what repairs the reported behaviour."
+}

@@ -1,0 +1,28 @@
+{
+  "id": "qt:QTBUG-96285",
+  "project": "qt",
+  "issue_key": "QTBUG-96285",
+  "annotator": "claude-opus-5",
+  "pass": 1,
+  "file_roles": [
+    {
+      "path": "src/corelib/kernel/qwineventnotifier.cpp",
+      "role": "causal",
+      "evidence": "This is the only file the fix touched, 'The fix changed 1 file(s); 1 of them are non-test source files', against a hard failure, 'Repeat kill 2-3 more times - the application crashes' with 'The program has unexpectedly finished.' Nothing else was treated as broken, so the wrong logic is the notifier's own handling of a repeatedly signalled and re-armed handle, which is the mechanism the reproduction exercises: killing cmd.exe signals the process handle, the application restarts the process, and the notifier is set up again."
+    }
+  ],
+  "symptom_location": {
+    "file": null,
+    "function": null,
+    "determinable": false
+  },
+  "log_location": {
+    "file": null,
+    "function": null,
+    "determinable": false
+  },
+  "relation": "unclear",
+  "rationale": "The report describes a crash on the third or fourth restart of a QProcess under MSVC release builds, 'the QProcess can't be restarted', 'In debug it hardly crashes. Not reproducible with MinGW', and the only output is the counter the reporter printed, 'ProcessTest::processFinished 30'. The single changed file is QWinEventNotifier, the Windows handle-notification object QProcess relies on, and under the rubric's hard case the file that was changed alone owns the violated invariant. No stack, no faulting frame and no diff were rendered, so the symptom site and the relation to it cannot be fixed.",
+  "confidence": "medium",
+  "notes": "The packet renders this file's diff as '(no diff retrieved)', so no hunk could be cited for any gold file in this instance. The causal call rests entirely on the single-changed-file rule that CONVENTIONS records for a guard in the file that owns the feature: no other file was treated as broken, and the failure is a real crash, so the defect is here. It does not rest on observed logic, and a second rater who declines to label any no-diff instance would put this at unclear. The gold file does not appear in the report at all: the reporter names QProcess and cmd.exe and never mentions QWinEventNotifier. There is no stack trace, so the symptom location is not determinable; 'The program has unexpectedly finished.' is the debugger's own notice, not a program log, so log_location.determinable is false. Build-configuration sensitivity is reported, 'built with MSVC2019 64bit', 'In debug it hardly crashes', which points at a timing or lifetime problem rather than a configuration one. The diff would settle whether the change corrects the notifier's own state machine or only guards against a dangling pointer handed to it."
+}

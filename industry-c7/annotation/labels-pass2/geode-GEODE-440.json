@@ -1,0 +1,28 @@
+{
+ "id": "geode:GEODE-440",
+ "project": "geode",
+ "issue_key": "GEODE-440",
+ "annotator": "claude-sonnet-5-5",
+ "pass": 2,
+ "file_roles": [
+  {
+   "path": "gemfire-core/src/main/java/com/gemstone/gemfire/cache/query/internal/index/IndexManager.java",
+   "role": "preventive",
+   "evidence": "Diff adds a public static flag ENABLE_UPDATE_IN_PROGRESS_INDEX_CALCULATION (default true) that short-circuits needsRecalculation(); it bypasses the path rather than correcting logic."
+  }
+ ],
+ "symptom_location": {
+  "file": "gemfire-core/src/main/java/com/gemstone/gemfire/cache/query/internal/index/CompactRangeIndex.java",
+  "function": "evaluateEntry",
+  "determinable": true
+ },
+ "log_location": {
+  "file": "gemfire-core/src/main/java/com/gemstone/gemfire/cache/query/internal/index/CompactRangeIndex.java",
+  "function": "evaluateEntry",
+  "determinable": true
+ },
+ "relation": "unclear",
+ "rationale": "The NPE is in CompactRangeIndex.evaluateEntry, which is not in the gold set. The only production change adds an on/off flag around needsRecalculation, which lets a test skip the recalculation path. No corrected logic is visible, so it is a workaround at best.",
+ "confidence": "low",
+ "notes": "To decide causal vs not: the test-file diff (does it set the flag false?) and the CompactRangeIndex code at evaluateEntry:953 would settle it."
+}

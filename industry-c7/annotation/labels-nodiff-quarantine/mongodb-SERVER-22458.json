@@ -1,0 +1,28 @@
+{
+  "id": "mongodb:SERVER-22458",
+  "project": "mongodb",
+  "issue_key": "SERVER-22458",
+  "annotator": "claude-opus-5",
+  "pass": 1,
+  "file_roles": [
+    {
+      "path": "src/mongo/db/storage/key_string.h",
+      "role": "causal",
+      "evidence": "The report names the faulty type and the wrong value in its summary, 'KeyString::TypeBits incorrectly limits length to 63 bytes', and gives the arithmetic for why it never fires, 'This is only a theoretical issue, as the BSON size of a key is limited to 1024 bytes, so 63 bytes of data would require in 64*4 = 252 numeric fields, which is impossible.' The single gold file is src/mongo/db/storage/key_string.h, the header that defines KeyString::TypeBits. The hunk is not visible: '(no diff retrieved)'."
+    }
+  ],
+  "symptom_location": {
+    "file": null,
+    "function": null,
+    "determinable": false
+  },
+  "log_location": {
+    "file": null,
+    "function": null,
+    "determinable": false
+  },
+  "relation": "unclear",
+  "rationale": "The report names the defective type and the wrong limit directly, and the one gold file is the header that defines that type, so the wrong bound lives there. No failure ever occurred: the reporter states it is 'only a theoretical issue' and shows that the input needed to trigger it cannot be constructed. With no failure there is no symptom site and no log, and the diff renders as '(no diff retrieved)'.",
+  "confidence": "medium",
+  "notes": "NO-DIFF-IN-PACKET: every gold file in this packet renders its diff as '(no diff retrieved)', so there is no diff evidence for any role here. Roles rest on the issue report and the gold file list alone, which is weaker than every previously labelled instance. REPORT-NAMES-FIX: the summary names the faulty type and the incorrect limit outright. The instance has no failure, by the reporter's own statement ('This is only a theoretical issue'), so symptom_location and log_location are undeterminable and `relation` is recorded as unclear rather than same-location, to avoid inflating the same-location count with an instance that has no symptom. The gold file is a header, and CONVENTIONS makes a header causal only if it holds logic; KeyString::TypeBits is named in the report as the thing that carries the limit, so the limit is logic in this header, but the hunk is not shown and a second rater could hold out for it."
+}

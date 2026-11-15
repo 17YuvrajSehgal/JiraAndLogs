@@ -1,0 +1,27 @@
+{
+ "id": "qt:QTBUG-88966",
+ "project": "qt",
+ "issue_key": "QTBUG-88966",
+ "annotator": "claude-sonnet-5-5",
+ "pass": 2,
+ "file_roles": [
+  {
+   "path": "src/corelib/itemmodels/qabstractitemmodel.h",
+   "role": "causal",
+   "evidence": "Adds friend qHashEquals(QPersistentModelIndex, QPersistentModelIndex) returning a.d == b.d; operator== used by QHash was inconsistent with qHash, which corrupted the hash and hit the rehash assert 'it.isUnused()'."
+  }
+ ],
+ "symptom_location": {
+  "file": "src/corelib/tools/qhash.h",
+  "function": "QHashPrivate::Data::rehash",
+  "determinable": true
+ },
+ "log_location": {
+  "file": "src/corelib/tools/qhash.h",
+  "function": "QHashPrivate::Data::rehash",
+  "determinable": true
+ },
+ "relation": "state-producer",
+ "rationale": "The hash function and equality used for QPersistentModelIndex did not agree, so QSet<QPersistentModelIndex> got corrupted and the assert fired later during insert. The fix makes equality match the hash.",
+ "confidence": "high"
+}

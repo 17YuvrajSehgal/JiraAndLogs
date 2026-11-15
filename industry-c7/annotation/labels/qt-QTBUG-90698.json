@@ -1,0 +1,28 @@
+{
+  "id": "qt:QTBUG-90698",
+  "project": "qt",
+  "issue_key": "QTBUG-90698",
+  "annotator": "claude-opus-5",
+  "pass": 1,
+  "file_roles": [
+    {
+      "path": "src/gui/text/qtextengine.cpp",
+      "role": "preventive",
+      "evidence": "applyVisibilityRules substituted one hard-coded glyph for a soft hyphen, 'glyphs->glyphs[glyphPosition] = fontEngine->glyphIndex('-');', and the fix turns that into a fallback chain, 'glyph_t glyph = fontEngine->glyphIndex(0x002d); if (glyph == 0) glyph = fontEngine->glyphIndex(0x2010); if (glyph == 0) glyph = fontEngine->glyphIndex(0x00ad);'. The report shows no font without U+002D and no missing glyph; it shows a length comparison, 'Actual (line.textLength()): 4 / Expected (5): 5', and the pre-existing code already handled a zero glyph, 'if (Q_LIKELY(glyphs->glyphs[glyphPosition] != 0))'. This hardens soft-hyphen substitution for fonts the report never exercises."
+    }
+  ],
+  "symptom_location": {
+    "file": "tests/auto/gui/text/qtextlayout/tst_qtextlayout.cpp",
+    "function": "tst_QTextLayout::softHyphens",
+    "determinable": true
+  },
+  "log_location": {
+    "file": null,
+    "function": null,
+    "determinable": false
+  },
+  "relation": "unclear",
+  "rationale": "The only reported failure is a CI assertion on one platform, 'FAIL! : tst_QTextLayout::softHyphens() Compared values are not the same / Actual (line.textLength()): 4 / Expected (5): 5 / Loc: [/Users/qt/work/qt/qtbase/tests/auto/gui/text/qtextlayout/tst_qtextlayout.cpp(2431)]'. The commit describes the repair as arithmetic in the test, 'Handle macOS 11 issues in softHyphens test. Calculate the effective width of the hyphen better, and compare with ceiled sizes', and the second changed file, the test, is filtered out of gold. What is left in gold is a defensive fallback to U+2010 and U+00AD, which the packet never ties to the number 4 appearing instead of 5, so no gold file is labelled causal.",
+  "confidence": "medium",
+  "notes": "Second rater would reasonably disagree: a rater who assumes the macOS 11 font lacked U+002D would call qtextengine.cpp causal, since it owns soft-hyphen substitution and 'Adding a check for a legal-but-unhandled input is causal' would then apply. It is labelled preventive because the recorded test for that rule is whether anything else was treated as broken, and something was: the test file, which the commit message is mostly about. The failure is a test-harness assertion, not a log, so log_location.determinable = false. The instance has no product failure; it is a CI comparison on one platform, and the fix as a whole changes an expected value as much as it changes behaviour. The gold file does not appear in the report at all, which names only tst_qtextlayout.cpp. Worth putting in the human agreement subset."
+}

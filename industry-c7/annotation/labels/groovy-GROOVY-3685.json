@@ -1,0 +1,28 @@
+{
+  "id": "groovy:GROOVY-3685",
+  "project": "groovy",
+  "issue_key": "GROOVY-3685",
+  "annotator": "claude-opus-5",
+  "pass": 1,
+  "file_roles": [
+    {
+      "path": "src/main/groovy/ui/text/TextEditor.java",
+      "role": "causal",
+      "evidence": "One line is added, 'PRINT_PANE.setFont(getFont());', immediately after 'PRINT_PANE.setDocument(getDocument());'. The print pane was given the editor's live document while keeping its own font, and this file owns both the editor font and PRINT_PANE, so the omission is the defect rather than a guard added elsewhere."
+    }
+  ],
+  "symptom_location": {
+    "file": "src/main/groovy/ui/text/TextEditor.java",
+    "function": null,
+    "determinable": true
+  },
+  "log_location": {
+    "file": null,
+    "function": null,
+    "determinable": false
+  },
+  "relation": "same-location",
+  "rationale": "The reported effect, 'it causes the font in the editor to change', is visible in the same component the fix touches, and the added setFont call sits in the same block that hands the editor's document to the print pane. The enclosing method name is not shown in the hunk, so only the file is recorded for the symptom. The log pasted in the report is not from this project at all.",
+  "confidence": "high",
+  "notes": "The pasted log is entirely from macOS and a third-party printer plugin, 'Error loading /Library/Printers/hp/PDEs/hpPostScriptPDE.plugin ... no matching architecture in universal wrapper'. No part of it comes from Groovy, and none of its terms appear anywhere in the repository, so a log-guided localizer given this report is pointed outside the codebase. A useful instance for the paper. Why sharing the document changes the rendered font is not derivable from the packet; the role rests on the single added line matching the reported effect."
+}

@@ -1,0 +1,38 @@
+{
+  "id": "mongodb:SERVER-29255",
+  "project": "mongodb",
+  "issue_key": "SERVER-29255",
+  "annotator": "claude-opus-5",
+  "pass": 1,
+  "file_roles": [
+    {
+      "path": "src/mongo/db/catalog/collection_options.cpp",
+      "role": "causal",
+      "evidence": "The validator re-parsed stored metadata with the default kind, which is the user-facing one, 'Status CollectionOptions::validate() const { return CollectionOptions().parse(toBSON()); }'. The fix passes the kind that accepts a server-generated UUID, 'Status CollectionOptions::validateForStorage() const { return CollectionOptions().parse(toBSON(), ParseKind::parseForStorage); }'. The parse function itself is unchanged below, 'Status CollectionOptions::parse(const BSONObj& options, ParseKind kind) { *this = {};'."
+    },
+    {
+      "path": "src/mongo/db/catalog/collection_options.h",
+      "role": "refactor",
+      "evidence": "Declaration only: 'Status validate() const;' becomes 'Status validateForStorage() const;', with the neighbouring 'Status parse(const BSONObj& obj, ParseKind kind = parseForCommand);' and the 'enum ParseKind { parseForCommand, parseForStorage };' untouched. The stale comment above it, 'Confirms that collection options can be converted to BSON and back without errors.', is not even updated."
+    },
+    {
+      "path": "src/mongo/db/repl/collection_cloner.cpp",
+      "role": "refactor",
+      "evidence": "One call site following the rename, 'uassertStatusOK(options.validate());' becoming 'uassertStatusOK(options.validateForStorage());', in the middle of untouched constructor checks such as 'uassert(ErrorCodes::BadValue, \"callback function cannot be null\", onCompletion);'."
+    }
+  ],
+  "symptom_location": {
+    "file": "src/mongo/db/catalog/collection_options.cpp",
+    "function": "CollectionOptions::validate",
+    "determinable": true
+  },
+  "log_location": {
+    "file": null,
+    "function": null,
+    "determinable": false
+  },
+  "relation": "same-location",
+  "rationale": "The report states the failing function and the mechanism directly, 'Currently, validate() will fail if the metadata contains a collection UUID' and 'This behavior is controlled by the CollectionOptions::ParseKind enumeration when calling CollectionOptions::parse()'. The diff corrects exactly that: the omitted second argument defaulted to parseForCommand, which rejects a UUID, so the defect and the place it surfaced are the same two-line body. The other two gold files carry the rename outward and change no behaviour.",
+  "confidence": "high",
+  "notes": "REPORT-NAMES-FIX: the report names the faulty function and prescribes the mechanism of the adopted fix. It also names the change that introduced the defect rather than a location, 'CollectionOptions started supporting an optional collection UUID in SERVER-27987', which is the ticket-level analogue of a bisect result. The instance has no failure output: there is no log, no trace and no reproducer, only prose, so log_location.determinable = false. Gold composition is the point here: of three gold files one holds the corrected logic and two are a declaration rename and a single call site, both pure call-site adaptation per the convention. The fix changed 6 files and only 3 are non-test source, so 3 test files were filtered as intended."
+}

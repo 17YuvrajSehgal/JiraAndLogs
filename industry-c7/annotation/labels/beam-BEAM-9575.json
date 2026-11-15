@@ -1,0 +1,28 @@
+{
+  "id": "beam:BEAM-9575",
+  "project": "beam",
+  "issue_key": "BEAM-9575",
+  "annotator": "claude-opus-5",
+  "pass": 1,
+  "file_roles": [
+    {
+      "path": "runners/java-job-service/src/main/java/org/apache/beam/runners/jobsubmission/PortablePipelineJarCreator.java",
+      "role": "causal",
+      "evidence": "writeClassPathResources is deleted entirely, including 'Preconditions.checkArgument(classPathResources.size() == 1, \"Expected exactly one jar on \" + classLoader.toString())', which is the reported message verbatim. It is replaced by taking the runner's own jar directly: 'copyResourcesFromJar(new JarFile(mainClass.getProtectionDomain().getCodeSource().getLocation().getPath()))'. Assuming the classloader held exactly one jar was the wrong logic."
+    }
+  ],
+  "symptom_location": {
+    "file": "runners/java-job-service/src/main/java/org/apache/beam/runners/jobsubmission/PortablePipelineJarCreator.java",
+    "function": "writeClassPathResources",
+    "determinable": true
+  },
+  "log_location": {
+    "file": "sdks/python/apache_beam/runners/portability/portable_runner.py",
+    "function": "wait_until_finish",
+    "determinable": true
+  },
+  "relation": "same-location",
+  "rationale": "The exception text in the report, 'Expected exactly one jar on sun.misc.Launcher$AppClassLoader@1b6d3586', is produced by the Preconditions check the fix removes, so the throw site and the defect are the same method. The reported traceback is Python, 'portable_runner.py, line 545, in wait_until_finish', which only relays the remote job's failure state, so the log site and the fix are in different languages and different directories. The commit message states the corrected behaviour: 'Only copy the Spark runner jar, not whatever other jars happen to be on the classloader'.",
+  "confidence": "high",
+  "notes": "Cross-language instance: everything the reporter pasted is Python, while the entire fix is Java. Any localizer weighting the report's file paths is pulled toward sdks/python and away from runners/java-job-service."
+}

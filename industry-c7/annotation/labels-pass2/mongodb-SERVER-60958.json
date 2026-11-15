@@ -1,0 +1,28 @@
+{
+ "id": "mongodb:SERVER-60958",
+ "project": "mongodb",
+ "issue_key": "SERVER-60958",
+ "annotator": "claude-sonnet-5-5",
+ "pass": 2,
+ "file_roles": [
+  {
+   "path": "src/mongo/db/s/migration_chunk_cloner_source_legacy.cpp",
+   "role": "causal",
+   "evidence": "In _checkRecipientCloningStatus, calls to _sessionCatalogSource->inCatchupPhase()/untransferredCatchUpDataSize() are moved before 'stdx::lock_guard<Latch> sl(_mutex)' into locals; accessing them inside the cloner mutex caused the hang on step-down."
+  }
+ ],
+ "symptom_location": {
+  "file": "src/mongo/db/s/migration_chunk_cloner_source_legacy.cpp",
+  "function": "MigrationChunkClonerSourceLegacy::_checkRecipientCloningStatus",
+  "determinable": true
+ },
+ "log_location": {
+  "file": null,
+  "function": null,
+  "determinable": false
+ },
+ "relation": "concurrency",
+ "rationale": "The report only says a hang occurs; the commit message and diff show the session catalog source was queried while holding the cloner mutex. Moving the calls outside the lock is a lock-scope correction.",
+ "confidence": "medium",
+ "notes": "The exact lock cycle is inferred from the commit message, not from the report."
+}

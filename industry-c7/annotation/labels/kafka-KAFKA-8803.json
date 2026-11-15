@@ -1,0 +1,28 @@
+{
+  "id": "kafka:KAFKA-8803",
+  "project": "kafka",
+  "issue_key": "KAFKA-8803",
+  "annotator": "claude-opus-5",
+  "pass": 1,
+  "file_roles": [
+    {
+      "path": "core/src/main/scala/kafka/coordinator/transaction/TransactionMetadata.scala",
+      "role": "causal",
+      "evidence": "One clause is deleted from the Ongoing transition guard, 'txnStartTimestamp > transitMetadata.txnStartTimestamp'. The commit explains why it was wrong, that 'due to ntp time shift the timer may go backwards and hence the newStartTimestamp be smaller than the original one', after which 'the txn would not transit to Ongoing' and 'would NEVER be expired anymore because only Ongoing ones would be checked for expiration'. Treating a monotonic clock as guaranteed is the defect."
+    }
+  ],
+  "symptom_location": {
+    "file": "streams/src/main/java/org/apache/kafka/streams/processor/internals/StreamTask.java",
+    "function": null,
+    "determinable": true
+  },
+  "log_location": {
+    "file": "streams/src/main/java/org/apache/kafka/streams/processor/internals/StreamTask.java",
+    "function": null,
+    "determinable": true
+  },
+  "relation": "state-producer",
+  "rationale": "Everything the reporter can see is on the client: 'task [0_36] Timeout exception caught when initializing transactions for task 0_36', logged by StreamTask, followed by 'TimeoutException: Timeout expired after 60000milliseconds while awaiting InitProducerId'. The fix is on the broker, in the transaction coordinator, where a transaction that failed to reach Ongoing is never expired and so blocks every later InitProducerId for that id. The stuck state is written once and every subsequent client request pays for it, which is why the reporter sees it 'consistently failing at startup' while other streams on the same brokers are fine.",
+  "confidence": "high",
+  "notes": "Client-side evidence, broker-side fix, in different processes and different source trees. The report also carries material that leads nowhere: repeated UNKNOWN_LEADER_EPOCH messages from ReplicaFetcherThread, a screenshot of their frequency, and a note that the broker carries a patch for KAFKA-8773. None of it touches the one line that was changed, and a reader following the most prominent broker log in the ticket would go to the fetcher rather than the transaction coordinator."
+}

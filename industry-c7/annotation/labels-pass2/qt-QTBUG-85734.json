@@ -1,0 +1,28 @@
+{
+ "id": "qt:QTBUG-85734",
+ "project": "qt",
+ "issue_key": "QTBUG-85734",
+ "annotator": "claude-sonnet-5-5",
+ "pass": 2,
+ "file_roles": [
+  {
+   "path": "src/plugins/platforms/windows/qwindowsscreen.cpp",
+   "role": "symptom-handling",
+   "evidence": "Diff replaces `QWindowsTheme::instance()->refreshFonts()` with `if (auto theme = QWindowsTheme::instance()) theme->refreshFonts();`, a null guard at the crash site."
+  }
+ ],
+ "symptom_location": {
+  "file": "src/plugins/platforms/windows/qwindowsscreen.cpp",
+  "function": "QWindowsScreenManager::handleScreenChanges",
+  "determinable": true
+ },
+ "log_location": {
+  "file": "src/plugins/platforms/windows/qwindowsscreen.cpp",
+  "function": "QWindowsScreenManager::handleScreenChanges",
+  "determinable": true
+ },
+ "relation": "state-producer",
+ "rationale": "The crash is a null dereference of QWindowsTheme::instance() in handleScreenChanges under Wine. The fix adds a null check there. The screen manager does not own the theme singleton and the reason it is null under Wine is not in this diff, so I treat it as handling the symptom.",
+ "confidence": "low",
+ "notes": "Could be causal if the manager is expected to tolerate a missing theme; the QWindowsTheme creation code would settle it."
+}

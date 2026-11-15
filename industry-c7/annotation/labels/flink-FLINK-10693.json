@@ -1,0 +1,28 @@
+{
+  "id": "flink:FLINK-10693",
+  "project": "flink",
+  "issue_key": "FLINK-10693",
+  "annotator": "claude-opus-5",
+  "pass": 1,
+  "file_roles": [
+    {
+      "path": "flink-scala/src/main/scala/org/apache/flink/api/scala/typeutils/EitherSerializer.scala",
+      "role": "causal",
+      "evidence": "'override def duplicate: EitherSerializer[A,B] = this' is replaced by a body that duplicates both nested serializers and returns 'new EitherSerializer[A, B](leftDup, rightDup)' unless both duplicates are reference-identical. Returning 'this' breaks the contract duplicate() exists to satisfy, so the wrong logic is corrected here."
+    }
+  ],
+  "symptom_location": {
+    "file": null,
+    "function": null,
+    "determinable": false
+  },
+  "log_location": {
+    "file": null,
+    "function": null,
+    "determinable": false
+  },
+  "relation": "concurrency",
+  "rationale": "The report gives a mechanism and no failure, 'buggy duplication logic, resulting in sharing and incorrect concurrent use when the nested serializers are not thread safe', with no stack trace, message or failing query, so neither the symptom nor the log site can be placed. The single gold file is where the wrong logic lives: duplicate() returned the receiver, so every thread that asked for its own copy got the same nested serializers. The relation is recorded as concurrency because the failure the report describes is two threads sharing state across sites, not a fault at one site.",
+  "confidence": "high",
+  "notes": "'unclear' is equally defensible for the relation, since no symptom site exists to relate the causal site to, and the concurrency reading rests entirely on one sentence of the report. Worth putting in the agreement check."
+}

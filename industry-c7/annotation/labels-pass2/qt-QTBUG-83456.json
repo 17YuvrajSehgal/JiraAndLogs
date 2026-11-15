@@ -1,0 +1,27 @@
+{
+ "id": "qt:QTBUG-83456",
+ "project": "qt",
+ "issue_key": "QTBUG-83456",
+ "annotator": "claude-sonnet-5-5",
+ "pass": 2,
+ "file_roles": [
+  {
+   "path": "src/corelib/io/qsettings.cpp",
+   "role": "causal",
+   "evidence": "The UTF-8 BOM skip was inside #if QT_CONFIG(textcodec), so qmake (no textcodec) never skipped it; diff moves the detection out and always sets dataPos = 3."
+  }
+ ],
+ "symptom_location": {
+  "file": "src/corelib/io/qsettings.cpp",
+  "function": "QConfFileSettingsPrivate::readIniFile",
+  "determinable": true
+ },
+ "log_location": {
+  "file": null,
+  "function": null,
+  "determinable": false
+ },
+ "relation": "same-location",
+ "rationale": "qmake is built without textcodec, so the BOM bytes stayed in the first line and the [Paths] section was not parsed. readIniFile now skips the BOM in all builds. The faulty conditional was in this function.",
+ "confidence": "high"
+}

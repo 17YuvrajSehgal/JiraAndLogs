@@ -1,0 +1,53 @@
+{
+  "id": "mariadb:MDEV-21983",
+  "project": "mariadb",
+  "issue_key": "MDEV-21983",
+  "annotator": "claude-opus-5",
+  "pass": 1,
+  "file_roles": [
+    {
+      "path": "storage/innobase/row/row0mysql.cc",
+      "role": "causal",
+      "evidence": "row_rename_table_for_mysql called the path builder unconditionally, 'char* new_path = row_make_new_pathname(table, new_name); char* old_path = fil_space_get_first_path(table->space);'. It is restructured to look first and skip the work when there is nothing to rename, 'else if (char* old_path = fil_space_get_first_path(table->space)) { char* new_path = os_file_make_new_pathname(old_path, new_name);'. The same file also stops asserting a path exists, 'ut_a(table->data_dir_path)' becoming 'ut_ad(table->data_dir_path || dict_table_is_discarded(table))'."
+    },
+    {
+      "path": "storage/innobase/dict/dict0dict.cc",
+      "role": "preventive",
+      "evidence": "Passes the new flag at the drop path, 'fil_delete_tablespace(table->space)' becoming 'fil_delete_tablespace(table->space, dict_table_is_discarded(table))', so DROP after DISCARD stops logging a missing tablespace. The report is about RENAME, not DROP."
+    },
+    {
+      "path": "storage/innobase/fil/fil0fil.cc",
+      "role": "refactor",
+      "evidence": "Signature churn and a conditional message: the BTR_CUR_HASH_ADAPT-guarded 'drop_ahi' parameter is replaced by 'bool if_exists', and the existing 'Cannot delete tablespace ... because it is not found in the tablespace memory cache' error is wrapped in 'if (!if_exists)'. No decision about renaming is made here."
+    },
+    {
+      "path": "storage/innobase/include/fil0fil.h",
+      "role": "refactor",
+      "evidence": "The matching declaration, 'dberr_t fil_delete_tablespace(ulint id, bool if_exists= false);', plus a copyright year."
+    },
+    {
+      "path": "storage/innobase/row/row0merge.cc",
+      "role": "refactor",
+      "evidence": "The entire change to this file is the keyword 'static' on row_make_new_pathname, now that its only external caller is gone."
+    },
+    {
+      "path": "storage/innobase/include/row0merge.h",
+      "role": "refactor",
+      "evidence": "Removes the declaration of row_make_new_pathname and its comment block, following the static qualifier, plus a copyright year."
+    }
+  ],
+  "symptom_location": {
+    "file": "storage/innobase/row/row0merge.cc",
+    "function": "row_make_new_pathname",
+    "determinable": true
+  },
+  "log_location": {
+    "file": null,
+    "function": null,
+    "determinable": false
+  },
+  "relation": "caller-callee",
+  "rationale": "The segmentation fault is at 'row_make_new_pathname (table=0x7f6f49891300, new_name=0x7f6f781e3bf0 \"test/t2\") at storage/innobase/row/row0merge.cc:4251', called directly from 'row_rename_table_for_mysql ... row0mysql.cc:4326'. Those two frames are the symptom and the cause, and the three statements in the report explain the state, since ALTER TABLE t DISCARD TABLESPACE leaves the table with no tablespace to build a path from.",
+  "confidence": "high",
+  "notes": "A clean caller-callee instance with a sharp detail about gold composition: the file the crash occurred in, row0merge.cc, is in the gold set, and its entire contribution to the fix is the keyword 'static'. The function that crashed was not wrong; its caller should not have called it. So a localizer that answers with the crashing file is scored correct against fix-gold and has identified a one-word visibility change, while the behaviour it needed is in a different gold file. Four of the six gold files here are signature, declaration, visibility and copyright changes."
+}

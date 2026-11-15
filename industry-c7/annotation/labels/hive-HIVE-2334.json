@@ -1,0 +1,28 @@
+{
+  "id": "hive:HIVE-2334",
+  "project": "hive",
+  "issue_key": "HIVE-2334",
+  "annotator": "claude-opus-5",
+  "pass": 1,
+  "file_roles": [
+    {
+      "path": "cli/src/java/org/apache/hadoop/hive/cli/CliDriver.java",
+      "role": "causal",
+      "evidence": "The header block iterated an unchecked list, 'Schema sc = qp.getSchema(); for (FieldSchema fs : sc.getFieldSchemas())'. It is lifted into printHeader and guarded, 'List<FieldSchema> fieldSchemas = qp.getSchema().getFieldSchemas(); if (HiveConf.getBoolVar(conf, HiveConf.ConfVars.HIVE_CLI_PRINT_HEADER) && fieldSchemas != null)'. The CLI's own header feature is what failed to handle a command that carries no field schemas."
+    }
+  ],
+  "symptom_location": {
+    "file": "cli/src/java/org/apache/hadoop/hive/cli/CliDriver.java",
+    "function": "processCmd",
+    "determinable": true
+  },
+  "log_location": {
+    "file": null,
+    "function": null,
+    "determinable": false
+  },
+  "relation": "same-location",
+  "rationale": "The report is a title and nothing else, with no trace, no message and no description, so the only evidence tying code to failure is the diff. The null list comes from the Driver's schema for a DESCRIBE command, and the Driver is not changed by this fix, so the project treated a null fieldSchemas as a legal value and the defect is the CLI iterating it unguarded. The guard lands in the same method the header printing lived in, which is also where the NPE was thrown.",
+  "confidence": "medium",
+  "notes": "'symptom-handling' is the defensible alternative: the change is literally a null guard at the site that blew up, and the null originates in Driver.getSchema(). It is labelled causal because Driver was not touched, so nothing elsewhere was treated as broken, which leaves the unguarded loop as the wrong logic. The deciding question is whether a null fieldSchemas is a defect in Driver or a legal value, and the packet cannot settle it. A good candidate for the agreement check. Note also that most of this diff is unrelated restructuring, extracting processLocalCmd, tokenizeCmd and getFirstCmd and making conf injectable for tests; the one-line guard is the fix."
+}

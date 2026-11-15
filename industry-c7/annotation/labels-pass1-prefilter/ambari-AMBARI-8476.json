@@ -1,0 +1,63 @@
+{
+  "id": "ambari:AMBARI-8476",
+  "project": "ambari",
+  "issue_key": "AMBARI-8476",
+  "annotator": "claude-opus-5",
+  "pass": 1,
+  "file_roles": [
+    {
+      "path": "ambari-common/src/main/python/resource_management/core/providers/package/apt.py",
+      "role": "refactor",
+      "evidence": "INSTALL_CMD/REPO_UPDATE_CMD/REMOVE_CMD change from format strings to argument lists and calls become 'cmd = INSTALL_CMD + [name]' with string_cmd_from_args_list for logging. This is the adaptation forced by shell.py refusing string commands under sudo."
+    },
+    {
+      "path": "ambari-common/src/main/python/resource_management/core/providers/package/yumrpm.py",
+      "role": "refactor",
+      "evidence": "Identical mechanical change: \"/usr/bin/yum -d 0 -e 0 -y install %s\" becomes ['/usr/bin/yum','-d','0','-e','0','-y','install'] and 'cmd = INSTALL_CMD % (name)' becomes 'cmd = INSTALL_CMD + [name]'."
+    },
+    {
+      "path": "ambari-common/src/main/python/resource_management/core/providers/package/zypper.py",
+      "role": "refactor",
+      "evidence": "Same list conversion as the other two providers, plus CHECK_CMD aligned with yumrpm's 'installed_pkgs=`rpm -qa %s`' form. No defect is corrected."
+    },
+    {
+      "path": "ambari-common/src/main/python/resource_management/core/providers/system.py",
+      "role": "refactor",
+      "evidence": "The entire diff is one added argument pass-through, 'output_file=self.resource.output_file,', matching the new parameter on shell._call."
+    },
+    {
+      "path": "ambari-common/src/main/python/resource_management/core/resources/system.py",
+      "role": "refactor",
+      "evidence": "Adds 'output_file = ResourceArgument()' and two docstrings describing the new as_sudo/as_user helpers and the cwd limitation. Declaration and documentation only."
+    },
+    {
+      "path": "ambari-common/src/main/python/resource_management/core/shell.py",
+      "role": "unclear",
+      "evidence": "This is the substantive change: as_sudo/as_user are added, string commands under sudo now raise Fail, and the invocation becomes '/usr/bin/sudo {env} -Hi {command}' or sudo -Hi su - user -s /bin/bash -c. But the issue reports no failure, so there is no reported failure for this file to be causal for."
+    },
+    {
+      "path": "ambari-common/src/main/python/resource_management/core/sudo.py",
+      "role": "unclear",
+      "evidence": "Corrects a real wrong-variable bug, 'shell.checked_call([\"chgrp\", owner, path])' to '[\"chgrp\", group, path]'. It is genuinely wrong logic, but it is not the logic the ticket asked about, so it cannot be causal for the reported failure."
+    },
+    {
+      "path": "ambari-common/src/main/python/resource_management/libraries/providers/copy_from_local.py",
+      "role": "refactor",
+      "evidence": "Replaces a hand-built \"su - {0} -c\" string with the new helper, 'unless_cmd = as_user(\"{kinnit_if_needed} ; hadoop fs -ls {dest_path}\", owner, env={PATH:bin_dir})'. A call-site adaptation to the shell.py API."
+    }
+  ],
+  "symptom_location": {
+    "file": null,
+    "function": null,
+    "determinable": false
+  },
+  "log_location": {
+    "file": null,
+    "function": null,
+    "determinable": false
+  },
+  "relation": "unclear",
+  "rationale": "The issue text is a single sentence, 'Run sudo commands as sudo and sudo su ability in Resource Management', with no failure, no log and no stack trace, so no symptom or log site exists to locate. Six of the eight gold files are mechanical adaptations to a changed shell API. The two that carry real content, shell.py and sudo.py, cannot be scored against a reported failure that was never reported.",
+  "confidence": "low",
+  "notes": "This instance is a feature and refactoring commit mined as if it were a production issue. Worth counting separately: the benchmark assumes each instance has a failure to localise, and this one does not, so every system is being scored against an unanswerable question."
+}

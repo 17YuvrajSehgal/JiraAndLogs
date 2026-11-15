@@ -1,0 +1,27 @@
+{
+ "id": "mariadb:MDEV-13972",
+ "project": "mariadb",
+ "issue_key": "MDEV-13972",
+ "annotator": "claude-sonnet-5-5",
+ "pass": 2,
+ "file_roles": [
+  {
+   "path": "sql/item_timefunc.cc",
+   "role": "causal",
+   "evidence": "In the overflow branch `err` (args[0]->val_str) may be NULL and was dereferenced with err->ptr(); diff adds `if (!err)` using ErrConvInteger(sec) instead."
+  }
+ ],
+ "symptom_location": {
+  "file": "sql/item_timefunc.cc",
+  "function": "Item_func_sec_to_time::get_date",
+  "determinable": true
+ },
+ "log_location": {
+  "file": "sql/item_timefunc.cc",
+  "function": "Item_func_sec_to_time::get_date",
+  "determinable": true
+ },
+ "relation": "same-location",
+ "rationale": "The crash frame is Item_func_sec_to_time::get_date. The old code dereferenced the result of val_str without a NULL check. The fix handles NULL inside the same function, which owns that value.",
+ "confidence": "high"
+}

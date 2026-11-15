@@ -1,0 +1,68 @@
+{
+  "id": "mongodb:SERVER-14268",
+  "project": "mongodb",
+  "issue_key": "SERVER-14268",
+  "annotator": "claude-opus-5",
+  "pass": 1,
+  "file_roles": [
+    {
+      "path": "src/mongo/db/catalog/collection_cursor_cache.cpp",
+      "role": "unclear",
+      "evidence": "The packet renders this file's diff as '(no diff retrieved)'. The report is the sanitised security advisory and carries no technical detail at all: 'Using a specially crafted message, a remote user could obtain a limited amount of information from the server heap memory' and 'The response sent by the server returns only validated data.' Nothing in it names a message type, a field, a function or a file. A cursor cache implementation could hold the defect (returning unvalidated heap contents for an unknown cursor id) or could merely be adapted to a changed accessor; the packet cannot distinguish these."
+    },
+    {
+      "path": "src/mongo/db/catalog/collection_cursor_cache.h",
+      "role": "unclear",
+      "evidence": "The packet renders this file's diff as '(no diff retrieved)'. The report is the sanitised security advisory and carries no technical detail at all: 'Using a specially crafted message, a remote user could obtain a limited amount of information from the server heap memory' and 'The response sent by the server returns only validated data.' Nothing in it names a message type, a field, a function or a file. A header, and CONVENTIONS makes a header causal only if it holds logic and refactor if it only declares. Which of the two this is cannot be seen without the hunk."
+    },
+    {
+      "path": "src/mongo/db/dbmessage.cpp",
+      "role": "unclear",
+      "evidence": "The packet renders this file's diff as '(no diff retrieved)'. The report is the sanitised security advisory and carries no technical detail at all: 'Using a specially crafted message, a remote user could obtain a limited amount of information from the server heap memory' and 'The response sent by the server returns only validated data.' Nothing in it names a message type, a field, a function or a file. Message parsing is the plausible site of a 'specially crafted message' defect, but plausibility is not the rubric's test (decision rule 1: label causal because the diff shows the wrong logic being corrected there). No diff is shown."
+    },
+    {
+      "path": "src/mongo/db/dbmessage.h",
+      "role": "unclear",
+      "evidence": "The packet renders this file's diff as '(no diff retrieved)'. The report is the sanitised security advisory and carries no technical detail at all: 'Using a specially crafted message, a remote user could obtain a limited amount of information from the server heap memory' and 'The response sent by the server returns only validated data.' Nothing in it names a message type, a field, a function or a file. A header; causal only if it holds logic, refactor if it only declares, and the packet shows neither."
+    },
+    {
+      "path": "src/mongo/db/instance.cpp",
+      "role": "unclear",
+      "evidence": "The packet renders this file's diff as '(no diff retrieved)'. The report is the sanitised security advisory and carries no technical detail at all: 'Using a specially crafted message, a remote user could obtain a limited amount of information from the server heap memory' and 'The response sent by the server returns only validated data.' Nothing in it names a message type, a field, a function or a file. The request dispatch path, which could be the producer of the leaked response or only a call-site adaptation. Not separable here."
+    },
+    {
+      "path": "src/mongo/s/cursors.cpp",
+      "role": "unclear",
+      "evidence": "The packet renders this file's diff as '(no diff retrieved)'. The report is the sanitised security advisory and carries no technical detail at all: 'Using a specially crafted message, a remote user could obtain a limited amount of information from the server heap memory' and 'The response sent by the server returns only validated data.' Nothing in it names a message type, a field, a function or a file. The mongos cursor path. Under CONVENTIONS a second copy of the same defect in a sibling component takes the same role as the original, but the original is itself unidentified here."
+    },
+    {
+      "path": "src/mongo/s/request.cpp",
+      "role": "unclear",
+      "evidence": "The packet renders this file's diff as '(no diff retrieved)'. The report is the sanitised security advisory and carries no technical detail at all: 'Using a specially crafted message, a remote user could obtain a limited amount of information from the server heap memory' and 'The response sent by the server returns only validated data.' Nothing in it names a message type, a field, a function or a file. The mongos request path, same problem: no hunk, and the report does not say whether mongos was reachable by the crafted message."
+    },
+    {
+      "path": "src/mongo/tools/sniffer.cpp",
+      "role": "unclear",
+      "evidence": "The packet renders this file's diff as '(no diff retrieved)'. The report is the sanitised security advisory and carries no technical detail at all: 'Using a specially crafted message, a remote user could obtain a limited amount of information from the server heap memory' and 'The response sent by the server returns only validated data.' Nothing in it names a message type, a field, a function or a file. A diagnostic tool that parses the wire protocol. It is a strong refactor candidate, as a tool normally adapts to a changed parsing signature rather than holding a server-side leak, but that is an inference from the path, not from a hunk."
+    },
+    {
+      "path": "src/mongo/util/net/message.h",
+      "role": "unclear",
+      "evidence": "The packet renders this file's diff as '(no diff retrieved)'. The report is the sanitised security advisory and carries no technical detail at all: 'Using a specially crafted message, a remote user could obtain a limited amount of information from the server heap memory' and 'The response sent by the server returns only validated data.' Nothing in it names a message type, a field, a function or a file. The wire message header; causal only if it holds logic (an inline length or bounds check that was wrong), refactor if it only declares. Not visible."
+    }
+  ],
+  "symptom_location": {
+    "file": null,
+    "function": null,
+    "determinable": false
+  },
+  "log_location": {
+    "file": null,
+    "function": null,
+    "determinable": false
+  },
+  "relation": "unclear",
+  "rationale": "The report is a post-hoc sanitised security advisory, not a bug report: it gives user impact, affected versions and a one-line 'RESOLUTION DETAILS' and deliberately withholds the mechanism. No log line, no trace, no field and no function is named, and all nine gold diffs render as '(no diff retrieved)'. With nothing to cite, every role would be a guess, so all nine are unclear per rubric rule on unverifiable labels.",
+  "confidence": "low",
+  "notes": "NO-DIFF-IN-PACKET: every gold file in this packet renders its diff as '(no diff retrieved)', so there is no diff evidence for any role here. Roles rest on the issue report and the gold file list alone, which is weaker than every previously labelled instance. The report is a sanitised security advisory, which withholds the mechanism by design; that is separate from the missing diff and would make this instance hard even with a diff. Nine gold files span three layers (wire message parsing, cursor caches on both mongod and mongos, and a packet-sniffing tool), and the single non-source file among them, src/mongo/tools/sniffer.cpp, is the kind of tool adaptation CONVENTIONS calls refactor. What would settle it: the diff for dbmessage.cpp and message.h, which would show whether a length or bounds check was corrected there (causal) or whether the validation was added at the response-building site (preventive)."
+}

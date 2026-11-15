@@ -1,0 +1,28 @@
+{
+  "id": "qt:QTBUG-84562",
+  "project": "qt",
+  "issue_key": "QTBUG-84562",
+  "annotator": "claude-opus-5",
+  "pass": 1,
+  "file_roles": [
+    {
+      "path": "src/corelib/kernel/qeventdispatcher_win.cpp",
+      "role": "causal",
+      "evidence": "qt_GetMessageHook tested the hook's wParam for equality, '&& wp == PM_REMOVE && d->sendPostedEventsTimerId == 0', so when Windows passed PM_REMOVE|PM_NOYIELD the branch was skipped and the posted-events timer was never started. The fix reads it as a bit field, 'const bool messageRemoved = (wp & PM_REMOVE) != 0;' used as '&& messageRemoved &&'. The equality test is the wrong logic and this file owns the delivery of posted events."
+    }
+  ],
+  "symptom_location": {
+    "file": "src/corelib/kernel/qeventdispatcher_win.cpp",
+    "function": "qt_GetMessageHook",
+    "determinable": true
+  },
+  "log_location": {
+    "file": null,
+    "function": null,
+    "determinable": false
+  },
+  "relation": "same-location",
+  "rationale": "The reporter sees an embedded window that 'no longer refresh (unless during a resize), and no longer receive any input event', which is posted events never being delivered, and the commit explains the mechanism, 'Windows unexpectedly passes PM_NOYIELD flag in wParam parameter to the hook procedure'. The diff changes exactly the condition that decides whether to arm the delivery timer, from '==' to a mask test. The missed branch and the undelivered events are in the same file.",
+  "confidence": "high",
+  "notes": "The report names a culprit commit rather than a location, 'I've narrowed down the problem to this commit: QEventDispatcherWin32: fix posted events delivering', which happens to land on the gold file. The user-visible surface is a QWinWidget-embedded window from the separate qt-solutions repository, which is outside the snapshot and has no frame in the packet, so symptom_location records the project-owned site. No log or trace was pasted. The packet says the fix changed 2 files of which 1 is non-test source, so a test did ship with this fix."
+}

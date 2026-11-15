@@ -1,0 +1,28 @@
+{
+  "id": "pdfbox:PDFBOX-5046",
+  "project": "pdfbox",
+  "issue_key": "PDFBOX-5046",
+  "annotator": "claude-opus-5",
+  "pass": 1,
+  "file_roles": [
+    {
+      "path": "pdfbox/src/main/java/org/apache/pdfbox/util/DateConverter.java",
+      "role": "causal",
+      "evidence": "parseDate's early return did not recognise the value the report gives: 'if (text == null || text.isEmpty())' becomes 'if (text == null || text.isEmpty() || \"D:\".equals(text.trim()))'. The exception is raised inside that same method, 'at org.apache.pdfbox.util.DateConverter.parseDate(DateConverter.java:656)', so the code that walked past the end of \"D:   \" is the defect, and no other source file was changed."
+    }
+  ],
+  "symptom_location": {
+    "file": "pdfbox/src/main/java/org/apache/pdfbox/util/DateConverter.java",
+    "function": "parseDate",
+    "determinable": true
+  },
+  "log_location": {
+    "file": "pdfbox/src/main/java/org/apache/pdfbox/util/DateConverter.java",
+    "function": "parseDate",
+    "determinable": true
+  },
+  "relation": "same-location",
+  "rationale": "The trace is three frames deep and only one of them is project-owned: 'at org.apache.pdfbox.util.DateConverter.parseDate(DateConverter.java:656)' called from 'DateConverter.toCalendar(DateConverter.java:724)', above it only java.lang.String.charAt and StringLatin1.charAt. The fix adds the missing case to the same method's guard, '\"D:\".equals(text.trim())', which is exactly the input the report quotes. Cause, symptom and the single gold file are the same method.",
+  "confidence": "high",
+  "notes": "REPORT-NAMES-FIX: the report quotes the triggering value, 'Happens with \"D:   \" as a date.', the trace names the method and line, and the adopted fix hard-codes that value. Convention applied: adding a check for a legal-but-unhandled input is causal when the changed file owns the feature and nothing elsewhere was treated as broken (HIVE-2334, KAFKA-6250 group). The commit message, 'PDFBOX-5046: catch more empty dates', describes the same thing the hunk shows. The fix touched 2 files and only 1 is gold, so the test file was filtered as intended."
+}

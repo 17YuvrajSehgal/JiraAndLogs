@@ -1,0 +1,27 @@
+{
+ "id": "kafka:KAFKA-6051",
+ "project": "kafka",
+ "issue_key": "KAFKA-6051",
+ "annotator": "claude-sonnet-5-5",
+ "pass": 2,
+ "file_roles": [
+  {
+   "path": "core/src/main/scala/kafka/server/ReplicaFetcherThread.scala",
+   "role": "causal",
+   "evidence": "shutdown() closed leaderEndpoint after super.shutdown(); diff overrides initiateShutdown() to close leaderEndpoint right after super.initiateShutdown(), so the blocking send ends early."
+  }
+ ],
+ "symptom_location": {
+  "file": "core/src/main/scala/kafka/server/ReplicaFetcherThread.scala",
+  "function": "shutdown",
+  "determinable": true
+ },
+ "log_location": {
+  "file": "core/src/main/scala/kafka/server/ReplicaFetcherThread.scala",
+  "function": "shutdown",
+  "determinable": true
+ },
+ "relation": "same-location",
+ "rationale": "The report asks to close the endpoint earlier in initiateShutdown instead of after super.shutdown(), and the diff does exactly this in the same class. The wrong ordering is the defect.",
+ "confidence": "high"
+}

@@ -1,0 +1,38 @@
+{
+  "id": "mongodb:SERVER-30467",
+  "project": "mongodb",
+  "issue_key": "SERVER-30467",
+  "annotator": "claude-opus-5",
+  "pass": 1,
+  "file_roles": [
+    {
+      "path": "src/mongo/db/matcher/schema/expression_internal_schema_str_length.h",
+      "role": "causal",
+      "evidence": "The matcher measured the BSON field's byte size rather than its characters, 'int lenWithoutNullTerm = elem.valuestrsize() - 1; return getComparator()(lenWithoutNullTerm);' with the comment 'BSONElement::valuestrsize() includes the terminating null character, so subtract 1 before comparing its length.' The fix counts code points instead, 'auto len = str::lengthInUTF8CodePoints(elem.valueStringData()); return getComparator()(len);'. This inline body is the one place in the gold set whose result changes."
+    },
+    {
+      "path": "src/mongo/db/pipeline/expression.cpp",
+      "role": "refactor",
+      "evidence": "A move and its call sites, with no change in result. The local helper is deleted, 'bool isContinuationByte(char charByte) { return (charByte & 0xc0) == 0x80; }', and four uassert conditions are rewritten against the relocated one, for example '!isContinuationByte(input[byteIx])' becoming '!str::isUTF8ContinuationByte(input[byteIx])'. ExpressionStrLenCP's hand-rolled loop, 'size_t strLen = 0; for (char byte : stringVal) { strLen += !isContinuationByte(byte); }', is replaced by 'size_t strLen = str::lengthInUTF8CodePoints(stringVal);', which is the same loop under a new name."
+    },
+    {
+      "path": "src/mongo/util/mongoutils/str.h",
+      "role": "refactor",
+      "evidence": "Receives the two helpers verbatim from expression.cpp, 'inline bool isUTF8ContinuationByte(char charByte) { return (charByte & 0xc0) == 0x80; }' and 'inline size_t lengthInUTF8CodePoints(mongo::StringData str) { size_t strLen = 0; for (char byte : str) { strLen += !isUTF8ContinuationByte(byte); } return strLen; }', including the original comment wording. Nothing here is new behaviour; the counting rule already existed inside ExpressionStrLenCP."
+    }
+  ],
+  "symptom_location": {
+    "file": "src/mongo/db/matcher/schema/expression_internal_schema_str_length.h",
+    "function": null,
+    "determinable": true
+  },
+  "log_location": {
+    "file": null,
+    "function": null,
+    "determinable": false
+  },
+  "relation": "same-location",
+  "rationale": "The report asks for one thing, that '$_internalSchemaMinLength and $_internalSchemaMaxLength must be updated to properly count the lengths of Unicode strings, which may contain multibyte characters', and exactly one gold file answers it: the matcher's inline body stops using valuestrsize() and starts using lengthInUTF8CodePoints. The other two files move an existing helper out of the aggregation code so the matcher can call it, which is why they are refactor rather than causal under the moved-method convention. The wrong result was produced and observed at the same place, so the relation is same-location.",
+  "confidence": "high",
+  "notes": "REPORT-NAMES-FIX: the two-line report names the operators and prescribes the semantics adopted, and the commit message restates them, '$_internalSchema{Min|Max}Length counts UTF-8 code points.' The instance has no failure output: no log, no trace, no reproducer, only a correctness statement, so log_location.determinable = false. symptom_location.function is null because the hunk opens mid-signature, 'MatchDetails* details = nullptr) const final {', and the method name is never visible. Gold composition: two of the three gold files are a verbatim move of code that already worked, so a system scored against fix-gold gets credit for str.h and expression.cpp without having found anything that was wrong. The judgement call is str.h, labelled refactor because the capability was not missing, only privately scoped; a second rater could call it causal under the missing-capability-plus-its-use convention. The fix changed 6 files and only 3 are non-test source, so 3 test files were filtered as intended."
+}

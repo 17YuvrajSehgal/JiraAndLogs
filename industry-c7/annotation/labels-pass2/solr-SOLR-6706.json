@@ -1,0 +1,27 @@
+{
+ "id": "solr:SOLR-6706",
+ "project": "solr",
+ "issue_key": "SOLR-6706",
+ "annotator": "claude-sonnet-5-5",
+ "pass": 2,
+ "file_roles": [
+  {
+   "path": "solr/solrj/src/java/org/apache/solr/common/util/JsonRecordReader.java",
+   "role": "causal",
+   "evidence": "Adds 'event == NUMBER ||' to the list of skippable scalar events in Node.handleObjectStart; a float value hit the 'unexpected token' RuntimeException because NUMBER was not handled."
+  }
+ ],
+ "symptom_location": {
+  "file": "solr/solrj/src/java/org/apache/solr/common/util/JsonRecordReader.java",
+  "function": "Node.handleObjectStart",
+  "determinable": true
+ },
+ "log_location": {
+  "file": "solr/solrj/src/java/org/apache/solr/common/util/JsonRecordReader.java",
+  "function": "Node.handleObjectStart",
+  "determinable": true
+ },
+ "relation": "same-location",
+ "rationale": "The reader skipped LONG and other scalars but not NUMBER (floats), so a non-leaf float threw. The one-token fix is at the throwing site.",
+ "confidence": "high"
+}

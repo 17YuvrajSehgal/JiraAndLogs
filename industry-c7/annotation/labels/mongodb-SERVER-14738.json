@@ -1,0 +1,63 @@
+{
+  "id": "mongodb:SERVER-14738",
+  "project": "mongodb",
+  "issue_key": "SERVER-14738",
+  "annotator": "claude-opus-5",
+  "pass": 1,
+  "file_roles": [
+    {
+      "path": "src/mongo/db/catalog/collection_info_cache.cpp",
+      "role": "causal",
+      "evidence": "computeIndexKeys treated every index the same way, 'BSONObj key = i.next()->keyPattern(); BSONObjIterator j( key ); while ( j.more() ) { BSONElement e = j.next(); _indexedPaths.addPath( e.fieldName() ); }', so a text index contributed only its key pattern and never the fields it actually indexes. The fix splits the case, 'if (descriptor->getAccessMethodName() != IndexNames::TEXT)' against 'fts::FTSSpec ftsSpec(descriptor->infoObj());' with 'if (ftsSpec.wildcard()) { _indexedPaths.allPathsIndexed(); }', the weights loop '_indexedPaths.addPath(it->first);', extraBefore, extraAfter and '_indexedPaths.addPathComponent(ftsSpec.languageOverrideField());'. The missing paths are the defect and they are supplied here."
+    },
+    {
+      "path": "src/mongo/db/catalog/collection_info_cache.h",
+      "role": "refactor",
+      "evidence": "A type swap and an include swap, with no changed logic: 'const IndexPathSet& indexKeys()' becomes 'const UpdateIndexData& indexKeys()' over an identical body, 'IndexPathSet _indexedPaths;' becomes 'UpdateIndexData _indexedPaths;', and '#include \"mongo/db/index_set.h\"' is replaced by '#include \"mongo/db/update_index_data.h\"'."
+    },
+    {
+      "path": "src/mongo/db/ops/update.cpp",
+      "role": "refactor",
+      "evidence": "The entire change to this file is includes: '#include \"mongo/db/index_set.h\"' is removed, '#include \"mongo/db/update_index_data.h\"' is added, and the existing operation_context_impl.h, catalog/collection.h and repl_coordinator_global.h lines are reordered alphabetically. No statement changes."
+    },
+    {
+      "path": "src/mongo/db/ops/update_driver.cpp",
+      "role": "refactor",
+      "evidence": "One parameter type: 'void UpdateDriver::refreshIndexKeys(const IndexPathSet* indexedFields) { _indexedFields = indexedFields; }' becomes 'void UpdateDriver::refreshIndexKeys(const UpdateIndexData* indexedFields)' over the same body."
+    },
+    {
+      "path": "src/mongo/db/ops/update_driver.h",
+      "role": "refactor",
+      "evidence": "The matching declaration and member, 'void refreshIndexKeys(const IndexPathSet* indexedFields);' to 'void refreshIndexKeys(const UpdateIndexData* indexedFields);' and 'const IndexPathSet* _indexedFields;' to 'const UpdateIndexData* _indexedFields;', plus the include swap from index_set.h to update_index_data.h."
+    },
+    {
+      "path": "src/mongo/db/ops/update_lifecycle.h",
+      "role": "refactor",
+      "evidence": "One pure virtual declaration, 'virtual const IndexPathSet* getIndexKeys() const = 0;' becoming 'virtual const UpdateIndexData* getIndexKeys() const = 0;'. The header declares and holds no body."
+    },
+    {
+      "path": "src/mongo/db/ops/update_lifecycle_impl.cpp",
+      "role": "refactor",
+      "evidence": "Return type only: 'const IndexPathSet* UpdateLifecycleImpl::getIndexKeys() const' becomes 'const UpdateIndexData* UpdateLifecycleImpl::getIndexKeys() const' over the unchanged body 'if (_collection) return &_collection->infoCache()->indexKeys(); return NULL;'."
+    },
+    {
+      "path": "src/mongo/db/ops/update_lifecycle_impl.h",
+      "role": "refactor",
+      "evidence": "The matching override declaration, 'virtual const IndexPathSet* getIndexKeys() const;' becoming 'virtual const UpdateIndexData* getIndexKeys() const;'. Nothing else in the file changes."
+    }
+  ],
+  "symptom_location": {
+    "file": null,
+    "function": null,
+    "determinable": false
+  },
+  "log_location": {
+    "file": null,
+    "function": null,
+    "determinable": false
+  },
+  "relation": "state-producer",
+  "rationale": "The index key set that decides whether an update touches an index never contained the text-indexed fields, because computeIndexKeys read keyPattern() for every index, so 'db.col.update({title:\"test\"}, {$set:{title:\"fail\"}})' was treated as touching no index and the text entry was left pointing at the old content. The report states the same preconditions, 'the update modifies a text-indexed field', 'the update is in-place (does not result in a document move)' and 'the update does not modify another index'. The bad state is written on the update path and consumed much later by a text query, which first returns the wrong document and then fails outright, '\"$err\" : \"BSONObj size: -286331154 (0xEEEEEEEE) is invalid.'",
+  "confidence": "high",
+  "notes": "REPORT-NAMES-FIX: the rendered report is not the original report at all. It is a post-resolution status panel, 'Issue Status as of Aug 04, 2014', which carries FIX VERSION and a RESOLUTION DETAILS line that states the adopted fix, 'Correctly determine if update with text index is in-place', and the commit message then repeats it almost word for word. The line 'h6. Original description' is the last line of the issue text with nothing after it, so the only evidence a system sees is a summary written after the fix existed. Seven of the eight gold files are a type swap from IndexPathSet to UpdateIndexData with no changed logic, two of them nothing but includes or a declaration; one file carries the whole fix. The gold set contains no file from the read path where the corruption is seen, so the symptom site is outside the gold set and the packet never names it, which is why symptom_location and log_location are not determinable; the pasted evidence is shell output, not a log or a trace. The second commit message names 'UpdateIndexData::clear() reset all member variables', but no hunk from that commit appears in the packet and no update_index_data file is in the gold set, so the second half of the fix is invisible here; the packet records 18 changed files and 8 gold, so 10 were filtered as tests."
+}

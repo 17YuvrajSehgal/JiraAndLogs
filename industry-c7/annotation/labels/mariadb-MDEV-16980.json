@@ -1,0 +1,33 @@
+{
+  "id": "mariadb:MDEV-16980",
+  "project": "mariadb",
+  "issue_key": "MDEV-16980",
+  "annotator": "claude-opus-5",
+  "pass": 1,
+  "file_roles": [
+    {
+      "path": "storage/innobase/handler/ha_innodb.cc",
+      "role": "causal",
+      "evidence": "table_name_parse cut the partition suffix off the buffer without shortening the recorded length: the body of 'if (char *is_part = strchr(tbl_buf, '#'))' wrote a NUL over the separator and stopped there. It gains 'tblnamelen = is_part - tbl_buf;'. The commit states the rule that was broken, 'Table name length should identify the table name only not the partition name.'"
+    },
+    {
+      "path": "sql/table.h",
+      "role": "preventive",
+      "evidence": "Two assertions are added to the char* overload of init_one_table, 'DBUG_ASSERT(!db_name_arg || strlen(db_name_arg) == db_length_arg)' and the matching one for the table name. The overload that actually fired in the report is the LEX_CSTRING one further down the file, which already had this check, so these extend the same check to a path the report did not exercise."
+    }
+  ],
+  "symptom_location": {
+    "file": "sql/table.h",
+    "function": "TABLE_LIST::init_one_table",
+    "determinable": true
+  },
+  "log_location": {
+    "file": "sql/table.h",
+    "function": "TABLE_LIST::init_one_table",
+    "determinable": true
+  },
+  "relation": "state-producer",
+  "rationale": "The assertion, 'sql/table.h:1949: void TABLE_LIST::init_one_table(...): Assertion `!table_name_arg->str || strlen(table_name_arg->str) == table_name_arg->length' failed', says the recorded length did not match the string, and the trace shows the value arriving through 'open_purge_table (... tb=0x7fa97d7f8240 \"t1\", tblen=7)'. The name is two characters and the length says seven, which is the width of the original 't1#P#p0' form. The length was computed earlier in table_name_parse and only checked here.",
+  "confidence": "high",
+  "notes": "Both gold files appear in the stack and neither at the changed code. table.h appears at the assertion in the LEX_CSTRING overload while the diff touches the char* overload two hundred lines above it, and ha_innodb.cc appears at innodb_acquire_mdl, innodb_find_table_for_vc and innobase_allocate_row_for_vcol while the fix is in table_name_parse, which is not on the stack because it ran earlier. That makes this the fifth right-file-wrong-function instance, and the first where it holds for every gold file at once. The reporter also records that there is nothing to see in production, 'No visible (immediate) effect on a non-debug build', and that the test is non-deterministic, 'Run with --repeat=N'."
+}

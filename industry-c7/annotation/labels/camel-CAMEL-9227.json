@@ -1,0 +1,28 @@
+{
+  "id": "camel:CAMEL-9227",
+  "project": "camel",
+  "issue_key": "CAMEL-9227",
+  "annotator": "claude-opus-5",
+  "pass": 1,
+  "file_roles": [
+    {
+      "path": "components/camel-dozer/src/main/java/org/apache/camel/converter/dozer/DozerTypeConverter.java",
+      "role": "causal",
+      "evidence": "convertTo is restructured to run the mapping under the right classloader: 'ClassLoader appcl = context != null ? context.getApplicationContextClassLoader() : null; ... if (appcl != null && appcl != tccl) { LOG.debug(\"Switching TCCL to: {}\", appcl); Thread.currentThread().setContextClassLoader(appcl); }' with a finally that restores it. The old code gave up on this entirely, commenting 'if the exchange is null, we have no chance to ensure that the TCCL is the one from the CamelContext'."
+    }
+  ],
+  "symptom_location": {
+    "file": "camel-core/src/main/java/org/apache/camel/impl/converter/BaseTypeConverterRegistry.java",
+    "function": "mandatoryConvertTo",
+    "determinable": true
+  },
+  "log_location": {
+    "file": "camel-core/src/main/java/org/apache/camel/impl/converter/BaseTypeConverterRegistry.java",
+    "function": "mandatoryConvertTo",
+    "determinable": true
+  },
+  "relation": "caller-callee",
+  "rationale": "The NoTypeConversionAvailableException is raised in BaseTypeConverterRegistry.mandatoryConvertTo, in camel-core, which is not in the gold set, while the fix is in the Dozer converter that registry would have delegated to. The registry reports 'no converter available' because the Dozer converter could not resolve the types under the wrong thread context classloader, so the symptom is one level up from the cause. The second fix commit is a checkstyle-only change, visible as a trailing-whitespace edit.",
+  "confidence": "medium",
+  "notes": "The link from the classloader switch to the 'No type converter available' message is read off the diff; the commit message only repeats the issue title. Same component and same week as CAMEL-8748, which removed the delegate classloader, so the two are likely consequences of one change."
+}

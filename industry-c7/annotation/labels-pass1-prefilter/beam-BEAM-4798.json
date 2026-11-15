@@ -1,0 +1,28 @@
+{
+  "id": "beam:BEAM-4798",
+  "project": "beam",
+  "issue_key": "BEAM-4798",
+  "annotator": "claude-opus-5",
+  "pass": 1,
+  "file_roles": [
+    {
+      "path": "runners/flink/src/main/java/org/apache/beam/runners/flink/translation/wrappers/streaming/io/UnboundedSourceWrapper.java",
+      "role": "causal",
+      "evidence": "Commit 6b7cd45251d7 inserts the missing branch: 'if (localReaders.size() == 0) { ... LOG.info(\"Number of readers is 0 for this task executor, idle\"); } else if (localReaders.size() == 1)'. Before it, zero readers fell through to a path that called localReaders.get(0), which is the reported 'IndexOutOfBoundsException: Index: 0, Size: 0'. Commit 45a3efc5ddf8 then adds 'isRunning = false' in that branch and moves the watermark timer under the checkpoint lock."
+    }
+  ],
+  "symptom_location": {
+    "file": "runners/flink/src/main/java/org/apache/beam/runners/flink/translation/wrappers/streaming/io/UnboundedSourceWrapper.java",
+    "function": "run",
+    "determinable": true
+  },
+  "log_location": {
+    "file": "runners/flink/src/main/java/org/apache/beam/runners/flink/translation/wrappers/streaming/io/UnboundedSourceWrapper.java",
+    "function": "run",
+    "determinable": true
+  },
+  "relation": "same-location",
+  "rationale": "The only Beam frame in the trace is 'UnboundedSourceWrapper.run(UnboundedSourceWrapper.java:277)', and that is the file and method the fix changes, so cause and symptom coincide. The reporter also identifies the trigger exactly, 'It happens when number of Kafka topic partitions is less than value of parallelism', which matches the new zero-readers branch. The second commit's concurrency work on the watermark timer is additional hardening carried in the same gold file.",
+  "confidence": "high",
+  "notes": "The two fix commits are rendered in timestamp order but the blob indexes show 6b7cd45251d7 applied first (32c8caa -> 606c040) and 45a3efc5ddf8 second (606c040 -> a909892). Commit timestamps and apply order can disagree after a rebase or cherry-pick, which is worth remembering because snapshot_sha is taken as the parent of the timestamp-first commit."
+}

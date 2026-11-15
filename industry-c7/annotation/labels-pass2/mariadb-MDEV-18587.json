@@ -1,0 +1,27 @@
+{
+ "id": "mariadb:MDEV-18587",
+ "project": "mariadb",
+ "issue_key": "MDEV-18587",
+ "annotator": "claude-sonnet-5-5",
+ "pass": 2,
+ "file_roles": [
+  {
+   "path": "sql/sql_class.cc",
+   "role": "causal",
+   "evidence": "The streaming replication check in THD::decide_logging_format gains 'wsrep_thd_is_local(this)', so DDL in TOI mode no longer hits the 'Streaming replication not supported with binlog_format=STATEMENT' error."
+  }
+ ],
+ "symptom_location": {
+  "file": "sql/sql_class.cc",
+  "function": "THD::decide_logging_format",
+  "determinable": true
+ },
+ "log_location": {
+  "file": "sql/sql_class.cc",
+  "function": "THD::decide_logging_format",
+  "determinable": true
+ },
+ "relation": "same-location",
+ "rationale": "The error message in the report is emitted by the changed condition. The condition was too broad because it also applied to TOI DDL. Narrowing it in the same function is the fix.",
+ "confidence": "high"
+}

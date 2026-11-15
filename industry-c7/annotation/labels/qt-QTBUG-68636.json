@@ -1,0 +1,33 @@
+{
+  "id": "qt:QTBUG-68636",
+  "project": "qt",
+  "issue_key": "QTBUG-68636",
+  "annotator": "claude-opus-5",
+  "pass": 1,
+  "file_roles": [
+    {
+      "path": "src/widgets/widgets/qmenu.cpp",
+      "role": "causal",
+      "evidence": "A menu that is its own window never got a transient parent. The fix adds the missing rule as a body, 'QWindow *QMenuPrivate::transientParentWindow() const' returning 'parent->windowHandle()' for a native parent widget, else 'w->transientParent()', else the window of 'causedPopup.widget', and then uses it in QMenu::event, 'if (isWindow() && window() && window()->windowHandle() && !window()->windowHandle()->transientParent()) window()->windowHandle()->setTransientParent(d->transientParentWindow());'."
+    },
+    {
+      "path": "src/widgets/widgets/qmenu_p.h",
+      "role": "refactor",
+      "evidence": "One added declaration beside the existing members, 'QWindow *transientParentWindow() const;', after 'void hideMenu(QMenu *menu);'. The body and the decision live in qmenu.cpp."
+    }
+  ],
+  "symptom_location": {
+    "file": null,
+    "function": null,
+    "determinable": false
+  },
+  "log_location": {
+    "file": null,
+    "function": null,
+    "determinable": false
+  },
+  "relation": "state-producer",
+  "rationale": "The report describes a placement failure with no log and no code location, 'if one menu is opened while another is being closed, it's positioned in the top-left corner instead of the expected position', and narrows it to 'a QMenu is created without a parent, i.e. QWidget::parentWidget() == nullptr' on gnome-shell only. The commit message names the consumer of the missing state, 'QMenu could be a popup window, which should be set a transient parent to get relative position, which is requested by Wayland', and the diff supplies exactly that in qmenu.cpp. The window is therefore mispositioned by the compositor because the widget layer never produced a transient parent for it.",
+  "confidence": "medium",
+  "notes": "No failure output of any kind: the symptom is a visual misplacement, so log_location.determinable = false, and the site that consumes the missing transient parent is in the Wayland platform layer and the compositor, neither of which is in the packet, so symptom_location.determinable = false too. The mechanism is taken from the commit message rather than shown, which sets confidence to medium; a second rater could set relation to 'unclear' on the ground that no symptom site exists to relate to the causal site. qmenu_p.h is a declaration-only header, labelled refactor under the CONVENTIONS header rule. The report also notes the behaviour is compositor-specific, 'There are no such issues on weston or kwin', which nothing in the diff is conditioned on."
+}

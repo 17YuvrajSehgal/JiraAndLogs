@@ -1,0 +1,38 @@
+{
+  "id": "impala:IMPALA-1351",
+  "project": "impala",
+  "issue_key": "IMPALA-1351",
+  "annotator": "claude-opus-5",
+  "pass": 1,
+  "file_roles": [
+    {
+      "path": "be/src/exec/partitioned-hash-join-node-ir.cc",
+      "role": "causal",
+      "evidence": "Three places returned the failure code without recording a reason, 'if (!null_aware_partition_->probe_rows()->AddRow(current_probe_row_)) return -1;' and two siblings. Each gains 'status_ = ...->status();' before the return. The commit states it, 'improving error handling in PHJ::ProcessProbeBatch(), as status_ was not being set properly', and an unset status_ is exactly what the failing DCHECK(!status_.ok()) detected."
+    },
+    {
+      "path": "be/src/exec/partitioned-hash-join-node.cc",
+      "role": "causal",
+      "evidence": "The null-aware partition stops inheriting the small-buffer setting: Partition's constructor takes use_small_buffers and the NAAJ stream is built with 'new Partition(state, this, 0, false)' plus 'false /* use small buffers */, false /* delete on read */' for null_probe_rows_. This is why AddRow failed in the first place, and the commit title names it, 'Update NAAJ stream to use io sized buffers'."
+    },
+    {
+      "path": "be/src/exec/partitioned-hash-join-node.h",
+      "role": "refactor",
+      "evidence": "One signature change, 'Partition(RuntimeState* state, PartitionedHashJoinNode* parent, int level)' gains 'bool use_small_buffers'. Declaration only; the decision about what to pass is made in the .cc file."
+    }
+  ],
+  "symptom_location": {
+    "file": "be/src/exec/partitioned-hash-join-node.cc",
+    "function": "GetNext",
+    "determinable": true
+  },
+  "log_location": {
+    "file": "be/src/exec/partitioned-hash-join-node.cc",
+    "function": "GetNext",
+    "determinable": true
+  },
+  "relation": "caller-callee",
+  "rationale": "The abort comes through glog from 'PartitionedHashJoinNode::GetNext ... partitioned-hash-join-node.cc:761', and the reporter pastes the code at that line, where 'if (UNLIKELY(rows_added < 0)) { DCHECK(!status_.ok());' asserts that a negative return left a reason behind. The returns that broke that contract are in ProcessProbeBatch in the -ir.cc file, which GetNext calls, so the check and the omission sit on opposite sides of one call. The underlying reason AddRow failed, small buffers on the NAAJ stream, is fixed in the same file as the check.",
+  "confidence": "high",
+  "notes": "The trace names a gold file, but the line it names is the assertion rather than anything that was corrected there; the DCHECK is left as it was. A localizer that follows the trace lands on the right file for the wrong reason. The eos rewrite in GetNext is behaviour-preserving and the DCHECK_EQ move in Init tightens an assertion, so neither is part of the fix. The commit also notes the regression test was disabled because the query takes too long, so this bug ships without a test."
+}

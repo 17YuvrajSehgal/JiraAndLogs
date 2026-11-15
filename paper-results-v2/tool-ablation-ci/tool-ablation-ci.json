@@ -1,0 +1,361 @@
+{
+  "_meta": {
+    "n_bootstrap": 1000,
+    "seed": 42,
+    "procedure": "paired bootstrap over bundles evaluable in both cells; same protocol as the Fig. 3 significance forest"
+  },
+  "online-boutique": {
+    "singles": {
+      "events": {
+        "hit_at_1": {
+          "delta": 0.0030211480362537513,
+          "ci_low": -0.00906344410876133,
+          "ci_high": 0.015105740181268883,
+          "p": 0.798,
+          "significant": false,
+          "n_paired": 331
+        },
+        "hit_at_5": {
+          "delta": 0.0,
+          "ci_low": 0.0,
+          "ci_high": 0.0,
+          "p": 1.0,
+          "significant": false,
+          "n_paired": 331
+        }
+      },
+      "trace": {
+        "hit_at_1": {
+          "delta": -0.01812688821752273,
+          "ci_low": -0.03323262839879154,
+          "ci_high": -0.006042296072507553,
+          "p": 0.0,
+          "significant": true,
+          "n_paired": 331
+        },
+        "hit_at_5": {
+          "delta": 0.0,
+          "ci_low": 0.0,
+          "ci_high": 0.0,
+          "p": 1.0,
+          "significant": false,
+          "n_paired": 331
+        }
+      },
+      "metrics": {
+        "hit_at_1": {
+          "delta": 0.0,
+          "ci_low": 0.0,
+          "ci_high": 0.0,
+          "p": 1.0,
+          "significant": false,
+          "n_paired": 331
+        },
+        "hit_at_5": {
+          "delta": 0.0,
+          "ci_low": 0.0,
+          "ci_high": 0.0,
+          "p": 1.0,
+          "significant": false,
+          "n_paired": 331
+        }
+      },
+      "peers": {
+        "hit_at_1": {
+          "delta": 0.015105740181268867,
+          "ci_low": -0.006042296072507553,
+          "ci_high": 0.03323262839879154,
+          "p": 0.172,
+          "significant": false,
+          "n_paired": 331
+        },
+        "hit_at_5": {
+          "delta": 0.0,
+          "ci_low": 0.0,
+          "ci_high": 0.0,
+          "p": 1.0,
+          "significant": false,
+          "n_paired": 331
+        }
+      }
+    },
+    "trace_contexts": {
+      "none -> trace": {
+        "delta": -0.01812688821752273,
+        "ci_low": -0.03323262839879154,
+        "ci_high": -0.006042296072507553,
+        "p": 0.0,
+        "significant": true,
+        "n_paired": 331
+      },
+      "events -> events+trace": {
+        "delta": -0.015105740181268867,
+        "ci_low": -0.030211480362537766,
+        "ci_high": 0.0,
+        "p": 0.08,
+        "significant": false,
+        "n_paired": 331
+      },
+      "metrics -> trace+metrics": {
+        "delta": -0.01812688821752273,
+        "ci_low": -0.03323262839879154,
+        "ci_high": -0.006042296072507553,
+        "p": 0.0,
+        "significant": true,
+        "n_paired": 331
+      },
+      "peers -> trace+peers": {
+        "delta": -0.0030211480362537513,
+        "ci_low": -0.00906344410876133,
+        "ci_high": 0.0,
+        "p": 0.778,
+        "significant": false,
+        "n_paired": 331
+      },
+      "events+metrics+peers -> events+trace+metrics+peers": {
+        "delta": -0.0030211480362537513,
+        "ci_low": -0.00906344410876133,
+        "ci_high": 0.0,
+        "p": 0.778,
+        "significant": false,
+        "n_paired": 331
+      }
+    }
+  },
+  "otel-demo": {
+    "singles": {
+      "events": {
+        "hit_at_1": {
+          "delta": 0.0,
+          "ci_low": 0.0,
+          "ci_high": 0.0,
+          "p": 1.0,
+          "significant": false,
+          "n_paired": 119
+        },
+        "hit_at_5": {
+          "delta": 0.0,
+          "ci_low": 0.0,
+          "ci_high": 0.0,
+          "p": 1.0,
+          "significant": false,
+          "n_paired": 119
+        }
+      },
+      "trace": {
+        "hit_at_1": {
+          "delta": 0.0,
+          "ci_low": 0.0,
+          "ci_high": 0.0,
+          "p": 1.0,
+          "significant": false,
+          "n_paired": 119
+        },
+        "hit_at_5": {
+          "delta": 0.0,
+          "ci_low": 0.0,
+          "ci_high": 0.0,
+          "p": 1.0,
+          "significant": false,
+          "n_paired": 119
+        }
+      },
+      "metrics": {
+        "hit_at_1": {
+          "delta": 0.0,
+          "ci_low": 0.0,
+          "ci_high": 0.0,
+          "p": 1.0,
+          "significant": false,
+          "n_paired": 119
+        },
+        "hit_at_5": {
+          "delta": 0.0,
+          "ci_low": 0.0,
+          "ci_high": 0.0,
+          "p": 1.0,
+          "significant": false,
+          "n_paired": 119
+        }
+      },
+      "peers": {
+        "hit_at_1": {
+          "delta": 0.0,
+          "ci_low": 0.0,
+          "ci_high": 0.0,
+          "p": 1.0,
+          "significant": false,
+          "n_paired": 119
+        },
+        "hit_at_5": {
+          "delta": 0.0,
+          "ci_low": 0.0,
+          "ci_high": 0.0,
+          "p": 1.0,
+          "significant": false,
+          "n_paired": 119
+        }
+      }
+    },
+    "trace_contexts": {
+      "none -> trace": {
+        "delta": 0.0,
+        "ci_low": 0.0,
+        "ci_high": 0.0,
+        "p": 1.0,
+        "significant": false,
+        "n_paired": 119
+      },
+      "events -> events+trace": {
+        "delta": 0.0,
+        "ci_low": 0.0,
+        "ci_high": 0.0,
+        "p": 1.0,
+        "significant": false,
+        "n_paired": 119
+      },
+      "metrics -> trace+metrics": {
+        "delta": 0.0,
+        "ci_low": 0.0,
+        "ci_high": 0.0,
+        "p": 1.0,
+        "significant": false,
+        "n_paired": 119
+      },
+      "peers -> trace+peers": {
+        "delta": 0.0,
+        "ci_low": 0.0,
+        "ci_high": 0.0,
+        "p": 1.0,
+        "significant": false,
+        "n_paired": 119
+      },
+      "events+metrics+peers -> events+trace+metrics+peers": {
+        "delta": 0.0,
+        "ci_low": 0.0,
+        "ci_high": 0.0,
+        "p": 1.0,
+        "significant": false,
+        "n_paired": 119
+      }
+    }
+  },
+  "wol-v3": {
+    "singles": {
+      "events": {
+        "hit_at_1": {
+          "delta": 0.0,
+          "ci_low": 0.0,
+          "ci_high": 0.0,
+          "p": 1.0,
+          "significant": false,
+          "n_paired": 5150
+        },
+        "hit_at_5": {
+          "delta": 0.0,
+          "ci_low": 0.0,
+          "ci_high": 0.0,
+          "p": 1.0,
+          "significant": false,
+          "n_paired": 5150
+        }
+      },
+      "trace": {
+        "hit_at_1": {
+          "delta": 0.0,
+          "ci_low": 0.0,
+          "ci_high": 0.0,
+          "p": 1.0,
+          "significant": false,
+          "n_paired": 5150
+        },
+        "hit_at_5": {
+          "delta": 0.0,
+          "ci_low": 0.0,
+          "ci_high": 0.0,
+          "p": 1.0,
+          "significant": false,
+          "n_paired": 5150
+        }
+      },
+      "metrics": {
+        "hit_at_1": {
+          "delta": 0.0,
+          "ci_low": 0.0,
+          "ci_high": 0.0,
+          "p": 1.0,
+          "significant": false,
+          "n_paired": 5150
+        },
+        "hit_at_5": {
+          "delta": 0.0,
+          "ci_low": 0.0,
+          "ci_high": 0.0,
+          "p": 1.0,
+          "significant": false,
+          "n_paired": 5150
+        }
+      },
+      "peers": {
+        "hit_at_1": {
+          "delta": 0.0,
+          "ci_low": 0.0,
+          "ci_high": 0.0,
+          "p": 1.0,
+          "significant": false,
+          "n_paired": 5150
+        },
+        "hit_at_5": {
+          "delta": 0.0,
+          "ci_low": 0.0,
+          "ci_high": 0.0,
+          "p": 1.0,
+          "significant": false,
+          "n_paired": 5150
+        }
+      }
+    },
+    "trace_contexts": {
+      "none -> trace": {
+        "delta": 0.0,
+        "ci_low": 0.0,
+        "ci_high": 0.0,
+        "p": 1.0,
+        "significant": false,
+        "n_paired": 5150
+      },
+      "events -> events+trace": {
+        "delta": 0.0,
+        "ci_low": 0.0,
+        "ci_high": 0.0,
+        "p": 1.0,
+        "significant": false,
+        "n_paired": 5150
+      },
+      "metrics -> trace+metrics": {
+        "delta": 0.0,
+        "ci_low": 0.0,
+        "ci_high": 0.0,
+        "p": 1.0,
+        "significant": false,
+        "n_paired": 5150
+      },
+      "peers -> trace+peers": {
+        "delta": 0.0,
+        "ci_low": 0.0,
+        "ci_high": 0.0,
+        "p": 1.0,
+        "significant": false,
+        "n_paired": 5150
+      },
+      "events+metrics+peers -> events+trace+metrics+peers": {
+        "delta": 0.0,
+        "ci_low": 0.0,
+        "ci_high": 0.0,
+        "p": 1.0,
+        "significant": false,
+        "n_paired": 5150
+      }
+    }
+  }
+}

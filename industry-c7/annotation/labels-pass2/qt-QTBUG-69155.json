@@ -1,0 +1,32 @@
+{
+ "id": "qt:QTBUG-69155",
+ "project": "qt",
+ "issue_key": "QTBUG-69155",
+ "annotator": "claude-sonnet-5-5",
+ "pass": 2,
+ "file_roles": [
+  {
+   "path": "src/plugins/platforms/android/qandroidplatformopenglwindow.cpp",
+   "role": "causal",
+   "evidence": "setGeometry only emitted Expose when m_oldGeometry was 0x0; the diff removes that old-geometry condition so every resize emits an expose event."
+  },
+  {
+   "path": "src/plugins/platforms/android/qandroidplatformvulkanwindow.cpp",
+   "role": "causal",
+   "evidence": "Same condition removal in setGeometry: m_oldGeometry.width()==0 && height()==0 dropped before handleExposeEvent."
+  }
+ ],
+ "symptom_location": {
+  "file": "tests/auto/gui/kernel/qwindow/tst_qwindow.cpp",
+  "function": "exposeEventOnShrink_QTBUG54040",
+  "determinable": true
+ },
+ "log_location": {
+  "file": "tests/auto/gui/kernel/qwindow/tst_qwindow.cpp",
+  "function": "exposeEventOnShrink_QTBUG54040",
+  "determinable": true
+ },
+ "relation": "caller-callee",
+ "rationale": "The test fails because no Expose event follows a shrink. Both Android window classes had the same wrong condition that blocked expose on resize, and both are corrected.",
+ "confidence": "high"
+}

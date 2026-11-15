@@ -1,0 +1,100 @@
+{
+  "datasets": [
+    {
+      "dataset": "online-boutique",
+      "n_windows": 1008,
+      "n_evaluable": 331,
+      "label_counts": {
+        "helps": 0,
+        "hurts": 0,
+        "no_change": 331
+      },
+      "label_fractions": {
+        "helps": 0.0,
+        "hurts": 0.0,
+        "no_change": 1.0
+      },
+      "hit_at_5": {
+        "never_escalate": 0.7583081570996979,
+        "always_escalate": 0.7583081570996979,
+        "oracle": 0.7583081570996979,
+        "headroom_over_always": 0.0,
+        "value_of_escalating_at_all": 0.0
+      },
+      "escalation_rate": {
+        "shipped_hand_tuned_gates": 0.20932539682539683,
+        "oracle_only_where_it_helps": 0.0,
+        "reduction_factor": null
+      },
+      "llm_tokens": {
+        "always_escalate": 0.0,
+        "never_escalate": 0.0,
+        "oracle_if_only_helpful": 0.0
+      }
+    },
+    {
+      "dataset": "otel-demo",
+      "n_windows": 247,
+      "n_evaluable": 119,
+      "label_counts": {
+        "helps": 0,
+        "hurts": 0,
+        "no_change": 119
+      },
+      "label_fractions": {
+        "helps": 0.0,
+        "hurts": 0.0,
+        "no_change": 1.0
+      },
+      "hit_at_5": {
+        "never_escalate": 0.7563025210084033,
+        "always_escalate": 0.7563025210084033,
+        "oracle": 0.7563025210084033,
+        "headroom_over_always": 0.0,
+        "value_of_escalating_at_all": 0.0
+      },
+      "escalation_rate": {
+        "shipped_hand_tuned_gates": 0.17408906882591094,
+        "oracle_only_where_it_helps": 0.0,
+        "reduction_factor": null
+      },
+      "llm_tokens": {
+        "always_escalate": 0.0,
+        "never_escalate": 0.0,
+        "oracle_if_only_helpful": 0.0
+      }
+    },
+    {
+      "dataset": "wol-v3",
+      "n_windows": 13388,
+      "n_evaluable": 5150,
+      "label_counts": {
+        "helps": 318,
+        "hurts": 13,
+        "no_change": 4819
+      },
+      "label_fractions": {
+        "helps": 0.06174757281553398,
+        "hurts": 0.002524271844660194,
+        "no_change": 0.9357281553398058
+      },
+      "hit_at_5": {
+        "never_escalate": 0.9040776699029126,
+        "always_escalate": 0.9633009708737864,
+        "oracle": 0.9658252427184466,
+        "headroom_over_always": 0.0025242718446601975,
+        "value_of_escalating_at_all": 0.059223300970873805
+      },
+      "escalation_rate": {
+        "shipped_hand_tuned_gates": 0.9991036749327756,
+        "oracle_only_where_it_helps": 0.06174757281553398,
+        "reduction_factor": 16.180452597181745
+      },
+      "llm_tokens": {
+        "always_escalate": 0.0,
+        "never_escalate": 0.0,
+        "oracle_if_only_helpful": 0.0
+      }
+    }
+  ]
+}

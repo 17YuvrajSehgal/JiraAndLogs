@@ -1,0 +1,33 @@
+{
+  "id": "mongodb:SERVER-26389",
+  "project": "mongodb",
+  "issue_key": "SERVER-26389",
+  "annotator": "claude-opus-5",
+  "pass": 1,
+  "file_roles": [
+    {
+      "path": "src/mongo/scripting/deadline_monitor.cpp",
+      "role": "causal",
+      "evidence": "The whole change is the default of the parameter the title is about, 'MONGO_EXPORT_SERVER_PARAMETER(scriptingEngineInterruptIntervalMS, int, 1000);' becoming 'MONGO_EXPORT_SERVER_PARAMETER(scriptingEngineInterruptIntervalMS, int, 0);'. The accessor just below, 'int getScriptingEngineInterruptInterval() { return scriptingEngineInterruptIntervalMS.load(); }', is untouched."
+    },
+    {
+      "path": "src/mongo/scripting/deadline_monitor.h",
+      "role": "causal",
+      "evidence": "The monitor loop treated a zero interval as 'always elapsed' and as a zero-length wait, 'if (now - lastInterruptCycle > interruptInterval) { for (const auto& task : _tasks) { ... task.first->interrupt();' and '_newDeadlineAvailable.wait_for(lk, interruptInterval.toSystemDuration());'. The fix teaches it that zero means off, 'if ((interruptInterval.count() > 0) && (now - lastInterruptCycle > interruptInterval))' and a blocking branch, 'else { _newDeadlineAvailable.wait(lk); }'."
+    }
+  ],
+  "symptom_location": {
+    "file": "src/mongo/scripting/deadline_monitor.h",
+    "function": null,
+    "determinable": true
+  },
+  "log_location": {
+    "file": null,
+    "function": null,
+    "determinable": false
+  },
+  "relation": "same-location",
+  "rationale": "The behaviour the report asks to switch off is issued in the header's monitor loop, 'task.first->interrupt();', and is governed by a default defined in the .cpp. Both files are labelled causal because neither change works alone: dropping the default to 0 without the header guard would make 'now - lastInterruptCycle > interruptInterval' true on every pass and 'wait_for' a zero-length wait, which would interrupt more often rather than not at all. The wrong logic therefore spans the pair, which rubric rule 2 and the missing-capability-plus-its-use convention allow.",
+  "confidence": "medium",
+  "notes": "REPORT-NAMES-FIX: the report is a single sentence that prescribes the adopted change, 'Make javascript periodic interrupts disabled by default', and the commit message repeats it verbatim. The instance has no failure: no log, no trace, no reproducer, so log_location.determinable = false and the symptom is the behaviour named in the title rather than an observed fault. symptom_location.function is null because the hunk's context line is 'private:' and the enclosing method name is never visible. The header is causal under the convention that a header counts when it holds an inline body whose behaviour changed (MDEV-11780, MDEV-22867), not merely a declaration; a second rater could call it preventive, reading the two '(interruptInterval.count() > 0)' guards as defensive handling for a newly legal value rather than logic that was already wrong for a zero a user could always have set. Worth putting in the agreement check, and the reason confidence is medium."
+}

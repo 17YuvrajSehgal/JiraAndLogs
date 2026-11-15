@@ -1,0 +1,43 @@
+{
+  "id": "qt:QTBUG-91061",
+  "project": "qt",
+  "issue_key": "QTBUG-91061",
+  "annotator": "claude-opus-5",
+  "pass": 1,
+  "file_roles": [
+    {
+      "path": "src/network/kernel/qnetworkinformation.cpp",
+      "role": "refactor",
+      "evidence": "Drops a member that was never read, '- bool m_isOnline = true; // cached', and routes two existing reads through a new getter, 'emit reachabilityChanged(d_func()->backend->m_reachability);' becoming 'emit reachabilityChanged(d_func()->backend->reachability());' and 'return d_func()->backend->m_reachability;' becoming 'return d_func()->backend->reachability();'. Same value, same behaviour; nothing here affects a static plugin import symbol."
+    },
+    {
+      "path": "src/network/kernel/qnetworkinformation.h",
+      "role": "refactor",
+      "evidence": "The whole change to this file is one keyword, '~QNetworkInformation();' becoming '~QNetworkInformation() override;'."
+    },
+    {
+      "path": "src/network/kernel/qnetworkinformation_p.h",
+      "role": "refactor",
+      "evidence": "'virtual ~QNetworkInformationBackend();' becoming '~QNetworkInformationBackend() override;', plus the identity accessor the .cpp now calls, 'QNetworkInformation::Reachability reachability() const { return m_reachability; }'. The body returns the member unchanged, so this is encapsulation, not a behaviour change."
+    },
+    {
+      "path": "src/plugins/networkinformationbackends/networkmanager/qnetworkmanagernetworkinformationbackend.cpp",
+      "role": "refactor",
+      "evidence": "Two macro lines and nothing else, 'Q_DISABLE_COPY_MOVE(QNetworkManagerNetworkInformationBackend)' and 'Q_DISABLE_COPY_MOVE(QNetworkManagerNetworkInformationBackendFactory)'. This is the NetworkManager backend, a Linux D-Bus plugin, while the report is an iOS arm64 link failure against the SCNetworkReachability backend."
+    }
+  ],
+  "symptom_location": {
+    "file": null,
+    "function": null,
+    "determinable": false
+  },
+  "log_location": {
+    "file": null,
+    "function": null,
+    "determinable": false
+  },
+  "relation": "config-build",
+  "rationale": "The failure is a link error against a symbol CMake was supposed to generate, 'Undefined symbols for architecture arm64: \"qt_static_plugin_QSCNetworkReachabilityNetworkInformationBackend()\", referenced from: StaticQSCNetworkReachabilityNetworkInformationBackendPluginInstance::StaticQSCNetworkReachabilityNetworkInformationBackendPluginInstance() in shell_plugin_import.o'. The commit says plainly where it was repaired, 'Added CLASS_NAME to the CMakeLists files for the plugins so that cmake can generate the correct import', and those CMakeLists files are among the four changed files that are not source files and so are not in gold. What is left in gold is the rest of the commit, 'QNetworkInformation fixups / Addressing feedback that came after the reviews ended from both bot and people': an unused member removed, two 'override' keywords, a getter, and two Q_DISABLE_COPY_MOVE macros.",
+  "confidence": "high",
+  "notes": "The clearest cleanup-commit instance in this share, and a direct illustration of the reviewer's fourth category. The fix changed 8 files; the 4 that actually fix the reported failure are build files and are filtered out, and all 4 files that reach gold are incidental. No gold file is causal, and no localizer could be right here for the right reason, because the causal site is not in the gold set at all. qnetworkinformation.h is wholly cosmetic (one 'override'), and the NetworkManager backend file is for a different platform than the one that failed. The accessor added in qnetworkinformation_p.h has an inline body, which the recorded convention treats as grounds for a causal header, but it is an identity getter over an existing member, so it does not qualify as 'an inline body that changed behaviour'. The symptom site is a link-time undefined symbol in a CMake-generated translation unit, shell_plugin_import.o, with no project-owned source frame, so symptom_location.determinable = false; the message is emitted by ld and clang, not by Qt, so log_location.determinable = false. relation is config-build because the causal site is a build file, even though it lies outside gold."
+}

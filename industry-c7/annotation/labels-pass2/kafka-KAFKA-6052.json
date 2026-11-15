@@ -1,0 +1,32 @@
+{
+ "id": "kafka:KAFKA-6052",
+ "project": "kafka",
+ "issue_key": "KAFKA-6052",
+ "annotator": "claude-sonnet-5-5",
+ "pass": 2,
+ "file_roles": [
+  {
+   "path": "core/src/main/scala/kafka/common/InterBrokerSendThread.scala",
+   "role": "causal",
+   "evidence": "doWork previously completed a request with a disconnect response as soon as networkClient.ready() was false; rewritten to keep unsent requests queued, retry, and fail only on real disconnect or expiry."
+  },
+  {
+   "path": "core/src/main/scala/kafka/coordinator/transaction/TransactionMarkerChannelManager.scala",
+   "role": "refactor",
+   "evidence": "Adds override val unsentExpiryMs = config.requestTimeoutMs, required by the new abstract member in InterBrokerSendThread."
+  }
+ ],
+ "symptom_location": {
+  "file": "core/src/main/scala/kafka/coordinator/transaction/TransactionMarkerChannelManager.scala",
+  "function": "TransactionMarkerChannelManager",
+  "determinable": true
+ },
+ "log_location": {
+  "file": null,
+  "function": null,
+  "determinable": false
+ },
+ "relation": "caller-callee",
+ "rationale": "WriteTxnMarkers requests never complete on Windows. The old send loop treated a not-ready connection as an instant disconnect instead of waiting. The diff replaces that logic. The channel manager change is forced by it.",
+ "confidence": "medium"
+}

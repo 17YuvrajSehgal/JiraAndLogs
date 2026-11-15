@@ -1,0 +1,28 @@
+{
+ "id": "mongodb:SERVER-35393",
+ "project": "mongodb",
+ "issue_key": "SERVER-35393",
+ "annotator": "claude-sonnet-5-5",
+ "pass": 2,
+ "file_roles": [
+  {
+   "path": "src/mongo/util/net/ssl/detail/io.hpp",
+   "role": "causal",
+   "evidence": "Single asio::write calls in want_output_and_retry and want_output are replaced by 'while (!ec && core.output_.size())' loops, so partial writes are completed."
+  }
+ ],
+ "symptom_location": {
+  "file": "src/mongo/util/net/ssl/detail/io.hpp",
+  "function": "io",
+  "determinable": true
+ },
+ "log_location": {
+  "file": null,
+  "function": null,
+  "determinable": false
+ },
+ "relation": "same-location",
+ "rationale": "Error 'asio.ssl stream truncated' is consistent with output not fully written before the next operation. The diff fixes that write loop in the generic TLS io path. Two other files changed (not gold) and may hold part of the fix.",
+ "confidence": "medium",
+ "notes": "Commit 573ebb251784 also limits the SecureTransport out buffer, which is not visible here."
+}

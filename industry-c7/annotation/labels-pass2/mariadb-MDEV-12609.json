@@ -1,0 +1,33 @@
+{
+ "id": "mariadb:MDEV-12609",
+ "project": "mariadb",
+ "issue_key": "MDEV-12609",
+ "annotator": "claude-sonnet-5-5",
+ "pass": 2,
+ "file_roles": [
+  {
+   "path": "storage/innobase/fsp/fsp0fsp.cc",
+   "role": "causal",
+   "evidence": "Removes the 'rounds' counter and the ib_logf(IB_LOG_LEVEL_INFO, 'Space id %lu trying to reserve ...') call after 50 rounds in fsp_reserve_free_extents; this is the code emitting the unwanted messages."
+  },
+  {
+   "path": "storage/xtradb/fsp/fsp0fsp.cc",
+   "role": "causal",
+   "evidence": "Same removal of the rounds counter and the extent-reservation ib_logf message in the XtraDB copy of fsp_reserve_free_extents."
+  }
+ ],
+ "symptom_location": {
+  "file": "storage/innobase/fsp/fsp0fsp.cc",
+  "function": "fsp_reserve_free_extents",
+  "determinable": true
+ },
+ "log_location": {
+  "file": "storage/innobase/fsp/fsp0fsp.cc",
+  "function": "fsp_reserve_free_extents",
+  "determinable": true
+ },
+ "relation": "same-location",
+ "rationale": "The report is about log volume, and the only change is deleting the log statement. I treat the logging code as the defect because it is the unwanted behaviour itself.",
+ "confidence": "medium",
+ "notes": "Could be read as symptom-handling since the log is only a diagnostic; the rubric does not cover a log statement that is itself the complaint."
+}

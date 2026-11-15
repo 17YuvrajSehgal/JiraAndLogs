@@ -1,0 +1,27 @@
+{
+ "id": "camel:CAMEL-9227",
+ "project": "camel",
+ "issue_key": "CAMEL-9227",
+ "annotator": "claude-sonnet-5-5",
+ "pass": 2,
+ "file_roles": [
+  {
+   "path": "components/camel-dozer/src/main/java/org/apache/camel/converter/dozer/DozerTypeConverter.java",
+   "role": "causal",
+   "evidence": "Diff moves the mapper.getMappingMetadata().getClassMapping(...) lookup inside the TCCL switch (try block with appcl) and also switches when exchange is handled uniformly; earlier the lookup ran under the wrong classloader."
+  }
+ ],
+ "symptom_location": {
+  "file": "components/camel-dozer/src/main/java/org/apache/camel/converter/dozer/DozerTypeConverter.java",
+  "function": "convertTo",
+  "determinable": true
+ },
+ "log_location": {
+  "file": "org/apache/camel/impl/converter/BaseTypeConverterRegistry.java",
+  "function": "mandatoryConvertTo",
+  "determinable": true
+ },
+ "relation": "caller-callee",
+ "rationale": "The failure is NoTypeConversionAvailableException from CsvMarshaller via the registry, for a Dozer-based bean-to-List conversion. The only gold file is DozerTypeConverter, whose convertTo is rewritten to do the metadata lookup under the application classloader. The diff is partly a restructure, so I cannot fully separate the logic fix from cleanup.",
+ "confidence": "medium"
+}

@@ -1,0 +1,28 @@
+{
+  "id": "mongodb:SERVER-23901",
+  "project": "mongodb",
+  "issue_key": "SERVER-23901",
+  "annotator": "claude-opus-5",
+  "pass": 1,
+  "file_roles": [
+    {
+      "path": "src/mongo/db/ops/write_ops_parsers.cpp",
+      "role": "causal",
+      "evidence": "parseWriteCommand rejected every non-boolean value for this option, 'if (fieldName == \"bypassDocumentValidation\") { checkType(Bool, field); op->bypassDocumentValidation = field.Bool();'. The fix deletes the type check and reads the value loosely, 'op->bypassDocumentValidation = field.trueValue();'. The sibling branch 'else if (fieldName == \"ordered\") { checkType(Bool, field);' is left alone, so the correction is specific to the option named in the report."
+    }
+  ],
+  "symptom_location": {
+    "file": "src/mongo/db/ops/write_ops_parsers.cpp",
+    "function": "parseWriteCommand",
+    "determinable": true
+  },
+  "log_location": {
+    "file": "src/mongo/db/ops/write_ops_parsers.cpp",
+    "function": "parseWriteCommand",
+    "determinable": true
+  },
+  "relation": "same-location",
+  "rationale": "The reported error, 'Wrong type for \\'bypassDocumentValidation\\'. Expected a bool, got a int', is produced by the 'checkType(Bool, field)' call that the diff deletes, and the replacement 'field.trueValue()' is what makes the command 'accept any type for bypassDocumentValidation' as the commit message says. The over-strict check and the place it fired are the same line in the same function, and no other file was changed, so this file owns both the defect and the symptom.",
+  "confidence": "high",
+  "notes": "REPORT-NAMES-FIX: the report quotes the exact error string and states the direction of the repair, 'It looks like the master branch tightened the acceptable types for this option compared to previously released versions of the server.' The option name in that quoted message is a string literal in the one changed hunk, so a plain text match on the report lands on the gold file and very near the gold line; this instance is easy for reasons unrelated to reasoning about causes. log_location is set to the same place as the symptom with a caveat: the text is a uassert returned to the driver rather than a server log line, and the packet does not show the body of checkType, so the function recorded is the enclosing one visible in the hunk header rather than the frame that formats the string. The fix changed 2 files and only 1 is a non-test source file, so the test file was filtered as intended."
+}

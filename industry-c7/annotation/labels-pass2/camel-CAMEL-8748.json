@@ -1,0 +1,32 @@
+{
+ "id": "camel:CAMEL-8748",
+ "project": "camel",
+ "issue_key": "CAMEL-8748",
+ "annotator": "claude-sonnet-5-5",
+ "pass": 2,
+ "file_roles": [
+  {
+   "path": "components/camel-dozer/src/main/java/org/apache/camel/converter/dozer/DozerThreadContextClassLoader.java",
+   "role": "causal",
+   "evidence": "The class had only a constructor taking DozerClassLoader delegate; fix removes the delegate field and constructor, so Dozer can instantiate it reflectively (NoSuchMethodException: <init>() in the report)."
+  },
+  {
+   "path": "components/camel-dozer/src/main/java/org/apache/camel/converter/dozer/DozerTypeConverterLoader.java",
+   "role": "causal",
+   "evidence": "Removes switchClassloader(), which created new DozerThreadContextClassLoader(oldCl) and set it in BeanContainer, and replaces it with setting the thread context classloader around mapper creation. The old design relied on the delegate constructor."
+  }
+ ],
+ "symptom_location": {
+  "file": "org/dozer/DozerInitializer.java",
+  "function": "registerClassLoader",
+  "determinable": true
+ },
+ "log_location": {
+  "file": "org/dozer/util/ReflectionUtils.java",
+  "function": "newInstance",
+  "determinable": true
+ },
+ "relation": "caller-callee",
+ "rationale": "Dozer instantiates the configured class loader class via no-arg newInstance, but the Camel class only had a one-arg constructor. Both the class and the loader code that depended on delegating were changed.",
+ "confidence": "high"
+}

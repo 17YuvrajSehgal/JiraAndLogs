@@ -1,0 +1,73 @@
+{
+  "id": "mongodb:SERVER-16031",
+  "project": "mongodb",
+  "issue_key": "SERVER-16031",
+  "annotator": "claude-opus-5",
+  "pass": 1,
+  "file_roles": [
+    {
+      "path": "src/mongo/db/storage/devnull/devnull_kv_engine.h",
+      "role": "unclear",
+      "evidence": "The packet renders this file's diff as '(no diff retrieved)'. The report gives a crash and a title, 'Race condition at shutdown for KVEngines', but no statement of what was changed where. The reported crash is entirely in the WiredTiger engine, so this engine was never exercised by the report. The gold set has the shape of an interface change plus its implementors (kv_engine.h with devnull, heap1, rocks and wiredtiger beside it), and that shape is where two CONVENTIONS rules point in opposite directions: extending a fix to a path the report never exercises is preventive, while adapting to a changed signature is refactor. Only the hunk shows which, so this is unclear rather than a coin toss. "
+    },
+    {
+      "path": "src/mongo/db/storage/heap1/heap1_engine.h",
+      "role": "unclear",
+      "evidence": "The packet renders this file's diff as '(no diff retrieved)'. The report gives a crash and a title, 'Race condition at shutdown for KVEngines', but no statement of what was changed where. A second engine the report never exercises. The gold set has the shape of an interface change plus its implementors (kv_engine.h with devnull, heap1, rocks and wiredtiger beside it), and that shape is where two CONVENTIONS rules point in opposite directions: extending a fix to a path the report never exercises is preventive, while adapting to a changed signature is refactor. Only the hunk shows which, so this is unclear rather than a coin toss. "
+    },
+    {
+      "path": "src/mongo/db/storage/kv/kv_engine.h",
+      "role": "unclear",
+      "evidence": "The packet renders this file's diff as '(no diff retrieved)'. The report gives a crash and a title, 'Race condition at shutdown for KVEngines', but no statement of what was changed where. The abstract KVEngine interface named in the title, 'Race condition at shutdown for KVEngines'. A new pure-virtual added here would be the missing capability (causal under the 'missing capability plus its missing use' reading in CONVENTIONS) or declaration-only plumbing (refactor); neither is visible."
+    },
+    {
+      "path": "src/mongo/db/storage/kv/kv_storage_engine.cpp",
+      "role": "unclear",
+      "evidence": "The packet renders this file's diff as '(no diff retrieved)'. The report gives a crash and a title, 'Race condition at shutdown for KVEngines', but no statement of what was changed where. The engine-independent shutdown path, the plausible site of a new ordered cleanup call. Plausibility is not the rubric's test (decision rule 1) and no hunk is shown."
+    },
+    {
+      "path": "src/mongo/db/storage/kv/kv_storage_engine.h",
+      "role": "unclear",
+      "evidence": "The packet renders this file's diff as '(no diff retrieved)'. The report gives a crash and a title, 'Race condition at shutdown for KVEngines', but no statement of what was changed where. A header; CONVENTIONS makes it causal only if it holds logic and refactor if it only declares."
+    },
+    {
+      "path": "src/mongo/db/storage/rocks/rocks_engine.h",
+      "role": "unclear",
+      "evidence": "The packet renders this file's diff as '(no diff retrieved)'. The report gives a crash and a title, 'Race condition at shutdown for KVEngines', but no statement of what was changed where. A third engine the report never exercises. The gold set has the shape of an interface change plus its implementors (kv_engine.h with devnull, heap1, rocks and wiredtiger beside it), and that shape is where two CONVENTIONS rules point in opposite directions: extending a fix to a path the report never exercises is preventive, while adapting to a changed signature is refactor. Only the hunk shows which, so this is unclear rather than a coin toss. "
+    },
+    {
+      "path": "src/mongo/db/storage/wiredtiger/wiredtiger_kv_engine.cpp",
+      "role": "unclear",
+      "evidence": "The packet renders this file's diff as '(no diff retrieved)'. The report gives a crash and a title, 'Race condition at shutdown for KVEngines', but no statement of what was changed where. This file holds the deepest project-owned frame in the crash, 'mongod(_ZN5mongo18WiredTigerKVEngine13dropAllQueuedEv+0x202) [0xd84be2]', so it is the strongest causal candidate in the set; but the rubric's hard case turns on whether this file owns the violated invariant or merely consumed a connection another site had torn down, and without the hunk that is undecided."
+    },
+    {
+      "path": "src/mongo/db/storage/wiredtiger/wiredtiger_kv_engine.h",
+      "role": "unclear",
+      "evidence": "The packet renders this file's diff as '(no diff retrieved)'. The report gives a crash and a title, 'Race condition at shutdown for KVEngines', but no statement of what was changed where. The matching header, undecidable between a changed inline body (causal) and a declaration (refactor)."
+    },
+    {
+      "path": "src/mongo/db/storage/wiredtiger/wiredtiger_session_cache.cpp",
+      "role": "unclear",
+      "evidence": "The packet renders this file's diff as '(no diff retrieved)'. The report gives a crash and a title, 'Race condition at shutdown for KVEngines', but no statement of what was changed where. The caller in the crash, 'mongod(_ZN5mongo22WiredTigerSessionCache14releaseSessionEPNS_17WiredTigerSessionE+0x100) [0xd8d920]', which calls dropAllQueued while a connection is being released. Under CONVENTIONS a caller that drives a callee into a torn-down state is the causal side, but which of the two was corrected is exactly what the missing diff would show."
+    },
+    {
+      "path": "src/mongo/db/storage/wiredtiger/wiredtiger_session_cache.h",
+      "role": "unclear",
+      "evidence": "The packet renders this file's diff as '(no diff retrieved)'. The report gives a crash and a title, 'Race condition at shutdown for KVEngines', but no statement of what was changed where. The matching header, undecidable between logic and declaration."
+    }
+  ],
+  "symptom_location": {
+    "file": "src/mongo/db/storage/wiredtiger/wiredtiger_kv_engine.cpp",
+    "function": "WiredTigerKVEngine::dropAllQueued",
+    "determinable": true
+  },
+  "log_location": {
+    "file": null,
+    "function": null,
+    "determinable": false
+  },
+  "relation": "concurrency",
+  "rationale": "The crash is a use-after-teardown reached from a connection thread's cleanup: 'mongod(_ZN5mongo18WiredTigerKVEngine13dropAllQueuedEv+0x202)' called from 'WiredTigerSessionCache::releaseSession', itself called from '~WiredTigerRecoveryUnit' and '~OperationContextImpl' under 'MyMessageHandler::process', with the invalid access occurring inside the WiredTiger library at '__wt_free_int' and '__wt_schema_drop'. The reporter names the mechanism in the title, 'Race condition at shutdown for KVEngines', so the relation is an ordering spanning two sites. All ten gold diffs render as '(no diff retrieved)', so which site was corrected is not decidable.",
+  "confidence": "low",
+  "notes": "NO-DIFF-IN-PACKET: every gold file in this packet renders its diff as '(no diff retrieved)', so there is no diff evidence for any role here. Roles rest on the issue report and the gold file list alone, which is weaker than every previously labelled instance. symptom_location records 'mongo::WiredTigerKVEngine::dropAllQueued' as the deepest project-owned frame, per the CONVENTIONS rule to skip the library frames above it: '__wt_free_int', '__wt_remove' and '__wt_schema_drop' are vendored WiredTiger, and 'libpthread.so.0' and 'libc.so.6' are system. log_location.determinable is false: the lines 'Invalid access at address: 0x78c' and 'Got signal: 11 (Segmentation fault).' come from mongod's own signal handler, whose frame appears as '_ZN5mongo15printStackTraceERSo', but the packet does not show which file that is and it is not in the gold set. The gold set is ten files for one race, of which four are engine headers for engines the reported crash never touches. What would settle every role here: the diff for wiredtiger_session_cache.cpp and wiredtiger_kv_engine.cpp, which would show whether the fix added the ordering at the release site or at the drop site."
+}

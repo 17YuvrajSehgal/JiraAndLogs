@@ -1,0 +1,58 @@
+{
+  "id": "phoenix:PHOENIX-3308",
+  "project": "phoenix",
+  "issue_key": "PHOENIX-3308",
+  "annotator": "claude-opus-5",
+  "pass": 1,
+  "file_roles": [
+    {
+      "path": "phoenix-core/src/it/java/org/apache/phoenix/end2end/index/ImmutableIndexIT.java",
+      "role": "test",
+      "evidence": "A JUnit integration test under src/it/java. The change is which harness it runs in, 'public class ImmutableIndexIT extends ParallelStatsDisabledIT' becoming 'public class ImmutableIndexIT extends BaseOwnClusterIT', with '@Shadower(classBeingShadowed = ParallelStatsDisabledIT.class)' and '@Ignore' removed and a now-unused local, 'String fullIndexName = SchemaUtil.getTableName(...)', deleted."
+    },
+    {
+      "path": "phoenix-flume/src/it/java/org/apache/phoenix/flume/PhoenixSinkIT.java",
+      "role": "test",
+      "evidence": "A JUnit integration test under src/it/java: 'public class PhoenixSinkIT extends ParallelStatsDisabledIT' becomes 'public class PhoenixSinkIT extends BaseHBaseManagedTimeIT'; the rest of the hunk is import reordering, including 'import org.apache.flume.*;' expanded into single-class imports."
+    },
+    {
+      "path": "phoenix-flume/src/it/java/org/apache/phoenix/flume/RegexEventSerializerIT.java",
+      "role": "test",
+      "evidence": "A JUnit integration test under src/it/java: the whole change is 'public class RegexEventSerializerIT extends ParallelStatsDisabledIT' becoming 'public class RegexEventSerializerIT extends BaseHBaseManagedTimeIT' plus the matching import swap."
+    },
+    {
+      "path": "phoenix-pherf/src/it/java/org/apache/phoenix/pherf/ResultBaseTestIT.java",
+      "role": "test",
+      "evidence": "A JUnit integration test under src/it/java: 'public class ResultBaseTestIT extends ParallelStatsDisabledIT' becomes 'public class ResultBaseTestIT extends BaseHBaseManagedTimeIT', with the java.nio/java.util imports moved above the org.apache ones."
+    },
+    {
+      "path": "phoenix-pherf/src/it/java/org/apache/phoenix/pherf/SchemaReaderIT.java",
+      "role": "test",
+      "evidence": "A JUnit integration test under src/it/java, holding '@Test public void testSchemaReader()': 'public class SchemaReaderIT extends ParallelStatsDisabledIT' becomes 'public class SchemaReaderIT extends BaseHBaseManagedTimeIT'."
+    },
+    {
+      "path": "phoenix-pig/src/it/java/org/apache/phoenix/pig/BasePigIT.java",
+      "role": "test",
+      "evidence": "A JUnit integration test base class under src/it/java: 'public class BasePigIT extends ParallelStatsDisabledIT' becomes 'extends BaseHBaseManagedTimeIT' and the harness annotation follows it, '@Shadower(classBeingShadowed = ParallelStatsDisabledIT.class)' becoming '@Shadower(classBeingShadowed = BaseHBaseManagedTimeIT.class)'."
+    },
+    {
+      "path": "phoenix-queryserver/src/it/java/org/apache/phoenix/end2end/QueryServerBasicsIT.java",
+      "role": "test",
+      "evidence": "A JUnit integration test under src/it/java whose own comment reads 'Smoke test for query server.': 'public class QueryServerBasicsIT extends ParallelStatsDisabledIT' becomes 'public class QueryServerBasicsIT extends BaseHBaseManagedTimeIT'."
+    }
+  ],
+  "symptom_location": {
+    "file": null,
+    "function": null,
+    "determinable": false
+  },
+  "log_location": {
+    "file": null,
+    "function": null,
+    "determinable": false
+  },
+  "relation": "unclear",
+  "rationale": "Every gold file is a JUnit integration test under src/it/java with an IT.java name, and every hunk changes only which test base class, and therefore which mini cluster lifecycle, the test runs under: 'extends ParallelStatsDisabledIT' becoming 'extends BaseHBaseManagedTimeIT' or 'extends BaseOwnClusterIT'. The report itself is about the test harness, 'We're currently not shutting down the mini cluster for tests that don't run in their own mini cluster', and hedges the effect, 'This might be the cause of the hangs we're seeing.'. There is no product code in the gold set, no failure site and no log, so no causal file exists here.",
+  "confidence": "high",
+  "notes": "Benchmark defect: all seven gold files are tests that leaked through the test filter, because they live in src/it/java (integration tests) rather than src/test/java, and the renderer still counted them as non-test source files. Flagging as the rubric asks. The instance also has no product failure: the report is a test-infrastructure complaint with no log, no trace and a hedged mechanism, and the two commit messages repeat the title only. Rubric rule 3 outcome, no causal file, here for the stronger reason that no product file was changed at all. symptom_location, log_location and relation are therefore not determinable."
+}

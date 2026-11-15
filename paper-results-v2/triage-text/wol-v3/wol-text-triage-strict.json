@@ -1,0 +1,142 @@
+{
+  "generated_at": "2026-10-01T13:00:25-0400",
+  "global_dir": "data\\derived\\global\\2026-06-17-wol-real-v3-global",
+  "protocol": {
+    "split": "leave-domain-out (train 21 projects / test Kafka+MariaDB)",
+    "labels": "strict",
+    "input_field": "triage_evidence_text",
+    "max_chars": 4000,
+    "seeds": 5,
+    "n_bootstrap": 1000
+  },
+  "published_feature_audit": {
+    "n_feature_columns": 94,
+    "n_rows_scanned": 52521,
+    "n_rows_with_any_nonzero_feature": 0
+  },
+  "n_train": 41235,
+  "n_test": 8024,
+  "test_positive_rate": 0.8440927218344965,
+  "majority_accuracy": 0.8440927218344965,
+  "summary": {
+    "majority_baseline": {
+      "accuracy": 0.8440927218344965,
+      "roc_auc": 0.5,
+      "pr_auc": 0.8440927218344965
+    },
+    "logreg_tfidf": {
+      "roc_auc": {
+        "mean": 0.6729084176922452,
+        "std": 0.0,
+        "ci95": [
+          0.6555896443627087,
+          0.689690681018749
+        ]
+      },
+      "pr_auc": {
+        "mean": 0.9047071554948307,
+        "std": 0.0
+      },
+      "accuracy": {
+        "mean": 0.8260219341974079,
+        "std": 1.1102230246251565e-16
+      },
+      "ece": {
+        "mean": 0.1769257780832511,
+        "std": 0.0
+      },
+      "n_seeds": 5
+    },
+    "linear_svm_tfidf": {
+      "roc_auc": {
+        "mean": 0.7036196762359787,
+        "std": 0.0001619061230995414,
+        "ci95": [
+          0.6882551633972088,
+          0.7205485065950182
+        ]
+      },
+      "pr_auc": {
+        "mean": 0.9173690044390828,
+        "std": 9.240612954099745e-05
+      },
+      "accuracy": {
+        "mean": 0.8440927218344964,
+        "std": 1.1102230246251565e-16
+      },
+      "ece": {
+        "mean": 0.170900360671375,
+        "std": 0.0008181968927768291
+      },
+      "n_seeds": 5
+    },
+    "hist_gradient_boosting_tfidf_svd": {
+      "roc_auc": {
+        "mean": 0.68271271068189,
+        "std": 0.0070475372228691055,
+        "ci95": [
+          0.6687082289055974,
+          0.6990063684081128
+        ]
+      },
+      "pr_auc": {
+        "mean": 0.9149857502599905,
+        "std": 0.003586675158776848
+      },
+      "accuracy": {
+        "mean": 0.8374875373878364,
+        "std": 0.0024611687011629716
+      },
+      "ece": {
+        "mean": 0.16013433370307065,
+        "std": 0.003411943444165485
+      },
+      "n_seeds": 5
+    }
+  },
+  "per_project": {
+    "logreg_tfidf": {
+      "wol-kafka": {
+        "n": 1624,
+        "roc_auc": 0.6242398820000767,
+        "pr_auc": 0.7902225984280696,
+        "base_rate": 0.7062807881773399
+      },
+      "wol-mariadb-server": {
+        "n": 6400,
+        "roc_auc": 0.6566614399185766,
+        "pr_auc": 0.9246192963782784,
+        "base_rate": 0.8790625
+      }
+    },
+    "linear_svm_tfidf": {
+      "wol-kafka": {
+        "n": 1624,
+        "roc_auc": 0.6434916352749585,
+        "pr_auc": 0.805755693802708,
+        "base_rate": 0.7062807881773399
+      },
+      "wol-mariadb-server": {
+        "n": 6400,
+        "roc_auc": 0.7020974049057945,
+        "pr_auc": 0.9396527844532203,
+        "base_rate": 0.8790625
+      }
+    },
+    "hist_gradient_boosting_tfidf_svd": {
+      "wol-kafka": {
+        "n": 1624,
+        "roc_auc": 0.6170476623915455,
+        "pr_auc": 0.7944427800930507,
+        "base_rate": 0.7062807881773399
+      },
+      "wol-mariadb-server": {
+        "n": 6400,
+        "roc_auc": 0.6809792528414128,
+        "pr_auc": 0.9343936516458988,
+        "base_rate": 0.8790625
+      }
+    }
+  },
+  "elapsed_s": 156.22579622268677
+}

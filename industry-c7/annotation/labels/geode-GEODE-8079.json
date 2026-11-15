@@ -1,0 +1,33 @@
+{
+  "id": "geode:GEODE-8079",
+  "project": "geode",
+  "issue_key": "GEODE-8079",
+  "annotator": "claude-opus-5",
+  "pass": 1,
+  "file_roles": [
+    {
+      "path": "geode-core/src/main/java/org/apache/geode/internal/cache/DistributedRegion.java",
+      "role": "causal",
+      "evidence": "The check that lived only inside preInitialize is lifted into 'void validateAsynchronousEventDispatcher(String asyncDispatcherId)' and then called from the two mutator entry points that had none: 'addGatewaySenderId' gains 'validateAsynchronousEventDispatcher(gatewaySenderId);' and 'addAsyncEventQueueId' gains 'validateAsynchronousEventDispatcher(getSenderIdFromAsyncEventQueueId(asyncEventQueueId));'. This class already owned the invariant at creation time, so accepting the same configuration through the mutator is the defect."
+    },
+    {
+      "path": "geode-core/src/main/java/org/apache/geode/internal/cache/wan/parallel/ParallelGatewaySenderQueue.java",
+      "role": "refactor",
+      "evidence": "Both throws keep their conditions and their exception types; only the String.format calls lose their redundant 'new Object[] {...}' wrapper and one message is recapitalised, 'Parallel gateway sender %s' to 'Parallel Gateway Sender %s'. The commit message lists this under 'Fixed several warnings.'"
+    }
+  ],
+  "symptom_location": {
+    "file": "geode-core/src/main/java/org/apache/geode/internal/cache/DistributedRegion.java",
+    "function": "preInitialize",
+    "determinable": true
+  },
+  "log_location": {
+    "file": "geode-core/src/main/java/org/apache/geode/internal/cache/DistributedRegion.java",
+    "function": "preInitialize",
+    "determinable": true
+  },
+  "relation": "state-producer",
+  "rationale": "The reporter states the mechanism directly, that the rule is 'correctly validated when creating or initialising the region, but totally ignored when updating the region through the AttributesMutator class', and the diff matches: validation moves out of preInitialize and is added to addGatewaySenderId and addAsyncEventQueueId. The alter call succeeds and writes an invalid cluster configuration, and the failure only appears on the next startup, where the trace's deepest frame is 'DistributedRegion.preInitialize(DistributedRegion.java:1035)', so the bad state is produced in one call and consumed in another much later. Symptom and cause are the same file but different methods, and the second gold file is cosmetic.",
+  "confidence": "high",
+  "notes": "The report carries a second symptom, the repeated 'Not queuing the event ... as the region for which this event originated is not yet configured in the GatewaySender' warn seen when putting entries after the alter. That one is emitted by the parallel gateway sender runtime, which the packet does not show, so only the startup trace is recorded above."
+}

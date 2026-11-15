@@ -1,0 +1,33 @@
+{
+ "id": "sakai:SAK-5571",
+ "project": "sakai",
+ "issue_key": "SAK-5571",
+ "annotator": "claude-sonnet-5-5",
+ "pass": 2,
+ "file_roles": [
+  {
+   "path": "samigo/samigo-app/src/java/org/sakaiproject/tool/assessment/ui/bean/delivery/DeliveryBean.java",
+   "role": "refactor",
+   "evidence": "Only adds a getPortal() accessor returning ServerConfigurationService.getString(\"portalPath\") and an import; support for the JSP changes, no logic corrected."
+  },
+  {
+   "path": "samigo/samigo-app/src/java/org/sakaiproject/tool/assessment/ui/bean/shared/PersonBean.java",
+   "role": "refactor",
+   "evidence": "Diff only adds a blank line after cleanResourceIdListInPreview; incidental."
+  }
+ ],
+ "symptom_location": {
+  "file": "sam/samigo-app/src/webapp/jsf/delivery/beginTakingAssessment.jsp",
+  "function": null,
+  "determinable": true
+ },
+ "log_location": {
+  "file": null,
+  "function": null,
+  "determinable": false
+ },
+ "relation": "caller-callee",
+ "rationale": "The report is about the hard-coded '/portal' strings in JSPs and LoginServlet, which are outside the gold set. The gold Java files only add a config-backed getter and whitespace. No gold file contains the hard-coded path.",
+ "confidence": "medium",
+ "notes": "The JSP/servlet diffs (non-gold) hold the real fix."
+}

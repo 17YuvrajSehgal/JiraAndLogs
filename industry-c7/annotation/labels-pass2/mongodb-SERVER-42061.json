@@ -1,0 +1,27 @@
+{
+ "id": "mongodb:SERVER-42061",
+ "project": "mongodb",
+ "issue_key": "SERVER-42061",
+ "annotator": "claude-sonnet-5-5",
+ "pass": 2,
+ "file_roles": [
+  {
+   "path": "src/mongo/crypto/aead_encryption.cpp",
+   "role": "causal",
+   "evidence": "_aesDecrypt gains a check: if (*resultLen >= dataSize) return BadValue, because macOS CommonCrypto fails open on bad padding."
+  }
+ ],
+ "symptom_location": {
+  "file": "src/mongo/crypto/aead_encryption.cpp",
+  "function": "_aesDecrypt",
+  "determinable": true
+ },
+ "log_location": {
+  "file": null,
+  "function": null,
+  "determinable": false
+ },
+ "relation": "same-location",
+ "rationale": "The task asks to validate the decrypted payload. The decrypt helper accepted output with no padding removed. The diff adds the validation in the same function that owns the decrypt result. The report gives little detail.",
+ "confidence": "medium"
+}

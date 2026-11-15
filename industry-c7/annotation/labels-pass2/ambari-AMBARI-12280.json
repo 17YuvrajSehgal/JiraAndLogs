@@ -1,0 +1,68 @@
+{
+ "id": "ambari:AMBARI-12280",
+ "project": "ambari",
+ "issue_key": "AMBARI-12280",
+ "annotator": "claude-sonnet-5-5",
+ "pass": 2,
+ "file_roles": [
+  {
+   "path": "ambari-common/src/main/python/resource_management/libraries/functions/hdp_select.py",
+   "role": "refactor",
+   "evidence": "Adds get_hadoop_dir_for_stack_version and drops the upgrade_stack_only flag: a helper needed by the new versioned-path logic in hive_server_upgrade.py, not a corrected defect."
+  },
+  {
+   "path": "ambari-common/src/main/python/resource_management/libraries/script/script.py",
+   "role": "refactor",
+   "evidence": "Extracts is_hdp_stack_greater_or_equal_to(version, compare) from the existing method with identical behaviour; supporting extraction."
+  },
+  {
+   "path": "ambari-server/src/main/java/org/apache/ambari/server/controller/internal/UpgradeResourceProvider.java",
+   "role": "refactor",
+   "evidence": "Adds COMMAND_DOWNGRADE_FROM_VERSION and puts it into the command params in four places; plumbing so the script can see the downgrade-source version."
+  },
+  {
+   "path": "ambari-server/src/main/java/org/apache/ambari/server/orm/dao/UpgradeDAO.java",
+   "role": "refactor",
+   "evidence": "New findLastUpgradeForCluster query method, only used to feed the new downgrade_from_version param."
+  },
+  {
+   "path": "ambari-server/src/main/java/org/apache/ambari/server/orm/entities/UpgradeEntity.java",
+   "role": "refactor",
+   "evidence": "Adds NamedQuery UpgradeEntity.findLatestForCluster used by the new DAO method; supporting plumbing."
+  },
+  {
+   "path": "ambari-server/src/main/java/org/apache/ambari/server/state/UpgradeContext.java",
+   "role": "refactor",
+   "evidence": "Adds m_downgradeFromVersion field with getter/setter; carrier for the new param."
+  },
+  {
+   "path": "ambari-server/src/main/resources/common-services/HIVE/0.12.0.2.0/package/scripts/hive_server.py",
+   "role": "causal",
+   "evidence": "stop() no longer calls pre_upgrade_deregister() during rolling restart; start() now calls post_upgrade_deregister() after hive_service start. This fixes the wrong order the report describes (deregister before new HS2 is up)."
+  },
+  {
+   "path": "ambari-server/src/main/resources/common-services/HIVE/0.12.0.2.0/package/scripts/hive_server_upgrade.py",
+   "role": "causal",
+   "evidence": "pre_upgrade_deregister renamed post_upgrade_deregister and the hive --version / deregister path is now computed from the exact versioned /usr/hdp/<ver>/hive/bin path (_get_hive_execute_path), matching the report's second point about using the HDP versioned path."
+  },
+  {
+   "path": "ambari-server/src/main/resources/common-services/HIVE/0.12.0.2.0/package/scripts/params_linux.py",
+   "role": "refactor",
+   "evidence": "Adds downgrade_from_version = default('/commandParams/downgrade_from_version') param read; adaptation needed by the real fix in hive_server_upgrade.py."
+  }
+ ],
+ "symptom_location": {
+  "file": "ambari-server/src/main/resources/common-services/HIVE/0.12.0.2.0/package/scripts/hive_server.py",
+  "function": "HiveServerDefault.stop",
+  "determinable": true
+ },
+ "log_location": {
+  "file": null,
+  "function": null,
+  "determinable": false
+ },
+ "relation": "state-producer",
+ "rationale": "Behavioural bug is an ordering and path-selection error in the HiveServer2 scripts: stop() deregistered before the new server started, and hive --version used the already-switched current path. The Java/Python common changes only carry the downgrade-from version to the scripts.",
+ "confidence": "medium",
+ "notes": "Java plumbing could arguably be causal if missing downgrade_from_version is viewed as the defect; I treated it as support for the script fix."
+}

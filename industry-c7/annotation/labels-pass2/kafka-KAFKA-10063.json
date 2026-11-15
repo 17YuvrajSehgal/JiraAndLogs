@@ -1,0 +1,27 @@
+{
+ "id": "kafka:KAFKA-10063",
+ "project": "kafka",
+ "issue_key": "KAFKA-10063",
+ "annotator": "claude-sonnet-5-5",
+ "pass": 2,
+ "file_roles": [
+  {
+   "path": "core/src/main/scala/kafka/log/LogCleaner.scala",
+   "role": "causal",
+   "evidence": "Gauges called cleaners.iterator.map(...).max, which throws on an empty collection; diff adds maxOverCleanerThreads using foldLeft(0.0d) and uses it in all three gauges."
+  }
+ ],
+ "symptom_location": {
+  "file": "core/src/main/scala/kafka/log/LogCleaner.scala",
+  "function": "max-clean-time-secs gauge",
+  "determinable": true
+ },
+ "log_location": {
+  "file": "core/src/main/scala/kafka/log/LogCleaner.scala",
+  "function": "max-clean-time-secs gauge",
+  "determinable": true
+ },
+ "relation": "same-location",
+ "rationale": "The exception comes from unsafe max over a possibly empty cleaners list, and the diff replaces it in the same class. The shutdown-then-query ordering is untouched.",
+ "confidence": "high"
+}

@@ -11,6 +11,25 @@ The shortcut a seasoned engineer takes is \emph{recognition}: this pattern, a br
 Two characteristics of operational triage shape our design. First, the \emph{same incident can arrive with vastly different evidence}. The broker failure above may carry logs, metrics, traces, and cluster events; in another team's tracker the identical failure may be a single sentence (``consumers stalled after the broker restarted, backlog growing'') with no telemetry. Yet the task is identical: identify the most relevant resolved incident. A system that depends on complete observability fails precisely when historical knowledge is needed most. Second, an incident is \emph{not instantaneous}: it evolves over a sequence of windows, from early warning signs through active failure to recovery, so treating each window independently produces repeated alerts for one evolving incident.
 
 \smallskip
+\noindent\textbf{What an incident is, concretely.} Before introducing notation we
+state what the objects are, since the formalism is otherwise easy to read as
+abstract. \emph{A memory item is a resolved issue-tracker ticket} written by
+engineers in the course of their work. On our real corpus it is a genuine Apache
+Jira issue of type \textsc{Bug} with resolution \textsc{Fixed}; the retrievable
+document is its summary, description, and the log and stack-trace blocks its
+authors pasted into the thread, and there are $38{,}642$ of them. On our
+telemetry corpora it is a ticket generated from a deliberately injected fault's
+ground truth and rewritten into engineer prose, which is why the link from
+observation to ticket there is exact rather than inferred.
+
+\emph{A query is whatever the system is handed at decision time.} In an
+instrumented deployment that is a five-minute slice of one service's activity:
+its log lines, its CPU, memory and restart series, any firing alerts, the
+cluster's pod events, and a sample of distributed-trace spans. In a text-only
+deployment it is the incident report itself, with no telemetry at all. The task
+is identical in both cases, which is the point.
+
+\smallskip
 \noindent\textbf{Problem formulation.}
 We formulate incident triage as adaptive retrieval over a time-aware incident memory under heterogeneous evidence. Let
 $\mathcal{W}=\{w_1,\ldots,w_n\}$ denote a time-ordered stream of observation
@@ -30,7 +49,10 @@ m_j=(\mathbf{d}_j,\mathcal{E}_j,\tau_j)
 \]
 contains its textual description $\mathbf{d}_j$, a set of extracted entities
 $\mathcal{E}_j$ (e.g., services, components, error classes, and symptoms), and
-its resolution time $\tau_j$. To prevent temporal leakage, only incidents
+its resolution time $\tau_j$. Concretely, $\mathbf{d}_j$ is the ticket text
+described above, $\mathcal{E}_j$ is produced offline by a language model reading
+only that text (\S\ref{sec:approach-kg}), and $\tau_j$ is the issue's resolution
+timestamp. To prevent temporal leakage, only incidents
 resolved before the current observation are searchable; for a window observed at
 time $t_i$, the eligible memory is
 \[
@@ -40,3 +62,16 @@ time $t_i$, the eligible memory is
 In all evaluations, the query incident itself is removed from the searchable memory; for real Jira issues, the query time is the issue creation time and memory eligibility is determined by the candidate issue’s resolution time. Given a window $w_i$, the objective is to retrieve the top-$k$ most relevant
 historical incidents from $\mathcal{M}_{<t_i}$ while simultaneously deciding
 whether the window warrants an engineer page. Since consecutive windows often belong to the same operational event, the system must additionally associate related windows into one incident so that only one page is issued.
+
+\smallskip
+\noindent\textbf{Why windows.} Nothing in the formulation requires discretizing
+the stream: $\mathcal{M}_{<t}$ is defined continuously in $t$, and no part of the
+retrieval depends on where a window boundary falls. We window because that is the
+granularity at which \emph{ground truth exists}. A label states that a competent
+engineer would have opened an issue over some interval of activity, and our
+synthetic corpora are annotated per five-minute interval; a continuous
+formulation would need continuous supervision we cannot obtain. Windowing also
+matches how the alerting rules these datasets emulate are themselves evaluated,
+and it is what creates the duplicate-page problem the state layer exists to
+solve. The windowing is therefore a property of the evaluation, not a commitment
+of the method.

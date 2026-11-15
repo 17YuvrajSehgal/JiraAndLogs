@@ -1,0 +1,68 @@
+{
+  "id": "ambari:AMBARI-12280",
+  "project": "ambari",
+  "issue_key": "AMBARI-12280",
+  "annotator": "claude-opus-5",
+  "pass": 1,
+  "file_roles": [
+    {
+      "path": "ambari-common/src/main/python/resource_management/libraries/functions/hdp_select.py",
+      "role": "refactor",
+      "evidence": "Drops the 'upgrade_stack_only' parameter from get_hadoop_dir and adds a separate get_hadoop_dir_for_stack_version(target, stack_version), documented as 'necessary when folder paths of downgrade-source stack-version are needed after hdp-select'. A new helper and a removed flag; the resolution the report complains about happens in the Hive script."
+    },
+    {
+      "path": "ambari-common/src/main/python/resource_management/libraries/script/script.py",
+      "role": "refactor",
+      "evidence": "is_hdp_stack_greater_or_equal is split so a version can be passed in: the old method now delegates with 'return Script.is_hdp_stack_greater_or_equal_to(Script.get_hdp_stack_version(), compare_to_version)'. Pure method extraction, behaviour preserved."
+    },
+    {
+      "path": "ambari-server/src/main/java/org/apache/ambari/server/controller/internal/UpgradeResourceProvider.java",
+      "role": "refactor",
+      "evidence": "Adds the COMMAND_DOWNGRADE_FROM_VERSION constant, sets it on the context for downgrades, and copies 'context.getDowngradeFromVersion()' into four separate command parameter maps. Plumbing that carries a new value to the agent."
+    },
+    {
+      "path": "ambari-server/src/main/java/org/apache/ambari/server/orm/dao/UpgradeDAO.java",
+      "role": "refactor",
+      "evidence": "Adds findLastUpgradeForCluster(long clusterId), which runs the new named query with direction UPGRADE and maxResults 1. A new lookup, not a correction."
+    },
+    {
+      "path": "ambari-server/src/main/java/org/apache/ambari/server/orm/entities/UpgradeEntity.java",
+      "role": "refactor",
+      "evidence": "Adds one named query, 'UpgradeEntity.findLatestForCluster', selecting by clusterId and direction ordered by upgradeId DESC. Declaration only."
+    },
+    {
+      "path": "ambari-server/src/main/java/org/apache/ambari/server/state/UpgradeContext.java",
+      "role": "refactor",
+      "evidence": "Adds the field 'm_downgradeFromVersion' with a getter and setter, described as 'the non-finalized version we are downgrading from'. A carrier for the value, with no logic."
+    },
+    {
+      "path": "ambari-server/src/main/resources/common-services/HIVE/0.12.0.2.0/package/scripts/hive_server.py",
+      "role": "causal",
+      "evidence": "The order is inverted exactly as the report asks: 'if rolling_restart: hive_server_upgrade.pre_upgrade_deregister()' before the stop is removed, and the deregister now runs after start, with the comment 'HiveServer2 should not be stopped before new server is available'. This is the reported defect, 'the deregister is happening before the new HS2 is started'."
+    },
+    {
+      "path": "ambari-server/src/main/resources/common-services/HIVE/0.12.0.2.0/package/scripts/hive_server_upgrade.py",
+      "role": "causal",
+      "evidence": "pre_upgrade_deregister is renamed post_upgrade_deregister, the branch flips from 'if \"upgrade\" == params.upgrade_direction' to '\"downgrade\"', and the PATH-rewriting block is replaced by '_get_hive_execute_path(downgrade_version)', which builds the exact versioned path. This answers the report's second point about not relying on $PATH."
+    },
+    {
+      "path": "ambari-server/src/main/resources/common-services/HIVE/0.12.0.2.0/package/scripts/params_linux.py",
+      "role": "refactor",
+      "evidence": "One added parameter read: 'downgrade_from_version = default(\"/commandParams/downgrade_from_version\", None)', with a comment explaining that version and current_version both point at the downgrade target. It exposes the value the server now sends."
+    }
+  ],
+  "symptom_location": {
+    "file": null,
+    "function": null,
+    "determinable": false
+  },
+  "log_location": {
+    "file": null,
+    "function": null,
+    "determinable": false
+  },
+  "relation": "unclear",
+  "rationale": "The report describes a wrong ordering and a wrong path source, with no exception, stack trace or log line, so neither a symptom nor a log site can be placed. Two of nine gold files carry the reported defects: hive_server.py moves the deregister after the start, and hive_server_upgrade.py stops rewriting $PATH in favour of an exact versioned path. The other seven are plumbing added so the downgrade-source version can reach the agent at all.",
+  "confidence": "medium",
+  "notes": "Seven of nine gold files exist only to transport one new string from the server to an agent script. This is the common shape in this benchmark: a small behavioural fix surrounded by the infrastructure needed to feed it."
+}

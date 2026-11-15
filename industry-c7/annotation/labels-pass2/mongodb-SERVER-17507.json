@@ -1,0 +1,27 @@
+{
+ "id": "mongodb:SERVER-17507",
+ "project": "mongodb",
+ "issue_key": "SERVER-17507",
+ "annotator": "claude-sonnet-5-5",
+ "pass": 2,
+ "file_roles": [
+  {
+   "path": "src/mongo/db/auth/native_sasl_authentication_session.cpp",
+   "role": "causal",
+   "evidence": "In step(), when status is not OK the fix adds else { _done = true; }, so the SASL conversation is marked done on failure."
+  }
+ ],
+ "symptom_location": {
+  "file": "src/mongo/db/auth/native_sasl_authentication_session.cpp",
+  "function": "NativeSaslAuthenticationSession::step",
+  "determinable": true
+ },
+ "log_location": {
+  "file": null,
+  "function": null,
+  "determinable": false
+ },
+ "relation": "caller-callee",
+ "rationale": "Failures were not audited. The session never set _done on a failed step, so the caller did not treat the conversation as finished and log the failure. The diff fixes that state here. The audit code that reads it is outside the gold set.",
+ "confidence": "medium"
+}

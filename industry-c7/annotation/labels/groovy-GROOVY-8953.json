@@ -1,0 +1,28 @@
+{
+  "id": "groovy:GROOVY-8953",
+  "project": "groovy",
+  "issue_key": "GROOVY-8953",
+  "annotator": "claude-opus-5",
+  "pass": 1,
+  "file_roles": [
+    {
+      "path": "src/main/java/org/codehaus/groovy/vmplugin/v5/Java5.java",
+      "role": "causal",
+      "evidence": "The guard 'if (diff > 1)' becomes 'if ((!constructor.getDeclaringClass().isEnum() && diff > 1) || diff > 2)', and the hardcoded single shift, 'adjusted[0] = EMPTY_ANNOTATION_ARRAY; System.arraycopy(annotations, 0, adjusted, 1, annotations.length)', becomes a loop over diff with 'System.arraycopy(annotations, 0, adjusted, diff, annotations.length)'. The old code assumed exactly one synthetic parameter, which is wrong for an enum, whose constructor carries two."
+    }
+  ],
+  "symptom_location": {
+    "file": "src/main/java/org/codehaus/groovy/vmplugin/v5/Java5.java",
+    "function": "getConstructorParameterAnnotations",
+    "determinable": true
+  },
+  "log_location": {
+    "file": "src/main/java/org/codehaus/groovy/vmplugin/v5/Java5.java",
+    "function": "getConstructorParameterAnnotations",
+    "determinable": true
+  },
+  "relation": "same-location",
+  "rationale": "The deepest frame is 'org.codehaus.groovy.vmplugin.v5.Java5.getConstructorParameterAnnotations(Java5.java:438)' and the message, 'Constructor parameter annotations length [5] does not match the parameter length', is the GroovyBugError thrown by the very branch the diff rewrites. The reporter's own reading matches the fix, that the trouble appears 'when using one of our enums', and the new condition is exactly an enum exemption. Throw site, defect and fix are one method.",
+  "confidence": "high",
+  "notes": "The arithmetic in the report confirms the mechanism: the constructor shown has seven parameters and the annotation array holds five, a difference of two, which is the synthetic name and ordinal an enum constructor carries."
+}

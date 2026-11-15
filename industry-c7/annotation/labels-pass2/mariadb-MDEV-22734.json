@@ -1,0 +1,27 @@
+{
+ "id": "mariadb:MDEV-22734",
+ "project": "mariadb",
+ "issue_key": "MDEV-22734",
+ "annotator": "claude-sonnet-5-5",
+ "pass": 2,
+ "file_roles": [
+  {
+   "path": "sql/field.cc",
+   "role": "causal",
+   "evidence": "In Field_temporal::get_equal_const_item_datetime, Datetime options for TIMESTAMP fields now use Timestamp::DatetimeOptions instead of Options_cmp, so an invalid '2010-00-01' is not turned into a literal later fed to sec_since_epoch."
+  }
+ ],
+ "symptom_location": {
+  "file": "sql/tztime.cc",
+  "function": "sec_since_epoch",
+  "determinable": true
+ },
+ "log_location": {
+  "file": "sql/tztime.cc",
+  "function": "sec_since_epoch",
+  "determinable": true
+ },
+ "relation": "state-producer",
+ "rationale": "A constant with a zero month was substituted into the condition and then converted to a timestamp, hitting the assert in sec_since_epoch. The fix stops the bad substitution at its source in field.cc.",
+ "confidence": "high"
+}

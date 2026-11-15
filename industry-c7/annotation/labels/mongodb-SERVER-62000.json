@@ -1,0 +1,33 @@
+{
+  "id": "mongodb:SERVER-62000",
+  "project": "mongodb",
+  "issue_key": "SERVER-62000",
+  "annotator": "claude-opus-5",
+  "pass": 1,
+  "file_roles": [
+    {
+      "path": "src/mongo/db/catalog/coll_mod.cpp",
+      "role": "causal",
+      "evidence": "parseCollModRequest recorded the unique request unconditionally, 'cmrIndex->indexUnique = indexObj[CollModIndex::kUniqueFieldName];', and let the parsing loop write the index object to the oplog builder. The fix builds a filtered copy and drops no-op fields, 'auto indexObjForOplog = indexObj;' then 'if (cmrIndex->idx->unique()) { indexObjForOplog = indexObjForOplog.removeField(CollModIndex::kUniqueFieldName); } else { cmrIndex->indexUnique = indexObj[CollModIndex::kUniqueFieldName]; }', the same for hidden, and only emits an entry when something is left, 'if (indexObjForOplog.nFields() > 1) { oplogEntryBuilder->append(CollMod::kIndexFieldName, indexObjForOplog); }'. This is where the offending oplog entry was generated."
+    },
+    {
+      "path": "src/mongo/db/catalog/coll_mod_index.cpp",
+      "role": "preventive",
+      "evidence": "The tolerated no-op is turned into a hard precondition downstream: '// Do not update catalog if index is already unique. if (idx->infoObj().getField(\"unique\").trueValue()) { return; }' is replaced by 'invariant(!idx->unique(), str::stream() << \"Index is already unique: \" << idx->infoObj());' in _processCollModIndexRequestUnique. Nothing this function did was wrong, and the branch is now unreachable because the parser filters the no-op out before it gets here."
+    }
+  ],
+  "symptom_location": {
+    "file": "src/mongo/db/catalog/coll_mod.cpp",
+    "function": "parseCollModRequest",
+    "determinable": true
+  },
+  "log_location": {
+    "file": null,
+    "function": null,
+    "determinable": false
+  },
+  "relation": "state-producer",
+  "rationale": "The report says the primary 'still generates the following oplog entry that will cause oplog application on a secondary to fail', and quotes it, '{collMod: 'mycoll', index: {name: 'myidx', unique: false}}'. The entry is produced in parseCollModRequest, which the fix changes to strip the no-op 'unique' field and to skip the append entirely when only the index name or key pattern remains. The secondary then fails replaying it in the same function, at the pre-existing rejection 'return Status(ErrorCodes::BadValue, \"Cannot make index non-unique\");', so the bad state is created on one node and consumed on another.",
+  "confidence": "medium",
+  "notes": "REPORT-NAMES-FIX: the report's title prescribes the adopted fix and commit a4387740aa41 repeats it verbatim. The failing frame on the secondary is not quoted in the report, so the symptom site is inferred from the 'Cannot make index non-unique' branch that the quoted entry would hit; that inference is why confidence is medium, and relation 'same-location' is defensible since producer and consumer are the same function running on different nodes. Note also that one of the three fix commits, 5e5230ee102f 'minimize BSONElement references in collMod index options parsing', is a parsing rewrite to IDL accessors that is bundled into the same gold file as the real fix, and a third commit only renames a test. The report states the feature is flag-guarded and still under development."
+}

@@ -1,0 +1,33 @@
+{
+  "id": "mariadb:MDEV-15611",
+  "project": "mariadb",
+  "issue_key": "MDEV-15611",
+  "annotator": "claude-opus-5",
+  "pass": 1,
+  "file_roles": [
+    {
+      "path": "storage/innobase/row/row0upd.cc",
+      "role": "causal",
+      "evidence": "wsrep_must_process_fk had its condition rebuilt. It opened by rejecting on two counts, 'if (que_node_get_type(node->common.parent) != QUE_NODE_UPDATE || !wsrep_on_trx(trx)) { return false; }' and then returned 'cascade_node == node'. It now rejects only on '!wsrep_on_trx(trx)' and returns 'que_node_get_type(node->common.parent) != QUE_NODE_UPDATE || ... cascade_node != node'. The commit names both the symptom and the origin: foreign key information was absent from the write set, and 'it happening because of issue in commit 2f342c4. wsrep_must_process_fk has changed to make it similar to original condition.'"
+    },
+    {
+      "path": "storage/xtradb/row/row0upd.cc",
+      "role": "causal",
+      "evidence": "The identical rewrite of wsrep_must_process_fk in the XtraDB copy, together with the same ibool to bool change on the foreign flag."
+    }
+  ],
+  "symptom_location": {
+    "file": null,
+    "function": null,
+    "determinable": false
+  },
+  "log_location": {
+    "file": null,
+    "function": null,
+    "determinable": false
+  },
+  "relation": "concurrency",
+  "rationale": "The failure needs two appliers: with wsrep_slave_threads greater than one, Galera applies two Delete_rows events in parallel that must be ordered, and the slave dies with 'Cannot delete or update a parent row: a foreign key constraint fails'. The write set lacked the foreign key information that would have forced the ordering, and that information is decided by the predicate the fix rewrites. The reproduction is explicit about the precondition, 'wsrep_slave_threads>1'.",
+  "confidence": "medium",
+  "notes": "The only file and line anywhere in the report belongs to a different project: 'at galera/src/trx_handle.cpp:apply():351' is in the Galera library, not the MariaDB server tree. That is the fifth out-of-repository log in the sample after GROOVY-3685, KAFKA-6052, KEYCLOAK-2362 and MDEV-13333, and the second, after MDEV-13333, where the foreign reference is shaped like a plausible in-repository path. Note also that the culprit commit, 2f342c4, is named in the fix commit rather than in the report, so unlike MDEV-21063 and MDEV-21195 this evidence was not available to anyone reading the ticket."
+}

@@ -1,0 +1,68 @@
+{
+  "id": "mongodb:SERVER-14268",
+  "project": "mongodb",
+  "issue_key": "SERVER-14268",
+  "annotator": "claude-opus-5",
+  "pass": 1,
+  "file_roles": [
+    {
+      "path": "src/mongo/db/catalog/collection_cursor_cache.cpp",
+      "role": "refactor",
+      "evidence": "Const-correctness forced by getArray returning a const pointer, plus line wrapping: 'int CollectionCursorCache::eraseCursorGlobalIfAuthorized(OperationContext* txn, int n, long long* ids)' gains 'const' on ids, while the other two hunks only rewrap 'timeoutCursorsGlobal' and a for loop across two lines, keeping the stray brace 'int millisSinceLastCall) {;'. No logic changes."
+    },
+    {
+      "path": "src/mongo/db/catalog/collection_cursor_cache.h",
+      "role": "refactor",
+      "evidence": "The matching declaration, 'static int eraseCursorGlobalIfAuthorized(OperationContext* txn, int n, long long* ids);' becoming 'const long long* ids);' wrapped over two lines. That is the whole change."
+    },
+    {
+      "path": "src/mongo/db/dbmessage.cpp",
+      "role": "causal",
+      "evidence": "The unchecked parsing that lived inline in the header is re-implemented here with bounds checks, which is where the defect now reads correctly: the constructor computes 'size_t limit = _msg.singleData()->dataLen() - sizeof(int);', uses 'strnlen(_nsStart, limit)' instead of strlen and refuses a run-on string, 'uassert(18633, \"Failed to parse ns string\", _nsLen <= (limit - 1));'; every typed read goes through 'template<typename T> void DbMessage::checkRead(const char* start, size_t count) const { if ((_theEnd - start) < static_cast<int>(sizeof(T) * count)) { uassert(18634, \"Not enough data to read\", false); } }', and the cursor array is checked against its count, 'const long long* DbMessage::getArray(size_t count) const { checkRead<long long>(_nextjsobj, count);'."
+    },
+    {
+      "path": "src/mongo/db/dbmessage.h",
+      "role": "causal",
+      "evidence": "This header held the wrong logic as inline bodies and the diff deletes it: 'const char * afterNS() const { return data + strlen( data ) + 1; }' walked off the end of an attacker-supplied buffer, 'int getInt( int num ) const { const int * foo = (const int*)afterNS(); return foo[num]; }' and 'long long getInt64( int offsetBytes ) const { const char * x = afterNS(); x += offsetBytes; const long long * ll = (const long long*)x; return ll[0]; }' read at any offset with no end check, and 'OID* getOID() const { return (OID *) (data + strlen(data) + 1); }' handed out a raw pointer. All of it is replaced by declarations over the checked implementations and by private state, 'const char* _theEnd; // end of packet' and 'unsigned int _nsLen;'."
+    },
+    {
+      "path": "src/mongo/db/instance.cpp",
+      "role": "causal",
+      "evidence": "The server's entry point did its own pointer arithmetic on the wire buffer before anything was validated, 'const char *ns = m.singleData()->_data + 4;' followed by 'strstr(ns, \".$cmd\")', and built a namespace from it for operations that carry none, since 'const NamespaceString nsString( ns );' sat above the dbKillCursors branch. Both are corrected: 'DbMessage dbmsg(m);' with 'const char *ns = dbmsg.getns();', and the dispatch is restructured so the namespace is only read for the three ops that have one, 'else if (op != dbInsert && op != dbUpdate && op != dbDelete) { ... } else { const char* ns = dbmsg.getns(); const NamespaceString nsString(ns);'. receivedKillCursors loses its raw cast as well, 'int *x = (int *) m.singleData()->_data; x++; int n = *x++;' and 'eraseCursorGlobalIfAuthorized(txn, n, (long long *) x)' becoming 'DbMessage dbmessage(m); int n = dbmessage.pullInt();' and 'const long long* cursorArray = dbmessage.getArray(n);'."
+    },
+    {
+      "path": "src/mongo/s/cursors.cpp",
+      "role": "causal",
+      "evidence": "The mongos copy of the same unchecked kill-cursors parse, and the weaker of the two: 'int *x = (int *) m.singleData()->_data; x++; int n = *x++;' then 'long long * cursors = (long long *)x;' with no size check at all, where mongod at least had one. It gains both the check and the checked read, 'massert( 18632 , str::stream() << \"bad kill cursors size: \" << m.dataSize(), m.dataSize() == 8 + ( 8 * n ) );' and 'const long long* cursors = dbmessage.getArray(n);'."
+    },
+    {
+      "path": "src/mongo/s/request.cpp",
+      "role": "preventive",
+      "evidence": "A guard that was specific to one opcode is widened to every message without a namespace: 'if ( _m.operation() == dbKillCursors ) { return; }' becomes 'if ( !_d.messageShouldHaveNs()) { return; }', with '_m.header()->id = _id; _clientInfo->clearRequestInfo();' hoisted above it, and the constructor drops 'verify( _d.getns() );' now that getns has a precondition. No unchecked read is removed here; the reach of an existing guard is extended."
+    },
+    {
+      "path": "src/mongo/tools/sniffer.cpp",
+      "role": "refactor",
+      "evidence": "An offline packet-dumping tool adapting to the new API after '_data' became private: 'int *x = (int *) m.singleData()->_data; x++; int n = *x;' becomes 'int n = d.pullInt();', and the second hunk is only a dropped reference, 'long long &cId = d.pullInt64();' becoming 'long long cId = d.pullInt64();', because pullInt64 no longer returns one. This binary serves no client."
+    },
+    {
+      "path": "src/mongo/util/net/message.h",
+      "role": "preventive",
+      "evidence": "Encapsulation tightened so the raw buffer cannot be walked by hand again: 'struct MsgData {' becomes 'class MsgData { friend class Message; friend class DbMessage; friend class MessagingPort; public:', and 'char _data[4];' moves to the bottom under 'private:' with the comment '//must be last member'. No parsing happens in this file; the change stops the pattern from recurring elsewhere."
+    }
+  ],
+  "symptom_location": {
+    "file": null,
+    "function": null,
+    "determinable": false
+  },
+  "log_location": {
+    "file": null,
+    "function": null,
+    "determinable": false
+  },
+  "relation": "unclear",
+  "rationale": "Every unchecked read in the diff is the same defect: a message supplied by a remote client was walked with raw pointer arithmetic, 'const char *ns = m.singleData()->_data + 4;', 'return data + strlen( data ) + 1;' and 'long long * cursors = (long long *)x;', with no comparison against the end of the buffer, so bytes beyond the message could be read and returned. The fix replaces all of it with one checked parser, 'uassert(18634, \"Not enough data to read\", false);' and 'strnlen(_nsStart, limit)', which matches the only mechanical statement in the report, 'The response sent by the server returns only validated data.' Which of the unchecked sites actually produced the disclosure is not stated anywhere, so the symptom site cannot be placed and the relation cannot be decided.",
+  "confidence": "medium",
+  "notes": "The rendered report is a sanitized security advisory, not a bug report: 'Using a specially crafted message, a remote user could obtain a limited amount of information from the server heap memory', plus USER IMPACT, WORKAROUNDS, AFFECTED VERSIONS and FIX VERSION. It contains no reproducer, no log, no stack, no opcode and no file name, which is why symptom_location, log_location and relation are all left undecided and why confidence is medium rather than high. It does carry a RESOLUTION DETAILS line written after the fix, 'The response sent by the server returns only validated data', so the issue text a system sees was partly authored from the fix. Duplicated copies take the same role: receivedKillCursors in instance.cpp and CursorCache::gotKillCursors in s/cursors.cpp are the same unchecked parse in mongod and mongos, both are labelled causal, and the packet cannot say which one the disclosure came through. Two gold files are a pure const-correctness and line-wrapping change, collection_cursor_cache.cpp and .h, and the first of those keeps a stray semicolon in a signature it rewraps, '{;'. Three gold files, instance.cpp, s/cursors.cpp and sniffer.cpp, were additionally forced to change by 'char _data[4]' becoming private, so compile pressure and the real fix overlap in the same hunks. Second-rater disagreements to expect: message.h could be read as refactor rather than preventive since struct-to-class is a visibility change, s/request.cpp could be read as refactor since part of it is adaptation to getns's new precondition, and sniffer.cpp could be read as preventive since the same unchecked parse is removed there too. The packet records 12 changed files and 9 gold, so 3 were filtered as tests."
+}

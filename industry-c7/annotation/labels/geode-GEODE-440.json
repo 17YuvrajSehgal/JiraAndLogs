@@ -1,0 +1,28 @@
+{
+  "id": "geode:GEODE-440",
+  "project": "geode",
+  "issue_key": "GEODE-440",
+  "annotator": "claude-opus-5",
+  "pass": 1,
+  "file_roles": [
+    {
+      "path": "gemfire-core/src/main/java/com/gemstone/gemfire/cache/query/internal/index/IndexManager.java",
+      "role": "preventive",
+      "evidence": "A new switch is added, 'public static boolean ENABLE_UPDATE_IN_PROGRESS_INDEX_CALCULATION = true', and needsRecalculation gains it as a prefix: 'return ENABLE_UPDATE_IN_PROGRESS_INDEX_CALCULATION && queryStartTime <= SAFE_QUERY_TIME.get() - queryStartTime + lastModifiedTime'. The original expression is untouched and the flag defaults to true, so default behaviour is unchanged; this only gives a caller a way to switch the path off."
+    }
+  ],
+  "symptom_location": {
+    "file": "gemfire-core/src/main/java/com/gemstone/gemfire/cache/query/internal/index/CompactRangeIndex.java",
+    "function": "evaluateEntry",
+    "determinable": true
+  },
+  "log_location": {
+    "file": "gemfire-core/src/main/java/com/gemstone/gemfire/cache/query/internal/index/CompactRangeIndex.java",
+    "function": "evaluateEntry",
+    "determinable": true
+  },
+  "relation": "unclear",
+  "rationale": "The NPE is thrown at 'CompactRangeIndex.evaluateEntry(CompactRangeIndex.java:953)', and that file is not in the gold set and is not changed by the fix. The one gold file adds a flag that defaults to true, leaving needsRecalculation's arithmetic exactly as it was, so nothing about the faulty path is corrected; the commit message says as much, 'Added a flag to ignore the update in progress calculation for querying'. No causal file is present, so the relation between the symptom and a causal site cannot be stated.",
+  "confidence": "medium",
+  "notes": "This is a CI-failure ticket closed by making the test able to avoid the path rather than by fixing it. The second changed file is the test itself, filtered from gold, so the gold set here is a one-line escape hatch while the defect site, CompactRangeIndex, is unreachable from the gold set. That the symptom site calls into needsRecalculation is inferred from the flag suppressing the failure; the packet does not show that call."
+}

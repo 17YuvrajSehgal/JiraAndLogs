@@ -1,0 +1,27 @@
+{
+ "id": "wildfly:WFLY-2582",
+ "project": "wildfly",
+ "issue_key": "WFLY-2582",
+ "annotator": "claude-sonnet-5-5",
+ "pass": 2,
+ "file_roles": [
+  {
+   "path": "webservices/server-integration/src/main/java/org/jboss/as/webservices/deployers/deployment/AbstractDeploymentModelBuilder.java",
+   "role": "causal",
+   "evidence": "Constructor used `SPIProviderResolver.getInstance()` with the caller's context loader; diff uses `AbstractDeploymentModelBuilder.class.getClassLoader()` for getInstance(cl) and getSPI(..., cl)."
+  }
+ ],
+ "symptom_location": {
+  "file": "webservices/server-integration/src/main/java/org/jboss/as/webservices/deployers/deployment/AbstractDeploymentModelBuilder.java",
+  "function": "AbstractDeploymentModelBuilder.<init>",
+  "determinable": true
+ },
+ "log_location": {
+  "file": "org.jboss.ws.api.util.ServiceLoader (external)",
+  "function": "loadDefault",
+  "determinable": true
+ },
+ "relation": "concurrency",
+ "rationale": "The CNFE for DefaultSPIProviderResolver happens when XTS boot reaches the WS builder before the WS subsystem sets up the classloader. The fix makes the builder always use its own module classloader, removing the dependence on that setup. The change is in the constructor that did the class lookup.",
+ "confidence": "medium"
+}

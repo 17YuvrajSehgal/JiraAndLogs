@@ -1,0 +1,27 @@
+{
+ "id": "flink:FLINK-10693",
+ "project": "flink",
+ "issue_key": "FLINK-10693",
+ "annotator": "claude-sonnet-5-5",
+ "pass": 2,
+ "file_roles": [
+  {
+   "path": "flink-scala/src/main/scala/org/apache/flink/api/scala/typeutils/EitherSerializer.scala",
+   "role": "causal",
+   "evidence": "duplicate() was 'this'; diff now duplicates leftSerializer and rightSerializer and returns a new EitherSerializer if either changed. Matches the report 'buggy duplication logic'."
+  }
+ ],
+ "symptom_location": {
+  "file": "flink-scala/src/main/scala/org/apache/flink/api/scala/typeutils/EitherSerializer.scala",
+  "function": "duplicate",
+  "determinable": true
+ },
+ "log_location": {
+  "file": null,
+  "function": null,
+  "determinable": false
+ },
+ "relation": "same-location",
+ "rationale": "The report names the duplication logic of this class and the diff rewrites exactly that method. No log or stack trace is given.",
+ "confidence": "high"
+}

@@ -1,0 +1,28 @@
+{
+  "id": "mariadb:MDEV-13712",
+  "project": "mariadb",
+  "issue_key": "MDEV-13712",
+  "annotator": "claude-opus-5",
+  "pass": 1,
+  "file_roles": [
+    {
+      "path": "include/my_handler_errors.h",
+      "role": "causal",
+      "evidence": "The exact string the reporter quotes is corrected here: 'Record was not update. Original values was same as new values' becomes 'Record was not updated. New values were the same as original values', inside the handler_error_messages array. Fifteen further entries are reworded in the same array, for example 'The table does not exist in engine' to 'The table does not exist in the storage engine'."
+    }
+  ],
+  "symptom_location": {
+    "file": "include/my_handler_errors.h",
+    "function": null,
+    "determinable": true
+  },
+  "log_location": {
+    "file": "include/my_handler_errors.h",
+    "function": null,
+    "determinable": true
+  },
+  "relation": "same-location",
+  "rationale": "There is no failure here. The report is a wording complaint, quoting 'ERROR 1030 (HY000): Got error 169 \"Record was not update. Original values was same as new values\"' and asking for 'update => updated' and 'was the same => were the same'. That text is a literal in the one gold file, so the reported string, the defect and the fix are the same array entry.",
+  "confidence": "high",
+  "notes": "This instance is in the benchmark because a commit links to an issue key, not because anything failed. There is no root cause to localize: the defect is the text of a message and the answer is found by matching the quoted string against the source. Eight files changed and seven are test result files, so the gold set is the single header holding the array. Instances like this are trivially easy for a reason unrelated to log-guided localization, and they sit in the same average as KAFKA-6624, where no evidence can reach the answer. Alongside MDEV-12609, where the log line itself was the defect, this is the second MariaDB instance in the sample whose entire content is a string."
+}

@@ -1,0 +1,27 @@
+{
+ "id": "qt:QTBUG-96069",
+ "project": "qt",
+ "issue_key": "QTBUG-96069",
+ "annotator": "claude-sonnet-5-5",
+ "pass": 2,
+ "file_roles": [
+  {
+   "path": "src/corelib/kernel/qjnienvironment.cpp",
+   "role": "causal",
+   "evidence": "registerNativeMethods(const char*, ...) builds a QJniObject(className) and checks isValid(), which fails if the class has no default constructor; now uses findClass(className) and checks the jclass."
+  }
+ ],
+ "symptom_location": {
+  "file": "src/corelib/kernel/qjnienvironment.cpp",
+  "function": "QJniEnvironment::registerNativeMethods",
+  "determinable": true
+ },
+ "log_location": {
+  "file": "src/corelib/kernel/qjnienvironment.cpp",
+  "function": "QJniEnvironment::registerNativeMethods",
+  "determinable": true
+ },
+ "relation": "caller-callee",
+ "rationale": "The report shows NoSuchMethodError for QtAndroidMediaPlayer.<init>, then JNI_ERR from JNI_OnLoad. The diff stops instantiating the class just to register methods, which is where the wrong requirement lived.",
+ "confidence": "high"
+}

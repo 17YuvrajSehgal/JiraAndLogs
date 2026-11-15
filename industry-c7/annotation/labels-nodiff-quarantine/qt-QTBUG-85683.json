@@ -1,0 +1,28 @@
+{
+  "id": "qt:QTBUG-85683",
+  "project": "qt",
+  "issue_key": "QTBUG-85683",
+  "annotator": "claude-opus-5",
+  "pass": 1,
+  "file_roles": [
+    {
+      "path": "src/gui/text/windows/qwindowsfontdatabase.cpp",
+      "role": "causal",
+      "evidence": "The report places both the bad name and the warning in this one component, 'Windows font database is tries to register extra names for fonts. For families with long names this may result in an attempt to register a too long name which would cause a warning', and quotes the warning itself, 'qt.qpa.fonts: Unable to enumerate family ' \"Droid Sans Mono Dotted for Powerline\" ''. The only non-test source file the fix changed is that database, so the over-long name it builds and then fails to enumerate is the defect, and nothing else was treated as broken."
+    }
+  ],
+  "symptom_location": {
+    "file": "src/gui/text/windows/qwindowsfontdatabase.cpp",
+    "function": null,
+    "determinable": true
+  },
+  "log_location": {
+    "file": "src/gui/text/windows/qwindowsfontdatabase.cpp",
+    "function": null,
+    "determinable": true
+  },
+  "relation": "same-location",
+  "rationale": "The only evidence is one warning, 'qt.qpa.fonts: Unable to enumerate family ' \"Droid Sans Mono Dotted for Powerline\" '', whose logging category and whose subject, the Windows font database registering extra family names, both point at the single gold file. The name that fails to enumerate is constructed by the same code that then reports the failure, so the state is produced and detected in one place. The reproduction is a plain font install, 'If it's installed all that's required to reproduce the warning is to run the attached app.'",
+  "confidence": "medium",
+  "notes": "The packet renders this file's diff as '(no diff retrieved)', so no hunk could be cited for any gold file in this instance. The logging category 'qt.qpa.fonts' and the report's own sentence place the emitting file, in the way CONVENTIONS records for KAFKA-6051; no function is recorded because the packet shows no code. The instance's whole symptom is log noise rather than a failure: nothing fails to render, nothing crashes, and the report asks only for the warning to stop, which is worth separating from instances where a log points at a crash. The role would change if the fix only silenced or downgraded the warning, which would be symptom-handling rather than causal; the packet cannot settle that because no diff was rendered, so this one belongs in the agreement check. Causal is chosen because the file both builds the too-long name and reports it, and no other file was changed."
+}

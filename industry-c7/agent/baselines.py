@@ -1,0 +1,685 @@
+"""LocAgent-style and CoSIL-style agentic baselines (T25, Mahsa's point 3).
+
+Neither published system runs on this benchmark. Both parse Python with the
+`ast` module and both are driven by the SWE-bench harness; every project
+here is Java, Scala, C or C++, and every instance is a Jira ticket with a
+log bundle rather than a GitHub issue. So this module re-implements their
+SEARCH STRATEGIES on our tree-sitter graph layer, exactly as the paper
+already says "BRTracer-style" for a reimplemented IR baseline. They are
+named LocAgent-style and CoSIL-style throughout and are never claimed to be
+the published systems. BASELINES.md records every deviation.
+
+What is held constant against \\sys{}: the model (one served Qwen3.8-27B),
+temperature 0, the seed, the snapshot, and the issue report WITH its logs.
+What differs is only what each system does with them.
+
+What the baselines deliberately do NOT get, because neither design has it:
+
+  * `recall_incidents`. Resolved-incident memory is the thing being
+    isolated. LocAgent and CoSIL have no history signal at all.
+  * the phase-0 pre-searches and the pre-walked backward hop. That
+    scaffolding is ours; handing it over would measure our harness twice.
+  * a structured `submit_ranking` tool. Both papers parse a free-text
+    answer, and CoSIL's Table II reports LocAgent's EMPTY RATE at 13-22%
+    with Qwen models for exactly that reason. Giving them our tool-call
+    submission would repair a weakness the literature measures. CoSIL gets
+    its own fix for it (reflective alignment); LocAgent does not, because
+    it does not have one. If this port is faithful we should see the same
+    ordering of empty rates, which is a free check that it is not broken.
+
+Both arms return the same dict shape as agent.run_instance, so scoring,
+transcript storage and the resume logic need no changes.
+"""
+
+from __future__ import annotations
+
+import json
+import re
+import sys
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import agent as A  # noqa: E402
+import tools as T  # noqa: E402
+from codegraph import Graph  # noqa: E402
+
+LIST_LEN = A.LIST_LEN
+MAX_TOOL_CHARS = A.MAX_TOOL_CHARS
+
+# LocAgent reports 6-9 interaction rounds (their Table 5). We give it our own
+# MAX_TURNS so a loss can never be blamed on a smaller budget.
+LOCAGENT_TURNS = A.MAX_TURNS
+# CoSIL's own tuned value (their Table V sweeps maxIter over {1,3,5,7,10}).
+COSIL_MAX_ITER = 10
+
+CODE_BLOCK_RE = re.compile(r"```(?:\w+)?\s*\n(.*?)```", re.S)
+# Alternation is leftmost-first in Python, NOT longest-match, so a bare `c`
+# ahead of `cpp` truncates "foo.cpp" to "foo.c" -- which then fails to
+# resolve and the whole answer is scored EMPTY. That silently crippled both
+# baselines on mongodb, mariadb and qt, i.e. 89% of the benchmark, and it
+# looked exactly like the empty rate the literature reports. Longest
+# extensions first, and \b so a prefix can never win on its own.
+PATH_RE = re.compile(
+    r"([\w./+-]+\.(?:scala|java|hpp|cpp|qml|idl|inl|yy|mm|cc|ic|h|c)\b)")
+
+
+# ---------------------------------------------------------------------------
+# shared plumbing
+# ---------------------------------------------------------------------------
+def _chat(messages, tools, usage, events, seed, label,
+          max_tokens=1500 + A.THINK_HEADROOM):
+    """One model call, with usage and transcript accounting."""
+    resp = A.call_llm(messages, tools, seed=seed, max_tokens=max_tokens)
+    if "error" in resp:
+        events.append({"type": "error", "stage": label,
+                       "error": resp["error"]})
+        return None
+    usage["calls"] += 1
+    u = resp.get("usage") or {}
+    usage["in"] += u.get("prompt_tokens", 0) or 0
+    usage["out"] += u.get("completion_tokens", 0) or 0
+    msg = resp["choices"][0].get("message", {}) or {}
+    events.append({"type": "assistant", "stage": label,
+                   "content": (msg.get("content") or "")[:1500],
+                   "tool_calls": [{"name": (tc.get("function") or {}).get("name"),
+                                   "args": A._args_of(tc)}
+                                  for tc in A._tool_calls_of(msg)]})
+    return msg
+
+
+def parse_locations(text: str, ws) -> list[str]:
+    """Pull file paths out of a free-text answer, in the order given.
+
+    Both papers parse an unstructured final answer. We prefer a fenced code
+    block when there is one, as their prompts ask for, and fall back to the
+    whole message. A message with no parseable path is an EMPTY result and
+    is scored as a miss, which is how CoSIL defines its empty rate.
+    """
+    blocks = CODE_BLOCK_RE.findall(text or "")
+    hay = "\n".join(blocks) if blocks else (text or "")
+    out, stats = [], {}
+    for raw in PATH_RE.findall(hay):
+        f = A._resolve(raw, ws, stats)
+        if f and f not in out:
+            out.append(f)
+    return out[:LIST_LEN]
+
+
+# A LocAgent stanza is a path followed by optional `line:`, `class:` and
+# `function:` lines -- their Figure 8 output format, which LOCAGENT_SYSTEM
+# already asks for verbatim. A CoSIL location is `path:Qualified.Name`, the
+# entity id its own call graph uses. Both are parsed here, so neither arm
+# is scored at a granularity its paper does not use and neither is given a
+# prompt we invented.
+KV_RE = re.compile(r"^\s*(class|function|method|def)\s*[:=]\s*(.+?)\s*$", re.I)
+ENTITY_RE = re.compile(
+    r"([\w./+-]+\.(?:scala|java|hpp|cpp|qml|idl|inl|yy|mm|cc|ic|h|c))"
+    r"\s*[:#]\s*([A-Za-z_~][\w:.]*)")
+# Real answers contain "(member declaration) _numYields" and "the method
+# foo()". Keep the identifier, drop the commentary around it.
+NOISE_RE = re.compile(
+    r"^\s*\([^)]*\)\s*|^\s*(?:the\s+)?"
+    r"(?:member\s+|static\s+|inline\s+|virtual\s+)*"
+    r"(?:function|method|constructor|destructor)\s+", re.I)
+SYM_OK_RE = re.compile(r"[A-Za-z_~][\w:.]*")
+
+
+def _clean_symbol(raw: str) -> str:
+    """Strip the prose a free-text answer wraps around a symbol name."""
+    s = NOISE_RE.sub("", (raw or "").strip()).strip()
+    s = s.split("(", 1)[0].split("<", 1)[0].strip()
+    s = s.strip("`'\"*, \t")
+    # Class.method and Class::method are kept whole: match_symbol prefers a
+    # qualified match and falls back to the bare name, so keeping the
+    # qualifier can only help and never costs a hit.
+    return s if SYM_OK_RE.fullmatch(s or "") else ""
+
+
+def parse_regions(text: str, ws) -> list[dict]:
+    """Pull (file, symbol) pairs out of a free-text answer, in order.
+
+    Both published systems localize functions. LocAgent's entities are
+    `path:QualifiedName` and its Table 2 tools return classes and
+    functions; CoSIL's second stage is an iterative function call-graph
+    search. Only our parser was file-only, which measured both arms at a
+    granularity neither paper reports.
+
+    Returns the shape `function_stage.py --ranking submitted` reads:
+    `{"path", "symbol"}`, deduplicated, most suspicious first. A symbol the
+    file does not contain is NOT repaired here; the scorer resolves it
+    against the snapshot and counts a miss, exactly as it does for ours.
+    """
+    blocks = CODE_BLOCK_RE.findall(text or "")
+    hay = "\n".join(blocks) if blocks else (text or "")
+    out, seen, stats = [], set(), {}
+
+    def add(path_raw, symbol):
+        f = A._resolve(path_raw, ws, stats)
+        sym = _clean_symbol(symbol)
+        if not f or not sym:
+            return
+        if (f, sym) not in seen:
+            seen.add((f, sym))
+            out.append({"path": f, "symbol": sym})
+
+    # CoSIL form first: `path:Name` is unambiguous wherever it appears.
+    for path_raw, sym in ENTITY_RE.findall(hay):
+        add(path_raw, sym)
+
+    # LocAgent stanza form: a path line, then key/value lines beneath it.
+    cur, cls = None, ""
+    for line in hay.splitlines():
+        paths = PATH_RE.findall(line)
+        if paths and not ENTITY_RE.search(line):
+            cur, cls = paths[-1], ""
+            continue
+        m = KV_RE.match(line)
+        if not (m and cur):
+            continue
+        kind, val = m.group(1).lower(), m.group(2)
+        if kind == "class":
+            cls = _clean_symbol(val)
+            continue
+        fn = _clean_symbol(val)
+        if fn:
+            # Do not re-qualify a name that already carries its class:
+            # "class: QSGTextNode" + "function: QSGTextNode::updateText"
+            # must stay QSGTextNode::updateText, not become
+            # QSGTextNode.QSGTextNode::updateText, which matches nothing
+            # on the qualified pass.
+            qualified = "::" in fn or "." in fn
+            add(cur, fn if (qualified or not cls or cls == fn)
+                else f"{cls}.{fn}")
+    return out[:LIST_LEN]
+
+
+def _isolate(ws) -> None:
+    """Strip the parts of our pipeline neither published system has.
+
+    The Workspace is seeded with `cond_ours`, which is retrieval PLUS
+    incident memory. search_text prepends that list to its candidate pool,
+    so leaving it on would feed our memory signal into an arm defined by
+    not having one. The list is kept on the Workspace only so the reported
+    `ranking_fused` diagnostic can still be computed.
+    """
+    ws.seed_search_pool = False
+
+
+def _finish(ws, arm, agent_list, events, usage, stop, extra=None,
+            regions=None):
+    """Common return shape. The baseline's OWN ranking is the headline.
+
+    `ranking_fused` applies the same lexical fallback \\sys{} gets, so a
+    reviewer can check that our safety net is not what produced the gap.
+    It is reported beside the faithful number, never instead of it.
+    """
+    agent_list = agent_list[:LIST_LEN]
+    fused = (A.fuse(agent_list, ws.seed_candidates)[:LIST_LEN]
+             if agent_list else list(ws.seed_candidates[:LIST_LEN]))
+    return {"ranking": agent_list, "agent_ranking": agent_list,
+            "ranking_fused": fused,
+            "lexical_seed": ws.seed_candidates[:LIST_LEN],
+            "empty": not agent_list,
+            "notes": ws.notes, "tool_calls": ws.calls, "stop_reason": stop,
+            # The challenge asks for ranked code REGIONS, not files, and
+            # both published systems localize functions. This is the
+            # field function_stage.py --ranking submitted reads, so the
+            # baselines are scored by the same code path as ours.
+            "regions": list(regions or []),
+            "rationale": "", "usage": usage, "resolver": {},
+            "events": events, "seed": usage.get("seed", 42),
+            "version": 0, "arm": arm, "causal_chain": [],
+            "prewalk_symbols": [], **(extra or {})}
+
+
+# ---------------------------------------------------------------------------
+# LocAgent-style
+# ---------------------------------------------------------------------------
+LOCAGENT_TOOLS = [
+    {"type": "function", "function": {
+        "name": "search_entity",
+        "description": ("Search the codebase by keyword and return matching "
+                        "entities (files, classes, functions) with their code "
+                        "snippets. Entity ids have the form "
+                        "path/to/File.java:Class.method."),
+        "parameters": {"type": "object", "properties": {
+            "keywords": {"type": "array", "items": {"type": "string"},
+                         "description": "Terms, symbol names or identifiers."}},
+            "required": ["keywords"]}}},
+    {"type": "function", "function": {
+        "name": "traverse_graph",
+        "description": ("Breadth-first traversal of the code graph from one "
+                        "or more entities. Choose the direction, the number "
+                        "of hops, and which entity and relation types to "
+                        "follow. One call can cover several hops."),
+        "parameters": {"type": "object", "properties": {
+            "start_entities": {"type": "array", "items": {"type": "string"}},
+            "direction": {"type": "string",
+                          "enum": ["upstream", "downstream", "both"]},
+            "traverse_hops": {"type": "integer"},
+            "entity_type_filter": {"type": "array",
+                                   "items": {"type": "string"}},
+            "dependency_type_filter": {"type": "array",
+                                       "items": {"type": "string"}}},
+            "required": ["start_entities"]}}},
+    {"type": "function", "function": {
+        "name": "retrieve_entity",
+        "description": ("Full attributes of entities by id: file path, line "
+                        "numbers and complete code."),
+        "parameters": {"type": "object", "properties": {
+            "entity_ids": {"type": "array", "items": {"type": "string"}}},
+            "required": ["entity_ids"]}}},
+]
+
+# Their Figure 8, with the Python-specific wording replaced by this
+# benchmark's. The four CoT steps and the output format are unchanged.
+LOCAGENT_SYSTEM = """You are a software maintenance assistant doing code localization.
+
+## Step 1: Categorize and Extract Key Problem Information
+- Classify the issue: bug report, feature request, performance issue or security issue.
+- Extract keywords: error messages, symbol names, stack frames, file names.
+- Use extracted keywords and line numbers to search for relevant code references for additional context.
+
+## Step 2: Locate Referenced Modules
+- Accurately determine specific modules.
+  - Explore the repo to familiarize yourself with its structure.
+  - Analyze the described execution flow to identify specific modules or components being referenced.
+- Pay special attention to distinguishing between modules with similar names using context and described execution flow.
+- Output Format for collected relevant modules:
+  - Use the format 'file_path:QualifiedName'.
+  - E.g. for a method `tick` in the `DistributedHerder` class located in
+    `connect/runtime/src/main/java/org/apache/kafka/connect/runtime/distributed/DistributedHerder.java`,
+    represent it as that path followed by ':DistributedHerder.tick'.
+
+## Step 3: Analyze and Reproduce the Problem
+- Clarify the purpose of the issue.
+  - If expanding capabilities: identify where and how to incorporate new behavior.
+  - If addressing unexpected behavior: focus on localizing modules containing potential bugs.
+- Reconstruct the execution flow.
+  - Identify main entry points triggering the issue.
+  - Trace function calls, class interactions, and sequences of events.
+  - Identify potential breakpoints causing the issue.
+  Important: keep the reconstructed flow focused on the problem.
+
+## Step 4: Locate Areas for Modification
+- Locate specific files, functions, or lines of code requiring changes.
+- Consider upstream and downstream dependencies that may affect or be affected by the issue.
+- Think thoroughly: list multiple potential solutions and consider edge cases.
+
+## Output Format for Final Results:
+Your final output should list the locations requiring modification, wrapped with triple backticks ```
+Each location should include the file path, class name (if applicable), function name, or line numbers, ordered by importance.
+Your answer would better include about 5 files.
+
+### Examples:
+```
+full_path1/file1.java
+line: 10
+class: MyClass1
+function: my_function1
+
+full_path2/file2.cpp
+line: 76
+function: MyClass2::my_function2
+```
+
+Return just the location(s)."""
+
+
+def _locagent_dispatch(g: Graph, ws, name: str, args: dict) -> dict:
+    if name == "search_entity":
+        kws = args.get("keywords") or []
+        if isinstance(kws, str):
+            kws = [kws]
+        found, seen = [], set()
+        for kw in [str(k) for k in kws][:6]:
+            for f, lno, _t in ws._grep(kw.strip())[:8]:
+                ent = next((e for e in g.entities_of(f)
+                            if e["line"] <= lno <= e["end"]), None)
+                ent = ent or {"id": f, "type": "file", "file": f,
+                              "name": f.rsplit("/", 1)[-1], "line": 1}
+                if ent["id"] in seen:
+                    continue
+                seen.add(ent["id"])
+                found.append({"entity_id": ent["id"], "type": ent["type"],
+                              "file": ent["file"], "line": ent["line"],
+                              "preview": _preview(g, ws, ent)})
+        if not found:
+            # LocAgent's lowest index tier is BM25 over entity contents.
+            for h in ws.search_text(" ".join(str(k) for k in kws),
+                                    k=8).get("hits", []):
+                found.append({"entity_id": f"{h['file']}:{h['best_region']}",
+                              "type": "function", "file": h["file"],
+                              "line": 0, "preview": "",
+                              "matched_terms": h.get("matched_terms", [])})
+        return {"keywords": kws, "n_found": len(found), "entities": found[:20]}
+    if name == "traverse_graph":
+        start = args.get("start_entities") or []
+        if isinstance(start, str):
+            start = [start]
+        rels = {str(r).lower() for r in
+                (args.get("dependency_type_filter") or
+                 ["contain", "import", "invoke", "inherit"])}
+        types = {str(t).lower() for t in (args.get("entity_type_filter") or [])}
+        return g.traverse([str(s) for s in start], rels,
+                          str(args.get("direction") or "downstream").lower(),
+                          args.get("traverse_hops") or 1, types)
+    if name == "retrieve_entity":
+        ids = args.get("entity_ids") or []
+        if isinstance(ids, str):
+            ids = [ids]
+        out = []
+        for eid in [str(i) for i in ids][:6]:
+            ent = g.resolve(eid)
+            if ent is None:
+                out.append({"entity_id": eid, "error": "no such entity"})
+                continue
+            out.append({"entity_id": ent["id"], "type": ent["type"],
+                        "file": ent["file"], "start_line": ent["line"],
+                        "end_line": ent["end"],
+                        "code": g.body_of(ent)[:2600]})
+        return {"entities": out}
+    return {"error": f"unknown tool {name}"}
+
+
+def _preview(g: Graph, ws, ent: dict) -> str:
+    if ent["type"] == "file":
+        return ", ".join(e["name"] for e in g.entities_of(ent["file"])[:12])
+    return g.body_of(ent)[:400]
+
+
+def run_locagent(ws: T.Workspace, seed: int = 42,
+                 max_turns: int = LOCAGENT_TURNS) -> dict:
+    """LocAgent's graph-guided loop: three tools, four-step CoT, free text."""
+    _isolate(ws)
+    g = Graph(ws)
+    usage = {"in": 0, "out": 0, "calls": 0, "seed": seed}
+    user = (f"Project: {ws.project}\n\n"
+            f"=== ISSUE REPORT (with logs) ===\n{ws.query_text[:18000]}\n\n"
+            f"Please localize the code that must change to resolve this "
+            f"issue. Source files in this repository end in "
+            f"{', '.join(T.PROJECTS[ws.project]['src_ext'])}.")
+    messages = [{"role": "system", "content": LOCAGENT_SYSTEM},
+                {"role": "user", "content": user}]
+    events = [{"type": "system", "content": LOCAGENT_SYSTEM},
+              {"type": "user", "content": user}]
+    answer, stop = "", "max_turns"
+
+    for turn in range(max_turns):
+        if turn == max_turns - 1:
+            messages.append({"role": "user", "content":
+                             "Stop searching. Give the final locations now, "
+                             "in the output format, wrapped in triple "
+                             "backticks."})
+        msg = _chat(A.trim_history(messages), LOCAGENT_TOOLS, usage, events,
+                    seed, f"turn{turn}")
+        if msg is None:
+            stop = "llm_error"
+            break
+        tcs = A._tool_calls_of(msg)
+        content = msg.get("content") or ""
+        if not tcs:
+            answer = content
+            stop = "answered"
+            break
+        messages.append({"role": "assistant", "content": content,
+                         "tool_calls": tcs})
+        for tc in tcs:
+            name = (tc.get("function") or {}).get("name") or ""
+            args = A._args_of(tc)
+            res = _locagent_dispatch(g, ws, name, args)
+            ws.calls.append({"tool": name, "args": args, "result": res})
+            payload = json.dumps(res, default=str)[:MAX_TOOL_CHARS]
+            events.append({"type": "tool", "turn": turn, "name": name,
+                           "args": args, "result": payload[:2500]})
+            messages.append({"role": "tool", "tool_call_id": tc.get("id", ""),
+                             "name": name, "content": payload})
+    else:
+        answer = ""
+
+    if not answer:
+        # the loop ended on the budget: the last assistant message is the
+        # answer if it had one, which is how a free-text system degrades.
+        answer = next((e.get("content") or "" for e in reversed(events)
+                       if e.get("type") == "assistant"), "")
+    ranked = parse_locations(answer, ws)
+    # LOCAGENT_SYSTEM is their Figure 8 verbatim and already asks for
+    # `class:` and `function:` lines, so nothing is added to the prompt
+    # here; the parser simply stops discarding what the model writes.
+    regions = parse_regions(answer, ws)
+    return _finish(ws, "locagent", ranked, events, usage, stop,
+                   {"final_text": answer[:2000]}, regions=regions)
+
+
+# ---------------------------------------------------------------------------
+# CoSIL-style
+# ---------------------------------------------------------------------------
+COSIL_TOOLS = [
+    {"type": "function", "function": {
+        "name": "search_class_node",
+        "description": "Get the code snippet of a class node.",
+        "parameters": {"type": "object", "properties": {
+            "node": {"type": "string"}}, "required": ["node"]}}},
+    {"type": "function", "function": {
+        "name": "search_class_function_node",
+        "description": "Get the code snippet of a class member function node.",
+        "parameters": {"type": "object", "properties": {
+            "node": {"type": "string"}}, "required": ["node"]}}},
+    {"type": "function", "function": {
+        "name": "search_file_function_node",
+        "description": "Get the code snippet of a static function node.",
+        "parameters": {"type": "object", "properties": {
+            "node": {"type": "string"}}, "required": ["node"]}}},
+    {"type": "function", "function": {
+        "name": "exit",
+        "description": ("Terminate the iterative search and go to the "
+                        "summary phase. Call this once you have enough "
+                        "context to decide."),
+        "parameters": {"type": "object", "properties": {}}}},
+]
+
+
+def _ask_text(messages, usage, events, seed, label,
+              max_tokens=1200 + A.THINK_HEADROOM):
+    msg = _chat(messages, [], usage, events, seed, label, max_tokens)
+    return (msg.get("content") or "") if msg else ""
+
+
+def _reflect_text(issue: str, last: str, usage, events, seed, label,
+                  functions: bool = False) -> str:
+    """CoSIL's reflective alignment: one short independent query that
+    reranks and reformats the previous answer. Their ablation puts it at
+    6-10% of the system's accuracy, entirely by rescuing unparseable
+    output.
+
+    `functions` selects the granularity this aligns. CoSIL stage 1 is
+    file-level search-space reduction and stage 2 is a function call-graph
+    search, so the reformatter has to ask for whatever the stage produced.
+    Asking stage 2 for file paths, which this did, discarded its
+    function-level answer before anything could score it.
+    """
+    want = ("locations as path:Class.function (or path:function), one per "
+            "line" if functions else "file paths, one per line")
+    return _ask_text(
+        [{"role": "system", "content":
+          f"You reformat localization results. Output ONLY {want}, most "
+          f"suspicious first, wrapped in triple backticks. No prose, no "
+          f"explanation."},
+         {"role": "user", "content":
+          f"Issue:\n{issue[:3000]}\n\nPrevious answer:\n{last[:6000]}\n\n"
+          f"Rerank the candidate locations it names and output them in "
+          f"that format only."}],
+        usage, events, seed, label, max_tokens=600 + A.THINK_HEADROOM)
+
+
+def _reflect(issue: str, last: str, ws, usage, events, seed, label) -> list[str]:
+    """File-level reflective alignment, i.e. CoSIL stage 1."""
+    return parse_locations(
+        _reflect_text(issue, last, usage, events, seed, label), ws)
+
+
+def run_cosil(ws: T.Workspace, seed: int = 42,
+              max_iter: int = COSIL_MAX_ITER) -> dict:
+    """CoSIL's two-stage search: file level over the module call graph, then
+    iterative function-level search with a pruner, reflection at each end."""
+    _isolate(ws)
+    g = Graph(ws)
+    usage = {"in": 0, "out": 0, "calls": 0, "seed": seed}
+    events: list = []
+    issue = ws.query_text[:14000]
+
+    # --- Stage 1: module call graph enhanced search space reduction --------
+    tree = g.repo_tree()
+    pre = _ask_text(
+        [{"role": "system", "content":
+          "You localize issues in a code repository. Given the repository "
+          "structure, name the files most likely to need changing."},
+         {"role": "user", "content":
+          f"Issue:\n{issue}\n\nRepository structure:\n{tree}\n\n"
+          f"List up to 8 candidate file paths, one per line, in triple "
+          f"backticks."}],
+        usage, events, seed, "cosil.preselect")
+    related = parse_locations(pre, ws)[:8]
+    # first-order subgraph of the module call graph, starting from those files
+    mcg = []
+    for f in related:
+        imps = g.imports_of(f)
+        if imps:
+            mcg.append(f"file: {f}\n  imports: {', '.join(imps[:12])}")
+    expand = _ask_text(
+        [{"role": "system", "content":
+          "You refine a file-level search space using import dependencies."},
+         {"role": "user", "content":
+          f"Issue:\n{issue}\n\nCandidate files:\n"
+          + "\n".join(related or ["(none found)"])
+          + "\n\nModule call graph (import relations):\n"
+          + ("\n".join(mcg) or "(no import edges resolved)")
+          + "\n\nReselect and rerank the suspicious files, adding any "
+            "imported module that the issue implicates. Output up to 10 "
+            "file paths, one per line, in triple backticks."}],
+        usage, events, seed, "cosil.expand")
+    files = _reflect(issue, expand, ws, usage, events, seed,
+                     "cosil.reflect_file") or parse_locations(expand, ws)
+    files = (files or related)[:10]
+    if not files:
+        return _finish(ws, "cosil", [], events, usage, "no_file_stage",
+                       {"file_stage": [], "n_iter": 0, "n_pruned": 0})
+
+    # --- Stage 2: iterative function call graph search ----------------------
+    ftree = g.file_tree(files)
+    start_txt = _ask_text(
+        [{"role": "system", "content":
+          "You pick starting points for a call-graph search."},
+         {"role": "user", "content":
+          f"Issue:\n{issue}\n\nStructure of the suspicious files:\n{ftree}\n\n"
+          f"Name up to 4 starting nodes as path:Class.function (or "
+          f"path:function), one per line, in triple backticks."}],
+        usage, events, seed, "cosil.startpoints")
+    visible, context, n_pruned = [], [], 0
+    for line in re.findall(r"[^\s`]+:[\w.:]+", start_txt):
+        ent = g.resolve(line.strip())
+        if ent and ent not in visible:
+            visible.append(ent)
+    if not visible:
+        for f in files[:3]:
+            visible.extend(e for e in g.entities_of(f)[:4])
+
+    stop = "max_iter"
+    for it in range(max_iter):
+        if not visible:
+            stop = "exhausted"
+            break
+        menu = "\n".join(f"  {e['id']}  ({e['type']})" for e in visible[:25])
+        got = "\n".join(f"  {e['id']}" for e in context[:15]) or "  (none yet)"
+        msg = _chat(
+            [{"role": "system", "content":
+              "You search a function call graph to localize an issue. Each "
+              "step, select ONE accessible node to inspect using the "
+              "matching tool, or call exit when you have enough context."},
+             {"role": "user", "content":
+              f"Issue:\n{issue[:6000]}\n\nAlready inspected:\n{got}\n\n"
+              f"Accessible nodes:\n{menu}\n\nIteration {it + 1} of "
+              f"{max_iter}. Select one node, or exit."}],
+            COSIL_TOOLS, usage, events, seed, f"cosil.iter{it}", 400)
+        if msg is None:
+            stop = "llm_error"
+            break
+        tcs = A._tool_calls_of(msg)
+        if not tcs:
+            stop = "no_tool_call"
+            break
+        name = (tcs[0].get("function") or {}).get("name") or ""
+        if name == "exit":
+            stop = "exit"
+            break
+        target = str(A._args_of(tcs[0]).get("node") or "").strip()
+        ent = g.resolve(target) or next(
+            (e for e in visible if e["name"].lower() in target.lower()), None)
+        if ent is None:
+            # their post-processing step: ask again rather than burn the turn
+            events.append({"type": "tool", "stage": f"cosil.iter{it}",
+                           "name": name, "args": {"node": target},
+                           "result": "unresolved node; reselect"})
+            continue
+        snippet = g.body_of(ent)[:2200]
+        ws.calls.append({"tool": name, "args": {"node": ent["id"]},
+                         "result": {"len": len(snippet)}})
+        # --- pruner: one boolean call, its own short context ---------------
+        verdict = _ask_text(
+            [{"role": "system", "content":
+              "Answer with exactly one word: True or False."},
+             {"role": "user", "content":
+              f"Issue:\n{issue[:2500]}\n\nCode:\n{snippet}\n\nIs this code "
+              f"related to the issue? Answer True or False."}],
+            usage, events, seed, f"cosil.prune{it}", 10)
+        accepted = "true" in verdict.lower()[:20]
+        events.append({"type": "prune", "stage": f"cosil.iter{it}",
+                       "node": ent["id"], "accepted": accepted})
+        visible = [v for v in visible if v["id"] != ent["id"]]
+        if not accepted:
+            n_pruned += 1
+            continue
+        context.append({**ent, "code": snippet})
+        for nb in g.neighbours(ent, {"invoke", "contain", "inherit"}, "both"):
+            if nb["id"] not in {v["id"] for v in visible} | \
+                    {c["id"] for c in context}:
+                visible.append(nb)
+
+    # --- Step III: summarise, then reflective alignment --------------------
+    ctx = "\n\n".join(f"### {c['id']}\n{c['code'][:1200]}"
+                      for c in context[:10]) or "(no context collected)"
+    summary = _ask_text(
+        [{"role": "system", "content":
+          "You give the final localization for an issue."},
+         {"role": "user", "content":
+          f"Issue:\n{issue}\n\nCollected context:\n{ctx}\n\nFile-level "
+          f"candidates from the first stage:\n" + "\n".join(files)
+          + "\n\nList the most suspicious locations, most likely first, one "
+            "per line in triple backticks, each as path:Class.function (or "
+            "path:function when there is no class). Name the function that "
+            "must change, not the file alone."}],
+        usage, events, seed, "cosil.summary")
+    aligned = _reflect_text(issue, summary, usage, events, seed,
+                            "cosil.reflect_func", functions=True)
+    regions = parse_regions(aligned, ws) or parse_regions(summary, ws)
+    # The file ranking still comes out of the same text, because PATH_RE
+    # matches the path inside `path:Class.function`. So moving stage 2 to
+    # its own paper's granularity cannot cost this arm a file-level hit.
+    # Regions lead, since they are the ranked locations; anything named
+    # without a function follows; the first-stage file list fills the tail,
+    # as CoSIL's own pipeline does.
+    ranked = []
+    for cand in ([r["path"] for r in regions]
+                 + parse_locations(aligned, ws)
+                 + parse_locations(summary, ws) + files):
+        if len(ranked) >= LIST_LEN:
+            break
+        if cand not in ranked:
+            ranked.append(cand)
+    return _finish(ws, "cosil", ranked, events, usage, stop,
+                   {"file_stage": files, "n_iter": len(context) + n_pruned,
+                    "n_pruned": n_pruned, "final_text": summary[:2000],
+                    "aligned_text": aligned[:2000]}, regions=regions)
+
+
+ARMS = {"locagent": run_locagent, "cosil": run_cosil}

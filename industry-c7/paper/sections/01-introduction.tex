@@ -1,0 +1,91 @@
+\section{Introduction}
+\label{sec:intro}
+
+When a production issue is reported, an engineer receives two things: a
+description of what went wrong, and logs. There is no failing test, no
+debugger session, and often no way to reproduce the problem. From this
+evidence alone the engineer must find the code that caused it. This
+paper is about doing that step automatically: given an issue report,
+its logs and a source snapshot, produce the affected module, a ranked
+list of suspicious code regions, and the evidence that connects them.
+
+The core difficulty is that logs show where a failure was
+\emph{detected}, not where it was \emph{caused}. Kafka issue KAFKA-6624
+reports that a disk is wrongly marked offline, and its stack trace
+points at \texttt{FileChannelImpl.force} and \texttt{FileRecords.flush},
+the code that hit a closed file channel. The fix landed in
+\texttt{LogManager.scala}, which allowed a log to be deleted while it
+was still being flushed. Every file the trace names is innocent, and a
+method that matches the report against the code it mentions, which is
+what an engineer grepping the codebase does, starts from the wrong
+files. In the benchmark we mined, \nHardPct{} of real reports name none
+of the files the fix later touched.
+
+Existing techniques approach this from two sides and stop short.
+Classical fault localization ranks code using failing tests or
+coverage, execution evidence that does not exist at report
+time~\cite{just2014defects4j,rafi2024multiagent}. Log-based root cause
+analysis in cloud operations identifies the faulty service or
+component but stops above the level of code~\cite{wang2024rcagent}.
+Agents that localize from an issue alone exist, but they are built and
+evaluated on Python repositories~\cite{chen2025locagent,jiang2025cosil},
+and they treat every issue as if it were the project's first. One source
+of evidence is missing from all of them: the project's own resolved
+history. Failures recur, and when an issue arrives, some past issue has
+often failed in a similar way and its fix commit records exactly which
+files were at fault. We call this \emph{incident memory}, and every use
+of it here sits behind a temporal firewall that admits only incidents
+resolved before the report was filed.
+
+Studying this required a benchmark that did not exist. We mined one
+from two public datasets and \nProjects{} git histories: \nInstances{}
+real incidents from Apache and Red Hat projects, MongoDB, MariaDB, Qt
+and Sakai, mainly in Java, Scala, C and C++, each pairing a report and
+its logs with
+the code at a revision where the defect is still present and the files
+the fix later changed. The ground truth is the set of non-test files
+the fix commit modified. That is a proxy for causation, not a
+measurement of it: a fix also touches files hardened against
+recurrence or refactored in passing, so where this paper says a system
+localizes the root cause, the evidence is that it ranks the files the
+fix changed.
+
+We then built \sys{}, an agent that keeps the retrieval and the
+incident memory as tools and reads code. It is not an agent of the
+usual shape, one model choosing freely among tools until it decides to
+stop. Its procedure is fixed in code: the evidence is gathered before
+the model makes any decision, every candidate file is judged on its own with its
+code on screen, code walks back from a file that only detects the
+failure to the files that call it, and the model decides only three
+things, which files to open, what role one file plays, and the order of
+the files. On \nEval{} incidents \sys{} ranks a file the fix changed
+first for \accOne{} and in the top five for \accFive{}, names the
+correct module for \modOne{}, and names a function the fix changed
+first for \regOne{}. An ablation that gives the same model the same
+tools in an unconstrained loop finds files equally well and names the
+faulty function fourteen points less often, which locates what the
+structure is worth.
+
+This paper makes three contributions.
+\begin{itemize}
+\item \textbf{A benchmark} of \nInstances{} issue--log--code--fix
+  instances across \nProjects{} projects in four main languages, stratified
+  by whether the report names any faulty file, with a per-project
+  incident-memory pool of \nMemoryPool{} resolved issues and a datasheet
+  for every filter (\cref{sec:benchmark}).
+\item \textbf{\sys{}}, a staged localization agent in which code owns
+  the procedure and the model decides inside bounded steps, with every
+  decision recorded (\cref{sec:agent}). It returns the module, ranked
+  file and function regions, and a causal chain whose steps cite the
+  report's log events.
+\item \textbf{An evaluation on the whole evaluation split}
+  (\cref{sec:results}): \sys{} against the retrieval layer and against
+  an unconstrained-loop ablation on \nEval{} instances, and against two
+  reimplemented published agents and the same model used without tools
+  on a \nSample-instance sample, with the cost of every system reported
+  next to its accuracy.
+\end{itemize}
+
+The retrieval layer is deterministic, every agent tool is a pure
+function of the snapshot, every run is recorded in full, and every
+number in this paper traces to a result file through a released script.

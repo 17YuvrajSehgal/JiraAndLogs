@@ -1,0 +1,28 @@
+{
+  "id": "spark:SPARK-13410",
+  "project": "spark",
+  "issue_key": "SPARK-13410",
+  "annotator": "claude-opus-5",
+  "pass": 1,
+  "file_roles": [
+    {
+      "path": "sql/catalyst/src/main/scala/org/apache/spark/sql/types/UserDefinedType.scala",
+      "role": "causal",
+      "evidence": "Both classes gain the value equality they never had: 'override def equals(other: Any): Boolean = other match { case that: UserDefinedType[_] => this.acceptsType(that) case _ => false }' and, for the Python subclass, 'case that: PythonUserDefinedType => this.pyUDT.equals(that.pyUDT)'. Without them the default reference equality is used, which the reporter states is the defect, 'this equality check will check if the two instances are the same and since they aren't references to a singleton this check fails'. The comparison site in basicOperators.scala was not changed, so the type's own equality contract is what was wrong."
+    }
+  ],
+  "symptom_location": {
+    "file": "sql/catalyst/src/main/scala/org/apache/spark/sql/catalyst/plans/logical/basicOperators.scala",
+    "function": null,
+    "determinable": true
+  },
+  "log_location": {
+    "file": null,
+    "function": null,
+    "determinable": false
+  },
+  "relation": "caller-callee",
+  "rationale": "The reporter localises the comparison himself, 'I tracked this down to this line ... basicOperators.scala#L202', 'Which compares datatypes between the output attributes of both logical plans', and the failure is the analyzer refusing the plan, 'AnalysisException: u\"unresolved operator 'Union;\"'. The fix changes neither the Union check nor the analyzer: it adds equals to UserDefinedType and PythonUserDefinedType, so the comparison site is the caller and the missing equality is the callee. The reporter's own note that 'this will work fine if you are unioning the dataframe with itself' is exactly what reference equality predicts.",
+  "confidence": "high",
+  "notes": "REPORT-NAMES-FIX, of the strongest kind: the reporter explains the mechanism, links the two lines he blames, and prescribes the adopted fix with a link to the pull request that was merged, 'I have a proposed patch for this which overrides the equality operator on the two classes here: https://github.com/apache/spark/pull/11279'; the commit confirms it, 'Closes #11279 from damnMeddlingKid/udt-union-all'. Worth noting against that: neither file the reporter actually links is the gold file. He links basicOperators.scala and DataType.scala, while the fix lands in types/UserDefinedType.scala, so a localizer that follows the report's links scores zero and one that reads its prose, which names the classes UserDefinedType and PythonUserDefinedType, scores one. Adding a missing equals is causal rather than preventive because this file owns the equality contract for the type and nothing elsewhere was treated as broken. The AnalysisException text is produced by the analyzer's check, which the packet does not show and which is not in the gold set, so log_location is not determinable; the message reached the reporter as a Python exception, not as a log line. The fix changed four files and only this one is source; the commit says the rest are tests, 'Tested using two unit tests in sql/test.py and the DataFrameSuite'."
+}

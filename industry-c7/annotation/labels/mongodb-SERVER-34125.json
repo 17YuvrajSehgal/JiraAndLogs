@@ -1,0 +1,33 @@
+{
+  "id": "mongodb:SERVER-34125",
+  "project": "mongodb",
+  "issue_key": "SERVER-34125",
+  "annotator": "claude-opus-5",
+  "pass": 1,
+  "file_roles": [
+    {
+      "path": "src/mongo/db/storage/wiredtiger/wiredtiger_record_store.cpp",
+      "role": "causal",
+      "evidence": "reclaimOplog asked every engine for a stable checkpoint, 'void WiredTigerRecordStore::reclaimOplog(OperationContext* opCtx) { reclaimOplog(opCtx, _kvEngine->getLastStableCheckpointTimestamp()); }'. The fix takes the engines that have no checkpoints out of that path first, 'if (!_kvEngine->supportsRecoverToStableTimestamp()) { // For non-RTT storage engines, the oplog can always be truncated. reclaimOplog(opCtx, Timestamp::max()); return; }'. The same hunk repairs the comparison the new Timestamp::max() argument would have broken, 'const auto persistedAsNumber = static_cast<std::int64_t>(persistedTimestamp.asULL()); if (stone->lastRecord.repr() >= persistedAsNumber)' becoming 'if (static_cast<std::uint64_t>(stone->lastRecord.repr()) >= persistedTimestamp.asULL())'."
+    },
+    {
+      "path": "src/mongo/db/storage/wiredtiger/wiredtiger_record_store.h",
+      "role": "refactor",
+      "evidence": "The entire change is a comment block above an unchanged declaration: 'The `persistedTimestamp` is when replication recovery would need to replay from on a restart. `reclaimOplog` will not truncate oplog entries in front of this time.' above 'void reclaimOplog(OperationContext* opCtx, Timestamp persistedTimestamp);'. No signature, no body, no logic."
+    }
+  ],
+  "symptom_location": {
+    "file": "src/mongo/db/storage/wiredtiger/wiredtiger_record_store.cpp",
+    "function": "WiredTigerRecordStore::reclaimOplog",
+    "determinable": true
+  },
+  "log_location": {
+    "file": null,
+    "function": null,
+    "determinable": false
+  },
+  "relation": "same-location",
+  "rationale": "The report states a rule the code broke, 'Only RTT WT storage engines may call `getLastStableCheckpoint`. In particular, {{inMemory}} does not take checkpoints.', and the one-argument reclaimOplog was calling it unconditionally. The fix adds the engine test at that call and gives the non-checkpointing case an unbounded timestamp, which the commit summarises as 'inMemory should not restrict truncating the oplog.' The offending call and the correction are the same function, so the relation is same-location.",
+  "confidence": "high",
+  "notes": "Convention applied: adding a check for an unhandled-but-legal configuration is causal when the changed file owns the feature and nothing elsewhere was treated as broken (HIVE-2334, KAFKA-6250 group); the inMemory engine was a legal configuration that this record store did not account for. The gold set contains a file whose whole change is cosmetic: wiredtiger_record_store.h gains a doc comment and nothing else, yet a system that answers with it scores correct against fix-gold. The instance has no failure output: the report is two sentences with no log, no trace and no reproducer, so log_location.determinable = false and the consequence of the bad call, whether an invariant, a crash or an unreclaimed oplog, is never stated in the packet. The signedness change in the same hunk is counted as part of the same correction rather than a separate cleanup, because Timestamp::max() through the old 'static_cast<std::int64_t>' would have been negative and would have stopped the new path truncating anything. The fix changed 2 files and both are gold, so no regression test is visible in the packet."
+}

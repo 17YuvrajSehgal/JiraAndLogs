@@ -1,0 +1,27 @@
+{
+ "id": "infinispan:ISPN-1010",
+ "project": "infinispan",
+ "issue_key": "ISPN-1010",
+ "annotator": "claude-sonnet-5-5",
+ "pass": 2,
+ "file_roles": [
+  {
+   "path": "core/src/main/java/org/infinispan/loaders/cluster/ClusterCacheLoader.java",
+   "role": "causal",
+   "evidence": "load() threw when responses.size() > 1; both commits dedupe via HashSet and only throw if the distinct responses differ. This corrects the faulty check."
+  }
+ ],
+ "symptom_location": {
+  "file": "core/src/main/java/org/infinispan/loaders/cluster/ClusterCacheLoader.java",
+  "function": "load",
+  "determinable": true
+ },
+ "log_location": {
+  "file": "core/src/main/java/org/infinispan/loaders/cluster/ClusterCacheLoader.java",
+  "function": "load",
+  "determinable": true
+ },
+ "relation": "same-location",
+ "rationale": "The loader treated any multiple responses as an error although identical responses are valid. The stack trace points at load() where the check lives.",
+ "confidence": "high"
+}

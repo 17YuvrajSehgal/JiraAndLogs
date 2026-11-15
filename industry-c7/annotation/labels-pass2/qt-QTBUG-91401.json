@@ -1,0 +1,33 @@
+{
+ "id": "qt:QTBUG-91401",
+ "project": "qt",
+ "issue_key": "QTBUG-91401",
+ "annotator": "claude-sonnet-5-5",
+ "pass": 2,
+ "file_roles": [
+  {
+   "path": "src/gui/image/qpnghandler.cpp",
+   "role": "symptom-handling",
+   "evidence": "qt_png_warning and the 'Failed to parse ICC profile' message are lowered from qCWarning to qCInfo/qCDebug; only the reporting level changes."
+  },
+  {
+   "path": "src/gui/painting/qicc.cpp",
+   "role": "causal",
+   "evidence": "isValidIccProfile now accepts Output-class profiles with Gray input colour space (`header.profileClass != Output || inputColorSpace != Gray`), so class 0x70727472 'prtr' is no longer rejected; messages also reduced to qCInfo."
+  }
+ ],
+ "symptom_location": {
+  "file": "src/gui/painting/qicc.cpp",
+  "function": "isValidIccProfile",
+  "determinable": true
+ },
+ "log_location": {
+  "file": "src/gui/painting/qicc.cpp",
+  "function": "isValidIccProfile",
+  "determinable": true
+ },
+ "relation": "caller-callee",
+ "rationale": "The reported warnings come from isValidIccProfile rejecting an Output-class gray profile, followed by a PNG handler warning. The diff changes the accepted-class condition in qicc.cpp and lowers log levels in both files. The commit message mentions only the noise reduction, the class check change is from the diff.",
+ "confidence": "medium",
+ "notes": "If the real defect is only log noise, qicc.cpp would be symptom-handling; the added class condition is what I used as evidence."
+}

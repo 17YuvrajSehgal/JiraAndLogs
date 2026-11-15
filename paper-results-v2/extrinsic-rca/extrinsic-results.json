@@ -1,0 +1,96 @@
+{
+  "judge_model": "Qwen/Qwen2.5-7B-Instruct",
+  "backend": "local-hf",
+  "judge_prompt": "You are grading an incident diagnosis.\n\nREFERENCE (what actually caused the incident, per the engineers who resolved it):\nRoot cause: {ref_rc}\nFix: {ref_fix}\n\nCANDIDATE DIAGNOSIS:\n{hyp}\n\nDoes the candidate identify the SAME underlying root cause as the reference? Judge the cause, not the wording. Reply with ONLY one integer 1-5: 5 = same underlying cause, 3 = partially overlapping or too generic, 1 = different or unrelated cause. Answer:",
+  "seed": 42,
+  "n_complete_queries": 500,
+  "conditions": {
+    "none": {
+      "n": 500,
+      "mean": 3.536,
+      "frac_ge4": 0.454,
+      "frac_ge3": 0.814
+    },
+    "arise": {
+      "n": 500,
+      "mean": 3.572,
+      "frac_ge4": 0.478,
+      "frac_ge3": 0.808
+    },
+    "hard": {
+      "n": 500,
+      "mean": 3.564,
+      "frac_ge4": 0.454,
+      "frac_ge3": 0.828
+    },
+    "oracle": {
+      "n": 500,
+      "mean": 3.588,
+      "frac_ge4": 0.476,
+      "frac_ge3": 0.818
+    }
+  },
+  "tests": [
+    {
+      "test": "arise - none",
+      "metric": "ge4",
+      "delta": 0.023999999999999966,
+      "ci_low": -0.02,
+      "ci_high": 0.066,
+      "p": 0.309,
+      "q_bh": 0.927,
+      "significant": false
+    },
+    {
+      "test": "arise - none",
+      "metric": "mean",
+      "delta": 0.03600000000000003,
+      "ci_low": -0.088,
+      "ci_high": 0.152,
+      "p": 0.572,
+      "q_bh": 0.945,
+      "significant": false
+    },
+    {
+      "test": "arise - hard",
+      "metric": "ge4",
+      "delta": 0.023999999999999966,
+      "ci_low": -0.016,
+      "ci_high": 0.066,
+      "p": 0.282,
+      "q_bh": 0.927,
+      "significant": false
+    },
+    {
+      "test": "arise - hard",
+      "metric": "mean",
+      "delta": 0.008000000000000007,
+      "ci_low": -0.1,
+      "ci_high": 0.128,
+      "p": 0.943,
+      "q_bh": 0.945,
+      "significant": false
+    },
+    {
+      "test": "oracle - arise",
+      "metric": "ge4",
+      "delta": -0.0020000000000000018,
+      "ci_low": -0.042,
+      "ci_high": 0.04,
+      "p": 0.945,
+      "q_bh": 0.945,
+      "significant": false
+    },
+    {
+      "test": "oracle - arise",
+      "metric": "mean",
+      "delta": 0.016000000000000014,
+      "ci_low": -0.096,
+      "ci_high": 0.128,
+      "p": 0.795,
+      "q_bh": 0.945,
+      "significant": false
+    }
+  ],
+  "elapsed_s": 81.49848318099976
+}

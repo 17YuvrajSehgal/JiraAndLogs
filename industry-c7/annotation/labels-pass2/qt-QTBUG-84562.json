@@ -1,0 +1,28 @@
+{
+ "id": "qt:QTBUG-84562",
+ "project": "qt",
+ "issue_key": "QTBUG-84562",
+ "annotator": "claude-sonnet-5-5",
+ "pass": 2,
+ "file_roles": [
+  {
+   "path": "src/corelib/kernel/qeventdispatcher_win.cpp",
+   "role": "causal",
+   "evidence": "qt_GetMessageHook changes 'wp == PM_REMOVE' to '(wp & PM_REMOVE) != 0' because Windows also passes PM_NOYIELD in wParam."
+  }
+ ],
+ "symptom_location": {
+  "file": "src/corelib/kernel/qeventdispatcher_win.cpp",
+  "function": "qt_GetMessageHook",
+  "determinable": true
+ },
+ "log_location": {
+  "file": null,
+  "function": null,
+  "determinable": false
+ },
+ "relation": "same-location",
+ "rationale": "Posted events stopped being delivered after a change that compared wParam for equality. The bit test in the hook fixes it in the same function.",
+ "confidence": "high",
+ "notes": "No log, behaviour symptom."
+}

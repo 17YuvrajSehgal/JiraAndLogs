@@ -1,0 +1,28 @@
+{
+  "id": "kafka:KAFKA-10564",
+  "project": "kafka",
+  "issue_key": "KAFKA-10564",
+  "annotator": "claude-opus-5",
+  "pass": 1,
+  "file_roles": [
+    {
+      "path": "streams/src/main/java/org/apache/kafka/streams/processor/internals/StateDirectory.java",
+      "role": "causal",
+      "evidence": "The cleaner thread's loop changes source, 'for (final File taskDir : listAllTaskDirectories())' becomes 'listNonEmptyTaskDirectories()'. Since the automatic path deletes a task directory's contents but not the directory, an emptied directory kept qualifying on every pass. This file owns both the cleanup loop and the directory listing it walks."
+    }
+  ],
+  "symptom_location": {
+    "file": "streams/src/main/java/org/apache/kafka/streams/processor/internals/StateDirectory.java",
+    "function": null,
+    "determinable": true
+  },
+  "log_location": {
+    "file": "streams/src/main/java/org/apache/kafka/streams/processor/internals/StateDirectory.java",
+    "function": null,
+    "determinable": true
+  },
+  "relation": "same-location",
+  "rationale": "Here the reported failure is the log itself: 'Deleting obsolete state directory 0_8 for task 0_8 as 60600001ms has elapsed (cleanup delay is 600000ms)' printed 'again and again', and the reporter states plainly that 'This issue doesn't seem to break anything'. That message is emitted by the cleanup this file performs, and the loop that keeps selecting an emptied directory is the line the fix changes, so the message and its cause are one method. The enclosing method of the log statement is not shown in the hunk, so only the file is recorded.",
+  "confidence": "high",
+  "notes": "An instance whose entire symptom is log noise rather than a failure, which is worth separating from instances where a log points at a crash. REPORT-NAMES-FIX: the reporter links the two exact GitHub line ranges, L335 and L349-L353, and explains that the directory survives automatic cleanup while only manual cleanup removes it."
+}

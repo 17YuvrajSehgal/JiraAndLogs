@@ -1,0 +1,28 @@
+{
+  "id": "kafka:KAFKA-6250",
+  "project": "kafka",
+  "issue_key": "KAFKA-6250",
+  "annotator": "claude-opus-5",
+  "pass": 1,
+  "file_roles": [
+    {
+      "path": "connect/runtime/src/main/java/org/apache/kafka/connect/util/TopicAdmin.java",
+      "role": "causal",
+      "evidence": "createTopics already tolerated two conditions, TopicExistsException and UnsupportedVersionException, and treated everything else as fatal. A third branch is added, 'if (cause instanceof ClusterAuthorizationException) { log.debug(\"Not authorized to create topic(s) '{}'. Falling back to assume topic(s) exist or will be auto-created by the broker.\", ...); return Collections.emptySet(); }'. This method owns which outcomes of a create attempt are tolerable, and omitting a refusal that the documentation says should be fine is the defect."
+    }
+  ],
+  "symptom_location": {
+    "file": "connect/runtime/src/main/java/org/apache/kafka/connect/util/TopicAdmin.java",
+    "function": "createTopics",
+    "determinable": true
+  },
+  "log_location": {
+    "file": "connect/runtime/src/main/java/org/apache/kafka/connect/runtime/distributed/DistributedHerder.java",
+    "function": null,
+    "determinable": true
+  },
+  "relation": "same-location",
+  "rationale": "The top frame is 'TopicAdmin.createTopics(TopicAdmin.java:245)' throwing 'ConnectException: Error while attempting to create/find topic(s) connect-offsets', and the root cause two levels down is 'ClusterAuthorizationException: Cluster authorization failed', which is exactly the case the new branch handles. The reporter had already worked out the rule being broken: Connect 'ignores some specific errors such as topics that already exist, but not authorization errors'. Throw site and fix are the same method.",
+  "confidence": "high",
+  "notes": "Useful as a contrast in where each kind of evidence leads. The log line is tagged 'DistributedHerder:206' and that file is not in the gold set, while the stack trace's top frame names the gold file directly. So on this instance the trace is informative and the logger name is not, which is the reverse of KAFKA-6051. REPORT-NAMES-FIX: the reporter states the missing case in prose before the fix existed."
+}

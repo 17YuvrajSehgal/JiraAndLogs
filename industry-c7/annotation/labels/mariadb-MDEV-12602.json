@@ -1,0 +1,88 @@
+{
+  "id": "mariadb:MDEV-12602",
+  "project": "mariadb",
+  "issue_key": "MDEV-12602",
+  "annotator": "claude-opus-5",
+  "pass": 1,
+  "file_roles": [
+    {
+      "path": "storage/innobase/fil/fil0fil.cc",
+      "role": "causal",
+      "evidence": "Holds the counter split the fix turns on: the new fil_space_acquire_for_io and fil_space_release_for_io 'modify fil_space_t::n_pending_ios instead of fil_space_t::n_pending_ops', and fil_space_free_low now waits 'for space->n_pending_ios to reach 0, to avoid accessing freed data in a concurrent thread'. The commit names the broken logic as fil_check_pending_operations, which lives here, and the failing assertion is reported from this file."
+    },
+    {
+      "path": "storage/xtradb/fil/fil0fil.cc",
+      "role": "causal",
+      "evidence": "The same counter split in the XtraDB copy, where the commit describes a further difference, 'fil_space_free_and_mutex_exit(): Renamed from fil_space_free(). Detach the tablespace from the fil_system cache, release the fil_system->mutex, and then wait for space->n_pending_ios to reach 0'."
+    },
+    {
+      "path": "storage/innobase/include/fil0fil.h",
+      "role": "refactor",
+      "evidence": "Declares the new field with its comment, 'ulint n_pending_ios', beside the existing n_pending_ops, and prototypes fil_space_acquire_for_io and fil_space_release_for_io. Declarations and comments only; no logic."
+    },
+    {
+      "path": "storage/xtradb/include/fil0fil.h",
+      "role": "refactor",
+      "evidence": "The same field and prototypes in the XtraDB header."
+    },
+    {
+      "path": "storage/innobase/buf/buf0buf.cc",
+      "role": "refactor",
+      "evidence": "Call sites move to the new pair, and buf_page_check_corrupt takes the tablespace as a parameter, which the commit lists under 'Adjust a number of places accordingly, and remove some redundant tablespace lookups'. These are the I/O-path acquisitions, but what they acquire is decided in fil0fil."
+    },
+    {
+      "path": "storage/xtradb/buf/buf0buf.cc",
+      "role": "refactor",
+      "evidence": "The same call-site changes in XtraDB, where the commit notes the variant 'buf_page_get_corrupt(): Add a tablespace parameter.'"
+    },
+    {
+      "path": "storage/innobase/include/buf0buf.h",
+      "role": "refactor",
+      "evidence": "Signature changes following the corrupt-check parameter addition in buf0buf.cc."
+    },
+    {
+      "path": "storage/xtradb/include/buf0buf.h",
+      "role": "refactor",
+      "evidence": "The same signature changes in the XtraDB header."
+    },
+    {
+      "path": "storage/innobase/buf/buf0flu.cc",
+      "role": "refactor",
+      "evidence": "The flush path switches to the io-specific acquire and release, a call-site adaptation."
+    },
+    {
+      "path": "storage/xtradb/buf/buf0flu.cc",
+      "role": "refactor",
+      "evidence": "The same switch in the XtraDB flush path."
+    },
+    {
+      "path": "storage/innobase/fil/fil0crypt.cc",
+      "role": "refactor",
+      "evidence": "A handful of lines moving to the new acquire and release pair."
+    },
+    {
+      "path": "storage/xtradb/fil/fil0crypt.cc",
+      "role": "refactor",
+      "evidence": "The same few lines in the XtraDB copy."
+    },
+    {
+      "path": "storage/innobase/fil/fil0pagecompress.cc",
+      "role": "refactor",
+      "evidence": "Five lines adapting to the new pair. This file has no XtraDB counterpart in the gold set."
+    }
+  ],
+  "symptom_location": {
+    "file": "storage/innobase/fil/fil0fil.cc",
+    "function": null,
+    "determinable": true
+  },
+  "log_location": {
+    "file": "storage/innobase/fil/fil0fil.cc",
+    "function": null,
+    "determinable": true
+  },
+  "relation": "concurrency",
+  "rationale": "The diagnostic names the file and line, 'InnoDB: Assertion failure in file ...storage\\innobase\\fil\\fil0fil.cc line 2875' with 'Failing assertion: space->n_pending_ops == 0', and that file is in the gold set. The failure needs two threads: one marking a tablespace for dropping and an I/O thread still incrementing the shared counter afterwards, which is why it appears only occasionally and on two different builders. The repair separates the two users of that counter rather than changing the assertion.",
+  "confidence": "high",
+  "notes": "Thirteen gold files, of which eleven are call sites and headers adapting to a two-function API split, and again roughly half the count comes from InnoDB being mirrored into XtraDB; fil0pagecompress.cc is the one file without a counterpart. The enclosing function of the assertion is not shown, so only the file is recorded for the symptom, though the commit identifies the broken logic as fil_check_pending_operations. REPORT-NAMES-FIX: the reporter diagnoses the regression before any fix exists, naming the field and the mechanism, 'The likely cause is the MDEV-12428 fix, which allows I/O threads to increment the fil_space_t::n_pending_ops count even after the tablespace has been marked for dropping.' The report also carries a true observation that no localizer could use, that the same failure appeared on a non-debug Debian x86 builder and a debug Windows builder."
+}

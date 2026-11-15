@@ -1,0 +1,43 @@
+{
+  "id": "ambari:AMBARI-15829",
+  "project": "ambari",
+  "issue_key": "AMBARI-15829",
+  "annotator": "claude-opus-5",
+  "pass": 1,
+  "file_roles": [
+    {
+      "path": "contrib/views/files/src/main/java/org/apache/ambari/view/filebrowser/DownloadService.java",
+      "role": "refactor",
+      "evidence": "Imports only: three classes move from org.apache.ambari.view.filebrowser.utils.* to org.apache.ambari.view.commons.exceptions.*, HdfsService is imported from the new commons package, and an unused FSDataOutputStream import is dropped."
+    },
+    {
+      "path": "contrib/views/files/src/main/java/org/apache/ambari/view/filebrowser/FileBrowserService.java",
+      "role": "refactor",
+      "evidence": "Adds imports for the relocated FileOperationService, UploadService and UserService, updates two @see javadoc references to the new package, and exposes the moved service with '@Path(\"/user\") public UserService userService()'."
+    },
+    {
+      "path": "contrib/views/files/src/main/java/org/apache/ambari/view/filebrowser/FilePreviewService.java",
+      "role": "refactor",
+      "evidence": "Import relocation to org.apache.ambari.view.commons.*, plus one whitespace change, 'public class FilePreviewService extends HdfsService{' gaining a space before the brace."
+    },
+    {
+      "path": "contrib/views/files/src/main/java/org/apache/ambari/view/filebrowser/HelpService.java",
+      "role": "refactor",
+      "evidence": "Deletes homeDir(), trashEnabled() and trashdir() along with their now-unused imports. The methods move to the shared component; nothing is corrected here."
+    }
+  ],
+  "symptom_location": {
+    "file": null,
+    "function": null,
+    "determinable": false
+  },
+  "log_location": {
+    "file": null,
+    "function": null,
+    "determinable": false
+  },
+  "relation": "unclear",
+  "rationale": "The issue is an explicit refactoring request, 'this piece of code needs to be extracted out and put into a common location so that the other view could use it', and reports no failure, so there is no symptom or log site to find. Every gold file changes only imports, javadoc references or code that moved elsewhere. This instance has no causal file because there was no defect.",
+  "confidence": "high",
+  "notes": "Another feature or refactoring commit mined as a production issue. The commit touched 75 files and only 4 survived filtering, so the gold set is also an arbitrary slice of a large move."
+}
