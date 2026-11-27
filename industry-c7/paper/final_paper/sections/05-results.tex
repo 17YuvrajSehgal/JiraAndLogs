@@ -1,0 +1,369 @@
+\section{Results}
+\label{sec:results}
+
+Every number in this section is from the \nProjects-project benchmark.
+\sys{}, the loop ablation and the retrieval layer are scored on the full
+\nEval-instance evaluation split; the published agents and the model
+baselines are scored on a stratified \nSample-instance sample of that
+split (\cref{sec:setup:populations}). \Cref{tab:all} collects every
+system and every metric in one place, one block per population; all
+systems in a block are scored on identical instances. Intervals are
+95\% paired bootstrap intervals over instances; ``significant'' means
+the interval excludes zero.
+
+\begin{table*}[t]
+\caption{Every system on every metric. The upper block is the full
+evaluation split (\nEval{} instances, \nEvalHard{} of them hard, meaning
+the report names no file the fix changed); the lower block is the
+stratified \nSample-instance sample on which the published agents and
+the model baselines were run. All systems in a block are scored on
+identical instances. Module is the module of the top-ranked file for
+every row. Region metrics are on the instances whose fix diff yields a
+gold function; the retrieval layer's region row is its BM25 function
+stage (\cref{sec:results:regions}). ``Cites'' is the share of causal-chain
+steps that cite one of the report's log events. Cost is per issue:
+model calls / prompt tokens. The best value in each column of a block
+is bold, and \win{green} when it is \sys{}'s.}
+\label{tab:all}
+\centering
+\footnotesize
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{@{}l cccc cc c cc c c@{}}
+\toprule
+ & \multicolumn{4}{c}{file, all} & \multicolumn{2}{c}{file, hard} & module & \multicolumn{2}{c}{region} & chain & cost \\
+\cmidrule(lr){2-5}\cmidrule(lr){6-7}\cmidrule(lr){9-10}
+ & Acc@1 & Acc@5 & Acc@10 & MRR & Acc@1 & Acc@5 & Acc@1 & Acc@1 & Acc@5 & cites & calls / tokens \\
+\midrule
+\tablebody{all}
+\bottomrule
+\end{tabular}
+\end{table*}
+
+\subsection{What the agent reaches}
+\label{sec:results:headline}
+
+The upper block of \cref{tab:all} gives the headline. On \nEval{} real incidents
+\sys{} ranks a file the fix changed first for \accOne{} of them and in
+the top five for \accFive{} (MRR \mrr). The module it names is correct
+for \modOne{}. At the region level, where a hit means the top-ranked
+function is one the fix changed, it reaches \regOne{} Acc@1 and
+\regFive{} Acc@5 on the \nRegion{} instances that have a gold
+function (24{,}847 of them when paired with the loop in
+\cref{tab:ablation,tab:functions}).
+
+The hard stratum is where the difficulty of the task lies, and it is
+half the benchmark. On the \nEvalHard{} reports that name no faulty
+file, \sys{} reaches \hardOne{} Acc@1 and \hardFive{} Acc@5; on the easy
+half it reaches 83.3\% and 97.4\%. The retrieval layer, which has no
+model, reaches \retrOne{} and \retrFive{} overall and 20.3\% and
+\retrHardFive{} on the hard stratum. The agent's margin over it is
+$+27.4$ points of Acc@1 overall and $+32.5$ on the hard stratum: reading
+the code closes most of the gap that the report leaves open.
+
+By report type the picture is flat. Reports with a stack trace score
+66.5\% Acc@1 (7{,}808 instances), reports with a log line the log layer
+recognises as an event but no trace 66.6\% (5{,}739), and reports with
+neither 70.8\% (12{,}993, half the split; the four unanswered instances
+are not typed). The last group are
+log-bearing by the source dataset's labelling but quote their evidence
+in prose, an exception name or an error message inside a sentence
+rather than a pasted line, and they are the easiest reports at rank
+one. A trace does not make the file easier to find, because the file it
+names is usually the one that detected the failure (\cref{sec:intro}).
+Whether the logs themselves carry the result is not something this
+split can show: no run removes the logs from the reports, and we list
+that ablation as missing in \cref{sec:discussion:threats}. Across the
+\nProjects{} projects Acc@1 ranges
+from 54.3\% (Infinispan) to 79.6\% (Hadoop). The projects rank the same
+way for the retrieval layer (Spearman $\rho = 0.87$ between the two
+systems' per-project Acc@1), so project difficulty is largely a property
+of the reports rather than of the agent; the per-project table is in the
+artifact.
+
+\subsection{What the structure changes}
+\label{sec:results:structure}
+
+\begin{table*}[t]
+\caption{Ablation: the same model, tools and evidence pass in an
+unconstrained loop against the staged workflow, on the 26{,}537
+evaluation instances both arms answered. The last row is the paired
+difference in points with its 95\% bootstrap interval. ``Cites'' is the share of causal-chain steps that
+cite one of the report's log events.}
+\label{tab:ablation}
+\centering
+\scriptsize
+\setlength{\tabcolsep}{3pt}
+\begin{tabular}{@{}l cc c ccc c c@{}}
+\toprule
+ & \multicolumn{2}{c}{file, all} & file, hard & \multicolumn{3}{c}{region} & chain & cost \\
+\cmidrule(lr){2-3}\cmidrule(lr){5-7}
+ & Acc@1 & Acc@5 & Acc@1 & Acc@1 & Acc@5 & Acc@10 & cites & calls / tokens \\
+\midrule
+\tablebody{ablation}
+\bottomrule
+\end{tabular}
+\end{table*}
+
+The unconstrained loop of \cref{sec:setup:systems} ran on the same split
+with the same model and the same evidence pass; \cref{tab:ablation}
+sets the two side by side. Paired on the 26{,}537
+instances both completed, the staged workflow changes the file-level
+result very little: Acc@1 $+0.7$ points $[+0.2, +1.2]$, Acc@5
+$-0.9$ $[-1.2, -0.6]$, MRR unchanged. Both differences are significant
+and both are small. The loop finds files as well as the workflow does.
+
+What the structure changes is everything below the file. Region Acc@1
+rises from \loopRegOne{} to \regOne{} ($+14.1$ points $[+13.5, +14.7]$)
+and region Acc@5 from \loopRegFive{} to \regFive{} ($+19.2$
+$[+18.6, +19.9]$). The two lists differ in length, and that matters for
+the Acc@5 and Acc@10 columns: the loop names 3.2 regions per answer, one
+function per file, while the workflow names up to three functions for
+each examined file and then fills the list with keyword-ranked
+functions. Region Acc@1, where list length plays no part, is the number
+to read, and on the workflow's own regions alone, without the keyword
+fill, it reaches 53.5\% Acc@1 and 69.4\% Acc@5. The explanation changes
+in kind as well. In the loop's chains no step cites a log event; in the
+workflow 57.3\% of chain steps cite one of the report's selected log
+events, and 85.7\% of those citations are grounded, meaning the step
+names an event id from the report or quotes a line from it word for
+word, while the rest paraphrase a line and are kept, flagged. The
+citation is a property of the fixed answer form, which asks for an
+event id at every step, and not an emergent behaviour of the model; we
+report it because it is what an engineer receives. The price is
+\calls{} model calls and \tokens{} prompt
+tokens per issue against the loop's 13.6 and 99k, and 286 against 199
+seconds of wall time at the same concurrency.
+
+By report type the file-level change is nil on reports with a trace
+($-0.3$ $[-1.3, +0.7]$) and small but positive on reports with logs only
+($+1.4$ $[+0.3, +2.4]$) and prose only ($+1.1$ $[+0.3, +1.8]$). On the
+hard stratum the workflow is $0.5$ points below the loop at Acc@1
+$[-1.3, +0.3]$, not significant, and $1.1$ below at Acc@5
+$[-1.7, -0.5]$, while its region Acc@1 is $+13.4$ $[+12.5, +14.2]$ and
+region Acc@5 $+20.9$ $[+19.9, +21.9]$ above.
+
+\subsection{Against reimplemented published agents}
+\label{sec:results:agents}
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=\columnwidth]{figures/easy-hard.pdf}
+\caption{Acc@1 and Acc@5 split by whether the report names a file
+the fix changed (easy) or none (hard). Top: every system on the
+\nSample-instance sample. Bottom: the two agents at the function level
+on the 26{,}537 paired evaluation instances. Where the report names a
+faulty file, a re-ranker matches \sys{}; where it names none, \sys{}
+leads the best alternative by 12 points at Acc@1 and 72 to 60 at
+Acc@5.}
+\label{fig:easyhard}
+\end{figure}
+
+The lower block of \cref{tab:all} compares \sys{} with two agents from
+the literature, reimplemented because neither released system runs on
+Java, Scala, C or C++ (\cref{sec:setup:systems}), and with the same
+model used without tools, alone and as a re-ranker of the retrieval
+layer's candidates; \cref{fig:easyhard} splits every score by whether
+the report names a faulty file.
+\sys{} leads every system on every column. Against LocAgent-style, the
+stronger published agent, the paired difference is $+7.2$ points of
+Acc@1 $[+4.5, +10.0]$ and $+13.6$ of Acc@5 $[+11.0, +16.2]$; on the
+hard stratum $+11.8$ $[+7.4, +16.4]$ and $+19.7$ $[+15.3, +24.0]$.
+Against CoSIL-style it is $+19.9$ and $+25.7$ overall and $+35.0$ and
+$+44.3$ on the hard stratum. Against the model alone it is $+14.4$
+points of Acc@1 $[+11.3, +17.6]$ and $+14.1$ of Acc@5 $[+11.6, +16.7]$;
+against the re-ranker, the strongest baseline at rank one, $+6.3$
+$[+3.8, +8.8]$ and $+6.1$ $[+4.2, +8.2]$. Every difference is
+significant. Because all five systems share the model, what separates
+them is the architecture.
+
+The cost column puts the gains in context. The re-ranker reaches 60.8\%
+Acc@1 for one model call and 2.8k prompt tokens per issue, and it is a
+reasonable choice where that budget is the constraint; its limit is its
+candidate set, since it can only reorder the twenty files retrieval
+found, and on the hard stratum it falls to 39.3\% against \sys{}'s
+52.2\%. LocAgent-style spends the same tokens as \sys{} (106k against
+108k) for seven points less at rank one; CoSIL-style spends a quarter
+of the tokens and loses most of the hard stratum.
+
+Two observations about the ports. LocAgent-style called its graph
+traversal tool 0.09 times per run against 14.5 keyword searches, so the
+multi-hop traversal that distinguishes LocAgent in its own paper goes
+almost unused under this model. And both arms returned no parseable
+location for 8\% to 10\% of instances (LocAgent-style 8.2\%, CoSIL-style
+10.1\%), which the table scores as misses. Part of the margin is that
+parsing. On the 918 instances where LocAgent-style did return a
+location, it scores 65.3\% Acc@1 and 77.9\% Acc@5 against \sys{}'s
+68.8\% and 86.8\% on the same instances: the paired margin is $+3.6$
+points $[+0.7, +6.4]$ at rank one and $+8.9$ $[+6.5, +11.4]$ at rank
+five (paired per instance before rounding), so half of the rank-one margin is parse failures and the Acc@5
+margin is not. On CoSIL-style's 899 answered instances the margins are
+$+15.9$ $[+12.8, +19.0]$ and $+19.9$ $[+16.9, +22.9]$ points. CoSIL's
+reflective alignment step exists to repair exactly that failure, so we
+expected CoSIL-style to show the lower rate; it does not, and we record
+that as a property of our port we cannot explain rather than as a
+finding about CoSIL. \sys{} returned an answer on every instance,
+because its submission is a schema the run cannot end without.
+
+\textbf{The model does not remember these fixes.} These are public
+projects, and the model may simply have memorised their histories. We
+asked it directly on the same \nSample{} instances: given only an issue
+key such as KAFKA-6624 and no report text, which files did that fix
+touch? It claimed to recall nothing and scored 0.0\% Acc@5. Given the
+issue title as well, it claimed recall for 2.1\% of instances and scored
+1.6\%. What the model-based systems contribute is inference from the
+report and the code, not recitation.
+
+\subsection{The retrieval layer, and what memory is worth}
+\label{sec:results:retrieval}
+
+\begin{table}[t]
+\caption{The retrieval layer's signals and their fusion, pooled over the
+\nProjects{} projects on the evaluation split (\nEval{} instances;
+\nEvalHard{} hard). ``Conditioned'' is the regime-conditioned weighted
+fusion of \cref{sec:approach:fusion}.}
+\label{tab:retrieval}
+\centering
+\scriptsize
+\setlength{\tabcolsep}{2.5pt}
+\begin{tabular}{@{}lccc cc c@{}}
+\toprule
+ & \multicolumn{3}{c}{all} & \multicolumn{2}{c}{hard} & easy \\
+\cmidrule(lr){2-4}\cmidrule(lr){5-6}
+ & Acc@1 & Acc@5 & MRR & Acc@1 & Acc@5 & Acc@5 \\
+\midrule
+\tablebody{retrieval}
+\bottomrule
+\end{tabular}
+\end{table}
+
+\sys{} uses the retrieval layer as a tool, so \cref{tab:retrieval}
+reports how that layer behaves on its own across the whole benchmark.
+The signals divide cleanly by stratum. Trace mentions (S1) are the best
+single signal on easy reports and score exactly zero on hard ones, by
+definition. Content retrieval (S3) is the best standalone signal
+overall. Incident memory (S4) is the one signal whose accuracy barely
+moves between the strata (43.8\% against 40.2\% Acc@5), because a past
+fix can point at a file the present report never names, and on the hard
+stratum it is the second-best standalone signal.
+
+That is where memory earns its place. Adding it to unweighted fusion
+lifts hard-stratum Acc@5 from 26.4\% to 41.8\%; adding it to the
+conditioned fusion, which already down-weights the mention signals in
+the no-mention regime, lifts it from 46.5\% to 48.7\%. The increment is
+small once the weights are tuned per regime and large when they are
+not, which is the practical reading: memory is cheap insurance against
+a report that names nothing.
+
+The memory signal is evaluated behind the firewall of
+\cref{sec:approach:firewall}. Pooled over the projects, the
+future-reports rule alone removes \firewallPct{} of the candidate votes
+the index proposes, and the numbers above are what survives that cut.
+
+\subsection{Regions and modules}
+\label{sec:results:regions}
+
+\begin{table}[t]
+\caption{Function-level results on the evaluation instances whose fix
+diff yields at least one gold function: the BM25 stage on the instances
+the retrieval layer ranked, the two agents on the instances both
+answered. ``Oracle'' is the share whose
+gold function is anywhere in the candidate set; it is the ceiling of
+the BM25 stage and is not defined for the agents, which choose their
+own regions.}
+\label{tab:functions}
+\centering
+\scriptsize
+\setlength{\tabcolsep}{2.5pt}
+\begin{tabular}{@{}lcccccc@{}}
+\toprule
+ & eligible & Acc@1 & Acc@5 & Acc@10 & MRR & oracle \\
+\midrule
+\tablebody{functions}
+\bottomrule
+\end{tabular}
+\end{table}
+
+Engineers need code regions, not files. Gold functions are
+derived mechanically: tree-sitter lists every function span in the
+snapshot, and a function is gold when its span overlaps a hunk of the
+fix diff; a gold function exists for 93.6\% of the evaluation
+instances (24,850 of the 26,540 \sys{} answered), and the function
+stage ranks 26,442 instances, 24,820 of them with a gold function.
+\Cref{tab:functions}
+compares three ways of getting there. A BM25 stage that ranks the
+function bodies in the retrieval layer's top ten files reaches 21.9\%
+Acc@1 with a 77.0\% ceiling, so its problem is ranking inside large
+files, not finding them. The unconstrained loop reaches 39.8\%, and \sys{}
+53.8\%, because its \textsc{examine} step reads each candidate file
+whole, or in whole functions, and names the functions that hold the
+fault while the code is on screen. On the hard stratum \sys{} reaches
+39.2\% region Acc@1 and 55.2\% Acc@5.
+
+At the module level, where modules are the leading path components of a
+file at a fixed per-project depth, \sys{} names the correct module for
+\modOne{} of instances (85.5\% hard, 94.6\% easy), and the module of its
+top-ranked file is correct for 90.9\%. The retrieval layer's top file
+gives \moduleRetr{}. Module spaces are small and defects concentrate, so
+these numbers need the sanity baselines of \cref{tab:modules}: ranking
+the modules that exist in the snapshot by their defect frequency on the
+development split already reaches \moduleFreq{} Acc@1, and the agent's
+margin over that prior, 41 points, is what counts as localization.
+
+\begin{table}[t]
+\caption{Module level on the evaluation split, with two sanity
+baselines: the expected accuracy of a random module ranking
+(analytical, per snapshot) and ranking the snapshot's modules by their
+defect frequency on the development split.}
+\label{tab:modules}
+\centering
+\footnotesize
+\begin{tabular}{@{}lcc@{}}
+\toprule
+ & Acc@1 & Acc@5 \\
+\midrule
+\tablebody{modules}
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Cost, and a dense alternative}
+\label{sec:results:cost}
+
+\sys{} spends \calls{} model calls and \tokens{} prompt tokens per
+issue and 286 seconds of wall time at 32 concurrent issues on one H100,
+which came to about six issues per minute per GPU over the run. The
+retrieval layer answers from one CPU core with no model, in a median of
+under 0.2 seconds per issue on every project. A team that can host a
+27B model gains $+27.4$ points of Acc@1 for that compute; a team that
+cannot, because source and production logs may not leave the building,
+still has a pipeline with no GPU, no training and no network that puts
+a changed file in the top five for seven issues in ten.
+
+Log-to-code matching is often framed as a semantic retrieval problem,
+so we also measured what a small dense retriever buys inside the
+retrieval layer. On
+200-instance samples per project, replacing BM25 with bge-small
+embeddings in the content slot loses on every one of the \nProjects{}
+projects (58.4\% to 44.9\% mean Acc@5): matching a log line to code is
+mostly identifier matching, and the embedder reads at most 1,400 words
+of a file where BM25 sees all of it. In the incident-memory slot, where
+the task is report-to-report similarity, dense retrieval wins on 22 of
+27 projects (37.6\% to 40.4\%) and lifts the full system from 67.7\% to
+69.1\% with weights tuned for the lexical signal. Semantics pays in the
+memory slot first; the code slot needs the model to read the code, which
+is what the agent does.
+
+\subsection{What goes against us}
+\label{sec:results:negatives}
+
+Five things. First, the staged workflow is below the unconstrained loop at
+Acc@5 by 0.9 points, significantly, and gains only 0.7 at Acc@1: at the
+file level the structure buys nothing, and a reader who wants files only
+should take the loop. Second, on reports with a stack trace the
+workflow is not better at all. Third, four of \nEval{} instances
+ended without an answer in two runs each (the final step's output
+failed to parse) and are scored as misses. Fourth, the port check for CoSIL-style fails,
+as stated above. Fifth, the module the agent names (\modOne{}) is below
+the module of its own top-ranked file (90.9\%) and of the loop's
+(90.8\%): naming the module is a separate decision in the rank step,
+and it is the weaker of the two.

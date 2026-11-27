@@ -1,0 +1,125 @@
+\section{A Benchmark from Issues, Logs, and Fix Commits}
+\label{sec:benchmark}
+
+Evaluating this task needs issue descriptions, logs, source code and
+ground-truth faulty code regions together. Existing resources supply
+some of these but not the combination. Defects4J supplies failing
+tests, which is exactly the execution evidence missing when an issue is
+first reported~\cite{just2014defects4j}. Bench4BL pairs reports with
+code and gold files at scale but does not select for reports that carry
+logs~\cite{lee2018bench4bl}, and benchmarks built from pull requests
+inherit solution text in the issue
+thread~\cite{aleithan2024swebenchplus}. Pathidea assembled the closest
+resource, a log-bearing set of Java issues~\cite{chen2022pathidea}.
+What we add is a set selected for log-bearing reports across
+\nProjects{} projects in Java, Scala, C and C++ (with some Python, Go
+and Groovy), stratified by whether the
+report names any faulty file, and shipped with a per-project pool of
+past incidents so that history-based methods can be evaluated under a
+stated temporal firewall. Throughout, an \emph{incident} is a resolved
+issue report together with the log excerpts its reporter pasted into
+it. These are the logs an engineer is handed at triage, not a raw
+production log bundle; what that leaves out is discussed in
+\cref{sec:discussion:difficulties}.
+
+\subsection{Sources and construction}
+\label{sec:benchmark:linkage}
+
+We join two public datasets. World of Logs v2 records, for every public
+Jira issue, whether its text contains log messages and an uncertainty
+score for that extraction~\cite{wang2026wol}. The Public Jira Dataset v7
+provides the metadata of 2.7 million issues from 16 trackers, with
+creation and resolution times, resolution status and typed links
+between issues~\cite{montgomery2022jira}. The two join exactly on the
+issue key, and both are licensed CC-BY-4.0. From the trackers we took
+every project whose fix commits can be linked to its issues through the
+default branch of a public git repository: twenty Apache projects (Hive,
+Hadoop, HBase, Ambari, Spark, Cassandra, Flink, Kafka and others), three
+Red Hat projects (Infinispan, WildFly, Keycloak), MongoDB, MariaDB, Qt
+(the \texttt{qtbase} module) and Sakai.
+
+An issue enters the benchmark if its text contains logs according to
+WoL with extraction uncertainty at most 0.05, if it is a bug resolved as
+fixed, if it links to one to ten fix commits (reverts and merges
+excluded), and if at least one of those commits modified a non-test
+source file. The \emph{gold} of an instance is the set of non-test
+source files the fix modified, capped at fifty files to exclude bulk
+edits such as license-header changes, which Acc@K would otherwise
+score as a free hit for every system. The \emph{snapshot} is the
+repository at the parent of the fix commit: the code while the bug was
+still present, with the fix never visible. The \emph{query} is the
+issue summary and description in full. \Cref{tab:funnel} gives the
+yield of every condition.
+
+\begin{table}[t]
+\caption{How the benchmark was mined, and what it holds. The scored set
+drops the 101 instances whose gold is entirely test code, where a hit
+would mean retrieving the test the fix edited rather than the defect;
+they are kept in the release and excluded from every score.}
+\label{tab:funnel}
+\centering
+\footnotesize
+\begin{tabular}{@{}lr@{}}
+\toprule
+log-bearing fixed bugs, uncertainty $\le 0.05$ & 70{,}999 \\
+\quad no fix commit found & $-$18{,}661 \\
+\quad more than ten fix commits & $-$55 \\
+\quad no non-test source file modified & $-$14{,}207 \\
+\quad gold over fifty files (bulk edit) & $-$75 \\
+\textbf{instances} & \textbf{\nInstances} \\
+\quad gold entirely test code (scoring-time exclusion) & $-$101 \\
+scored instances & \nScored \\
+\midrule
+projects / main languages & 27 / 4 \\
+hard: report names no gold file & \nHardPct \\
+report contains a stack trace & 30\% \\
+single fix commit & 85\% \\
+gold files per instance, median / p95 & 1 / 8 \\
+fixes touching more than three files & 37\% \\
+query length in characters, median / p95 & 902 / 6{,}577 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The parent of the fix commit is a known-defective revision, not the
+revision deployed when the report was filed; the two differ by whatever
+landed in between. What we measure is therefore localization on a
+revision that contains the defect, which is the setting this paper
+studies, and not a replay of the exact tree an engineer faced at
+triage. Report-time admissibility is enforced where we claim it: the
+incident memory of \cref{sec:approach:memory} admits nothing resolved
+after the report.
+
+\subsection{Easy and hard instances}
+\label{sec:benchmark:strata}
+
+Logs often show where a failure was detected rather than where it
+originated. We make this measurable. An instance
+is \emph{easy} if the issue text names at least one gold file, for
+example in a pasted stack trace, and \emph{hard} otherwise: the report
+describes the failure, but no file the fix changed is named anywhere in
+it. Across the benchmark \nHardPct{} of instances are hard; per project
+the share runs from 22\% (PDFBox, whose reports usually carry a Java
+trace) to 72\% (Groovy). The definition is file-based and therefore
+favours Java, where a stack frame names the file; we also ship a second
+label that counts a mention of a gold file's basename or of any function
+it defines, under which the hard share falls, and we keep the file-based
+one for stratification because a file name is what grep turns into a
+candidate directly. Every result in this paper is reported on both
+strata, and we also record whether the report contains a stack trace at
+all.
+
+\subsection{The incident memory pool}
+\label{sec:benchmark:memory}
+
+Our approach uses the project's resolved history as a signal
+(\cref{sec:approach}). This history does not need logs: any fixed issue
+whose fix commit can be identified tells us which files a past problem
+ended in. We therefore build a separate \emph{memory pool} per project
+from all of PJD using the same conditions without the log requirement,
+\nMemoryPool{} issues in total. Each entry carries the issue's summary
+and description, its creation and resolution times, its fix commits and
+their gold files. PJD's typed links also give duplicate clusters,
+groups of issues marked as duplicates of one another. Timestamps and
+clusters are what keep the memory honest during evaluation
+(\cref{sec:approach:firewall}).

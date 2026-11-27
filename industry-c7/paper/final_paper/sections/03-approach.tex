@@ -1,0 +1,67 @@
+\section{The Retrieval Layer: Log-to-Code Matching Plus Incident Memory}
+\label{sec:approach}
+
+The retrieval layer is a system in its own right in
+\cref{sec:results:retrieval}, and it is the component \sys{} uses as a
+tool, so its construction matters twice. It is lexical and
+deterministic: no model, nothing trained, one CPU core, a median of under
+0.2 seconds per issue on every project. Four signals each produce a ranked list over the
+snapshot's non-test source files, and a weighted fusion merges them.
+
+\textbf{Trace mentions (S1)} finds files named in the report itself:
+file names with an extension (\texttt{KafkaChannel.java},
+\texttt{row0mysql.cc:123}) and class names inside stack-trace frames,
+ranked by where they first appear, since reporters paste the decisive
+trace early. If no file is named, S1 falls back to bare file-name
+stems. S1 is deliberately simple because it doubles as a baseline: it
+is the automated form of an engineer grepping the report.
+\textbf{Path retrieval (S2)} scores every file path against the report
+with BM25 after splitting identifiers on case and underscores.
+\textbf{Content retrieval (S3)} scores file contents, where the
+identifiers, string literals and logging statements that produced the
+reported lines live. To avoid a global index that leaks across time, S3
+scores a per-instance pool, the files found by S1, the top 200 from S2
+and the files proposed by memory, with term statistics computed inside
+that pool only.
+
+\label{sec:approach:memory}
+\textbf{Incident memory (S4)} searches the project's pool
+(\cref{sec:benchmark:memory}) for past incidents whose summary and
+description read like the current report, with BM25 over an inverted
+index. The twenty most similar admissible incidents vote: an incident
+at similarity rank $r$ adds $1/r$ to every gold file of its own fix,
+provided the file still exists in the current snapshot. Unlike S1 to
+S3, S4 can point at a file that no log line and no trace ever names,
+which is what the hard stratum requires.
+
+\label{sec:approach:firewall}
+\textbf{The memory firewall.} A memory signal evaluated on historical
+data can cheat in ways that are invisible if they are not controlled.
+A past incident is excluded from voting on a query when (1) it is the
+query issue itself, (2) it belongs to the query's duplicate cluster,
+(3) it shares a fix commit with the query, or (4) it was resolved after
+the query was created. Rule 4 is strict and it costs real signal:
+pooled over the benchmark it removes \firewallPct{} of the candidate
+votes the index proposes. We accept the cost because the remaining
+signal is one a deployed system would truly have had. One residual
+channel remains and we state it: the index's corpus statistics are
+computed once over the full pool, so the text of excluded incidents
+still influences term weights; excluded incidents never vote.
+
+\label{sec:approach:fusion}
+\textbf{Fusion, conditioned on an observable regime.} The four lists
+are merged by reciprocal rank fusion~\cite{cormack2009rrf}, file $f$ receiving
+$\sum_i w_i / (60 + \mathrm{rank}_i(f))$. The weights $w_i$ are the only
+tuned parameters. The right weights depend on the report: when the text
+names files, S1 is nearly always right and should dominate; when it
+names none, S1 is noise and memory matters more. The easy and hard
+strata cannot drive this choice, because they are defined through the
+gold answer, so we condition on a property visible at inference time,
+whether S1 found an explicit file mention, and tune the weights per
+regime by grid search over $\{0, 0.5, 1, 2\}$ on the development split
+only (\cref{sec:setup:protocol}). The variant without memory is tuned
+the same way, so the memory ablation compares two equally tuned
+systems. The affected module is read off the file ranking at a fixed
+per-project path depth, and every ranked file carries its provenance:
+the signals that ranked it, the matching mentions or terms, and for S4
+the keys of the past incidents that voted for it.

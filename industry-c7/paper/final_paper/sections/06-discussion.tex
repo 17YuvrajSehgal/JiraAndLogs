@@ -1,0 +1,122 @@
+\section{Discussion and Threats to Validity}
+\label{sec:discussion}
+
+\subsection{Three difficulties, measured}
+\label{sec:discussion:difficulties}
+
+\textbf{Root cause beyond symptoms.} This is the hardest part of the
+task, and the benchmark shows it in a form that can be counted:
+in \nHardPct{} of real reports no file the fix changed is named
+anywhere in the text, and a method that matches the report against the
+code it mentions scores zero there by construction. On those
+\nEvalHard{} evaluation instances the retrieval layer reaches
+\retrHardFive{} Acc@5 and \sys{} \hardFive{}. Two things recover a file
+no log line names: incident memory, statistically, since a past fix
+points at code the report never mentions; and reading the code,
+causally, since the agent judges whether a file creates the bad state
+or only reports it and walks back to the callers. The walk-back is one hop, not data-flow analysis. At \hardFive{}
+the hard stratum is where future work should be judged, and it is not
+solved.
+
+\textbf{Noisy and incomplete logs.} Here the benchmark is kinder than
+production: its logs are the excerpts reporters chose to paste, so a
+human has filtered the noise once, and 30\% of reports carry a stack
+trace. The pipeline groups repeated lines into events, ranks and labels
+them, and finds the code that printed each by matching it against the
+snapshot's logging statements; the agent cites those event ids. We did
+not evaluate on synthetic noise or raw runtime bundles, which would
+need segmenting by incident first.
+
+\textbf{Evidence-to-code semantic retrieval.} Our results say where
+log-and-code semantics have to sit. A small dense
+retriever helps in the memory slot, where the task is comparing one
+report with another, and loses to full-text BM25 in the code slot on
+every one of the \nProjects{} projects, because matching a log line to
+code is mostly identifier matching (\cref{sec:results:cost}). What
+supplies the semantics in our system is a model that reads the code,
+paired with a procedure that puts the right code in front of it.
+The lower block of \cref{tab:all} is a ladder of how much code the same
+model sees: path names only, 52.7\% Acc@1; paths with function names,
+60.8\%; the files themselves, read whole or in whole functions, 67.1\%.
+
+\subsection{What the explanation output is}
+\label{sec:discussion:explanation}
+
+The retrieval layer produces provenance rather than prose: for each
+ranked file, which signals ranked it, the matching terms, and the past
+incidents that voted for it. \sys{} produces an argument: for each file, the verdict and
+the quoted line it rests on, and one chain from the reported symptom to
+the named cause in which 57.3\% of steps cite one of the report's log
+events, 85.7\% of them grounded, as an event id or a verbatim quote.
+Both are checkable without being
+trusted: a chain can cite a real line and still give the wrong cause,
+so the evidence is a lead to verify, and no user study shows that
+either form speeds engineers up.
+
+\subsection{Threats to validity}
+\label{sec:discussion:threats}
+
+\textbf{Construct.} The answer key is the set of non-test files a fix
+modified, a proxy for causation rather than a measurement of it. A
+commit subject can name an issue it does not fix (reverts, merges and
+long multi-commit efforts are removed); a fix can touch files
+refactored in passing; and the repaired file is occasionally not where
+the defect originated. With a
+median of one gold file per instance the effect is bounded; accuracy
+rises with fix size for every system because a larger fix offers more
+files to hit, a loosening of the key rather than better localization. The module metric depends on a per-project depth
+fixed before evaluation. Gold functions are derived from diff hunks and
+miss a defect fixed by adding a function.
+
+\textbf{Internal.} The prompts and step budgets of \sys{} (the
+candidate table of thirty, the five files to shortlist, the eight to
+examine, the 24{,}000-character file view) were developed on two
+pilots drawn from the evaluation split, of 30 and 81 instances, both
+disjoint from the \nSample-instance sample; no parameter was fitted to outcomes on evaluation instances, and
+the pilot instances remain in the split (0.4\% of it). Scoring \sys{}
+on the 26{,}429 answered instances outside the pilots changes nothing at the
+paper's precision: file Acc@1 68.6\% and Acc@5 85.9\%, module 90.2\%,
+region 53.8\% and 70.0\%. Two ablations
+are missing. No run removes the logs from the reports, so the
+contribution of the log lines themselves, as opposed to the rest of
+the report, is not isolated; and incident memory is ablated in the
+retrieval layer (\cref{tab:retrieval}) but not inside the agent, so
+what the agent's \texttt{recall} evidence contributes on its own is not
+measured. The agents run at temperature zero with a fixed seed, but
+the model is not bit-reproducible under continuous batching.
+On 20 instances run twice, the top-ranked file agreed on 18 on the same
+machine and on 14 to 15 across two machines with identical software and
+model checksums, and the module on all 20: the top file agrees across
+repeats in 70\% to 90\% of cases, so differences of a point or two
+between agent runs are inside the noise. Three seeds of \sys{} on
+the \nSample-instance sample bound that noise in the aggregate: on the
+998 instances all three answered, file Acc@1 spans 67.0\% to 67.9\%,
+module 89.4\% to 90.2\% and region Acc@1 53.2\% to 53.3\%, at most
+one point on every headline metric, while 55 to 61 instances change
+their top file between two seeds. Four instances ended without an answer and are
+scored as misses. Thinking was disabled for every model-based system, a
+fair comparison that may understate the model.
+
+\textbf{External.} Twenty-seven projects with disciplined issue-commit
+linkage, mainly in four languages; a project without such linkage
+cannot use the mining recipe directly. One model, so the result shows
+what this architecture achieves with a 27B open-weights model, not how
+it scales. Logs are
+reporter-curated, as discussed above.
+
+\textbf{Baselines.} LocAgent-style and CoSIL-style are our
+reimplementations, not the published systems, and one check on the
+ports goes the wrong way: CoSIL-style, whose design includes a step to
+repair unparseable answers, left more answers unparseable than
+LocAgent-style. Both ports leave 8\% to 10\% of instances without a
+parseable answer, which counts as a miss; \cref{sec:results:agents}
+reports the margins with those instances excluded as well. Pathidea,
+the closest log-based prior work, was not run, not even on the Java
+subset its path reconstruction is built for; that is a gap. Classic information-retrieval
+localizers were not run; coverage-based localization needs execution
+evidence absent at report time. The contamination probe
+tests recitation from an issue key, not recognition when report and
+code are shown, and the benchmark has no post-cutoff subset, so
+memorisation cannot be excluded. The explanations were checked mechanically, for existence
+and grounding; no human judged whether a chain's reasoning is correct,
+and no practitioner has used the output.
