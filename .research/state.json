@@ -1,0 +1,12 @@
+{
+  "stage": 1,
+  "gates": {},
+  "gate_requests": {},
+  "tasks": {},
+  "active": null,
+  "next_step": "",
+  "plan": {
+    "version": 0,
+    "locked": false
+  }
+}
