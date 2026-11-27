@@ -1,6 +1,6 @@
 <mxfile host="Electron">
   <diagram name="Page-1" id="Tru3fI8KDK8wv8GJeKan">
-    <mxGraphModel dx="1379" dy="286" grid="0" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="850" pageHeight="1100" background="light-dark(#ffffff, #121212)" math="0" shadow="0">
+    <mxGraphModel dx="1280" dy="297" grid="0" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="850" pageHeight="1100" background="light-dark(#ffffff, #121212)" math="0" shadow="0">
       <root>
         <mxCell id="0" />
         <mxCell id="1" parent="0" />
@@ -17,10 +17,10 @@
           <mxGeometry height="72" width="53.28" x="-257" y="693" as="geometry" />
         </mxCell>
         <mxCell id="vIaPh19hu4Nj6NwytJih-19" parent="1" style="image;html=1;image=img/lib/atlassian/Jira_Logo.svg;labelPerimeter=1;rounded=1;roundedPerimeter=1;verticalLabelPosition=bottom;verticalAlign=top;fontSize=9;fontColor=light-dark(#5A5A5A,#AAAAAA);" value="issue tracker" vertex="1">
-          <mxGeometry height="40" width="40" x="-88.64" y="567" as="geometry" />
+          <mxGeometry height="40" width="40" x="-97.44" y="567" as="geometry" />
         </mxCell>
         <mxCell id="vIaPh19hu4Nj6NwytJih-26" parent="1" style="dashed=0;outlineConnect=0;html=1;align=center;labelPosition=center;verticalLabelPosition=bottom;verticalAlign=top;shape=mxgraph.weblogos.github;labelPerimeter=1;rounded=1;roundedPerimeter=1;fontSize=9;fontColor=light-dark(#5A5A5A,#AAAAAA);" value="code snapshot" vertex="1">
-          <mxGeometry height="40" width="40" x="-36" y="567" as="geometry" />
+          <mxGeometry height="40" width="40" x="-30" y="567" as="geometry" />
         </mxCell>
         <mxCell id="vIaPh19hu4Nj6NwytJih-91" edge="1" parent="1" source="vIaPh19hu4Nj6NwytJih-28" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;defaultLabelBackgroundColor=page;entryX=0.5;entryY=0;entryDx=0;entryDy=0;entryPerimeter=0;" target="vIaPh19hu4Nj6NwytJih-31" value="">
           <mxGeometry relative="1" as="geometry" />
